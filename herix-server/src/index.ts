@@ -20,6 +20,7 @@ const app = express();
 const PORT = process.env.PORT || 3004;
 
 app.use(cors());
+app.get("/", (_req, res) => res.redirect("/preview.html"));
 app.use(express.static(path.join(__dirname, '../../'), {
   setHeaders: (res: any, filePath: string) => {
     const ext = path.extname(filePath);

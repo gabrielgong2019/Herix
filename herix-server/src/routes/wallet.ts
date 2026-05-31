@@ -9,25 +9,25 @@ export const walletRouter = Router();
 walletRouter.use(requireAuth);
 
 /** GET /api/wallet/balance */
-walletRouter.get('/balance', (req: Request, res: Response) => {
+walletRouter.get('/balance', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
 
   // 累计收入：ESCROW_RELEASE + 推广结算
-  const income = findOne<{ total: number }>(
+  const income = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'COMPLETED'`,
     [userId]
   );
 
   // 已提现
-  const withdrawn = findOne<{ total: number }>(
+  const withdrawn = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type = 'WITHDRAWAL' AND status = 'COMPLETED'`,
     [userId]
   );
 
   // 待结算：PENDING 状态的收入 + 推广码收益
-  const pending = findOne<{ total: number }>(
+  const pending = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'PENDING'`,
     [userId]
@@ -38,7 +38,7 @@ walletRouter.get('/balance', (req: Request, res: Response) => {
   const pendingAmount = pending?.total || 0;
 
   // 推广码累计收益（从 referrals 表统计 qualified 数量）
-  const codeEarnings = findOne<{ total: number }>(
+  const codeEarnings = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(r.qualified * t.commission), 0) as total
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
@@ -48,7 +48,7 @@ walletRouter.get('/balance', (req: Request, res: Response) => {
   );
 
   // 当月收入（本月1号至今）
-  const monthlyIncome = findOne<{ total: number }>(
+  const monthlyIncome = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'COMPLETED'
      AND created_at >= date('now', 'start of month')`,
@@ -69,7 +69,7 @@ walletRouter.get('/balance', (req: Request, res: Response) => {
 });
 
 /** GET /api/wallet/transactions */
-walletRouter.get('/transactions', (req: Request, res: Response) => {
+walletRouter.get('/transactions', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { type, page = '1', limit = '20' } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
@@ -82,7 +82,7 @@ walletRouter.get('/transactions', (req: Request, res: Response) => {
     params.push(type);
   }
 
-  const rows = findMany(
+  const rows = await findMany(
     `SELECT t.id, t.type, t.amount, t.platform_fee, t.status, t.note, t.created_at, t.completed_at,
             tk.title as task_title
      FROM transactions t
@@ -93,7 +93,7 @@ walletRouter.get('/transactions', (req: Request, res: Response) => {
     [...params, Number(limit), skip]
   );
 
-  const count = findOne<{ total: number }>(
+  const count = await findOne<{ total: number }>(
     `SELECT COUNT(*) as total FROM transactions t WHERE ${where}`,
     params
   );
@@ -107,9 +107,9 @@ walletRouter.get('/transactions', (req: Request, res: Response) => {
 });
 
 /** GET /api/wallet/methods */
-walletRouter.get('/methods', (req: Request, res: Response) => {
+walletRouter.get('/methods', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const methods = findMany(
+  const methods = await findMany(
     'SELECT * FROM withdrawal_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
     [userId]
   );
@@ -125,7 +125,7 @@ walletRouter.get('/methods', (req: Request, res: Response) => {
 });
 
 /** POST /api/wallet/methods */
-walletRouter.post('/methods', (req: Request, res: Response) => {
+walletRouter.post('/methods', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { type, country, label, account_details, is_default } = req.body;
 
@@ -138,10 +138,10 @@ walletRouter.post('/methods', (req: Request, res: Response) => {
 
   // 如果设为默认，先取消其他默认
   if (is_default) {
-    db.prepare('UPDATE withdrawal_methods SET is_default = 0 WHERE user_id = ?').run(userId);
+    await db.query('UPDATE withdrawal_methods SET is_default = 0 WHERE user_id = $1', [userId]);
   }
 
-  const id = insert('withdrawal_methods', {
+  const id = await insert('withdrawal_methods', {
     user_id: userId,
     type,
     country: country || '',
@@ -154,19 +154,19 @@ walletRouter.post('/methods', (req: Request, res: Response) => {
 });
 
 /** PUT /api/wallet/methods/:id */
-walletRouter.put('/methods/:id', (req: Request, res: Response) => {
+walletRouter.put('/methods/:id', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const methodId = req.params.id;
   const { type, country, label, account_details, is_default } = req.body;
 
-  const method = findOne<any>(
+  const method = await findOne<any>(
     'SELECT * FROM withdrawal_methods WHERE id = ? AND user_id = ?',
     [methodId, userId]
   );
   if (!method) return res.status(404).json({ error: '收款方式不存在' });
 
   if (is_default) {
-    db.prepare('UPDATE withdrawal_methods SET is_default = 0 WHERE user_id = ?').run(userId);
+    await db.query('UPDATE withdrawal_methods SET is_default = 0 WHERE user_id = $1', [userId]);
   }
 
   const data: any = { updated_at: new Date().toISOString() };
@@ -176,28 +176,28 @@ walletRouter.put('/methods/:id', (req: Request, res: Response) => {
   if (account_details) data.account_details = JSON.stringify(account_details);
   if (is_default !== undefined) data.is_default = is_default ? 1 : 0;
 
-  update('withdrawal_methods', data, 'id = ? AND user_id = ?', [methodId, userId]);
+  await update('withdrawal_methods', data, 'id = ? AND user_id = ?', [methodId, userId]);
 
   res.json({ message: '收款方式已更新' });
 });
 
 /** DELETE /api/wallet/methods/:id */
-walletRouter.delete('/methods/:id', (req: Request, res: Response) => {
+walletRouter.delete('/methods/:id', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const methodId = req.params.id;
 
-  const method = findOne<any>(
+  const method = await findOne<any>(
     'SELECT * FROM withdrawal_methods WHERE id = ? AND user_id = ?',
     [methodId, userId]
   );
   if (!method) return res.status(404).json({ error: '收款方式不存在' });
 
-  remove('withdrawal_methods', 'id = ? AND user_id = ?', [methodId, userId]);
+  await remove('withdrawal_methods', 'id = ? AND user_id = ?', [methodId, userId]);
   res.json({ message: '收款方式已删除' });
 });
 
 /** POST /api/wallet/withdraw */
-walletRouter.post('/withdraw', (req: Request, res: Response) => {
+walletRouter.post('/withdraw', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { method_id, amount } = req.body;
 
@@ -209,24 +209,24 @@ walletRouter.post('/withdraw', (req: Request, res: Response) => {
   }
 
   // 验证收款方式
-  const method = findOne<any>(
+  const method = await findOne<any>(
     'SELECT * FROM withdrawal_methods WHERE id = ? AND user_id = ?',
     [method_id, userId]
   );
   if (!method) return res.status(400).json({ error: '收款方式不存在' });
 
   // 计算可用余额（同上）
-  const income = findOne<{ total: number }>(
+  const income = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type = 'ESCROW_RELEASE' AND status = 'COMPLETED'`,
     [userId]
   );
-  const withdrawn = findOne<{ total: number }>(
+  const withdrawn = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type = 'WITHDRAWAL' AND (status = 'COMPLETED' OR status = 'PENDING')`,
     [userId]
   );
-  const codeEarnings = findOne<{ total: number }>(
+  const codeEarnings = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(r.qualified * t.commission), 0) as total
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
@@ -246,7 +246,7 @@ walletRouter.post('/withdraw', (req: Request, res: Response) => {
   const netAmount = amount - fee;
 
   // 创建提现交易
-  const txId = insert('transactions', {
+  const txId = await insert('transactions', {
     user_id: userId,
     withdrawal_method_id: method_id,
     type: 'WITHDRAWAL',

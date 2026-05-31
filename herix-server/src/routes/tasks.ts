@@ -9,20 +9,20 @@ function genCode(): string {
   return 'HERIX-' + crypto.randomBytes(3).toString('hex').toUpperCase();
 }
 
-function generateCodePool(taskId: string, count: number): void {
+async function generateCodePool(taskId: string, count: number): Promise<void> {
   for (let i = 0; i < count; i++) {
     let code = genCode();
-    while (findOne('SELECT id FROM task_promo_codes WHERE code = ?', [code])) {
+    while (await findOne('SELECT id FROM task_promo_codes WHERE code = ?', [code])) {
       code = genCode();
     }
-    insert('task_promo_codes', { task_id: taskId, code });
+    await insert('task_promo_codes', { task_id: taskId, code });
   }
 }
 
 export const tasksRouter = Router();
 
 /** GET /api/tasks — 获取任务列表（已登录用户可见自己所有状态，未登录只见 OPEN） */
-tasksRouter.get('/', optionalAuth, (req: Request, res: Response) => {
+tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   const { status, mode, creator, page = '1', limit = '20' } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
@@ -42,11 +42,13 @@ tasksRouter.get('/', optionalAuth, (req: Request, res: Response) => {
     params.push(uid);
   }
 
-  const total = (findOne<{ cnt: number }>(
+  const totalRow = await findOne<{ cnt: number }>(
     `SELECT COUNT(*) as cnt FROM tasks t WHERE ${where}`, params
-  )?.cnt) || 0;
+  );
 
-  const tasks = findMany<any>(
+  const total = totalRow?.cnt || 0;
+
+  const tasks = await findMany<any>(
     `SELECT t.*, u.nickname as creator_name,
             (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
@@ -69,10 +71,10 @@ tasksRouter.get('/', optionalAuth, (req: Request, res: Response) => {
 });
 
 /** GET /api/tasks/my/stats — 我的任务数据（已登录即可，creator 过滤保证只看自己的） */
-tasksRouter.get('/my/stats', requireAuth, (req: Request, res: Response) => {
+tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) => {
   const uid = req.user!.userId;
 
-  const tasks = findMany<any>(`
+  const tasks = await findMany<any>(`
     SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at,
       (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id=t.id) as app_total,
       (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='APPROVED') as app_approved,
@@ -103,12 +105,12 @@ tasksRouter.get('/my/stats', requireAuth, (req: Request, res: Response) => {
 });
 
 /** GET /api/tasks/:id — 任务详情 (公开) */
-tasksRouter.get('/:id/codes', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
-  const task = findOne<any>('SELECT creator_id FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.get('/:id/codes', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT creator_id FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
 
-  const all = findMany<any>(
+  const all = await findMany<any>(
     'SELECT code, herald_id, assigned_at FROM task_promo_codes WHERE task_id = ? ORDER BY created_at ASC',
     [req.params.id]
   );
@@ -121,14 +123,14 @@ tasksRouter.get('/:id/codes', requireAuth, requireRole('BRAND', 'ADMIN'), (req: 
 });
 
 /** GET /api/tasks/:id/codes/export — 下载推广码 CSV（商家用） */
-tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
-  const task = findOne<any>('SELECT id, title, creator_id FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, title, creator_id FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '无权限' });
   }
 
-  const codes = findMany<any>(`
+  const codes = await findMany<any>(`
     SELECT
       pc.code as unique_code,
       pc.assigned_at,
@@ -159,8 +161,8 @@ tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'),
 });
 
 /** POST /api/tasks/:id/codes/upload — 商家上传自定义推广码 */
-tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
-  const task = findOne<any>('SELECT id, creator_id, mode, code_mode, max_heralds FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, mode, code_mode, max_heralds FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '仅成果报酬任务支持推广码' });
@@ -175,9 +177,9 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
 
   let added = 0, skipped = 0;
   for (const code of cleaned) {
-    const exists = findOne('SELECT id FROM task_promo_codes WHERE code = ?', [code]);
+    const exists = await findOne('SELECT id FROM task_promo_codes WHERE code = ?', [code]);
     if (exists) { skipped++; continue; }
-    insert('task_promo_codes', { task_id: task.id, code });
+    await insert('task_promo_codes', { task_id: task.id, code });
     added++;
   }
 
@@ -185,8 +187,8 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
 });
 
 /** POST /api/tasks/:id/csv — 上传推广码转化数据 (类型A) */
-tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
-  const task = findOne<any>('SELECT id, creator_id, mode, commission FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, mode, commission FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
@@ -196,7 +198,7 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), (req: R
 
   let processed = 0, skipped = 0;
   for (const row of records) {
-    const ambassadorTask = findOne<any>(
+    const ambassadorTask = await findOne<any>(
       'SELECT id, herald_id FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?', [row.code, task.id]
     );
     if (!ambassadorTask) { skipped++; continue; }
@@ -205,7 +207,7 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), (req: R
     const usedCount = Math.max(0, parseInt(String(row.used_count || '0'), 10));
     const earnedAmount = usedCount * task.commission;
 
-    update('ambassador_tasks', {
+    await update('ambassador_tasks', {
       registered_count: regCount,
       used_count: usedCount
     }, 'id = ?', [ambassadorTask.id]);
@@ -219,8 +221,8 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), (req: R
 /** PATCH /api/tasks/:id/publish});
 
 /** PATCH /api/tasks/:id/publish — 发布任务 */
-tasksRouter.get('/:id', (req: Request, res: Response) => {
-  const task = findOne<any>(
+tasksRouter.get('/:id', async (req: Request, res: Response) => {
+  const task = await findOne<any>(
     `SELECT t.*, u.nickname as creator_name,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
             (SELECT COUNT(*) FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
@@ -230,7 +232,7 @@ tasksRouter.get('/:id', (req: Request, res: Response) => {
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
-  const applications = findMany<any>(
+  const applications = await findMany<any>(
     `SELECT ta.*, u.nickname, hp.display_name, hp.country, hp.social_platforms
      FROM task_applications ta
      JOIN users u ON u.id = ta.herald_id
@@ -238,19 +240,21 @@ tasksRouter.get('/:id', (req: Request, res: Response) => {
      WHERE ta.task_id = ?`, [req.params.id]
   );
 
-  const submissionCount = (findOne<{ cnt: number }>(
+  const subRow = await findOne<{ cnt: number }>(
     'SELECT COUNT(*) as cnt FROM task_submissions WHERE task_id = ?', [req.params.id]
-  )?.cnt) || 0;
+  );
+
+  const submissionCount = subRow?.cnt || 0;
 
   res.json({ ...task, applications, _count: { applications: applications.length, submissions: submissionCount } });
 });
 
 /** POST /api/tasks — 创建任务 (品牌商家) */
-tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
+tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   try {
     const data = CreateTaskSchema.parse(req.body);
 
-    const taskId = insert('tasks', {
+    const taskId = await insert('tasks', {
       creator_id: req.user!.userId,
       mode: data.mode,
       title: data.title,
@@ -273,7 +277,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request,
       generateCodePool(taskId, data.maxHeralds);
     }
 
-    const task = findOne('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    const task = await findOne('SELECT * FROM tasks WHERE id = ?', [taskId]);
     res.status(201).json(task);
   } catch (err) {
     if (err instanceof ZodError) {
@@ -285,8 +289,8 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request,
 });
 
 /** PUT /api/tasks/:id — 编辑草稿任务 */
-tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
-  const task = findOne<any>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
@@ -304,13 +308,13 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Reques
   if (difficulty) data.difficulty = difficulty;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
 
-  update('tasks', data, 'id = ?', [req.params.id]);
-  res.json(findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
+  await update('tasks', data, 'id = ?', [req.params.id]);
+  res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
 });
 
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
-tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), (req: Request, res: Response) => {
-  const task = findOne<{ id: string; creator_id: string; status: string }>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<{ id: string; creator_id: string; status: string }>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '只有创建者可以发布' });
@@ -319,14 +323,14 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), (r
     return res.status(400).json({ error: '只有草稿状态可以发布' });
   }
 
-  update('tasks', { status: 'OPEN', published_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
-  const updated = findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
+  await update('tasks', { status: 'OPEN', published_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
+  const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });
 
 /** PATCH /api/tasks/:id/escrow — 托管资金 */
-tasksRouter.patch('/:id/escrow', requireAuth, requireRole('BRAND'), (req: Request, res: Response) => {
-  const task = findOne<{ id: string; creator_id: string; commission: number; max_heralds: number; title: string }>(
+tasksRouter.patch('/:id/escrow', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const task = await findOne<{ id: string; creator_id: string; commission: number; max_heralds: number; title: string }>(
     'SELECT id, creator_id, commission, max_heralds, title FROM tasks WHERE id = ?', [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -334,8 +338,8 @@ tasksRouter.patch('/:id/escrow', requireAuth, requireRole('BRAND'), (req: Reques
 
   const escrowAmount = task.commission * task.max_heralds;
 
-  update('tasks', { escrow_amount: escrowAmount, is_escrowed: 1 }, 'id = ?', [req.params.id]);
-  insert('transactions', {
+  await update('tasks', { escrow_amount: escrowAmount, is_escrowed: 1 }, 'id = ?', [req.params.id]);
+  await insert('transactions', {
     user_id: req.user!.userId,
     task_id: task.id,
     type: 'ESCROW_DEPOSIT',
@@ -345,17 +349,17 @@ tasksRouter.patch('/:id/escrow', requireAuth, requireRole('BRAND'), (req: Reques
     completed_at: new Date().toISOString(),
   });
 
-  const updated = findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
+  const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });
 
 /** PATCH /api/tasks/:id/complete — 完成任务 */
-tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), (req: Request, res: Response) => {
-  const task = findOne<{ id: string; creator_id: string }>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
+tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const task = await findOne<{ id: string; creator_id: string }>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId) return res.status(403).json({ error: '无权限' });
 
-  update('tasks', { status: 'COMPLETED', completed_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
-  const updated = findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
+  await update('tasks', { status: 'COMPLETED', completed_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
+  const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });

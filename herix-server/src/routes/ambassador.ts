@@ -5,8 +5,8 @@ import { requireAuth } from '../middleware/auth';
 export const ambassadorRouter = Router();
 
 /** GET /api/ambassador/status — 检查大使身份状态 */
-ambassadorRouter.get('/status', requireAuth, (req: Request, res: Response) => {
-  const profile = findOne<any>(
+ambassadorRouter.get('/status', requireAuth, async (req: Request, res: Response) => {
+  const profile = await findOne<any>(
     'SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]
   );
 
@@ -47,7 +47,7 @@ ambassadorRouter.get('/status', requireAuth, (req: Request, res: Response) => {
 });
 
 /** PATCH /api/ambassador/profile — 更新大使身份 */
-ambassadorRouter.patch('/profile', requireAuth, (req: Request, res: Response) => {
+ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Response) => {
   const { residence, residenceCountry, kycStatus, visaType, bankAccount } = req.body;
 
   const data: Record<string, any> = {};
@@ -58,22 +58,22 @@ ambassadorRouter.patch('/profile', requireAuth, (req: Request, res: Response) =>
   if (bankAccount) data.bank_account = JSON.stringify(bankAccount);
 
   // 查找或创建 profile
-  const existing = findOne<{ id: string }>(
+  const existing = await findOne<{ id: string }>(
     'SELECT id FROM herald_profiles WHERE user_id = ?', [req.user!.userId]
   );
 
   if (existing) {
-    update('herald_profiles', data, 'user_id = ?', [req.user!.userId]);
+    await update('herald_profiles', data, 'user_id = ?', [req.user!.userId]);
   } else {
-    insert('herald_profiles', { user_id: req.user!.userId, display_name: '', ...data });
+    await insert('herald_profiles', { user_id: req.user!.userId, display_name: '', ...data });
   }
 
-  const profile = findOne('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
+  const profile = await findOne('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
   res.json(profile);
 });
 
 /** POST /api/ambassador/declaration — 提交在留资格声明（在日赫使） */
-ambassadorRouter.post('/declaration', requireAuth, (req: Request, res: Response) => {
+ambassadorRouter.post('/declaration', requireAuth, async (req: Request, res: Response) => {
   const { visaType, hasWorkPermit, workPermitHours } = req.body;
 
   if (!visaType) {
@@ -81,7 +81,7 @@ ambassadorRouter.post('/declaration', requireAuth, (req: Request, res: Response)
   }
 
   // 检查是否已提交过
-  const existing = findOne<{ id: string }>(
+  const existing = await findOne<{ id: string }>(
     "SELECT id FROM declarations WHERE user_id = ? AND status = 'pending'",
     [req.user!.userId]
   );
@@ -89,7 +89,7 @@ ambassadorRouter.post('/declaration', requireAuth, (req: Request, res: Response)
     return res.status(409).json({ error: '已有待审核的声明' });
   }
 
-  const id = insert('declarations', {
+  const id = await insert('declarations', {
     user_id: req.user!.userId,
     visa_type: visaType,
     has_work_permit: hasWorkPermit ? 1 : 0,
@@ -97,18 +97,18 @@ ambassadorRouter.post('/declaration', requireAuth, (req: Request, res: Response)
   });
 
   // 更新 profile 状态
-  update('herald_profiles', {
+  await update('herald_profiles', {
     visa_type: visaType,
     declaration_status: 'submitted',
     declaration_submitted_at: new Date().toISOString(),
   }, 'user_id = ?', [req.user!.userId]);
 
-  const decl = findOne('SELECT * FROM declarations WHERE id = ?', [id]);
+  const decl = await findOne('SELECT * FROM declarations WHERE id = ?', [id]);
   res.status(201).json(decl);
 });
 
 /** POST /api/ambassador/onboard — 一次性完成大使入驻 */
-ambassadorRouter.post('/onboard', requireAuth, (req: Request, res: Response) => {
+ambassadorRouter.post('/onboard', requireAuth, async (req: Request, res: Response) => {
   const { residence, residenceCountry, visaType, hasWorkPermit, bankAccountType, bankDetails } = req.body;
 
   if (!residence || !['japan', 'overseas'].includes(residence)) {
@@ -130,11 +130,11 @@ ambassadorRouter.post('/onboard', requireAuth, (req: Request, res: Response) => 
     profileData.declaration_submitted_at = new Date().toISOString();
 
     // 记录声明
-    const existing = findOne<{ id: string }>(
+    const existing = await findOne<{ id: string }>(
       "SELECT id FROM declarations WHERE user_id = ?", [req.user!.userId]
     );
     if (!existing) {
-      insert('declarations', {
+      await insert('declarations', {
         user_id: req.user!.userId,
         visa_type: visaType,
         has_work_permit: hasWorkPermit ? 1 : 0,
@@ -148,34 +148,34 @@ ambassadorRouter.post('/onboard', requireAuth, (req: Request, res: Response) => 
     profileData.declaration_status = 'exempt';
   }
 
-  update('herald_profiles', profileData, 'user_id = ?', [req.user!.userId]);
+  await update('herald_profiles', profileData, 'user_id = ?', [req.user!.userId]);
 
-  const profile = findOne('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
+  const profile = await findOne('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
   res.json({ success: true, profile });
 });
 
 /** POST /api/ambassador/declaration/:id/review — 审核声明（Admin） */
-ambassadorRouter.post('/declaration/:id/review', requireAuth, (req: Request, res: Response) => {
+ambassadorRouter.post('/declaration/:id/review', requireAuth, async (req: Request, res: Response) => {
   const { status, reason } = req.body;
   if (!['approved', 'rejected'].includes(status)) {
     return res.status(400).json({ error: '状态必须是 approved 或 rejected' });
   }
 
-  const decl = findOne<{ id: string; user_id: string }>(
+  const decl = await findOne<{ id: string; user_id: string; status: string }>(
     'SELECT id, user_id FROM declarations WHERE id = ?', [req.params.id]
   );
   if (!decl) return res.status(404).json({ error: '声明不存在' });
   if (decl.status !== 'pending') return res.status(400).json({ error: '该声明已审核' });
 
-  update('declarations', {
+  await update('declarations', {
     status,
     reviewed_at: new Date().toISOString(),
   }, 'id = ?', [req.params.id]);
 
   // 同步更新 profile
   const declStatus = status === 'approved' ? 'approved' : 'pending';
-  update('herald_profiles', { declaration_status: declStatus }, 'user_id = ?', [decl.user_id]);
+  await update('herald_profiles', { declaration_status: declStatus }, 'user_id = ?', [decl.user_id]);
 
-  const updated = findOne('SELECT * FROM declarations WHERE id = ?', [req.params.id]);
+  const updated = await findOne('SELECT * FROM declarations WHERE id = ?', [req.params.id]);
   res.json(updated);
 });

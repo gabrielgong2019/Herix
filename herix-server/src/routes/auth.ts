@@ -27,14 +27,14 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     if (data.email) { conditions.push('email = ?'); params.push(data.email); }
 
     if (conditions.length > 0) {
-      const existing = findOne<{ id: string }>(
+      const existing = await findOne<{ id: string }>(
         `SELECT id FROM users WHERE ${conditions.join(' OR ')}`, params
       );
       if (existing) return res.status(409).json({ error: '手机号或邮箱已被注册' });
     }
 
     const roles = [data.role];
-    const userId = insert('users', {
+    const userId = await insert('users', {
       phone: data.phone || null,
       email: data.email || null,
       password_hash: passwordHash,
@@ -44,12 +44,12 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     });
 
     if (data.role === 'BRAND') {
-      insert('brand_profiles', { user_id: userId, company_name: '', contact_name: data.nickname || '' });
+      await insert('brand_profiles', { user_id: userId, company_name: '', contact_name: data.nickname || '' });
     } else if (data.role === 'HERALD') {
-      insert('herald_profiles', { user_id: userId, display_name: data.nickname || '赫使' });
+      await insert('herald_profiles', { user_id: userId, display_name: data.nickname || '赫使' });
     }
 
-    const user = findOne<any>(
+    const user = await findOne<any>(
       `SELECT u.id, u.nickname, u.role, u.roles, u.is_verified,
               COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded
        FROM users u
@@ -80,7 +80,7 @@ authRouter.post('/login', async (req: Request, res: Response) => {
   try {
     const { account, password } = LoginSchema.parse(req.body);
 
-    const user = findOne<any>(
+    const user = await findOne<any>(
       'SELECT id, password_hash, nickname, role, roles, is_verified FROM users WHERE phone = ? OR email = ?',
       [account, account]
     );
@@ -93,10 +93,10 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 
     // 旧账号补填 roles
     if (!user.roles) {
-      update('users', { roles: JSON.stringify(userRoles) }, 'id = ?', [user.id]);
+      await update('users', { roles: JSON.stringify(userRoles) }, 'id = ?', [user.id]);
     }
 
-    const profile = findOne<any>(
+    const profile = await findOne<any>(
       `SELECT COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded
        FROM users u
        LEFT JOIN herald_profiles hp ON hp.user_id = u.id
@@ -121,8 +121,8 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 });
 
 /** GET /api/auth/me — 当前用户信息 */
-authRouter.get('/me', requireAuth, (req: Request, res: Response) => {
-  const user = findOne<any>(
+authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
+  const user = await findOne<any>(
     `SELECT u.id, u.phone, u.email, u.nickname, u.avatar_url, u.role, u.roles, u.is_verified, u.created_at,
             bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded,
             hp.display_name, hp.country, hp.diaspora_group, hp.social_platforms, hp.specialties,

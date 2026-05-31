@@ -1,53 +1,73 @@
 import crypto from 'crypto';
-import db from '../db';
+import pool from '../db';
 
-/** 生成唯一 ID */
+/** 生成唯一 ID（32 位 hex） */
 export function genId(): string {
   return crypto.randomBytes(16).toString('hex');
 }
 
+/** 将 SQLite ? 占位符转换为 PG $N 格式 */
+function toPgSql(sql: string, params: any[]): { text: string; values: any[] } {
+  let idx = 0;
+  const text = sql.replace(/\?/g, () => `$${++idx}`);
+  return { text, values: params };
+}
+
 /** 执行查询并返回单行 */
-export function findOne<T = any>(sql: string, params: any[] = []): T | undefined {
-  const stmt = db.prepare(sql);
-  return stmt.get(...params) as T | undefined;
+export async function findOne<T = any>(sql: string, params: any[] = []): Promise<T | undefined> {
+  const { text, values } = toPgSql(sql, params);
+  const result = await pool.query(text, values);
+  return result.rows[0] as T | undefined;
 }
 
 /** 执行查询并返回多行 */
-export function findMany<T = any>(sql: string, params: any[] = []): T[] {
-  const stmt = db.prepare(sql);
-  return stmt.all(...params) as T[];
+export async function findMany<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  const { text, values } = toPgSql(sql, params);
+  const result = await pool.query(text, values);
+  return result.rows as T[];
 }
 
 /** 执行 INSERT，返回插入的 ID */
-export function insert(table: string, data: Record<string, any>): string {
-  // 自动生成 ID
+export async function insert(table: string, data: Record<string, any>): Promise<string> {
   if (!data.id) {
     data.id = genId();
   }
 
   const keys = Object.keys(data);
-  const placeholders = keys.map(() => '?');
+  const placeholders = keys.map((_, i) => `$${i + 1}`);
   const values = Object.values(data);
 
-  const stmt = db.prepare(
-    `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`
+  await pool.query(
+    `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${placeholders.join(', ')})`,
+    values
   );
-  stmt.run(...values);
   return data.id;
 }
 
 /** 执行 UPDATE */
-export function update(table: string, data: Record<string, any>, whereClause: string, whereParams: any[] = []) {
+export async function update(
+  table: string,
+  data: Record<string, any>,
+  whereClause: string,
+  whereParams: any[] = []
+) {
   const keys = Object.keys(data);
-  const setClause = keys.map(k => `${k} = ?`).join(', ');
-  const values = [...Object.values(data), ...whereParams];
+  const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+  const allValues = [...Object.values(data), ...whereParams];
 
-  const stmt = db.prepare(`UPDATE ${table} SET ${setClause} WHERE ${whereClause}`);
-  return stmt.run(...values);
+  // 将 WHERE 子句中的 ? 转换为 $N（从 SET 部分之后开始编号）
+  let idx = keys.length;
+  const whereText = whereClause.replace(/\?/g, () => `$${++idx}`);
+
+  await pool.query(
+    `UPDATE ${table} SET ${setClause} WHERE ${whereText}`,
+    allValues
+  );
 }
 
 /** 执行 DELETE */
-export function remove(table: string, whereClause: string, params: any[] = []) {
-  const stmt = db.prepare(`DELETE FROM ${table} WHERE ${whereClause}`);
-  return stmt.run(...params);
+export async function remove(table: string, whereClause: string, params: any[] = []) {
+  let idx = 0;
+  const whereText = whereClause.replace(/\?/g, () => `$${++idx}`);
+  await pool.query(`DELETE FROM ${table} WHERE ${whereText}`, params);
 }

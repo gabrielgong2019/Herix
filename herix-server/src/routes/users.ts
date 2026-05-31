@@ -7,13 +7,13 @@ import { ZodError } from 'zod';
 export const usersRouter = Router();
 
 /** PATCH /api/users/profile/brand — 更新品牌商家资料 */
-usersRouter.patch('/profile/brand', requireAuth, (req: Request, res: Response) => {
+usersRouter.patch('/profile/brand', requireAuth, async (req: Request, res: Response) => {
   try {
     const data = UpdateBrandProfileSchema.parse(req.body);
 
-    const existing = findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
     if (existing) {
-      update('brand_profiles', {
+      await update('brand_profiles', {
         company_name: data.companyName,
         company_desc: data.companyDesc || null,
         website: data.website || null,
@@ -22,7 +22,7 @@ usersRouter.patch('/profile/brand', requireAuth, (req: Request, res: Response) =
         contact_phone: data.contactPhone || null,
       }, 'user_id = ?', [req.user!.userId]);
     } else {
-      insert('brand_profiles', {
+      await insert('brand_profiles', {
         user_id: req.user!.userId,
         company_name: data.companyName,
         company_desc: data.companyDesc || null,
@@ -33,7 +33,7 @@ usersRouter.patch('/profile/brand', requireAuth, (req: Request, res: Response) =
       });
     }
 
-    const profile = findOne('SELECT * FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    const profile = await findOne('SELECT * FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
     res.json(profile);
   } catch (err) {
     if (err instanceof ZodError) {
@@ -45,7 +45,7 @@ usersRouter.patch('/profile/brand', requireAuth, (req: Request, res: Response) =
 });
 
 /** PATCH /api/users/profile/herald — 更新赫使资料 */
-usersRouter.patch('/profile/herald', requireAuth, (req: Request, res: Response) => {
+usersRouter.patch('/profile/herald', requireAuth, async (req: Request, res: Response) => {
   try {
     const data = UpdateHeraldProfileSchema.parse(req.body);
 
@@ -58,14 +58,14 @@ usersRouter.patch('/profile/herald', requireAuth, (req: Request, res: Response) 
       specialties: data.specialties ? JSON.stringify(data.specialties) : null,
     };
 
-    const existing = findOne<{ id: string }>('SELECT id FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
+    const existing = await findOne<{ id: string }>('SELECT id FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
     if (existing) {
-      update('herald_profiles', profileData, 'user_id = ?', [req.user!.userId]);
+      await update('herald_profiles', profileData, 'user_id = ?', [req.user!.userId]);
     } else {
-      insert('herald_profiles', { user_id: req.user!.userId, ...profileData });
+      await insert('herald_profiles', { user_id: req.user!.userId, ...profileData });
     }
 
-    const profile = findOne('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
+    const profile = await findOne('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
     res.json(profile);
   } catch (err) {
     if (err instanceof ZodError) {
@@ -77,21 +77,21 @@ usersRouter.patch('/profile/herald', requireAuth, (req: Request, res: Response) 
 });
 
 /** PATCH /api/users/me — 修改昵称 */
-usersRouter.patch('/me', requireAuth, (req: Request, res: Response) => {
+usersRouter.patch('/me', requireAuth, async (req: Request, res: Response) => {
   const { nickname } = req.body;
   if (!nickname || !nickname.trim()) return res.status(400).json({ error: '昵称不能为空' });
-  update('users', { nickname: nickname.trim() }, 'id = ?', [req.user!.userId]);
+  await update('users', { nickname: nickname.trim() }, 'id = ?', [req.user!.userId]);
   res.json({ success: true, nickname: nickname.trim() });
 });
 
 /** POST /api/users/add-role — 添加第二个角色 */
-usersRouter.post('/add-role', requireAuth, (req: Request, res: Response) => {
+usersRouter.post('/add-role', requireAuth, async (req: Request, res: Response) => {
   const { role } = req.body as { role: 'HERALD' | 'BRAND' };
   if (!['HERALD', 'BRAND'].includes(role)) {
     return res.status(400).json({ error: '角色只能是 HERALD 或 BRAND' });
   }
 
-  const user = findOne<any>('SELECT id, role, roles, nickname FROM users WHERE id = ?', [req.user!.userId]);
+  const user = await findOne<any>('SELECT id, role, roles, nickname FROM users WHERE id = ?', [req.user!.userId]);
   if (!user) return res.status(404).json({ error: '用户不存在' });
 
   let currentRoles: string[] = [];
@@ -104,15 +104,15 @@ usersRouter.post('/add-role', requireAuth, (req: Request, res: Response) => {
 
   // 创建对应档案
   if (role === 'BRAND') {
-    const existing = findOne('SELECT id FROM brand_profiles WHERE user_id = ?', [user.id]);
-    if (!existing) insert('brand_profiles', { user_id: user.id, company_name: '', contact_name: user.nickname || '' });
+    const existing = await findOne('SELECT id FROM brand_profiles WHERE user_id = ?', [user.id]);
+    if (!existing) await insert('brand_profiles', { user_id: user.id, company_name: '', contact_name: user.nickname || '' });
   } else {
-    const existing = findOne('SELECT id FROM herald_profiles WHERE user_id = ?', [user.id]);
-    if (!existing) insert('herald_profiles', { user_id: user.id, display_name: user.nickname || '赫使' });
+    const existing = await findOne('SELECT id FROM herald_profiles WHERE user_id = ?', [user.id]);
+    if (!existing) await insert('herald_profiles', { user_id: user.id, display_name: user.nickname || '赫使' });
   }
 
   const newRoles = [...currentRoles, role];
-  update('users', { roles: JSON.stringify(newRoles) }, 'id = ?', [user.id]);
+  await update('users', { roles: JSON.stringify(newRoles) }, 'id = ?', [user.id]);
 
   // 返回新 token（含更新后的 roles）
   const token = signToken({ userId: user.id, role: user.role, roles: newRoles });
@@ -120,12 +120,12 @@ usersRouter.post('/add-role', requireAuth, (req: Request, res: Response) => {
 });
 
 /** POST /api/users/brand/onboard — 品牌入驻 */
-usersRouter.post('/brand/onboard', requireAuth, (req: Request, res: Response) => {
+usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {
   const { companyName, industry, companyDesc, website, contactName, contactPhone } = req.body;
   if (!companyName || !contactName) {
     return res.status(400).json({ error: '公司名称和联系人姓名为必填项' });
   }
-  update('brand_profiles', {
+  await update('brand_profiles', {
     company_name: companyName,
     industry: industry || null,
     company_desc: companyDesc || null,
@@ -138,8 +138,8 @@ usersRouter.post('/brand/onboard', requireAuth, (req: Request, res: Response) =>
 });
 
 /** GET /api/users/heralds — 赫使列表 (公开) */
-usersRouter.get('/heralds', (_req: Request, res: Response) => {
-  const heralds = findMany<any>(
+usersRouter.get('/heralds', async (_req: Request, res: Response) => {
+  const heralds = await findMany<any>(
     `SELECT u.id, u.nickname, hp.display_name, hp.country, hp.diaspora_group, hp.specialties, hp.social_platforms
      FROM users u
      JOIN herald_profiles hp ON hp.user_id = u.id
@@ -149,8 +149,8 @@ usersRouter.get('/heralds', (_req: Request, res: Response) => {
 });
 
 /** GET /api/users/:id — 用户公开信息 */
-usersRouter.get('/:id', (req: Request, res: Response) => {
-  const user = findOne<any>(
+usersRouter.get('/:id', async (req: Request, res: Response) => {
+  const user = await findOne<any>(
     `SELECT u.id, u.nickname, u.role, u.is_verified, u.avatar_url,
             bp.company_name, bp.industry,
             hp.display_name, hp.country, hp.diaspora_group, hp.specialties, hp.social_platforms, hp.bio
@@ -165,8 +165,8 @@ usersRouter.get('/:id', (req: Request, res: Response) => {
 });
 
 /** GET /api/users/me/transactions — 我的交易记录 */
-usersRouter.get('/me/transactions', requireAuth, (req: Request, res: Response) => {
-  const txns = findMany<any>(
+usersRouter.get('/me/transactions', requireAuth, async (req: Request, res: Response) => {
+  const txns = await findMany<any>(
     `SELECT t.*, tk.title as task_title
      FROM transactions t
      LEFT JOIN tasks tk ON tk.id = t.task_id

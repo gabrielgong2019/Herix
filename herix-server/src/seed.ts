@@ -40,7 +40,7 @@ export async function seedIfEmpty(): Promise<void> {
   await pool.query("INSERT INTO brand_profiles (id, user_id, contact_name, company_name, industry, is_onboarded) VALUES ($1,$2,$3,$4,$5,$6)",
     [genId(), uGabriel, 'Gabriel', 'Gabriel Studio', '品牌营销', 1]);
   await pool.query("INSERT INTO herald_profiles (id, user_id, display_name, country, diaspora_group, specialties, is_onboarded, kyc_status, declaration_status, residence) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",
-    [genId(), uAlice, 'Alice海外达人', '美国', '华人', JSON.stringify(['美妆','珠宝','生活方式']), 1, 'approved', 'approved', 'usa']);
+    [genId(), uAlice, 'Alice海外达人', '美国', '华人', JSON.stringify(['美妆','珠宝','生活方式']), 1, 'approved', 'approved', 'japan']);
   await pool.query("INSERT INTO herald_profiles (id, user_id, display_name, is_onboarded, kyc_status, declaration_status, residence) VALUES ($1,$2,$3,$4,$5,$6,$7)",
     [genId(), uGabriel, 'Gabriel', 1, 'approved', 'approved', 'japan']);
 

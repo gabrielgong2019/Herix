@@ -4,8 +4,10 @@ services:
     env: node
     region: singapore
     plan: free
-    buildCommand: cd herix-server && npm install
-    startCommand: cd herix-server && npx tsx src/index.ts
+    buildCommand: >
+      cd herix-server && npm install && npx tsc &&
+      cd ../herix-miniapp && npm install && npx taro build --type h5
+    startCommand: cd herix-server && node dist/index.js
     healthCheckPath: /api/health
     envVars:
       - key: JWT_SECRET

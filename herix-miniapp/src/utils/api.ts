@@ -1,7 +1,7 @@
 import Taro from '@tarojs/taro';
 
 // API 基础配置
-const BASE_URL = 'http://localhost:3004/api';
+const BASE_URL = '/api';
 
 // 存储 token 的 key
 const TOKEN_KEY = 'herix_token';

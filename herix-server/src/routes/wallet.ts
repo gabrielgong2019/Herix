@@ -51,7 +51,7 @@ walletRouter.get('/balance', async (req: Request, res: Response) => {
   const monthlyIncome = await findOne<{ total: number }>(
     `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
      WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'COMPLETED'
-     AND created_at >= date('now', 'start of month')`,
+     AND created_at >= TO_CHAR(DATE_TRUNC('month', CURRENT_TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')`,
     [userId]
   );
 

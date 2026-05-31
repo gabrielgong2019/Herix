@@ -1,251 +1,142 @@
-.index {
+.index-page {
   min-height: 100vh;
-  background: #f5f5f7;
-  padding-bottom: 120px;
+  background: #f5f5f5;
+  padding-bottom: 100px;
 }
 
-/* ── Header ── */
-.explore-header {
+.tab-bar {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 56px 32px 20px;
-  background: #f5f5f7;
-}
-
-.explore-title {
-  font-size: 52px;
-  font-weight: 700;
-  color: #111;
-  letter-spacing: -0.5px;
-}
-
-.header-icons {
-  display: flex;
-  gap: 8px;
-}
-
-.icon-btn {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
   background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.icon-text {
-  font-size: 36px;
-  color: #111;
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 14px 0;
+  font-size: 15px;
+  color: #666;
+  position: relative;
+  cursor: pointer;
 }
 
-/* ── List ── */
-.task-list {
-  padding: 16px 24px;
-  height: calc(100vh - 160px);
+.tab.active {
+  color: #1a1a2e;
+  font-weight: 600;
 }
 
-/* ── Card ── */
+.tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: #1a1a2e;
+  border-radius: 2px;
+}
+
+.list {
+  padding: 12px;
+}
+
 .task-card {
   display: block;
   background: #fff;
-  border-radius: 20px;
-  padding: 28px 28px 28px 28px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-  overflow: hidden;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
-/* ── Top row: badge + platform + media counts ── */
-.card-top {
+.task-card.mine {
+  border-left: 3px solid #4caf50;
+}
+
+.task-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.type-badge {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: #f0f0f0;
-  border-radius: 20px;
-  padding: 8px 18px;
-  flex-shrink: 0;
-}
-
-.type-icon-text {
-  font-size: 22px;
-  color: #444;
-  line-height: 1;
-}
-
-.type-label-text {
-  font-size: 22px;
-  color: #333;
-  font-weight: 500;
-}
-
-.platform-dot {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.platform-letter {
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.5px;
-}
-
-.platform-instagram {
-  background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
-}
-
-.platform-tiktok {
-  background: #010101;
-}
-
-.platform-youtube {
-  background: #ff0000;
-}
-
-.media-badges {
-  display: flex;
-  gap: 8px;
-  margin-left: auto;
-}
-
-.media-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border: 2px solid #e8e8e8;
-  border-radius: 10px;
-  padding: 6px 14px;
-}
-
-.media-icon {
-  font-size: 22px;
-  color: #555;
-}
-
-.media-count {
-  font-size: 22px;
-  color: #333;
-  font-weight: 500;
-}
-
-/* ── Card body: content + image ── */
-.card-body {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
-}
-
-.card-content {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .task-title {
-  font-size: 32px;
+  font-size: 16px;
   font-weight: 600;
-  color: #111;
-  line-height: 1.4;
+  color: #1a1a2e;
+  flex: 1;
+  margin-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.brand-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.brand-logo {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-}
-
-.brand-logo-placeholder {
-  width: 36px;
-  height: 36px;
-  border-radius: 6px;
-  background: #e0e0e0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.brand-initial {
-  font-size: 20px;
-  font-weight: 600;
-  color: #666;
-}
-
-.brand-name {
-  font-size: 24px;
-  color: #555;
-}
-
-.commission-text {
-  font-size: 44px;
+.task-price {
+  font-size: 16px;
   font-weight: 700;
-  color: #111;
-  line-height: 1.2;
+  color: #e74c3c;
+  white-space: nowrap;
 }
 
-.product-price-pill {
-  display: inline-flex;
-  align-self: flex-start;
-  border: 2px solid #ddd;
-  border-radius: 20px;
-  padding: 8px 20px;
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.product-price-label {
-  font-size: 22px;
-  color: #444;
-}
-
-/* ── Product image ── */
-.product-image {
-  width: 180px;
-  height: 180px;
-  border-radius: 16px;
-  flex-shrink: 0;
-  background: #f0f0f0;
-}
-
-.product-image-placeholder {
-  width: 180px;
-  height: 180px;
-  border-radius: 16px;
-  background: #f0f0f0;
-  flex-shrink: 0;
-}
-
-/* ── States ── */
-.loading-more {
-  text-align: center;
-  padding: 32px;
+.task-creator {
+  font-size: 12px;
   color: #999;
-  font-size: 24px;
+}
+
+.task-tag {
+  font-size: 11px;
+  color: #666;
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.app-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.app-badge.approved {
+  color: #2e7d32;
+  background: #e8f5e9;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  color: #999;
+  font-size: 14px;
 }
 
 .empty {
-  text-align: center;
-  padding: 120px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px;
+}
+
+.empty-text {
+  font-size: 14px;
   color: #999;
-  font-size: 28px;
+  margin-bottom: 12px;
+}
+
+.empty-action {
+  font-size: 14px;
+  color: #1a1a2e;
+  text-decoration: underline;
+  cursor: pointer;
 }

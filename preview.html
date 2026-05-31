@@ -345,7 +345,6 @@ function detailHTML(){
   // 底部按钮 — 不使用 fixed，直接放在内容后面
   h+='<div style="padding:16px 0 20px;border-top:1px solid var(--border);margin-top:20px">';
   if(!state.user&&t.status==='OPEN') h+='<button class="btn btn-primary" onclick="openLogin()">登录后报名</button>';
-  else if(canApply&&isReferral) h+='<button class="btn btn-primary" onclick="assignReferral()">领取推广码</button>';
   else if(canApply) h+='<button class="btn btn-primary" onclick="applyTask()">立即报名</button>';
   else if(applied) h+='<div style="text-align:center;padding:12px;background:#f9fafb;border-radius:12px;font-size:14px;color:var(--muted)">✅ 已报名，等待品牌审核</div>';
   h+='</div>';return h;
@@ -509,7 +508,10 @@ function heraldDashHTML(){
   var filter=state.heraldFilter||'all';
   var filteredApps=state.myApps;
   if(filter==='pending') filteredApps=state.myApps.filter(function(a){return a.status==='PENDING'});
-  if(filter==='done') filteredApps=state.myApps.filter(function(a){return a.status==='APPROVED'||a.status==='REJECTED'||a.status==='WITHDRAWN'});
+  if(filter==='done') filteredApps=state.myApps.filter(function(a){
+      var doneSub=state.mySubs.some(function(s){return s.task_id===a.task_id && s.status==='APPROVED'});
+      return a.status==='APPROVED' && doneSub;
+    });
 
   h+='<div style="margin-bottom:20px"><div style="font-size:14px;font-weight:600;margin-bottom:12px">报名历史</div>';
 
@@ -529,6 +531,10 @@ function heraldDashHTML(){
     for(var m=0;m<filteredApps.length;m++){
       var ra=filteredApps[m];if(!ra)continue;
       var stMap={PENDING:['待审核','#d97706'],APPROVED:['已通过','#16a34a'],REJECTED:['未通过','#dc2626'],WITHDRAWN:['已撤回','#6b7280']};
+      if(ra.status==='APPROVED' && ra.mode==='STANDARD'){
+        var doneSub=state.mySubs.some(function(s){return s.task_id===ra.task_id && s.status==='APPROVED'});
+        if(doneSub) stMap.APPROVED=['已完成','#6366f1'];
+      }
       var s=stMap[ra.status]||['','#666'];
       h+='<div style="background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:6px">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center">';

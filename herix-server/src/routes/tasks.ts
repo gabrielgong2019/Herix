@@ -50,9 +50,9 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
 
   const tasks = await findMany<any>(
     `SELECT t.*, u.nickname as creator_name,
-            (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
+            (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
-            (SELECT COUNT(*) FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
+            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
      FROM tasks t
      JOIN users u ON u.id = t.creator_id
      WHERE ${where}
@@ -76,15 +76,15 @@ tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) =>
 
   const tasks = await findMany<any>(`
     SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at,
-      (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id=t.id) as app_total,
-      (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='APPROVED') as app_approved,
-      (SELECT COUNT(*) FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='PENDING') as app_pending,
-      (SELECT COUNT(*) FROM task_submissions ts WHERE ts.task_id=t.id) as sub_total,
-      (SELECT COUNT(*) FROM task_submissions ts WHERE ts.task_id=t.id AND ts.status='APPROVED') as sub_approved,
-      (SELECT COUNT(*) FROM task_submissions ts WHERE ts.task_id=t.id AND ts.status='PENDING_REVIEW') as sub_pending,
-      (SELECT COUNT(*) FROM ambassador_tasks at WHERE at.task_id=t.id) as code_holders,
-      (SELECT COUNT(*) FROM ambassador_tasks at JOIN referrals r ON r.ambassador_task_id=at.id WHERE at.task_id=t.id AND r.qualified=1) as qualified_referrals,
-      (SELECT COUNT(*) FROM ambassador_tasks at JOIN referrals r ON r.ambassador_task_id=at.id WHERE at.task_id=t.id) as total_referrals
+      (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id) as app_total,
+      (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='APPROVED') as app_approved,
+      (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='PENDING') as app_pending,
+      (SELECT COUNT(*)::int FROM task_submissions ts WHERE ts.task_id=t.id) as sub_total,
+      (SELECT COUNT(*)::int FROM task_submissions ts WHERE ts.task_id=t.id AND ts.status='APPROVED') as sub_approved,
+      (SELECT COUNT(*)::int FROM task_submissions ts WHERE ts.task_id=t.id AND ts.status='PENDING_REVIEW') as sub_pending,
+      (SELECT COUNT(*)::int FROM ambassador_tasks at WHERE at.task_id=t.id) as code_holders,
+      (SELECT COUNT(*)::int FROM ambassador_tasks at JOIN referrals r ON r.ambassador_task_id=at.id WHERE at.task_id=t.id AND r.qualified=1) as qualified_referrals,
+      (SELECT COUNT(*)::int FROM ambassador_tasks at JOIN referrals r ON r.ambassador_task_id=at.id WHERE at.task_id=t.id) as total_referrals
     FROM tasks t WHERE t.creator_id=? ORDER BY t.created_at DESC
   `, [uid]);
 
@@ -138,8 +138,8 @@ tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'),
       u.nickname as herald_name,
       u.email as herald_email,
       hp.country, hp.residence,
-      COALESCE((SELECT COUNT(*) FROM referrals r JOIN ambassador_tasks at ON at.id = r.ambassador_task_id WHERE at.unique_code = pc.code AND r.qualified = 1), 0) as qualified_count,
-      COALESCE((SELECT COUNT(*) FROM referrals r JOIN ambassador_tasks at ON at.id = r.ambassador_task_id WHERE at.unique_code = pc.code), 0) as total_referrals
+      COALESCE((SELECT COUNT(*)::int FROM referrals r JOIN ambassador_tasks at ON at.id = r.ambassador_task_id WHERE at.unique_code = pc.code AND r.qualified = 1), 0) as qualified_count,
+      COALESCE((SELECT COUNT(*)::int FROM referrals r JOIN ambassador_tasks at ON at.id = r.ambassador_task_id WHERE at.unique_code = pc.code), 0) as total_referrals
     FROM task_promo_codes pc
     LEFT JOIN users u ON u.id = pc.herald_id
     LEFT JOIN herald_profiles hp ON hp.user_id = pc.herald_id
@@ -225,7 +225,7 @@ tasksRouter.get('/:id', async (req: Request, res: Response) => {
   const task = await findOne<any>(
     `SELECT t.*, u.nickname as creator_name,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
-            (SELECT COUNT(*) FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
+            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
      FROM tasks t JOIN users u ON u.id = t.creator_id
      WHERE t.id = ?`, [req.params.id]
   );

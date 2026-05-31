@@ -29,6 +29,7 @@ interface State {
   userId: string | null;
   myApplication: any;
   mySubmission: any;
+  myAmbassadorTask: any;
 }
 
 export default class TaskDetail extends Component<{ id: string }, State> {
@@ -39,6 +40,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     userId: null,
     myApplication: null,
     mySubmission: null,
+    myAmbassadorTask: null,
   };
 
   componentDidMount() {
@@ -54,7 +56,6 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       const task = await taskApi.detail(id);
       this.setState({ task, loading: false });
 
-      // 检查当前用户报名状态
       try {
         const profile = await Taro.getStorage({ key: 'herix_user' }).catch(() => null);
         if (profile) {
@@ -69,6 +70,20 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             const mySubs = await subApi.my();
             const mySub = mySubs.find((s: any) => s.task_id === id);
             if (mySub) this.setState({ mySubmission: mySub });
+
+            // 成果报酬类：审核通过后自动发码，查一下是否已有码
+            if (task.mode === 'PERFORMANCE') {
+              try {
+                const myCodes = await Taro.request({
+                  url: `/api/referrals/my-codes`,
+                  header: { Authorization: 'Bearer ' + getToken() },
+                });
+                const myTaskCodes = (myCodes.data || []).filter((c: any) => c.task_id === id);
+                if (myTaskCodes.length > 0) {
+                  this.setState({ myAmbassadorTask: myTaskCodes[0] });
+                }
+              } catch {}
+            }
           }
         }
       } catch {}
@@ -97,7 +112,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
   };
 
   render() {
-    const { task, loading, myApplication, mySubmission, role } = this.state;
+    const { task, loading, myApplication, mySubmission, myAmbassadorTask, role } = this.state;
 
     if (loading) {
       return <View className='loading'><Text>加载中...</Text></View>;
@@ -107,25 +122,26 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       return <View className='loading'><Text>任务不存在</Text></View>;
     }
 
-    const canApply = role === 'HERALD' && task.status === 'OPEN' && !myApplication;
+    const isPerformance = task.mode === 'PERFORMANCE';
+    const canApply = role === 'HERALD' && task.status === 'OPEN' && !myApplication && !myAmbassadorTask;
     const canSubmit = role === 'HERALD' && myApplication?.status === 'APPROVED' && !mySubmission;
 
     return (
       <View className='task-detail'>
-        {/* 任务基本信息 */}
         <View className='section'>
           <Text className='title'>{task.title}</Text>
           <View className='tags'>
-            <Text className='tag'>{task.mode === 'STANDARD' ? '普通任务' : '成果报酬'}</Text>
+            <Text className='tag'>{isPerformance ? '成果报酬' : '普通任务'}</Text>
             <Text className={`tag status-${task.status.toLowerCase()}`}>
               {task.status === 'OPEN' ? '招募中' : task.status}
             </Text>
           </View>
-          <Text className='price'>¥{task.commission}/人</Text>
+          <Text className='price'>
+            {isPerformance ? `¥${task.commission}/成功转化` : `¥${task.commission}/人`}
+          </Text>
           <Text className='meta'>预算：¥{task.budget} · 招募 {task.max_heralds} 人</Text>
         </View>
 
-        {/* 任务描述 */}
         <View className='section'>
           <Text className='section-title'>任务描述</Text>
           <Text className='content'>{task.description}</Text>
@@ -138,7 +154,6 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           </View>
         )}
 
-        {/* 报名列表 */}
         <View className='section'>
           <Text className='section-title'>报名情况 ({task.applications.length})</Text>
           {task.applications.map((app: any) => (
@@ -154,7 +169,17 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           )}
         </View>
 
-        {/* 底部操作按钮 */}
+        {/* 审核通过后展示推广码（成果报酬类） */}
+        {myAmbassadorTask && (
+          <View className='section code-section'>
+            <Text className='section-title'>我的推广码</Text>
+            <View className='code-box'>
+              <Text className='code-text'>{myAmbassadorTask.unique_code}</Text>
+            </View>
+            <Text className='code-hint'>分享此推广码给好友，好友注册后即可获得奖励</Text>
+          </View>
+        )}
+
         <View className='actions'>
           {myApplication && (
             <View className='apply-status'>

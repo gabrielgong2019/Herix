@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: herix
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: cd herix-server && npm install
+    startCommand: cd herix-server && npx tsx src/index.ts
+    healthCheckPath: /api/health
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true

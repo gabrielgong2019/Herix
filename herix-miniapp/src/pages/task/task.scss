@@ -1,0 +1,135 @@
+.task-detail {
+  padding-bottom: 140px;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+  color: var(--text-muted);
+  font-size: 28px;
+}
+
+.section {
+  background: var(--card-bg);
+  margin: 16px 24px;
+  border-radius: var(--radius);
+  padding: 28px;
+  box-shadow: var(--shadow);
+}
+
+.title {
+  font-size: 34px;
+  font-weight: 700;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.tags {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tag {
+  font-size: 22px;
+  padding: 4px 16px;
+  border-radius: 20px;
+  background: #f0f0f5;
+  color: var(--text-secondary);
+}
+
+.tag.status-open { background: #e8f5e9; color: #2e7d32; }
+
+.price {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 8px;
+}
+
+.meta {
+  font-size: 24px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.section-title {
+  font-size: 28px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.content {
+  font-size: 26px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  display: block;
+}
+
+.muted {
+  font-size: 24px;
+  color: var(--text-muted);
+  display: block;
+}
+
+.applicant {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.applicant:last-child { border-bottom: none; }
+
+.name { font-size: 26px; color: var(--text-primary); }
+
+.app-status {
+  font-size: 22px;
+  padding: 2px 12px;
+  border-radius: 12px;
+}
+
+.app-status.pending { background: #fff3e0; color: #e65100; }
+.app-status.approved { background: #e8f5e9; color: #2e7d32; }
+.app-status.rejected { background: #fbe9e7; color: #c62828; }
+
+.actions {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 24px;
+  padding-bottom: calc(20px + env(safe-area-inset-bottom));
+  background: var(--card-bg);
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
+}
+
+.apply-status {
+  text-align: center;
+  font-size: 26px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.btn-primary {
+  width: 100%;
+  height: 88px;
+  line-height: 88px;
+  background: linear-gradient(135deg, var(--accent), #c73652);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 600;
+  border-radius: 44px;
+  text-align: center;
+  border: none;
+}
+
+.btn-primary:active {
+  opacity: 0.9;
+}

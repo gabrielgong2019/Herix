@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Herix 运营后台</title>
+<style>
+:root{--primary:#6366f1;--sidebar:#0f172a;--bg:#f8fafc;--card:#fff;--text:#0f172a;--muted:#64748b;--border:#e2e8f0;--success:#16a34a;--warning:#d97706;--danger:#dc2626;--sidebar-w:220px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--sidebar);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;transition:transform .25s}
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.content{padding:24px 28px;flex:1}
+.sb-brand{padding:20px 16px 12px;font-size:15px;font-weight:800;color:#fff;letter-spacing:.5px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:6px}
+.sb-brand span{color:var(--primary)}
+.sb-section{padding:10px 16px 4px;font-size:10px;letter-spacing:1.5px;color:rgba(255,255,255,.25);text-transform:uppercase}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 14px;margin:1px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:rgba(255,255,255,.55);transition:all .15s}
+.sb-item:hover{background:rgba(255,255,255,.07);color:#fff}
+.sb-item.active{background:var(--primary);color:#fff}
+.sb-icon{font-size:15px;width:20px;text-align:center}
+.sb-badge{background:#ef4444;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;margin-left:auto}
+.sb-bottom{margin-top:auto;padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:rgba(255,255,255,.35)}
+.sb-logout{cursor:pointer;margin-top:4px}
+.sb-logout:hover{color:#fff}
+.page-title{font-size:17px;font-weight:700}
+.btn{padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;border:none;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-outline{background:#fff;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{border-color:#94a3b8}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-success{background:var(--success);color:#fff}
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.stat{background:#fff;border-radius:12px;padding:18px;border:1px solid var(--border)}
+.stat-val{font-size:26px;font-weight:700;margin-bottom:3px}
+.stat-lbl{font-size:12px;color:var(--muted)}
+.stat-sub{font-size:11px;margin-top:2px}
+/* Chart */
+.chart-card{background:#fff;border-radius:12px;padding:20px;border:1px solid var(--border);margin-bottom:20px}
+.chart-title{font-size:14px;font-weight:600;margin-bottom:16px}
+.bar-chart{display:flex;align-items:flex-end;gap:8px;height:80px}
+.bar-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.bar{background:var(--primary);border-radius:4px 4px 0 0;width:100%;min-height:2px;transition:height .3s}
+.bar-lbl{font-size:10px;color:var(--muted);white-space:nowrap}
+.bar-val{font-size:10px;color:var(--text);font-weight:600}
+/* Table */
+.tcard{background:#fff;border-radius:12px;border:1px solid var(--border);overflow:hidden;margin-bottom:16px}
+.thead{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.ttitle{font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{padding:9px 20px;text-align:left;font-size:11px;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);background:#f8fafc;text-transform:uppercase;letter-spacing:.3px}
+td{padding:11px 20px;border-bottom:1px solid var(--border);font-size:13px}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc;cursor:pointer}
+.tag{display:inline-flex;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.tag-open,.tag-active{background:#dcfce7;color:#166534}
+.tag-draft,.tag-pending{background:#fef3c7;color:#92400e}
+.tag-completed,.tag-approved{background:#e0e7ff;color:#3730a3}
+.tag-cancelled,.tag-rejected,.tag-suspended{background:#fee2e2;color:#991b1b}
+.tag-paid{background:#dcfce7;color:#166534}
+/* Detail panel */
+.detail-grid{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}
+.panel{background:#fff;border-radius:12px;border:1px solid var(--border);padding:18px;margin-bottom:14px}
+.panel-title{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.irow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px}
+.irow:last-child{border-bottom:none}
+.ikey{color:var(--muted)}
+/* Tabs */
+.tabs{display:flex;gap:4px;background:#f1f5f9;border-radius:10px;padding:4px;margin-bottom:18px}
+.tab{flex:1;text-align:center;padding:7px;border-radius:7px;font-size:13px;cursor:pointer;color:var(--muted);font-weight:500;white-space:nowrap}
+.tab.active{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+/* Action card */
+.acard{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px}
+.acard-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.acard-title{font-size:13px;font-weight:600}
+.acard-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.acard-btns{display:flex;gap:8px}
+/* Alert */
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px}
+.alert-error{background:#fee2e2;color:#991b1b}
+.alert-success{background:#dcfce7;color:#166534}
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc}
+.login-card{background:#fff;border-radius:16px;padding:40px;width:380px;box-shadow:0 4px 24px rgba(0,0,0,.08)}
+.login-logo{font-size:20px;font-weight:800;text-align:center;margin-bottom:4px}
+.login-logo span{color:var(--primary)}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.field label{font-size:12px;font-weight:600;color:var(--muted)}
+.field input,.field select{padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;color:var(--text);outline:none}
+.field input:focus,.field select:focus{border-color:var(--primary)}
+/* Payout */
+.prow{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px}
+.prow-info{flex:1}
+.prow-name{font-weight:600;font-size:13px}
+.prow-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.prow-amount{font-size:18px;font-weight:700;color:var(--primary);margin:0 16px}
+/* Empty */
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:10px}
+/* Search */
+.search-bar{display:flex;gap:10px;margin-bottom:16px}
+.search-bar input,.search-bar select{padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;background:#fff}
+.search-bar input:focus,.search-bar select:focus{border-color:var(--primary)}
+/* Responsive */
+@media(max-width:900px){.stats-grid{grid-template-columns:1fr 1fr}.detail-grid{grid-template-columns:1fr}}
+@media(max-width:640px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.main{margin-left:0}.stats-grid{grid-template-columns:1fr 1fr}}
+.hamburger{display:none;background:none;border:none;cursor:pointer;font-size:20px;padding:4px}
+@media(max-width:640px){.hamburger{display:block}}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+.overlay.show{display:block}
+</style>
+<script src="/shared/auth.js"></script>
+<script src="/shared/sidebar.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+var API='/api';
+var st={page:'dashboard',user:null,token:null,data:{},msg:null,msgType:'success',subPage:null,filter:{}};
+
+function go(page,sub){st.page=page;st.subPage=sub||null;st.msg=null;st.filter={};load(page);render()}
+function render(){
+  var r=document.getElementById('root');
+  if(!st.user){r.innerHTML=loginPage();bindLogin();return}
+  r.innerHTML=shell(pageCont());
+  bindShell();
+}
+
+function shell(inner){
+  var nav=[
+    {id:'dashboard',icon:'📊',label:'数据看板'},
+    {id:'reviews',icon:'✅',label:'审核中心',badge:(st.data.stats?.pendingDeclarations||0)+(st.data.stats?.pendingSubmissions||0)+(st.data.stats?.pendingApplications||0)},
+    {id:'payouts',icon:'💰',label:'结算管理'},
+    {id:'users',icon:'👥',label:'用户管理'},
+    {id:'tasks',icon:'📋',label:'任务管理'},
+    {id:'ambassadors',icon:'🌟',label:'赫使列表'},
+  ];
+  var sb='<div class="sidebar" id="sb"><div class="sb-brand">HERIX<span>.</span><div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div>';
+  sb += Sidebar.navItems(nav, { activeId: st.page, onclick: "go('%s')" });
+  sb+='<div class="sb-bottom"><div>'+esc(st.user.nickname)+'</div><div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
+
+  var topbar='<div class="topbar"><div style="display:flex;align-items:center;gap:12px"><button class="hamburger" onclick="toggleSB()">☰</button><div class="page-title">'+pageTitle()+'</div></div>'
+    +'<div>'+topActions()+'</div></div>';
+  var msg=st.msg?'<div style="padding:0 28px;margin-top:14px"><div class="alert alert-'+st.msgType+'">'+esc(st.msg)+'</div></div>':'';
+  return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
+}
+
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',payouts:'结算管理',users:'用户管理',tasks:'任务管理',ambassadors:'赫使列表'}[st.page]||''}
+function topActions(){
+  if(st.page==='payouts') return '<button class="btn btn-primary btn-sm" onclick="generatePayouts()">生成本月账单</button>';
+  return '';
+}
+
+function pageCont(){
+  switch(st.page){
+    case 'dashboard': return dashPage();
+    case 'reviews': return reviewsPage();
+    case 'payouts': return payoutsPage();
+    case 'users': return usersPage();
+    case 'tasks': return tasksPage();
+    case 'ambassadors': return ambassadorsPage();
+    default: return dashPage();
+  }
+}
+
+/* ── Login ── */
+function loginPage(){
+  return '<div class="login-wrap"><div class="login-card">'
+    +'<div class="login-logo">HERIX<span>.</span></div>'
+    +'<div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:24px">平台运营管理后台</div>'
+    +Auth.loginForm({
+      title: '',
+      subtitle: '',
+      emailId: 'email',
+      passwordId: 'password',
+      emailPlaceholder: 'admin@herix.com',
+      passwordPlaceholder: '密码',
+      fieldClass: 'field',
+      titleClass: '',
+      subtitleClass: '',
+      submitStyle: 'width:100%;padding:11px;margin-top:4px',
+      submitBtnClass: '',
+    })
+    +'</div></div>';
+}
+function bindLogin(){
+  Auth.init({
+    api: API + '/auth',
+    emailId: 'email',
+    passwordId: 'password',
+    errorId: 'lerr',
+    onLogin: function(d){
+      var uRoles=d.user.roles||[d.user.role];
+      if(!uRoles.includes('ADMIN')){document.getElementById('lerr').innerHTML='<div class="alert alert-error">此页面仅限平台运营人员</div>';return}
+      st.token=d.token;st.user=d.user;go('dashboard');
+    },
+    onError: function(msg){
+      document.getElementById('auth-form-err').innerHTML='<div class="alert alert-error">'+esc(msg)+'</div>';
+    }
+  });
+}
+
+/* ── Dashboard ── */
+function dashPage(){
+  var s=st.data.stats||{};
+  var maxBar=Math.max(1,...(s.daily||[]).map(function(d){return d.count}));
+  var bars=(s.daily||[]).map(function(d){
+    var h=Math.round((d.count/maxBar)*70)||2;
+    return '<div class="bar-col"><div class="bar-val">'+d.count+'</div><div class="bar" style="height:'+h+'px"></div><div class="bar-lbl">'+d.date.slice(5)+'</div></div>';
+  }).join('');
+
+  return '<div class="stats-grid">'
+    +statCard('本月完成',s.monthCompletions||0,'var(--primary)','📦','单')
+    +statCard('在线任务',s.openTasks||0,'#0891b2','📋','个')
+    +statCard('赫使总数',s.heralds||0,'#7c3aed','🌟','人')
+    +statCard('待处理',((s.pendingDeclarations||0)+(s.pendingSubmissions||0)+(s.pendingApplications||0)),'var(--danger)','⚠️','项')
+    +'</div>'
+    +'<div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">'
+    +statCard('品牌商家',s.brands||0,'#059669','🏢','家')
+    +statCard('待审声明',s.pendingDeclarations||0,'#d97706','📄','条')
+    +statCard('待审内容',s.pendingSubmissions||0,'#7c3aed','✅','条')
+    +statCard('本月已结算','¥'+(Number(s.monthPayout||0).toLocaleString()),'#059669','💰','')
+    +'</div>'
+    +'<div class="chart-card"><div class="chart-title">近7日 — 内容审核通过数</div><div class="bar-chart">'+bars+'</div></div>'
+    +(s.pendingDeclarations||s.pendingSubmissions||s.pendingApplications?'<div class="acard" style="background:#fffbeb;border-color:#fbbf24"><div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:6px">⚠️ 待处理事项</div><div style="font-size:12px;color:#78350f">'
+    +(s.pendingDeclarations?'• '+s.pendingDeclarations+'条 在留声明待审核<br>':'')
+    +(s.pendingSubmissions?'• '+s.pendingSubmissions+'条 内容提交待审核<br>':'')
+    +(s.pendingApplications?'• '+s.pendingApplications+'条 任务报名待审核<br>':'')
+    +'</div><button class="btn btn-sm btn-primary" style="margin-top:10px" onclick="go(\'reviews\')">前往审核</button></div>':'');
+}
+
+function statCard(label,val,color,icon,unit){
+  return '<div class="stat"><div style="display:flex;justify-content:space-between"><div><div class="stat-val" style="color:'+color+'">'+val+'<span style="font-size:13px;font-weight:400;color:var(--muted)"> '+unit+'</span></div><div class="stat-lbl">'+label+'</div></div><div style="font-size:28px;opacity:.2">'+icon+'</div></div></div>';
+}
+
+/* ── Reviews ── */
+function reviewsPage(){
+  var decls=st.data.decls||[];
+  var subs=st.data.subs||[];
+  var apps=st.data.apps||[];
+  var tab=st.subPage||'decls';
+  var tabs='<div class="tabs">'
+    +'<div class="tab'+(tab==='decls'?' active':'')+'" onclick="switchTab(\'decls\')">在留声明 ('+decls.length+')</div>'
+    +'<div class="tab'+(tab==='subs'?' active':'')+'" onclick="switchTab(\'subs\')">内容审核 ('+subs.length+')</div>'
+    +'<div class="tab'+(tab==='apps'?' active':'')+'" onclick="switchTab(\'apps\')">报名审核 ('+apps.length+')</div>'
+    +'</div>';
+
+  var content='';
+  if(tab==='decls'){
+    if(!decls.length) content='<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';
+    else content=decls.map(function(d){
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(d.nickname)+'</span><span style="font-size:11px;color:var(--muted)">'+d.submitted_at.slice(0,10)+'</span></div>'
+        +'<div class="acard-sub">在留资格：'+esc(d.visa_type)+' · '+esc(d.email||'')+'</div>'
+        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doDecl(\''+d.id+'\',true)">✓ 通过</button>'
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doDecl(\''+d.id+'\',false)">✗ 拒绝</button></div></div>';
+    }).join('');
+  } else if(tab==='subs'){
+    if(!subs.length) content='<div class="empty"><div class="empty-icon">✅</div>暂无待审内容</div>';
+    else content=subs.map(function(s){
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(s.herald_name)+'</span><span class="tag tag-pending">待审核</span></div>'
+        +'<div class="acard-sub" style="color:var(--primary);margin-bottom:4px">'+esc(s.task_title)+'</div>'
+        +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:6px">🔗 查看内容</a>':'')
+        +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
+        +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交：'+s.submitted_at.slice(0,16).replace('T',' ')+'</div>'
+        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doSub(\''+s.id+'\',true)">✓ 通过</button>'
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doSub(\''+s.id+'\',false)">✗ 拒绝</button></div></div>';
+    }).join('');
+  } else {
+    if(!apps.length) content='<div class="empty"><div class="empty-icon">✅</div>暂无待审报名</div>';
+    else content='<div class="empty"><div class="empty-icon">👤</div>报名审核请在商户后台操作（按任务维度）</div>';
+  }
+  return tabs+content;
+}
+
+function switchTab(t){st.subPage=t;render()}
+
+/* ── Payouts ── */
+function payoutsPage(){
+  var data=st.data.payouts||{};
+  var earned=data.earned||[];
+  var history=data.payouts||[];
+  var tab=st.subPage||'pending';
+
+  var tabs='<div class="tabs"><div class="tab'+(tab==='pending'?' active':'')+'" onclick="st.subPage=\'pending\';render()">待结算 ('+earned.length+')</div>'
+    +'<div class="tab'+(tab==='history'?' active':'')+'" onclick="st.subPage=\'history\';render()">结算历史 ('+history.length+')</div></div>';
+
+  var content='';
+  if(tab==='pending'){
+    if(!earned.length) content='<div class="empty"><div class="empty-icon">💰</div>暂无待结算记录</div>';
+    else content=earned.map(function(h){
+      var bank=h.bank_account?JSON.parse(h.bank_account):{};
+      return '<div class="prow"><div class="prow-info"><div class="prow-name">'+esc(h.nickname)+'</div>'
+        +'<div class="prow-meta">'+esc(h.email||'')+(bank.type?' · '+bank.type.toUpperCase():'')+(h.residence==='japan'?' · 🇯🇵':' · 🌏')+'</div>'
+        +'<div class="prow-meta">已完成 '+h.completed_tasks+' 个任务</div></div>'
+        +'<div class="prow-amount">¥'+Number(h.total_earned).toLocaleString()+'</div>'
+        +'<div><select id="pm-'+h.id+'" style="margin-bottom:6px;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px">'
+        +(h.residence==='japan'?'<option value="jp_bank">日本银行</option>':'')
+        +'<option value="wise">Wise</option><option value="swift">SWIFT</option></select><br>'
+        +'<button class="btn btn-primary btn-sm" onclick="markPaid(\''+h.id+'\')">标记已付款</button></div></div>';
+    }).join('');
+  } else {
+    if(!history.length) content='<div class="empty"><div class="empty-icon">📜</div>暂无结算历史</div>';
+    else content='<div class="tcard"><table><thead><tr><th>赫使</th><th>期间</th><th>完成数</th><th>金额</th><th>方式</th><th>状态</th><th>付款时间</th></tr></thead><tbody>'
+      +history.map(function(p){
+        return '<tr><td>'+esc(p.nickname)+'</td><td>'+p.period+'</td><td>'+p.qualified_count+'</td>'
+          +'<td>¥'+Number(p.amount).toLocaleString()+'</td><td>'+(p.payment_method||'-')+'</td>'
+          +'<td><span class="tag tag-'+(p.status==='paid'?'paid':'pending')+'">'+p.status+'</span></td>'
+          +'<td>'+(p.paid_at?p.paid_at.slice(0,10):'-')+'</td></tr>';
+      }).join('')+'</tbody></table></div>';
+  }
+  return tabs+content;
+}
+
+function generatePayouts(){
+  post('/admin/payouts/generate',{},function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='已生成 '+d.created+' 条账单（'+d.period+'期）';st.msgType='success';
+    load('payouts');render();
+  });
+}
+
+function markPaid(userId){
+  var sel=document.getElementById('pm-'+userId);
+  var method=sel?sel.value:'wise';
+  if(!confirm('确认已向该赫使完成打款？')) return;
+  // find pending payout for this user
+  var payout=(st.data.payouts?.payouts||[]).find(function(p){return p.user_id===userId&&p.status==='pending'});
+  if(!payout){alert('请先点击「生成本月账单」');return}
+  post('/admin/payouts/'+payout.id+'/mark-paid',{method:method},function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='已标记打款完成';st.msgType='success';load('payouts');render();
+  });
+}
+
+/* ── Users ── */
+function usersPage(){
+  var users=st.data.users?.users||[];
+  var q=st.filter.q||'',role=st.filter.role||'';
+  return '<div class="search-bar">'
+    +'<input id="uq" placeholder="搜索昵称/邮箱" value="'+esc(q)+'" onkeydown="if(event.key===\'Enter\')searchUsers()">'
+    +'<select id="urole" onchange="searchUsers()"><option value="">所有角色</option><option value="HERALD"'+(role==='HERALD'?' selected':'')+'>赫使</option><option value="BRAND"'+(role==='BRAND'?' selected':'')+'>品牌</option></select>'
+    +'<button class="btn btn-outline btn-sm" onclick="searchUsers()">搜索</button></div>'
+    +(users.length?'<div class="tcard"><table><thead><tr><th>昵称</th><th>邮箱</th><th>角色</th><th>入驻</th><th>KYC</th><th>注册时间</th><th>操作</th></tr></thead><tbody>'
+    +users.map(function(u){
+      var onboarded=u.role==='HERALD'?u.herald_onboarded:u.brand_onboarded;
+      return '<tr><td style="font-weight:500">'+esc(u.nickname)+'</td><td style="color:var(--muted)">'+esc(u.email||'')+'</td>'
+        +'<td><span class="tag '+(u.role==='HERALD'?'tag-open':'tag-completed')+'">'+u.role+'</span></td>'
+        +'<td>'+(onboarded?'✅':'❌')+'</td>'
+        +'<td>'+(u.kyc_status==='approved'?'✅':u.kyc_status==='pending'?'⏳':'-')+'</td>'
+        +'<td style="color:var(--muted)">'+u.created_at.slice(0,10)+'</td>'
+        +'<td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="suspendUser(\''+u.id+'\')">封禁</button></td></tr>';
+    }).join('')+'</tbody></table></div>'
+    :'<div class="empty"><div class="empty-icon">👥</div>暂无用户</div>');
+}
+
+function searchUsers(){
+  st.filter.q=document.getElementById('uq')?.value||'';
+  st.filter.role=document.getElementById('urole')?.value||'';
+  apiGet('/admin/users?q='+encodeURIComponent(st.filter.q)+'&role='+encodeURIComponent(st.filter.role),function(d){st.data.users=d;render()});
+}
+
+function suspendUser(id){
+  if(!confirm('确认封禁该用户？')) return;
+  post('/admin/users/'+id+'/suspend',{suspend:true},function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='用户已封禁';st.msgType='success';load('users');render();
+  });
+}
+
+/* ── Tasks ── */
+function tasksPage(){
+  var tasks=st.data.tasks?.tasks||[];
+  var status=st.filter.status||'';
+  return '<div class="search-bar">'
+    +'<select id="tstatus" onchange="filterTasks()"><option value="">所有状态</option>'
+    +['DRAFT','OPEN','COMPLETED','CANCELLED'].map(function(s){return '<option value="'+s+'"'+(status===s?' selected':'')+'>'+{DRAFT:'草稿',OPEN:'招募中',COMPLETED:'已完成',CANCELLED:'已取消'}[s]+'</option>'}).join('')
+    +'</select></div>'
+    +(tasks.length?'<div class="tcard"><table><thead><tr><th>任务名称</th><th>品牌</th><th>类型</th><th>报酬</th><th>报名/通过/完成</th><th>状态</th><th>操作</th></tr></thead><tbody>'
+    +tasks.map(function(t){
+      return '<tr><td style="font-weight:500;max-width:200px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.title)+'</div></td>'
+        +'<td style="color:var(--muted)">'+esc(t.creator_name)+'</td>'
+        +'<td><span style="font-size:11px">'+(t.mode==='PERFORMANCE'?'类A':'类B')+'</span></td>'
+        +'<td>¥'+Number(t.commission).toLocaleString()+'</td>'
+        +'<td style="color:var(--muted)">'+t.application_count+' / '+t.approved_count+' / '+t.completed_count+'</td>'
+        +'<td><span class="tag tag-'+t.status.toLowerCase()+'">'+{DRAFT:'草稿',OPEN:'招募中',IN_PROGRESS:'进行中',COMPLETED:'完成',CANCELLED:'取消'}[t.status]+'</span></td>'
+        +'<td><button class="btn btn-outline btn-sm" onclick="changeTaskStatus(\''+t.id+'\',\'CANCELLED\')">关闭</button></td></tr>';
+    }).join('')+'</tbody></table></div>'
+    :'<div class="empty"><div class="empty-icon">📋</div>暂无任务</div>');
+}
+
+function filterTasks(){
+  st.filter.status=document.getElementById('tstatus')?.value||'';
+  apiGet('/admin/tasks?status='+encodeURIComponent(st.filter.status),function(d){st.data.tasks=d;render()});
+}
+
+function changeTaskStatus(id,s){
+  if(!confirm('确认修改任务状态为'+s+'？')) return;
+  apiPatch('/admin/tasks/'+id+'/status',{status:s},function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='已更新';st.msgType='success';load('tasks');render();
+  });
+}
+
+/* ── Ambassadors ── */
+function ambassadorsPage(){
+  var list=st.data.ambassadors||[];
+  if(!list.length) return '<div class="empty"><div class="empty-icon">🌟</div>暂无赫使</div>';
+  return '<div class="tcard"><table><thead><tr><th>昵称</th><th>邮箱</th><th>居住地</th><th>KYC</th><th>声明</th><th>活跃任务</th><th>完成数</th><th>注册</th></tr></thead><tbody>'
+    +list.map(function(u){
+      var kyc=u.kyc_status==='approved'?'✅':u.kyc_status==='pending'?'⏳':'❌';
+      var decl=u.declaration_status==='approved'?'✅':u.declaration_status==='submitted'?'⏳':u.declaration_status==='exempt'?'免':'-';
+      return '<tr><td style="font-weight:500">'+esc(u.nickname)+'</td>'
+        +'<td style="color:var(--muted);font-size:12px">'+esc(u.email||'')+'</td>'
+        +'<td>'+(u.residence==='japan'?'🇯🇵 日本':u.residence==='overseas'?'🌏 海外':'未设置')+'</td>'
+        +'<td>'+kyc+'</td><td>'+decl+'</td>'
+        +'<td>'+u.active_tasks+'</td><td>'+u.completed+'</td>'
+        +'<td style="color:var(--muted)">'+u.created_at.slice(0,10)+'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+/* ── Review Actions ── */
+function doDecl(id,approve){
+  var reason=approve?null:prompt('拒绝原因（可选）');
+  if(reason===null&&!approve) return;
+  post('/admin/declarations/'+id+'/'+(approve?'approve':'reject'),{reason:reason},function(d){
+    if(d.error){alert(d.error);return}
+    st.data.decls=(st.data.decls||[]).filter(function(x){return x.id!==id});
+    if(st.data.stats) st.data.stats.pendingDeclarations=Math.max(0,(st.data.stats.pendingDeclarations||1)-1);
+    render();
+  });
+}
+
+function doSub(id,approve){
+  var reason=approve?null:prompt('拒绝原因（可选）');
+  if(reason===null&&!approve) return;
+  post('/admin/submissions/'+id+'/'+(approve?'approve':'reject'),{reason:reason},function(d){
+    if(d.error){alert(d.error);return}
+    st.data.subs=(st.data.subs||[]).filter(function(x){return x.id!==id});
+    if(st.data.stats) st.data.stats.pendingSubmissions=Math.max(0,(st.data.stats.pendingSubmissions||1)-1);
+    render();
+  });
+}
+
+/* ── Data Loading ── */
+function load(page){
+  if(page==='dashboard'){
+    apiGet('/admin/stats',function(d){st.data.stats=d;render()});
+  } else if(page==='reviews'){
+    st.subPage=st.subPage||'decls';
+    apiGet('/admin/declarations',function(d){st.data.decls=d});
+    apiGet('/admin/submissions',function(d){st.data.subs=d});
+    apiGet('/admin/applications',function(d){st.data.apps=d;render()});
+  } else if(page==='payouts'){
+    st.subPage=st.subPage||'pending';
+    apiGet('/admin/payouts',function(d){st.data.payouts=d;render()});
+  } else if(page==='users'){
+    apiGet('/admin/users',function(d){st.data.users=d;render()});
+  } else if(page==='tasks'){
+    apiGet('/admin/tasks',function(d){st.data.tasks=d;render()});
+  } else if(page==='ambassadors'){
+    apiGet('/admin/ambassadors',function(d){st.data.ambassadors=d;render()});
+  }
+}
+
+/* ── API helpers ── */
+function apiGet(path,cb){var x=new XMLHttpRequest();x.open('GET',API+path,true);if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send()}
+function post(path,body,cb){var x=new XMLHttpRequest();x.open('POST',API+path,true);x.setRequestHeader('Content-Type','application/json');if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send(JSON.stringify(body))}
+function apiPatch(path,body,cb){var x=new XMLHttpRequest();x.open('PATCH',API+path,true);x.setRequestHeader('Content-Type','application/json');if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send(JSON.stringify(body))}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function logout(){st.token=null;st.user=null;render()}
+function toggleSB(){document.getElementById('sb').classList.toggle('open');document.getElementById('ov').classList.toggle('show')}
+function bindShell(){}
+
+render(); // 初始化渲染
+</script>
+</body>
+</html>

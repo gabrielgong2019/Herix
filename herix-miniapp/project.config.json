@@ -1,0 +1,13 @@
+{
+  "miniprogramRoot": "./dist",
+  "projectname": "herix-miniapp",
+  "description": "Herix 赫使 - 连接品牌与海外侨民KOL的平台",
+  "appid": "touristappid",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "postcss": false,
+    "minified": true
+  },
+  "compileType": "miniprogram"
+}

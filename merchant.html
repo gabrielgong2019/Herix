@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Herix 商户后台</title>
+<style>
+:root {
+  --primary: #0070CC; --sidebar: #111827; --sidebar-text: #9ca3af;
+  --sidebar-active: #fff; --bg: #f5f5f7; --card: #fff;
+  --text: #111; --muted: #6b7280; --border: #e5e7eb;
+  --success: #16a34a; --warning: #d97706; --danger: #dc2626;
+  --sidebar-w: 220px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+
+/* ── Layout ── */
+.layout { display:flex; min-height:100vh; }
+.sidebar {
+  width:var(--sidebar-w); background:var(--sidebar); color:var(--sidebar-text);
+  display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; z-index:100;
+  transition: transform .25s;
+}
+.main { margin-left:var(--sidebar-w); flex:1; display:flex; flex-direction:column; min-height:100vh; }
+.topbar {
+  background:#fff; border-bottom:1px solid var(--border);
+  padding:0 28px; height:60px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:50;
+}
+.content { padding:28px; flex:1; }
+
+/* ── Sidebar ── */
+.sb-logo { padding:20px 20px 8px; font-size:16px; font-weight:800; color:#fff; letter-spacing:1px; border-bottom:1px solid rgba(255,255,255,.08); margin-bottom:8px; }
+.sb-logo span { color:var(--primary); }
+.sb-section { padding:8px 12px 4px; font-size:10px; letter-spacing:1.5px; color:rgba(255,255,255,.3); text-transform:uppercase; }
+.sb-item {
+  display:flex; align-items:center; gap:10px; padding:10px 16px; margin:2px 8px;
+  border-radius:8px; cursor:pointer; font-size:13px; color:var(--sidebar-text);
+  transition: all .15s;
+}
+.sb-item:hover { background:rgba(255,255,255,.07); color:#fff; }
+.sb-item.active { background:var(--primary); color:#fff; }
+.sb-item .icon { font-size:16px; width:20px; text-align:center; }
+.sb-badge { background:#ef4444; color:#fff; font-size:10px; padding:1px 6px; border-radius:10px; margin-left:auto; }
+.sb-icon { font-size:15px; width:20px; text-align:center; }
+.sb-bottom { margin-top:auto; padding:16px; border-top:1px solid rgba(255,255,255,.08); }
+.sb-user { font-size:12px; color:rgba(255,255,255,.5); margin-bottom:8px; }
+.sb-logout { font-size:12px; color:rgba(255,255,255,.4); cursor:pointer; }
+.sb-logout:hover { color:#fff; }
+
+/* ── Topbar ── */
+.page-title { font-size:18px; font-weight:700; }
+.topbar-right { display:flex; align-items:center; gap:12px; }
+.btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:all .15s; }
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:hover { background:#005bb5; }
+.btn-outline { background:#fff; color:var(--text); border:1px solid var(--border); }
+.btn-outline:hover { border-color:#999; }
+.btn-sm { padding:5px 12px; font-size:12px; }
+.btn-danger { background:var(--danger); color:#fff; }
+.btn-success { background:var(--success); color:#fff; }
+
+/* ── Cards & Stats ── */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
+.stat-card { background:#fff; border-radius:12px; padding:20px; }
+.stat-val { font-size:28px; font-weight:700; margin-bottom:4px; }
+.stat-lbl { font-size:12px; color:var(--muted); }
+
+/* ── Table ── */
+.table-card { background:#fff; border-radius:12px; overflow:hidden; }
+.table-head { padding:16px 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border); }
+.table-title { font-size:15px; font-weight:600; }
+table { width:100%; border-collapse:collapse; }
+th { padding:10px 20px; text-align:left; font-size:12px; color:var(--muted); font-weight:500; border-bottom:1px solid var(--border); background:#fafafa; }
+td { padding:12px 20px; border-bottom:1px solid var(--border); font-size:13px; }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:#f9fafb; cursor:pointer; }
+.tag { display:inline-flex; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+.tag-open { background:#dcfce7; color:#16a34a; }
+.tag-draft { background:#fef3c7; color:#d97706; }
+.tag-completed { background:#e0e7ff; color:#4338ca; }
+.tag-cancelled { background:#fee2e2; color:#dc2626; }
+.tag-pending { background:#fef3c7; color:#d97706; }
+.tag-approved { background:#dcfce7; color:#16a34a; }
+.tag-rejected { background:#fee2e2; color:#dc2626; }
+
+/* ── Form ── */
+.form-card { background:#fff; border-radius:12px; padding:24px; }
+.form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.form-full { grid-column:1/-1; }
+.field { display:flex; flex-direction:column; gap:6px; }
+.field label { font-size:12px; font-weight:600; color:var(--muted); }
+.field input, .field textarea, .field select {
+  padding:10px 12px; border:1px solid var(--border); border-radius:8px;
+  font-size:13px; color:var(--text); background:#fff; outline:none;
+  transition: border-color .15s;
+}
+.field input:focus, .field textarea:focus, .field select:focus { border-color:var(--primary); }
+.field textarea { resize:vertical; min-height:80px; }
+.form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:24px; padding-top:20px; border-top:1px solid var(--border); }
+.field-hint { font-size:11px; color:var(--muted); margin-top:2px; }
+
+/* ── Detail panels ── */
+.detail-grid { display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start; }
+.panel { background:#fff; border-radius:12px; padding:20px; margin-bottom:16px; }
+.panel-title { font-size:14px; font-weight:600; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid var(--border); }
+.info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+.info-row:last-child { border-bottom:none; }
+.info-key { color:var(--muted); }
+.applicant-card { padding:14px; border:1px solid var(--border); border-radius:10px; margin-bottom:10px; }
+.applicant-card:last-child { margin-bottom:0; }
+.applicant-hdr { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.av { width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+.sub-card { border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; }
+.sub-card:last-child { margin-bottom:0; }
+
+/* ── Tabs ── */
+.tabs { display:flex; gap:4px; background:#f3f4f6; border-radius:10px; padding:4px; margin-bottom:20px; }
+.tab { flex:1; text-align:center; padding:7px; border-radius:7px; font-size:13px; cursor:pointer; color:var(--muted); font-weight:500; }
+.tab.active { background:#fff; color:var(--text); font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1); }
+
+/* ── Login ── */
+.login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); }
+.login-card { background:#fff; border-radius:16px; padding:40px; width:380px; box-shadow:0 4px 24px rgba(0,0,0,.08); }
+.login-logo { font-size:22px; font-weight:800; text-align:center; margin-bottom:4px; }
+.login-logo span { color:var(--primary); }
+.login-sub { text-align:center; font-size:12px; color:var(--muted); margin-bottom:28px; }
+.field-lg input { padding:12px 14px; font-size:14px; }
+
+/* ── Empty ── */
+.empty { text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-icon { font-size:40px; margin-bottom:12px; }
+
+/* ── Alert ── */
+.alert { padding:12px 16px; border-radius:8px; font-size:13px; margin-bottom:16px; }
+.alert-error { background:#fee2e2; color:#991b1b; }
+.alert-success { background:#dcfce7; color:#166534; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar { transform:translateX(-100%); }
+  .sidebar.open { transform:translateX(0); }
+  .main { margin-left:0; }
+  .stats-grid { grid-template-columns:1fr 1fr; }
+  .form-grid { grid-template-columns:1fr; }
+  .detail-grid { grid-template-columns:1fr; }
+  .hamburger { display:flex; }
+}
+.hamburger { display:none; align-items:center; justify-content:center; width:36px; height:36px; border:none; background:none; cursor:pointer; font-size:20px; }
+.overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:90; }
+.overlay.show { display:block; }
+</style>
+<script src="/shared/auth.js"></script>
+<script src="/shared/sidebar.js"></script>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script>
+var API = '/api';
+var state = {
+  page: 'login', user: null, token: null,
+  tasks: [], currentTask: null, taskTab: 'applicants',
+  stats: {}, msg: null, msgType: 'success',
+  editingTask: null, showActivate: false, tasksLoading: false, taskFilter: '',
+};
+
+/* ── Routing ── */
+function go(page, data) {
+  state.page = page;
+  if (data) Object.assign(state, data);
+  state.msg = null;
+  render();
+}
+
+function render() {
+  var root = document.getElementById('root');
+  if (!state.user) { root.innerHTML = loginPage(); bindLogin(); return; }
+  if (state.showActivate) { root.innerHTML = activateBrandPage(); return; }
+  root.innerHTML = layout(pageContent());
+  bindNav();
+  bindPage();
+}
+
+function layout(inner) {
+  var sm = state.dashStats?.summary||{}; var pending = (sm.pendingApplicants||0)+(sm.pendingSubmissions||0);
+  var nav = [
+    { id:'dashboard', icon:'📊', label:'概览' },
+    { id:'tasks', icon:'📋', label:'任务管理' },
+    { id:'reviews', icon:'✅', label:'审核中心', badge: pending },
+    { id:'csv', icon:'📤', label:'数据上传' },
+    { id:'settings', icon:'⚙️', label:'账户设置' },
+  ];
+  var sb = '<div class="sidebar" id="sidebar">';
+  sb += '<div class="sb-logo">HERIX<span>.</span><div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:2px;letter-spacing:0">商户后台</div></div>';
+  sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
+  sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">品牌商家</span></div>';
+  sb += '<div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
+
+  var main = '<div class="main"><div class="topbar">';
+  main += '<div style="display:flex;align-items:center;gap:12px"><button class="hamburger" onclick="toggleSidebar()">☰</button>';
+  main += '<div class="page-title" id="page-title">'+getPageTitle()+'</div></div>';
+  main += '<div class="topbar-right">'+topbarActions()+'</div></div>';
+  if (state.msg) main += '<div style="padding:0 28px;margin-top:16px"><div class="alert alert-'+state.msgType+'">'+esc(state.msg)+'</div></div>';
+  main += '<div class="content">'+inner+'</div></div>';
+
+  return '<div class="layout">'+sb+main+'</div><div class="overlay" id="overlay" onclick="toggleSidebar()"></div>';
+}
+
+function getPageTitle() {
+  var m = {dashboard:'概览', tasks:'任务管理', reviews:'审核中心', csv:'数据上传', settings:'账户设置', task_detail:'任务详情', task_create:'创建任务', task_edit:'编辑任务'};
+  return m[state.page] || '';
+}
+
+function topbarActions() {
+  if (state.page === 'tasks') return '<button class="btn btn-primary btn-sm" onclick="go(\'task_create\')">+ 创建任务</button>';
+  if (state.page === 'task_detail' && state.currentTask) {
+    var t = state.currentTask;
+    var btns = '<button class="btn btn-outline btn-sm" onclick="go(\'tasks\')">← 返回</button>';
+    if (t.status === 'DRAFT') btns += ' <button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button>';
+    if (t.status === 'OPEN') btns += ' <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="closeTask(\''+t.id+'\')">关闭任务</button>';
+    return btns;
+  }
+  if (state.page === 'task_create' || state.page === 'task_edit') return '<button class="btn btn-outline btn-sm" onclick="go(\'tasks\')">取消</button>';
+  return '';
+}
+
+function pageContent() {
+  switch(state.page) {
+    case 'dashboard':   return dashPage();
+    case 'tasks':       return tasksPage();
+    case 'task_detail': return taskDetailPage();
+    case 'task_create': return taskFormPage(null);
+    case 'task_edit':   return taskFormPage(state.editingTask);
+    case 'reviews':     return reviewsPage();
+    case 'csv':         return csvPage();
+    case 'settings':    return settingsPage();
+    default: return dashPage();
+  }
+}
+
+/* ── Login ── */
+function loginPage() {
+  return '<div class="login-wrap"><div class="login-card">'
+    +'<div class="login-logo">HERIX<span>.</span></div>'
+    +'<div class="login-sub">品牌商家管理后台</div>'
+    +Auth.loginForm({
+      title: '',
+      subtitle: '',
+      emailId: 'email',
+      passwordId: 'password',
+      emailPlaceholder: 'brand@company.com',
+      passwordPlaceholder: '密码',
+      fieldClass: 'field field-lg',
+      titleClass: '',
+      subtitleClass: '',
+      submitStyle: 'width:100%;padding:12px',
+      submitBtnClass: '',
+    })
+    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">还没有账号？<a href="preview.html" style="color:var(--primary)">前往注册</a></div>'
+    +'</div></div>';
+}
+
+function bindLogin() {
+  Auth.init({
+    api: API + '/auth',
+    onLogin: function(d) {
+      var uRoles=d.user.roles||[d.user.role];
+      if(!uRoles.includes('BRAND')){
+        document.getElementById('auth-form-err').innerHTML='<div class="alert alert-error">此页面仅限商家用户</div>';
+        return;
+      }
+      state.token=d.token;state.user=d.user;
+      state.msg='登录成功';state.msgType='success';
+      loadDashStats();loadMyTasks();
+    },
+    onError: function(msg) {
+      var el=document.getElementById('auth-form-err');
+      if(el)el.innerHTML='<div class="alert alert-error">'+esc(msg)+'</div>';
+    }
+  });
+}
+
+function activateBrandPage() {
+  var step = state.activateStep || 1;
+  var h = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc">';
+  h += '<div style="background:#fff;border-radius:16px;padding:40px;width:440px;max-width:94vw;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
+
+  // 进度条
+  h += '<div style="display:flex;gap:6px;margin-bottom:28px">';
+  for (var i = 1; i <= 2; i++) h += '<div style="flex:1;height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>';
+  h += '</div>';
+
+  if (step === 1) {
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">开通品牌商家功能</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">你好，'+esc(state.user.nickname)+'！填写品牌信息后即可发布任务、招募赫使。</div>';
+    h += '<div class="field"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Remitly Japan"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>所属行业</label><select id="act-industry">';
+    ['金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他'].forEach(function(i){h+='<option>'+i+'</option>'});
+    h += '</select></div>';
+    h += '<div class="field" style="margin-top:12px"><label>官网（选填）</label><input id="act-website" placeholder="https://..."></div>';
+    h += '<div style="display:flex;gap:10px;margin-top:24px">';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="cancelActivate()">取消</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep2()">下一步</button>';
+    h += '</div>';
+  } else {
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">联系方式</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">平台将通过此方式与你确认合作细节。</div>';
+    h += '<div class="field"><label>联系人姓名 *</label><input id="act-contact" placeholder="你的姓名"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>联系电话（选填）</label><input id="act-phone" placeholder="+81 ..."></div>';
+    h += '<div id="act-err" style="margin-top:12px"></div>';
+    h += '<div style="display:flex;gap:10px;margin-top:24px">';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=1;render()">返回</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">开通并进入后台</button>';
+    h += '</div>';
+  }
+
+  h += '</div></div>';
+  return h;
+}
+
+function activateStep2() {
+  var company = (document.getElementById('act-company')||{}).value||'';
+  if (!company.trim()) { alert('请填写品牌名称'); return; }
+  state.activateData = {
+    companyName: company.trim(),
+    industry: (document.getElementById('act-industry')||{}).value||'',
+    website: (document.getElementById('act-website')||{}).value||'',
+  };
+  state.activateStep = 2;
+  render();
+}
+
+function doActivateBrand() {
+  var contact = (document.getElementById('act-contact')||{}).value||'';
+  if (!contact.trim()) { alert('请填写联系人姓名'); return; }
+  var data = Object.assign({}, state.activateData||{}, {
+    contactName: contact.trim(),
+    contactPhone: (document.getElementById('act-phone')||{}).value||'',
+  });
+  var errEl = document.getElementById('act-err');
+
+  // Step 1: 添加 BRAND 角色
+  patch('POST', '/users/add-role', { role: 'BRAND' }, function(d) {
+    if (d.error && d.error.indexOf('已拥有') === -1) {
+      if (errEl) errEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>';
+      return;
+    }
+    if (d.token) state.token = d.token;
+
+    // Step 2: 完成品牌入驻
+    patch('POST', '/users/brand/onboard', data, function(d2) {
+      if (d2.error) {
+        if (errEl) errEl.innerHTML = '<div class="alert alert-error">'+esc(d2.error)+'</div>';
+        return;
+      }
+      state.showActivate = false;
+      state.activateStep = 1;
+      state.activateData = null;
+      state.page = 'dashboard';
+      render();
+      loadDashStats();
+    });
+  });
+}
+
+function cancelActivate() {
+  state.showActivate = false;
+  state.token = null;
+  state.user = null;
+  render();
+}
+
+
+
+/* ── Dashboard ── */
+function dashPage() {
+  var s = state.dashStats || {};
+  var sm = s.summary || {};
+  var tasks = s.tasks || [];
+  var pending = (sm.pendingApplicants||0) + (sm.pendingSubmissions||0);
+
+  var html = '';
+
+  // 核心指标 — 第一行
+  html += '<div class="stats-grid">'
+    + statCard('累计支出', '¥'+Number(sm.totalSpend||0).toLocaleString(), '#0070CC', '💰')
+    + statCard('已完成任务', sm.totalCompleted||0, '#16a34a', '✅', '件')
+    + statCard('在线任务', sm.openTasks||0, '#7c3aed', '📋', '个')
+    + statCard('待处理', pending, pending>0?'#dc2626':'#16a34a', '⚠️', '项')
+    + '</div>';
+
+  // 第二行
+  html += '<div class="stats-grid" style="margin-top:-8px">'
+    + statCard('总报名人次', sm.totalApplicants||0, '#0891b2', '👤', '人')
+    + statCard('待审报名', sm.pendingApplicants||0, '#d97706', '⏳', '条')
+    + statCard('待审内容', sm.pendingSubmissions||0, '#d97706', '📄', '条')
+    + statCard('推广码转化', sm.qualifiedReferrals||0, '#0070CC', '🔗', '单')
+    + '</div>';
+
+  // 待处理提醒
+  if (pending > 0) {
+    html += '<div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between">'
+      + '<div style="font-size:13px;color:#92400e">⚠️ 有 <strong>'+pending+'</strong> 条事项待处理'
+      + (sm.pendingApplicants?' · '+sm.pendingApplicants+'条报名':'')
+      + (sm.pendingSubmissions?' · '+sm.pendingSubmissions+'条内容审核':'')
+      +'</div><button class="btn btn-sm" style="background:#f59e0b;color:#fff" onclick="nav(\'reviews\')">去处理</button></div>';
+  }
+
+  // 任务绩效表
+  if (tasks.length) {
+    html += '<div class="table-card"><div class="table-head"><div class="table-title">任务绩效</div>'
+      +'<button class="btn btn-outline btn-sm" onclick="nav(\'tasks\')">管理任务</button></div>'
+      +'<table><thead><tr><th>任务名称</th><th>状态</th><th>报名</th><th>通过</th><th>提交</th><th>完成</th><th>转化率</th><th>支出</th></tr></thead><tbody>'
+      + tasks.map(function(t) {
+          var conversion = t.app_total > 0 ? Math.round((t.sub_approved/t.app_total)*100)+'%' : '-';
+          var spent = (t.sub_approved||0) * t.commission;
+          return '<tr onclick="openTask(\''+t.id+'\')" style="cursor:pointer">'
+            +'<td><div style="font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.title)+'</div>'
+            +'<div style="font-size:11px;color:var(--muted);margin-top:1px">'+(t.mode==='PERFORMANCE'?'类A · 推广码':'类B · 内容')+'</div></td>'
+            +'<td><span class="tag tag-'+t.status.toLowerCase()+'">'+statusLabel(t.status)+'</span></td>'
+            +'<td>'+t.app_total+(t.app_pending?' <span style="color:var(--warning);font-size:11px">('+t.app_pending+'待)</span>':'')+'</td>'
+            +'<td>'+t.app_approved+'</td>'
+            +'<td>'+t.sub_total+(t.sub_pending?' <span style="color:var(--warning);font-size:11px">('+t.sub_pending+'待)</span>':'')+'</td>'
+            +'<td style="font-weight:600;color:var(--success)">'+t.sub_approved+'</td>'
+            +'<td style="color:var(--muted)">'+conversion+'</td>'
+            +'<td>¥'+Number(spent).toLocaleString()+'</td>'
+            +'</tr>';
+        }).join('')
+      +'</tbody></table></div>';
+  } else {
+    html += '<div class="table-card"><div class="empty"><div class="empty-icon">📋</div><div style="margin-bottom:14px">还没有任务</div>'
+      +'<button class="btn btn-primary" onclick="go(\'task_create\')">+ 创建第一个任务</button></div></div>';
+  }
+
+  return html;
+}
+
+function statCard(label, val, color, icon, unit) {
+  unit = unit || '';
+  return '<div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:flex-start">'
+    +'<div><div class="stat-val" style="color:'+color+'">'+val+'<span style="font-size:13px;color:var(--muted);font-weight:400"> '+unit+'</span></div>'
+    +'<div class="stat-lbl">'+label+'</div></div>'
+    +'<div style="font-size:24px;opacity:.2">'+icon+'</div></div></div>';
+}
+
+/* ── Tasks ── */
+function tasksPage() {
+  var tasks = state.tasks || [];
+
+  // 筛选栏
+  var status = state.taskFilter || '';
+  var filtered = status ? tasks.filter(function(t){return t.status===status}) : tasks;
+
+  var filterBar = '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">';
+  var statuses = [{v:'',l:'全部'},{v:'DRAFT',l:'草稿'},{v:'OPEN',l:'招募中'},{v:'COMPLETED',l:'已完成'},{v:'CANCELLED',l:'已取消'}];
+  statuses.forEach(function(s){
+    filterBar += '<button class="btn btn-sm '+(status===s.v?'btn-primary':'btn-outline')+'" onclick="state.taskFilter=\''+s.v+'\';render()">'+s.l+'</button>';
+  });
+  filterBar += '<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go(\'task_create\')">+ 创建任务</button></div>';
+
+  if (!tasks.length && state.tasksLoading) return filterBar+'<div class="empty" style="padding:40px">加载中...</div>';
+
+  if (!filtered.length) {
+    return filterBar+'<div class="table-card"><div class="empty"><div class="empty-icon">📋</div>'
+      +(tasks.length ? '该状态下没有任务' : '<div style="margin-bottom:16px">还没有任务</div><button class="btn btn-primary" onclick="go(\'task_create\')">+ 创建第一个任务</button>')
+      +'</div></div>';
+  }
+
+  var rows = filtered.map(function(t) {
+    var st = t.status || 'DRAFT';
+    var created = t.created_at ? t.created_at.slice(0,10) : '-';
+    return '<tr data-task-id="'+esc(t.id)+'" style="cursor:pointer">'
+      +'<td><div style="font-weight:500">'+esc(t.title)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+catLabel(t.category)+'</div></td>'
+      +'<td><span class="tag tag-'+st.toLowerCase()+'">'+statusLabel(st)+'</span></td>'
+      +'<td><span style="font-size:12px">'+modeLabel(t.mode)+'</span></td>'
+      +'<td>¥'+Number(t.commission||0).toLocaleString()+'</td>'
+      +'<td>'+(t.max_heralds||'-')+'</td>'
+      +'<td>'+(t.application_count||t.app_total||0)+'</td>'
+      +'<td>'+created+'</td>'
+      +'<td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openTask(\''+esc(t.id)+'\')">查看</button></td>'
+      +'</tr>';
+  }).join('');
+  return filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>任务</th><th>状态</th><th>类型</th><th>报酬/人</th><th>名额</th><th>报名数</th><th>创建</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+/* ── Task Detail ── */
+function taskDetailPage() {
+  var t = state.currentTask;
+  if (!t || !t.id) return '<div class="empty" style="padding:60px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⏳</div>加载中...</div>';
+  var apps = t.applications || [];
+  var subs = state.taskSubs || [];
+  var pendingApps = apps.filter(function(a){return a.status==='PENDING'});
+  var pendingSubs = subs.filter(function(s){return s.status==='PENDING_REVIEW'});
+
+  var left = '<div class="panel">'
+    +'<div class="panel-title">任务信息</div>'
+    + infoRow('状态', '<span class="tag tag-'+t.status.toLowerCase()+'">'+statusLabel(t.status)+'</span>')
+    + infoRow('类型', modeLabel(t.mode))
+    + infoRow('分类', catLabel(t.category))
+    + infoRow('内容形式', ctLabel(t.content_type))
+    + infoRow('单份报酬', '¥'+Number(t.commission).toLocaleString())
+    + infoRow('招募名额', t.max_heralds+' 人')
+    + infoRow('已报名', apps.length+' 人（'+apps.filter(function(a){return a.status==='APPROVED'}).length+' 通过）')
+    + infoRow('发布时间', t.published_at ? t.published_at.slice(0,10) : '未发布')
+    +'</div>';
+
+  if (t.status === 'DRAFT') {
+    var pool = state.codePool || { total: 0, assigned: 0, available: 0, samples: [] };
+    var isCustom = t.code_mode === 'custom';
+    var codeReady = pool.total > 0;
+
+    if (t.mode === 'PERFORMANCE') {
+      left += '<div class="panel">';
+      left += '<div class="panel-title">推广码设置 '+(codeReady?'<span style="color:var(--success);font-weight:normal">✅ 就绪</span>':'<span style="color:var(--danger);font-weight:normal">⚠️ 待配置</span>')+'</div>';
+
+      if (isCustom) {
+        // 自定义上传
+        if (codeReady) {
+          left += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:12px">';
+          left += '<div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:6px">✅ 已上传 '+pool.total+' 个推广码</div>';
+          left += '<div style="font-family:monospace;font-size:12px;color:#555">'+pool.samples.map(function(c){return esc(c)}).join('<br>')+'...</div>';
+          left += '</div>';
+        } else {
+          left += '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--danger)">⚠️ 需要上传推广码才能发布，任务名额 <strong>'+t.max_heralds+' 个</strong>，需上传等量推广码</div>';
+        }
+        left += '<div id="upload-result"></div>';
+        left += '<textarea id="custom-codes-input" rows="5" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:8px" placeholder="每行一个推广码，例如：&#10;REMITLY-ABC123&#10;REMITLY-DEF456&#10;..."></textarea>';
+        left += '<button class="btn btn-outline btn-sm" onclick="uploadCustomCodes(\''+t.id+'\')">上传推广码</button>';
+      } else {
+        // 自动生成
+        if (codeReady) {
+          left += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:12px">';
+          left += '<div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px">✅ 已自动生成 '+pool.total+' 个推广码</div>';
+          left += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">示例（前5个）：</div>';
+          left += '<div style="font-family:monospace;font-size:13px;font-weight:600;color:#0369a1;line-height:1.8">'+pool.samples.map(function(c){return esc(c)}).join('<br>')+'</div>';
+          left += '</div>';
+          left += '<div style="margin-bottom:14px">';
+          left += '<button class="btn btn-outline btn-sm" onclick="downloadCodes(\''+t.id+'\')">⬇ 下载全部推广码 CSV</button>';
+          left += '<div style="font-size:11px;color:var(--warning);margin-top:6px">⚠️ 请将推广码上传到 Remitly 等第三方系统后再发布任务</div>';
+          left += '</div>';
+        } else {
+          left += '<div style="font-size:12px;color:var(--danger);margin-bottom:12px">推广码生成异常，请重新创建任务</div>';
+        }
+      }
+
+      left += '<div style="display:flex;gap:8px;margin-top:4px">';
+      left += '<button class="btn btn-outline btn-sm" onclick="editTask()">编辑任务</button>';
+      if (codeReady) {
+        left += '<button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button>';
+      } else {
+        left += '<button class="btn btn-sm" style="background:#e2e8f0;color:#94a3b8;cursor:not-allowed" disabled>'+(isCustom?'请先上传推广码':'推广码异常')+'</button>';
+      }
+      left += '</div></div>';
+
+    } else {
+      left += '<div class="panel" style="background:#f0fdf4;border:1px solid #86efac">'
+        +'<div style="font-size:13px;color:#166534;margin-bottom:12px">✅ 草稿已保存。发布后赫使才能看到并报名。</div>'
+        +'<div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="editTask()">编辑</button>'
+        +'<button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button></div></div>';
+    }
+  }
+
+  var tabs = '<div class="tabs">'
+    +'<div class="tab'+(state.taskTab==='applicants'?' active':'')+'" onclick="switchTab(\'applicants\')">报名审核 ('+apps.length+')'+(pendingApps.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingApps.length+'</span>':'')+'</div>'
+    +'<div class="tab'+(state.taskTab==='submissions'?' active':'')+'" onclick="switchTab(\'submissions\')">内容提交 ('+subs.length+')'+(pendingSubs.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingSubs.length+'</span>':'')+'</div>'
+    +(t.mode==='PERFORMANCE'?'<div class="tab'+(state.taskTab==='codes'?' active':'')+'" onclick="switchTab(\'codes\')">推广码</div>':'')
+    +'</div>';
+
+  var tabContent = '';
+  if (state.taskTab === 'applicants') tabContent = applicantsPanel(apps);
+  else if (state.taskTab === 'submissions') tabContent = submissionsPanel(subs);
+  else tabContent = codesPanel(t);
+
+  var right = '<div>'
+    +'<div class="panel"><div class="panel-title">任务描述</div><div style="font-size:13px;line-height:1.7;color:#444">'+esc(t.description)+'</div></div>'
+    + tabs + tabContent
+    +'</div>';
+
+  return '<div class="detail-grid">'+left+right+'</div>';
+}
+
+function applicantsPanel(apps) {
+  if (!apps.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">👤</div>暂无报名</div>';
+  return apps.map(function(a) {
+    var color = a.status==='APPROVED'?'var(--success)':a.status==='REJECTED'?'var(--danger)':'var(--warning)';
+    var country = a.country ? ' · '+esc(a.country) : '';
+    return '<div class="applicant-card">'
+      +'<div class="applicant-hdr"><div class="av">'+esc((a.nickname||'?')[0])+'</div>'
+      +'<div><div style="font-weight:600;font-size:13px">'+esc(a.nickname)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted)">'+esc(a.display_name||'')+''+country+'</div></div>'
+      +'<span style="margin-left:auto;font-size:12px;font-weight:600;color:'+color+'">'+appStatusLabel(a.status)+'</span></div>'
+      +(a.message?'<div style="font-size:12px;color:#555;margin-bottom:8px;padding:8px;background:#f9fafb;border-radius:6px">'+esc(a.message)+'</div>':'')
+      +(a.status==='PENDING'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewApp(\''+a.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewApp(\''+a.id+'\',\'REJECTED\')">✗ 拒绝</button></div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function submissionsPanel(subs) {
+  if (!subs.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">📄</div>暂无提交</div>';
+  return subs.map(function(s) {
+    var color = s.status==='APPROVED'?'var(--success)':s.status==='REJECTED'?'var(--danger)':'var(--warning)';
+    var screenshots = s.screenshot_urls ? JSON.parse(s.screenshot_urls||'[]') : [];
+    return '<div class="sub-card">'
+      +'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
+      +'<div style="font-weight:600;font-size:13px">'+esc(s.herald_name||s.herald_id.slice(0,8))+'</div>'
+      +'<span style="font-size:12px;font-weight:600;color:'+color+'">'+subStatusLabel(s.status)+'</span></div>'
+      +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:6px;word-break:break-all">🔗 '+esc(s.content_url)+'</a>':'')
+      +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
+      +(screenshots.length?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+screenshots.length+' 张截图</div>':'')
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交于 '+s.submitted_at.slice(0,16).replace('T',' ')+'</div>'
+      +(s.status==='PENDING_REVIEW'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\')">✗ 拒绝</button></div>':'')
+      +(s.status==='REJECTED'&&s.review_note?'<div style="font-size:11px;color:var(--danger);margin-top:8px">拒绝原因：'+esc(s.review_note)+'</div>':'')
+      +'</div>';
+  }).join('');
+}
+
+function codesPanel(t) {
+  var codes = state.taskCodes || [];
+  var exportUrl = API + '/tasks/' + t.id + '/codes/export';
+  var dlBtn = '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
+    + '<div style="font-size:12px;color:var(--muted)">赫使审核通过后自动分配推广码</div>'
+    + '<a href="'+exportUrl+'" target="_blank" id="csv-dl-btn" class="btn btn-outline btn-sm" onclick="attachAuthHeader(this,\''+exportUrl+'\')">⬇ 下载 CSV</a>'
+    + '</div>';
+  if (!codes.length) return dlBtn + '<div class="empty" style="padding:20px"><div class="empty-icon">🔗</div>暂无推广码（审核通过赫使后自动生成）</div>';
+  var rows = codes.map(function(c) {
+    return '<tr><td>'+esc(c.herald_name)+'</td>'
+      +'<td style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1px">'+esc(c.unique_code)+'</td>'
+      +'<td style="color:var(--success);font-weight:600">'+(c.qualified_count||0)+'</td>'
+      +'<td style="color:var(--muted)">'+(c.total_referrals||0)+'</td>'
+      +'<td><span class="tag tag-'+(c.status==='active'?'open':'completed')+'">'+c.status+'</span></td></tr>';
+  }).join('');
+  return dlBtn + '<div class="table-card"><table><thead><tr><th>赫使</th><th>推广码</th><th>合格</th><th>总引荐</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+function toggleCodeMode() {
+  var isCustom = document.getElementById('codeMode-custom')?.checked;
+  var hint = document.getElementById('custom-code-hint');
+  if (hint) hint.style.display = isCustom ? 'block' : 'none';
+}
+
+function toggleCodeModeSection() {
+  var mode = document.getElementById('mode')?.value;
+  var codeSection = document.getElementById('code-mode-section');
+  var ctField = document.getElementById('contentType-field');
+  if (codeSection) codeSection.style.display = (mode === 'PERFORMANCE') ? 'block' : 'none';
+  // PERFORMANCE 任务不需要内容形式（赫使用推广码，不提交内容）
+  if (ctField) ctField.style.display = (mode === 'PERFORMANCE') ? 'none' : 'block';
+}
+
+function uploadCustomCodes(taskId) {
+  var raw = (document.getElementById('custom-codes-input') || {}).value || '';
+  var codes = raw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
+  if (!codes.length) { alert('请输入至少一个推广码'); return; }
+  var resultEl = document.getElementById('upload-result');
+  patch('POST', '/tasks/' + taskId + '/codes/upload', { codes: codes }, function(d) {
+    if (d.error) {
+      if (resultEl) resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>';
+      return;
+    }
+    if (resultEl) resultEl.innerHTML = '<div class="alert alert-success">已上传 '+d.added+' 个推广码'+(d.skipped?' （'+d.skipped+' 个重复跳过）':'')+'</div>';
+    var input = document.getElementById('custom-codes-input');
+    if (input) input.value = '';
+    // 刷新码池
+    get('/tasks/'+taskId+'/codes', function(pool) { state.codePool = pool; render(); });
+  });
+}
+
+function downloadCodes(taskId) {
+  var url = API + '/tasks/' + taskId + '/codes/export';
+  fetch(url, { headers: { Authorization: 'Bearer ' + state.token } })
+    .then(function(r) { return r.blob(); })
+    .then(function(b) {
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = 'herix_promo_codes.csv';
+      a.click();
+    });
+}
+
+function attachAuthHeader(el, url) {
+  // 因为浏览器 <a> 无法带 Authorization header，改用 fetch 下载
+  event.preventDefault();
+  fetch(url, {headers:{Authorization:'Bearer '+state.token}})
+    .then(function(r){return r.blob()})
+    .then(function(b){
+      var a=document.createElement('a');
+      a.href=URL.createObjectURL(b);
+      a.download='herix_codes.csv';
+      a.click();
+    });
+}
+
+/* ── Task Form ── */
+var CATS = ['experience','beauty','travel','fashion','food','lifestyle','referral','baby'];
+var CAT_LABELS = {experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'};
+
+function taskFormPage(t) {
+  var isEdit = !!t;
+  return '<div class="form-card"><div class="form-grid">'
+    + field('任务标题 *', 'title', 'text', t&&t.title||'', '例：Remitly Japan 大使计划')
+    + '<div class="field"><label>任务模式 *</label><select id="mode" onchange="toggleCodeModeSection()">'
+    + '<option value="STANDARD"'+(t&&t.mode==='STANDARD'?' selected':'')+'>类型B — 任务体验（提交内容审核）</option>'
+    + '<option value="PERFORMANCE"'+(t&&t.mode==='PERFORMANCE'?' selected':'')+'>类型A — 成果报酬（推广码转化）</option>'
+    + '</select></div>'
+    + '<div class="field"><label>分类</label><select id="category">'
+    + CATS.map(function(c){return '<option value="'+c+'"'+(t&&t.category===c?' selected':'')+'>'+CAT_LABELS[c]+'</option>'}).join('')
+    + '</select></div>'
+    + '<div class="field" id="contentType-field"><label>内容形式</label><select id="contentType" onchange="">'
+    + '<option value="photo"'+(t&&t.content_type==='photo'?' selected':'')+'>📷 图文</option>'
+    + '<option value="video"'+(t&&t.content_type==='video'?' selected':'')+'>🎬 视频</option>'
+    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">赫使需要提交的内容类型</div></div>'
+    + field('单份报酬 (¥) *', 'commission', 'number', t&&t.commission||'', '每位赫使的报酬金额')
+    + field('招募人数 *', 'maxHeralds', 'number', t&&t.max_heralds||'3', '最多接受多少位赫使')
+    + '<div class="field"><label>任务难度</label><select id="difficulty">'
+    + '<option value="easy"'+(t&&t.difficulty==='easy'?' selected':'')+'>轻松</option>'
+    + '<option value="medium"'+(t&&t.difficulty==='medium'?' selected':'')+'>适中</option>'
+    + '<option value="hard"'+(t&&t.difficulty==='hard'?' selected':'')+'>挑战</option>'
+    + '</select></div>'
+    + field('截止日期', 'deadline', 'date', t&&t.deadline?t.deadline.slice(0,10):'', '')
+    + '<div class="field form-full"><label>任务描述 *</label><textarea id="description" rows="4" placeholder="详细说明任务要求、目标受众、品牌背景...">'+esc(t&&t.description||'')+'</textarea></div>'
+    + '<div class="field form-full"><label>具体要求</label><textarea id="requirements" rows="3" placeholder="可选：发布平台要求、内容关键词、存续时间等...">'+esc(t&&t.requirements||'')+'</textarea></div>'
+    + field('封面图链接', 'coverImage', 'text', t&&t.cover_image||'', 'https://... 图片URL（可选）')
+    // 推广码模式（仅 PERFORMANCE 任务显示）
+    +'<div class="field form-full" id="code-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>推广码来源</label>'
+    +'<div style="display:flex;gap:10px;margin-top:4px">'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-auto" value="auto" '+((!t||t.code_mode!=='custom')?'checked':'')+' onchange="toggleCodeMode()"> 平台自动生成（HERIX-XXXXXX）</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-custom" value="custom" '+(t&&t.code_mode==='custom'?'checked':'')+' onchange="toggleCodeMode()"> 上传自定义推广码</label>'
+    +'</div>'
+    +'<div id="custom-code-hint" style="margin-top:8px;font-size:12px;color:var(--muted);'+(t&&t.code_mode==='custom'?'':'display:none')+'">任务创建后，在任务详情页上传推广码文件。</div>'
+    +'</div>'
+    +'</div>'
+    +'<div class="form-actions">'
+    +(isEdit?'<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>':'')
+    +'<button class="btn btn-outline" onclick="saveTask(false)" title="保存为草稿，需手动发布后赫使才能看到">保存草稿</button>'
+    +'<button class="btn btn-primary" onclick="saveTask(true)">创建并发布</button>'
+    +'</div>'
+    +'<div style="text-align:right;font-size:11px;color:var(--muted);margin-top:8px">草稿不会对外展示，发布后赫使才能看到并报名</div>'
+    +'</div>';
+}
+
+function field(label, id, type, val, placeholder) {
+  return '<div class="field"><label>'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc(String(val))+'" placeholder="'+esc(placeholder)+'"></div>';
+}
+
+/* ── Reviews ── */
+function reviewsPage() {
+  var apps = state.allPendingApps || [];
+  var subs = state.allPendingSubs || [];
+  return '<div class="tabs"><div class="tab'+(state.reviewTab!=='subs'?' active':'')+'" onclick="switchReviewTab(\'apps\')">待审报名 ('+apps.length+')</div>'
+    +'<div class="tab'+(state.reviewTab==='subs'?' active':'')+'" onclick="switchReviewTab(\'subs\')">待审内容 ('+subs.length+')</div></div>'
+    +(state.reviewTab==='subs' ? allSubsPanel(subs) : allAppsPanel(apps));
+}
+
+function allAppsPanel(apps) {
+  if (!apps.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审报名</div>';
+  return apps.map(function(a) {
+    return '<div class="applicant-card" style="margin-bottom:10px">'
+      +'<div style="font-size:11px;color:var(--primary);margin-bottom:6px">'+esc(a.task_title)+'</div>'
+      +'<div class="applicant-hdr"><div class="av">'+esc((a.nickname||'?')[0])+'</div>'
+      +'<div><div style="font-weight:600;font-size:13px">'+esc(a.nickname)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted)">'+esc(a.display_name||'')+'</div></div></div>'
+      +(a.message?'<div style="font-size:12px;color:#555;margin:6px 0;padding:8px;background:#f9fafb;border-radius:6px">'+esc(a.message)+'</div>':'')
+      +'<div style="display:flex;gap:8px;margin-top:8px">'
+      +'<button class="btn btn-success btn-sm" onclick="reviewApp(\''+a.id+'\',\'APPROVED\',true)">✓ 通过</button>'
+      +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewApp(\''+a.id+'\',\'REJECTED\',true)">✗ 拒绝</button>'
+      +'<button class="btn btn-outline btn-sm" onclick="openTask(\''+a.task_id+'\')">查看任务 →</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+function allSubsPanel(subs) {
+  if (!subs.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审内容</div>';
+  return subs.map(function(s) {
+    return '<div class="sub-card" style="margin-bottom:10px">'
+      +'<div style="font-size:11px;color:var(--primary);margin-bottom:6px">'+esc(s.task_title)+'</div>'
+      +'<div style="font-weight:600;margin-bottom:6px">'+esc(s.herald_name)+'</div>'
+      +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:8px">🔗 '+esc(s.content_url)+'</a>':'')
+      +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
+      +'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\',true)">✓ 通过</button>'
+      +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\',true)">✗ 拒绝</button></div>'
+      +'</div>';
+  }).join('');
+}
+
+/* ── CSV Upload ── */
+function csvPage() {
+  var perfTasks = state.tasks.filter(function(t){return t.mode==='PERFORMANCE' && t.status==='OPEN'});
+  if (!perfTasks.length) return '<div class="table-card"><div class="empty"><div class="empty-icon">📤</div><div>没有进行中的成果报酬任务</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">创建类型A任务后可在此上传转化数据</div></div></div>';
+
+  var opts = perfTasks.map(function(t){return '<option value="'+t.id+'">'+esc(t.title)+'</option>'}).join('');
+  return '<div class="form-card"><div style="max-width:600px">'
+    +'<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">选择任务</div><select id="csv-task" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+opts+'</select></div>'
+    +'<div style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-weight:600">上传转化数据（CSV）</div>'
+    +'<button class="btn btn-outline btn-sm" onclick="downloadCsvTemplate()">⬇ 下载模板</button>'
+    +'</div>'
+    +'<div style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:6px;white-space:pre">code,注册数,使用数\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3</div>'
+    +'<div style="font-size:11px;color:var(--muted)">每人一行，code 是赫使的推广码，注册数和使用数填写整数</div>'
+    +'</div>'
+    +'<div class="field"><label>粘贴 CSV 数据或选择文件</label>'
+    +'<textarea id="csv-data" rows="8" placeholder="code,注册数,使用数&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3"></textarea>'
+    +'<input type="file" accept=".csv" style="margin-top:8px;font-size:13px" onchange="loadCsvFile(event)">'
+    +'</div>'
+    +'<div id="csv-result"></div>'
+    +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="doCsvUpload()">上传数据</button></div>'
+    +'</div></div>';
+}
+
+/* ── Settings ── */
+function settingsPage() {
+  var p = state.brandProfile || {};
+  return '<div class="form-card" style="max-width:600px"><div class="panel-title">品牌信息</div>'
+    +'<div class="form-grid">'
+    + field('公司/品牌名称', 'company_name', 'text', p.company_name||'', '')
+    + '<div class="field"><label>行业</label><select id="industry">'
+    + ['美妆','时尚','食品饮料','金融服务','旅游','母婴','电商','其他'].map(function(i){return '<option value="'+i+'"'+(p.industry===i?' selected':'')+'>'+i+'</option>'}).join('')
+    + '</select></div>'
+    + field('官网', 'website', 'text', p.website||'', 'https://...')
+    + field('联系人姓名', 'contact_name', 'text', p.contact_name||'', '')
+    + field('联系电话', 'contact_phone', 'text', p.contact_phone||'', '')
+    + '<div class="field form-full"><label>品牌简介</label><textarea id="company_desc" rows="3">'+esc(p.company_desc||'')+'</textarea></div>'
+    +'</div><div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">保存</button></div></div>';
+}
+
+/* ── Helpers ── */
+function infoRow(key, val) {
+  return '<div class="info-row"><span class="info-key">'+key+'</span><span>'+val+'</span></div>';
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function statusLabel(s) { return {DRAFT:'草稿',OPEN:'招募中',IN_PROGRESS:'进行中',COMPLETED:'已完成',CANCELLED:'已取消'}[s]||s; }
+function modeLabel(m) { return m==='PERFORMANCE'?'类型A · 成果报酬':'类型B · 任务体验'; }
+function ctLabel(c) { return {photo:'📷 图文',video:'🎬 视频',referral:'🔗 推广码'}[c]||c||'-'; }
+function catLabel(c) { return ({experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'})[c]||c||'-'; }
+function appStatusLabel(s) { return {PENDING:'待审核',APPROVED:'已通过',REJECTED:'已拒绝',WITHDRAWN:'已撤回'}[s]||s; }
+function subStatusLabel(s) { return {PENDING_REVIEW:'待审核',APPROVED:'已通过',REJECTED:'已拒绝'}[s]||s; }
+
+/* ── API ── */
+function get(path, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', API+path, true);
+  if (state.token) xhr.setRequestHeader('Authorization', 'Bearer '+state.token);
+  xhr.onload = function() { try { cb(JSON.parse(xhr.responseText)); } catch(e) { cb({}); } };
+  xhr.onerror = function() { cb({}); };
+  xhr.send();
+}
+function post(path, body, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API+path, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  if (state.token) xhr.setRequestHeader('Authorization', 'Bearer '+state.token);
+  xhr.onload = function() { try { cb(JSON.parse(xhr.responseText)); } catch(e) { cb({}); } };
+  xhr.onerror = function() { cb({}); };
+  xhr.send(JSON.stringify(body));
+}
+function patch(method, path, body, cb) {
+  var xhr = new XMLHttpRequest();
+  xhr.open(method, API+path, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  if (state.token) xhr.setRequestHeader('Authorization', 'Bearer '+state.token);
+  xhr.onload = function() { try { cb(JSON.parse(xhr.responseText)); } catch(e) { cb({}); } };
+  xhr.onerror = function() { cb({}); };
+  xhr.send(JSON.stringify(body));
+}
+
+/* ── Actions ── */
+function nav(page) {
+  state.page = page;
+  state.currentTask = null;
+  state.msg = null;
+  if (page === 'dashboard') loadDashStats();
+  if (page === 'tasks') { state.taskFilter = ''; loadMyTasks(); }
+  if (page === 'reviews') loadPendingReviews();
+  if (page === 'settings') loadBrandProfile();
+  closeSidebar();
+  render();
+}
+
+function loadDashStats() {
+  get('/tasks/my/stats', function(d) {
+    state.dashStats = d;
+    state.tasks = d.tasks || [];
+    render();
+  });
+}
+
+function loadMyTasks() {
+  if (!state.user) return;
+  get('/tasks/my/stats', function(d) {
+    if (d && d.tasks) {
+      state.dashStats = d;
+      state.tasks = d.tasks;
+    }
+    state.tasksLoading = false;
+    render();
+  });
+}
+
+function loadPendingReviews() {
+  state.reviewTab = state.reviewTab || 'apps';
+  state.allPendingApps = [];
+  state.allPendingSubs = [];
+  get('/tasks?creator='+state.user.id+'&status=OPEN&limit=100', function(d) {
+    var tasks = d.tasks || [];
+    var remaining = tasks.length;
+    if (!remaining) { render(); return; }
+    tasks.forEach(function(t) {
+      get('/tasks/'+t.id, function(detail) {
+        (detail.applications||[]).forEach(function(a) {
+          if (a.status==='PENDING') state.allPendingApps.push(Object.assign({}, a, {task_title:t.title, task_id:t.id}));
+        });
+        remaining--;
+        if (!remaining) {
+          // load subs
+          var subTasks = tasks.slice(); var srem = subTasks.length;
+          subTasks.forEach(function(st) {
+            get('/submissions/task/'+st.id, function(subs) {
+              (subs||[]).forEach(function(s) {
+                if (s.status==='PENDING_REVIEW') state.allPendingSubs.push(Object.assign({}, s, {task_title:st.title}));
+              });
+              srem--;
+              if (!srem) render();
+            });
+          });
+        }
+      });
+    });
+    render();
+  });
+}
+
+function loadBrandProfile() {
+  get('/auth/me', function(d) {
+    state.brandProfile = d;
+    render();
+  });
+}
+
+function openTask(id) {
+  state.page = 'task_detail';
+  state.taskTab = 'applicants';
+  state.currentTask = null;
+  state.taskSubs = [];
+  state.taskCodes = [];
+  state.codePool = null;
+  render();
+  get('/tasks/'+id, function(t) {
+    state.currentTask = t;
+    // load submissions
+    get('/submissions/task/'+id, function(subs) {
+      state.taskSubs = (subs||[]).map(function(s) {
+        var app = (t.applications||[]).find(function(a){return a.herald_id===s.herald_id});
+        return Object.assign({}, s, {herald_name: app?app.nickname:s.herald_id.slice(0,8)});
+      });
+      // load codes if PERFORMANCE
+      if (t.mode === 'PERFORMANCE') {
+        // 加载已分配的推广码（赫使维度）
+        get('/tasks/'+id+'/codes', function(pool) {
+          state.taskCodes = codes || [];
+          render();
+        });
+        // 加载码池概览（含未分配）
+        get('/tasks/'+id+'/codes', function(pool) {
+          state.codePool = pool;
+          render();
+        });
+      } else {
+        render();
+      }
+    });
+  });
+}
+
+function switchTab(tab) { state.taskTab = tab; render(); }
+function switchReviewTab(tab) { state.reviewTab = tab; render(); }
+
+function editTask() {
+  state.editingTask = state.currentTask;
+  go('task_edit');
+}
+
+function saveTask(publish) {
+  var body = {
+    title: (document.getElementById('title')||{}).value,
+    description: (document.getElementById('description')||{}).value,
+    requirements: (document.getElementById('requirements')||{}).value,
+    commission: Number((document.getElementById('commission')||{}).value),
+    budget: Number((document.getElementById('commission')||{}).value) * Number((document.getElementById('maxHeralds')||{}).value||1),
+    maxHeralds: Number((document.getElementById('maxHeralds')||{}).value||1),
+    mode: (document.getElementById('mode')||{}).value,
+    category: (document.getElementById('category')||{}).value,
+    contentType: (document.getElementById('contentType')||{}).value,
+    difficulty: (document.getElementById('difficulty')||{}).value,
+    coverImage: (document.getElementById('coverImage')||{}).value || undefined,
+    deadline: (document.getElementById('deadline')||{}).value || undefined,
+    codeMode: document.getElementById('codeMode-custom')?.checked ? 'custom' : 'auto',
+  };
+  if (!body.title || !body.description || !body.commission) { alert('请填写标题、描述和报酬'); return; }
+
+  var isEdit = state.page === 'task_edit' && state.editingTask;
+  var method = isEdit ? 'PUT' : 'POST';
+  var path = isEdit ? '/tasks/'+state.editingTask.id : '/tasks';
+
+  patch(method, path, body, function(d) {
+    if (d.error) {
+      var msg = d.error;
+      if (d.details && d.details.length) {
+        msg += ':\n' + d.details.map(function(e){ return '  - ' + (e.path||[]).join('.') + ': ' + e.message; }).join('\n');
+      }
+      alert(msg); return;
+    }
+    // 问题1：创建/更新后刷新任务列表
+    loadMyTasks();
+    loadDashStats();
+
+    if (publish && d.status === 'DRAFT') {
+      // 问题2：直接发布前检查邀请码
+      if (body.mode === 'PERFORMANCE') {
+        doPublishWithCodeCheck(d.id);
+      } else {
+        patch('PATCH', '/tasks/'+d.id+'/publish', {}, function(p) {
+          if (p.error) { alert(p.error); return; }
+          state.msg = '任务已发布！'; state.msgType = 'success';
+          loadMyTasks(); loadDashStats();
+          openTask(d.id);
+        });
+      }
+    } else {
+      // 问题3：保存草稿后跳转到任务详情，提示需要发布
+      state.msg = isEdit ? '任务已更新' : '草稿已保存，请检查推广码后点击「发布任务」使其生效';
+      state.msgType = 'success';
+      openTask(d.id);
+    }
+  });
+}
+
+function doPublishWithCodeCheck(id) {
+  // 问题2+4：检查邀请码是否存在，并提示确认
+  get('/tasks/'+id, function(t) {
+    get('/tasks/'+id+'/codes', function(pool) {
+      var codeCount = pool ? pool.total : 0;
+      var isCustom = t.code_mode === 'custom';
+
+      if (codeCount === 0) {
+        if (isCustom) {
+          alert('请先上传推广码后再发布任务。\n\n操作：任务详情 → 上传推广码 → 发布任务');
+        } else {
+          alert('推广码生成异常，请重新创建任务。');
+        }
+        openTask(id);
+        return;
+      }
+
+      // 问题4：确认邀请码有效性
+      var msg = '确认发布任务？\n\n'
+        + '📋 任务共有 ' + codeCount + ' 个推广码\n'
+        + (isCustom ? '⚠️ 请确认这些推广码已在 Remitly 等第三方系统中配置完成，发布后赫使将立即收到推广码。'
+                    : '⚠️ 系统已自动生成推广码，请确认已下载 CSV 并上传到第三方系统，否则赫使拿到的码将无法使用。')
+        + '\n\n推广码未配置到第三方系统将导致赫使推广无效。';
+
+      if (!confirm(msg)) { openTask(id); return; }
+
+      patch('PATCH', '/tasks/'+id+'/publish', {}, function(p) {
+        if (p.error) { alert(p.error); return; }
+        state.msg = '任务已发布！赫使现在可以看到并报名。'; state.msgType = 'success';
+        loadMyTasks(); loadDashStats();
+        openTask(id);
+      });
+    });
+  });
+}
+
+function publishTask(id) {
+  var t = state.currentTask;
+  if (t && t.mode === 'PERFORMANCE') {
+    doPublishWithCodeCheck(id);
+  } else {
+    if (!confirm('确认发布？发布后赫使即可看到并报名。')) return;
+    patch('PATCH', '/tasks/'+id+'/publish', {}, function(d) {
+      if (d.error) { alert(d.error); return; }
+      state.msg = '任务已发布'; state.msgType = 'success';
+      if (state.currentTask) state.currentTask.status = 'OPEN';
+      loadMyTasks(); loadDashStats(); render();
+    });
+  }
+}
+
+function closeTask(id) {
+  if (!confirm('确认关闭任务？关闭后赫使无法继续报名。')) return;
+  patch('PATCH', '/tasks/'+id+'/complete', {}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    state.msg = '任务已关闭'; state.msgType = 'success';
+    loadMyTasks();
+  });
+}
+
+function reviewApp(id, status, fromAll) {
+  patch('PATCH', '/applications/'+id+'/review', {status:status}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    if (fromAll) {
+      state.allPendingApps = state.allPendingApps.filter(function(a){return a.id!==id});
+      render();
+    } else {
+      openTask(state.currentTask.id);
+      loadMyTasks();
+      loadDashStats();
+    }
+  });
+}
+
+function reviewSub(id, status, fromAll) {
+  patch('PATCH', '/submissions/'+id+'/review', {status:status}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    if (fromAll) {
+      state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==id});
+      render();
+    } else {
+      openTask(state.currentTask.id);
+      loadMyTasks();
+      loadDashStats();
+    }
+  });
+}
+
+function reviewSubReject(id, fromAll) {
+  var reason = prompt('拒绝原因（可选）');
+  if (reason === null) return;
+  patch('PATCH', '/submissions/'+id+'/review', {status:'REJECTED', reviewNote:reason}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    if (fromAll) {
+      state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==id});
+      render();
+    } else {
+      openTask(state.currentTask.id);
+      loadMyTasks();
+      loadDashStats();
+    }
+  });
+}
+
+function doCsvUpload() {
+  var taskId = (document.getElementById('csv-task')||{}).value;
+  var raw = (document.getElementById('csv-data')||{}).value;
+  var resultEl = document.getElementById('csv-result');
+  if (!raw.trim()) { resultEl.innerHTML='<div class="alert alert-error">请粘贴数据或选择CSV文件</div>'; return; }
+
+  var lines = raw.trim().split('\n').map(function(l){return l.trim()}).filter(Boolean);
+  if (lines.length < 2) { resultEl.innerHTML='<div class="alert alert-error">数据至少需要2行（表头+数据）</div>'; return; }
+
+  // 解析第一行表头
+  var headers = lines[0].split(',').map(function(h){return h.trim().toLowerCase()});
+  var codeIdx = headers.indexOf('code');
+  var regIdx = headers.indexOf('注册数');
+  var usedIdx = headers.indexOf('使用数');
+  if (codeIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">表头需要包含 "code" 列</div>'; return; }
+
+  var records = [];
+  for (var i = 1; i < lines.length; i++) {
+    var cols = lines[i].split(',');
+    var code = (cols[codeIdx]||'').trim();
+    if (!code) continue;
+    var regCount = regIdx >= 0 ? parseInt(cols[regIdx]||'0',10) : 0;
+    var usedCount = usedIdx >= 0 ? parseInt(cols[usedIdx]||'0',10) : 0;
+    records.push({ code: code, registered_count: isNaN(regCount)?0:regCount, used_count: isNaN(usedCount)?0:usedCount });
+  }
+
+  if (!records.length) { resultEl.innerHTML='<div class="alert alert-error">没有有效的推广码数据</div>'; return; }
+
+  post('/tasks/' + taskId + '/csv', { records: records }, function(d) {
+    if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>'; return; }
+    resultEl.innerHTML = '<div class="alert alert-success">处理完成：成功 '+d.processed+' 条，跳过 '+d.skipped+' 条，单价 ¥'+d.commissionPerUser+'/人</div>';
+  });
+}
+
+function loadCsvFile(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('csv-data').value = e.target.result;
+  };
+  reader.readAsText(file);
+}
+
+function downloadCsvTemplate() {
+  var csv = 'code,注册数,使用数\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0';
+  var blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'herix_conversion_template.csv';
+  a.click();
+}
+
+function saveSettings() {
+  var body = {
+    companyName: (document.getElementById('company_name')||{}).value,
+    industry: (document.getElementById('industry')||{}).value,
+    website: (document.getElementById('website')||{}).value,
+    contactName: (document.getElementById('contact_name')||{}).value,
+    contactPhone: (document.getElementById('contact_phone')||{}).value,
+    companyDesc: (document.getElementById('company_desc')||{}).value,
+  };
+  patch('PATCH', '/users/profile/brand', body, function(d) {
+    if (d.error) { alert(d.error); return; }
+    state.brandProfile = d;
+    state.msg = '设置已保存'; state.msgType = 'success';
+    render();
+  });
+}
+
+function logout() {
+  state.token = null; state.user = null; state.tasks = [];
+  render();
+}
+
+function toggleSidebar() {
+  var sb = document.getElementById('sidebar');
+  var ov = document.getElementById('overlay');
+  if (sb) sb.classList.toggle('open');
+  if (ov) ov.classList.toggle('show');
+}
+function closeSidebar() {
+  var sb = document.getElementById('sidebar');
+  var ov = document.getElementById('overlay');
+  if (sb) sb.classList.remove('open');
+  if (ov) ov.classList.remove('show');
+}
+
+function bindNav() {}
+function bindPage() {
+  if (state.page === 'task_create' || state.page === 'task_edit') {
+    setTimeout(toggleCodeModeSection, 0);
+  }
+  // 任务列表行点击（事件代理）
+  var table = document.getElementById('tasks-table');
+  if (table) {
+    table.addEventListener('click', function(e) {
+      var tr = e.target.closest('tr[data-task-id]');
+      if (tr) openTask(tr.getAttribute('data-task-id'));
+    });
+  }
+}
+
+// Init
+loadDashStats();
+</script>
+</body>
+</html>

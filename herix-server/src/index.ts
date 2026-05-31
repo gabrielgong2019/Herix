@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import { initDatabase } from './db';
+import { seedIfEmpty } from './seed';
 import { authRouter } from './routes/auth';
 import { tasksRouter } from './routes/tasks';
 import { submissionsRouter } from './routes/submissions';
@@ -14,6 +15,7 @@ import { adminRouter } from './routes/admin';
 import { walletRouter } from './routes/wallet';
 
 initDatabase();
+seedIfEmpty().catch(err => console.error("seed failed:", err));
 
 const app = express();
 const PORT = process.env.PORT || 3005;

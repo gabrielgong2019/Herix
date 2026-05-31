@@ -14,8 +14,10 @@ import { referralsRouter } from './routes/referrals';
 import { adminRouter } from './routes/admin';
 import { walletRouter } from './routes/wallet';
 
-initDatabase();
-seedIfEmpty().catch(err => console.error("seed failed:", err));
+(async () => {
+  await initDatabase();
+  await seedIfEmpty().catch(err => console.error('seed failed:', err));
+})();
 
 const app = express();
 const PORT = process.env.PORT || 3005;

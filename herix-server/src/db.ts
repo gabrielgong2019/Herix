@@ -231,8 +231,3 @@ export async function initDatabase() {
   }
 }
 
-// 启动时自动初始化
-initDatabase().catch(err => {
-  console.error('数据库初始化失败:', err);
-  process.exit(1);
-});

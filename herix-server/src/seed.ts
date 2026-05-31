@@ -45,38 +45,38 @@ export async function seedIfEmpty(): Promise<void> {
     [genId(), uGabriel, 'Gabriel', 1, 'approved', 'approved', 'japan']);
 
   // ── 3. 品牌任务（周大福珠宝 7 个）──
-  const brandTasks: [string, string, number, number, number, string, string][] = [
-    ['新品珠宝推广 #1', '在海外华人社群推广新款珠宝，需要拍摄佩戴照片并分享体验。', 3500, 400, 3, 'STANDARD', 'photo-1605100804763-247f67b3557e'],
-    ['新品珠宝推广 #2', '在海外华人社群推广新款珠宝。', 4000, 500, 3, 'STANDARD', 'photo-1605100804763-247f67b3557e'],
-    ['新品珠宝推广 #3', '在海外华人社群推广新款珠宝。', 4500, 600, 3, 'STANDARD', 'photo-1605100804763-247f67b3557e'],
-    ['Remitly 品牌大使', '分享 Remitly 汇款推荐码，每成功转化一位注册用户获得奖励。', 300000, 3000, 100, 'PERFORMANCE', 'photo-1563013544-824ae1b704d3'],
-    ['熊猫外卖拉新大使', '在中国社群分享熊猫外卖推荐码，新注册用户即算成功。', 200000, 2000, 100, 'PERFORMANCE', 'photo-1504674900247-0877df9cc836'],
-    ['母婴产品体验', '体验并分享母婴产品使用心得，需拍摄使用照片。', 200000, 20000, 3, 'STANDARD', 'photo-1519689680058-324335c77eba'],
-    ['口红新品测评', '试色并分享口红新品，发布到小红书或Instagram。', 200000, 20000, 3, 'STANDARD', 'photo-1586495777744-4413f21062fa'],
+  const brandTasks: [string, string, number, number, number, string, string, string, string, string][] = [
+    ['新品珠宝推广 #1', '在海外华人社群推广新款珠宝，需要拍摄佩戴照片并分享体验。', 3500, 400, 3, 'STANDARD', 'photo-1605100804763-247f67b3557e', 'easy', 'photo', ''],
+    ['新品珠宝推广 #2', '在海外华人社群推广新款珠宝。', 4000, 500, 3, 'STANDARD', 'photo-1605100804763-247f67b3557e', 'easy', 'photo', ''],
+    ['新品珠宝推广 #3', '在海外华人社群推广新款珠宝。', 4500, 600, 3, 'STANDARD', 'photo-1605100804763-247f67b3557e', 'easy', 'photo', ''],
+    ['Remitly 品牌大使', '分享 Remitly 汇款推荐码，每成功转化一位注册用户获得奖励。', 300000, 3000, 100, 'PERFORMANCE', 'photo-1563013544-824ae1b704d3', 'medium', 'referral', 'referral'],
+    ['熊猫外卖拉新大使', '在中国社群分享熊猫外卖推荐码，新注册用户即算成功。', 200000, 2000, 100, 'PERFORMANCE', 'photo-1504674900247-0877df9cc836', 'medium', 'referral', 'referral'],
+    ['母婴产品体验', '体验并分享母婴产品使用心得，需拍摄使用照片。', 200000, 20000, 3, 'STANDARD', 'photo-1519689680058-324335c77eba', 'easy', 'photo', 'baby'],
+    ['口红新品测评', '试色并分享口红新品，发布到小红书或Instagram。', 200000, 20000, 3, 'STANDARD', 'photo-1586495777744-4413f21062fa', 'easy', 'photo', 'beauty'],
   ];
   const bIds: string[] = [];
-  for (const [title, desc, budget, comm, maxH, mode, cover] of brandTasks) {
+  for (const [title, desc, budget, comm, maxH, mode, cover, difficulty, contentType, category] of brandTasks) {
     const tid = genId(); bIds.push(tid);
     await pool.query(
-      "INSERT INTO tasks (id, creator_id, mode, title, description, budget, commission, max_heralds, cover_image, status, published_at, escrow_amount, is_escrowed, code_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'OPEN',TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS'),$10,1,'auto')",
-      [tid, uBrand, mode, title, desc, budget, comm, maxH, img(cover), comm * maxH]
+      "INSERT INTO tasks (id, creator_id, mode, title, description, budget, commission, max_heralds, cover_image, difficulty, content_type, category, status, published_at, escrow_amount, is_escrowed, code_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'OPEN',TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS'),$13,1,'auto')",
+      [tid, uBrand, mode, title, desc, budget, comm, maxH, img(cover), difficulty, contentType, category, comm * maxH]
     );
   }
   // bIds: 0=珠宝#1, 1=珠宝#2, 2=珠宝#3, 3=Remitly, 4=熊猫外卖, 5=母婴, 6=口红
 
   // ── 4. Gabriel 的任务（4 个）──
-  const gabrielTasks: [string, string, number, number, number, string, string][] = [
-    ['体验漂亮的房子', '拍摄并分享高端住宅体验，需入住体验并产出图文内容。', 200000, 20000, 3, 'STANDARD', 'photo-1600585154340-be6161a56a0c'],
-    ['美食探店任务', '前往指定餐厅用餐并拍摄短视频，分享真实用餐体验。', 150000, 15000, 5, 'STANDARD', 'photo-1504674900247-0877df9cc836'],
-    ['Gabriel体验任务', '拍摄并分享你的生活方式，面向海外华人群体。', 100000, 10000, 3, 'STANDARD', 'photo-1600585154340-be6161a56a0c'],
-    ['发小红书任务', '在小红书发布品牌体验笔记，需包含真实使用感受和高质量图片。', 80000, 8000, 5, 'STANDARD', 'photo-1611162617213-7d7a39e9b1d7'],
+  const gabrielTasks: [string, string, number, number, number, string, string, string, string, string][] = [
+    ['体验漂亮的房子', '拍摄并分享高端住宅体验，需入住体验并产出图文内容。', 200000, 20000, 3, 'STANDARD', 'photo-1600585154340-be6161a56a0c', 'hard', 'photo', 'experience'],
+    ['美食探店任务', '前往指定餐厅用餐并拍摄短视频，分享真实用餐体验。', 150000, 15000, 5, 'STANDARD', 'photo-1504674900247-0877df9cc836', 'hard', 'photo', 'food'],
+    ['Gabriel体验任务', '拍摄并分享你的生活方式，面向海外华人群体。', 100000, 10000, 3, 'STANDARD', 'photo-1600585154340-be6161a56a0c', 'easy', 'photo', 'lifestyle'],
+    ['发小红书任务', '在小红书发布品牌体验笔记，需包含真实使用感受和高质量图片。', 80000, 8000, 5, 'STANDARD', 'photo-1611162617213-7d7a39e9b1d7', 'easy', 'photo', 'lifestyle'],
   ];
   const gIds: string[] = [];
-  for (const [title, desc, budget, comm, maxH, mode, cover] of gabrielTasks) {
+  for (const [title, desc, budget, comm, maxH, mode, cover, difficulty, contentType, category] of gabrielTasks) {
     const tid = genId(); gIds.push(tid);
     await pool.query(
-      "INSERT INTO tasks (id, creator_id, mode, title, description, budget, commission, max_heralds, cover_image, status, published_at, escrow_amount, is_escrowed, code_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'OPEN',TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS'),$10,1,'auto')",
-      [tid, uGabriel, mode, title, desc, budget, comm, maxH, img(cover), comm * maxH]
+      "INSERT INTO tasks (id, creator_id, mode, title, description, budget, commission, max_heralds, cover_image, difficulty, content_type, category, status, published_at, escrow_amount, is_escrowed, code_mode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'OPEN',TO_CHAR(CURRENT_TIMESTAMP,'YYYY-MM-DD HH24:MI:SS'),$13,1,'auto')",
+      [tid, uGabriel, mode, title, desc, budget, comm, maxH, img(cover), difficulty, contentType, category, comm * maxH]
     );
   }
   // gIds: 0=漂亮房子, 1=美食探店, 2=Gabriel体验, 3=发小红书

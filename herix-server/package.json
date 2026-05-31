@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "tsx --env-file=.env src/index.ts",
     "render-start": "npx tsx src/index.ts",
-    "render-build": "npm install"
+    "render-build": "npm install",
+    "seed": "psql -d \"$DATABASE_URL\" -f seed.sql"
   },
   "dependencies": {
     "@types/nodemailer": "^8.0.0",

@@ -1,5 +1,5 @@
 # Herix 赫使 — 大使任务系统 PRD
-**版本：** v1.1 · 2026-05-30  
+**版本：** v1.2 · 2026-05-31  
 **状态：** Draft  
 **用途：** AI工程师开发参考文档
 
@@ -13,6 +13,8 @@
 5. [类型A：大使进度看板](#5-类型a大使进度看板)
 6. [类型B：体验分享任务流程](#6-类型b体验分享任务流程)
 7. [类型B：内容规范结构](#7-类型b内容规范结构)
+16. [2026-05-31 变更记录](#16-2026-05-31-变更记录)
+
 8. [类型B：审核流程](#8-类型b审核流程)
 9. [大使居住地与税务逻辑](#9-大使居住地与税务逻辑)
 10. [身份核验与银行账户收集](#10-身份核验与银行账户收集)
@@ -751,4 +753,115 @@ GET /:id/codes   → 推广码池（requireAuth + BRAND）
 
 ---
 
-*文档结束 · Herix Ambassador PRD v1.1 + 实现记录 2026-05-30*
+*文档结束 · Herix Ambassador PRD v1.2 + 实现记录 2026-05-31*
+
+
+---
+
+## 16. 2026-05-31 变更记录
+
+### 16.1 数据库迁移：SQLite → PostgreSQL
+
+项目从 SQLite（`better-sqlite3`）完全迁移到 PostgreSQL（`pg`）。
+
+**改动范围：**
+- `src/db.ts` — 删除模块级 `initDatabase()` 自动调用，避免与 `index.ts` 中的调用冲突导致 Render 部署时报 `duplicate key violates unique constraint "pg_class_relname_nsp_index"`
+- 所有 SQL 通过 `src/utils/db.ts` 中的 `toPgSql()` 将 `?` 占位符自动转换为 `$N` 格式
+- `initDatabase()` 仅在 `index.ts` 中通过 `await` 调用一次
+
+**本地环境：**
+- PostgreSQL 16 via Homebrew，数据库 `herix`
+- 配置文件 `.env` 改为 `DATABASE_URL=postgres://localhost:5432/herix`
+- 本地 launchd 服务（`com.herix.server`）管理进程，崩溃自动重启
+
+### 16.2 PostgreSQL 兼容性修复
+
+**COUNT(*) 类型问题：**
+- PostgreSQL 中 `COUNT(*)` 返回 `bigint`，`pg` 驱动返回字符串
+- 在 JavaScript 的 `reduce()` 中字符串相加导致 `merchant.html` 品牌统计面板显示 "02111001" 等乱码
+- 修复：所有 `COUNT(*)` 改为 `COUNT(*)::int`，强制返回整数
+
+**date() 函数问题：**
+- `src/routes/wallet.ts` 中的 `date('now', 'start of month')` 是 SQLite 专有函数
+- 修复：改为 `TO_CHAR(DATE_TRUNC('month', CURRENT_TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')`
+
+### 16.3 自动种子数据
+
+**启动时自动检测：**
+- `src/seed.ts` — `seedIfEmpty()` 函数检测 `users` 表是否为空
+- 空库时自动创建 4 个用户、11 个任务、7 条申请记录、2 条推广码、4 条资金记录
+- Render 首次部署时完全自动化，无需手动操作
+
+**手动重灌脚本：**
+- `seed-db.ts` — 独立种子脚本，先清空所有表再重新填充
+- Render Shell 执行：`cd herix-server && npx tsx seed-db.ts`
+- 不需要删除 PostgreSQL 实例
+
+### 16.4 成果报酬任务流程修正
+
+**问题：** `preview.html` 中对 PERFORMANCE 任务（成果报酬）显示了 "领取推广码" 按钮，允许赫使直接跳过报名和审核流程领取推广码。
+
+**修正为统一流程：**
+- 所有任务类型（STANDARD / PERFORMANCE）都显示 "立即报名" 按钮
+- 商家审核通过后，PERFORMANCE 任务由系统从码池自动分配推广码
+- Alice 的 "已完成" vs "已通过" 状态区分：APPROVED + 已有通过提交 = 显示 "已完成"
+
+### 16.5 种子数据补全
+
+**新增字段：**
+- 所有 11 个任务补全 `cover_image`（Unsplash 图片链接）
+- 所有任务补全 `category`（beauty / baby / food / experience / lifestyle / referral）
+- 所有任务补全 `content_type`（photo / referral）
+- 所有任务补全 `difficulty`（easy / medium / hard）
+
+**新增测试数据：**
+- Gabriel（HERALD+BRAND）发布 4 个品牌任务
+- Alice 新增 APPROVED 申请：Remitly 品牌大使 + 母婴产品体验
+- Alice 新增 PENDING 申请：熊猫外卖拉新大使
+- Gabriel 新增使用：口红新品测评 APPROVED、Remitly APPROVED（含推广码）
+- 双方均有 Remitly 推广码（`ambassador_tasks`）
+
+### 16.6 前端修复
+
+**preview.html：**
+- 删除 "领取推广码" 按钮（第 348 行），统一为 "立即报名"
+- "已完成" 筛选逻辑修正：仅包含 APPROVED + 已有提交记录的任务
+- 报名历史中 "已通过" 与 "已完成" 状态根据提交记录自动区分
+
+**merchant.html：**
+- 品牌统计面板数字显示正常（`COUNT(*)::int` 修复后）
+
+**小程序 H5 构建：**
+- `config/index.js` 中 `publicPath` 和 API 代理端口更新为 3005
+- `src/utils/api.ts` 中 `BASE_URL` 改为相对路径 `/api`（适配 Render 部署）
+- 首页从占位符重写为带"我的待办"标签页的任务列表
+
+### 16.7 Render 部署配置
+
+**render.yaml 更新：**
+```yaml
+buildCommand: cd herix-server && npm install && npx tsc && cd ../herix-miniapp && npm install && npx taro build --type h5
+startCommand: cd herix-server && node dist/index.js
+```
+
+**部署后自动种子：**
+- `index.ts` 中 `await initDatabase()` 然后 `await seedIfEmpty()`
+- 首次部署时数据库为空，自动灌入完整测试数据
+
+### 16.8 测试账号（更新）
+
+| 账号 | 密码 | 角色 | 数据内容 |
+|------|------|------|----------|
+| `admin@herix.com` | 123456 | 管理员 | 访问管理后台 |
+| `brand@d.com` | 123456 | 品牌商家 | 周大福珠宝，7个任务（含2个 PERFOMANCE） |
+| `alice@d.com` | 123456 | 赫使 | 已报名4个任务（2个APPROVED，1个已完成，1个PENDING） |
+| `gabrielgong2019@outlook.com` | 123456 | 赫使+品牌 | 双角色，3个赫使申请 + 4个品牌任务 |
+
+**测试地址：**
+| 端 | URL |
+|------|-----|
+| 赫使用户端 | `https://herix.onrender.com/preview.html` |
+| 品牌商家端 | `https://herix.onrender.com/merchant.html` |
+| 管理后台 | `https://herix.onrender.com/admin.html` |
+| 小程序 H5 | `https://herix.onrender.com/` |
+

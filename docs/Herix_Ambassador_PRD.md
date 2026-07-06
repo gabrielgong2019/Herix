@@ -1,5 +1,5 @@
 # Herix 赫使 — 大使任务系统 PRD
-**版本：** v1.2 · 2026-05-31  
+**版本：** v1.3 · 2026-06-09  
 **状态：** Draft  
 **用途：** AI工程师开发参考文档
 
@@ -22,7 +22,13 @@
 12. [数据模型](#12-数据模型)
 13. [状态机](#13-状态机)
 14. [开发优先级清单](#14-开发优先级清单)
-15. [系统实现记录（2026-05-30）](#15-系统实现记录2026-05-30)
+15. [社交平台体系与国际化架构](#15-社交平台体系与国际化架构)
+16. [系统实现记录（2026-05-30）](#16-系统实现记录2026-05-30)
+17. [赫使成长体系（2026-06-09）](#17-赫使成长体系2026-06-09-新增)
+18. [定价矩阵（2026-06-09）](#18-定价矩阵2026-06-09-新增)
+19. [产品路线图（2026-06-09）](#19-产品路线图2026-06-09-新增)
+22. [品牌定价方案与结算分层（2026-06-17）](#22-品牌结算分层与素材体系2026-06-14-新增)
+23. [赫府生态（2026-06-18）](#23-赫府生态agency-ecosystem2026-06-18-新增)
 
 ---
 
@@ -574,7 +580,147 @@ pending ──→ paid        打款完成
 
 ---
 
-## 15. 系统实现记录（2026-05-30）
+## 15. 社交平台体系与国际化架构
+
+### 15.0 设计原则
+
+不对任何单一平台（如微信）做硬编码特殊处理。所有平台通过**注册表配置**驱动行为，UI 和验证逻辑根据平台属性自动适配。扩展新平台只需在注册表增加一条记录。
+
+---
+
+### 15.0.1 平台注册表
+
+```typescript
+Platform {
+  id:                 string      // "wechat" | "instagram" | "line" | "zalo" | "whatsapp" | ...
+  name:               string      // 显示名称
+  type:               "messaging" | "social" | "video" | "short_video"
+  verification:       "url" | "screenshot" | "oauth"
+  // url        → 输入主页链接，可抓取粉丝数
+  // screenshot → 上传截图（微信/Zalo/WhatsApp 等封闭平台）
+  // oauth      → 授权接入（Instagram/TikTok 未来支持）
+  has_public_profile: boolean     // 是否有可公开查询的主页
+  diaspora_groups:    string[]    // 推荐展示给哪些族裔群体
+}
+```
+
+**初期注册表（可持续扩展）：**
+
+| id | name | type | verification | 备注 |
+|----|------|------|-------------|------|
+| `wechat` | 微信 | messaging | screenshot | 封闭生态，截图验证 |
+| `instagram` | Instagram | social | url | 公开主页，未来可 OAuth |
+| `xiaohongshu` | 小红书 | social | url | |
+| `tiktok` | TikTok | short_video | url | 未来可 OAuth |
+| `line` | LINE | messaging | screenshot | 日本/东南亚常用 |
+| `zalo` | Zalo | messaging | screenshot | 越南裔常用 |
+| `whatsapp` | WhatsApp | messaging | screenshot | 印度裔/东南亚常用 |
+| `facebook` | Facebook | social | url | |
+| `youtube` | YouTube | video | url | |
+| `twitter` | Twitter/X | social | url | |
+
+---
+
+### 15.0.2 族裔群体配置
+
+```typescript
+DiasporaGroup {
+  id:            string      // "chinese" | "vietnamese" | "indian" | "korean" | ...
+  label:         string      // 显示名称
+  language:      string      // 默认语言（UI 国际化预留）
+  currency:      string      // 主要结算货币
+  tax_regime:    string      // 税务规则分支
+  platforms:     string[]    // 推荐平台列表（按优先级排序）
+}
+```
+
+**族裔 × 平台推荐矩阵：**
+
+| 族裔 | 推荐平台（按优先级） |
+|------|------------------|
+| 华人 | wechat → xiaohongshu → instagram → tiktok |
+| 越南裔 | zalo → facebook → tiktok |
+| 印度裔 | whatsapp → instagram → youtube → facebook |
+| 日韩 | line → instagram → twitter |
+
+赫使选择 `diaspora_group` 后，平台填写界面优先展示推荐平台，但不限制选择其他平台。
+
+---
+
+### 15.0.3 赫使社交账号数据结构
+
+存储于 `herald_profiles.social_platforms`（JSON 数组）：
+
+```typescript
+HeraldSocialAccount {
+  platform:       string      // Platform.id
+  handle:         string | null   // 用户名 / ID
+  url:            string | null   // 主页链接（url 验证方式）
+  followers:      number | null   // 粉丝数（自填或抓取）
+  screenshot_url: string | null   // 截图路径（screenshot 验证方式）
+  verified:       boolean         // 运营人工标记是否已核验
+  added_at:       timestamp
+}
+```
+
+---
+
+### 15.0.4 任务平台要求配置
+
+存储于 `tasks.platform_requirements`（JSON 数组）：
+
+```typescript
+TaskPlatformRequirement {
+  platform:      string      // Platform.id
+  required:      boolean     // true = 硬性门槛，false = 加分项
+  min_followers: number | null
+}
+```
+
+**任务发布时**，商家在「平台要求」区块添加平台并标注必须/可选：
+
+```
+平台要求：
+● 微信（必须）— 最低粉丝：不限
+○ Instagram（可选）— 最低粉丝：1000
+○ 小红书（可选）— 最低粉丝：不限
+```
+
+---
+
+### 15.0.5 报名时的验证逻辑
+
+```
+赫使点击「报名」
+  → 检查 required 平台
+    ├── 档案里已有 → 直接带入，一键报名
+    └── 档案里没有 → 提示补填 → 填完自动存档 → 再报名
+
+  → 可选平台
+    → 展示「补充以下平台可提升被选中概率」
+
+  → 粉丝数门槛
+    → 低于 min_followers → 提示不满足要求（软警告，不硬性拦截，1.0）
+```
+
+**1.0 阶段**：粉丝数自填不验证，运营人工核查。平台账号填一次后存入档案，后续报名同类任务自动复用。
+
+---
+
+### 15.0.6 收集时机
+
+| 信息 | 入驻时 | 报名时 |
+|------|--------|--------|
+| 微信 ID | 必填 | — |
+| 主要平台账号（1个） | 选填 | — |
+| 任务要求的平台账号 | — | 按需补填，自动存档 |
+| 截图（messaging 类平台） | — | 按需提交 |
+
+**渐进式档案**：赫使档案随报名任务逐步完善，不在入驻阶段前置收集所有信息。
+
+---
+
+## 16. 系统实现记录（2026-05-30）
 
 > 本节记录实际开发过程中的架构决策与实现细节，供后续开发参考。
 
@@ -656,9 +802,12 @@ pending ──→ paid        打款完成
 2. 在日本：在留资格声明 + 同意书面确认；海外：打款方式选择
 3. 完成
 
-**品牌商家入驻（2步向导）：**
-1. 品牌信息（公司名、行业、官网）
-2. 联系方式（联系人、电话、简介）
+**品牌商家入驻（3步向导）：**
+1. **方案选择**：展示 Launch / Scale / Alliance 三档定价对比（见 22.1）
+   - 选择 **Launch** → 继续自助向导（步骤2→3）
+   - 选择 **Scale / Alliance** → 显示销售联系引导页（留下联系方式，由销售团队跟进线下签约）；向导终止，账号进入「待激活」状态，由运营后台人工开通
+2. 品牌信息（公司名、行业、官网）
+3. 联系方式（联系人、电话、简介）
 
 入驻状态存储：
 - `herald_profiles.is_onboarded` / `brand_profiles.is_onboarded`
@@ -864,4 +1013,694 @@ startCommand: cd herix-server && node dist/index.js
 | 品牌商家端 | `https://herix.onrender.com/merchant.html` |
 | 管理后台 | `https://herix.onrender.com/admin.html` |
 | 小程序 H5 | `https://herix.onrender.com/` |
+
+---
+
+## 17. 赫使成长体系（2026-06-09 新增）
+
+### 17.1 战略方向
+
+**以赫使为中心，赫使成长是平台的北极星指标。**
+
+平台定位从"任务撮合平台"升级为"海外华人创作者成长基础设施"。赫使在平台上成长，平台就有了真正的护城河。
+
+```
+赫使加入
+  ↓ 完成任务 → 积累评级
+  ↓ 成长工具 → 提升粉丝
+  ↓ 升级段位 → 接更高价任务
+  ↓ 更多收入 → 付费使用工具
+  ↓ 深度依赖 → 不会离开
+```
+
+---
+
+### 17.2 段位体系（Tier）
+
+**定义**：基于粉丝数量，衡量赫使的影响力规模。按平台分别计算，不合并统计（合并仅用于档案展示参考）。
+
+| 段位 | 粉丝数 | 说明 |
+|------|-------|------|
+| **Nano** | < 1,000 | 入门级，垂直社群影响力 |
+| **Micro** | 1,000 - 10,000 | 主流段位，性价比最高 |
+| **Mid** | 10,000 - 100,000 | 有一定影响力 |
+| **Macro** | 100,000+ | 头部，议价空间大 |
+
+**规则：**
+- 段位按赫使填写的各平台粉丝数自动计算
+- 同一赫使在不同平台可能属于不同段位
+- 报名任务时，系统自动校验该平台的段位是否符合任务要求
+- 粉丝数更新后段位实时变化
+
+---
+
+### 17.3 评级体系（Rating）
+
+**定义**：基于任务执行质量，衡量赫使的可靠性和专业度。全平台统一一个评级，与粉丝数无关。
+
+| 评级 | 标签 | 解锁条件 |
+|------|------|---------|
+| 未评级 | — | 完成任务 < 3 单 |
+| ⭐ Bronze | 新手 | 完成 3 单，好评率 ≥ 60% |
+| ⭐⭐ Silver | 稳定 | 完成 10 单，好评率 ≥ 75% |
+| ⭐⭐⭐ Gold | 优质 | 完成 25 单，好评率 ≥ 85% |
+| ⭐⭐⭐⭐ Platinum | 顶级 | 完成 50 单，好评率 ≥ 95% |
+
+**评分来源：**
+- 品牌方对每次任务评 1-5 星（审核通过后触发）
+- 好评率 = 4星及以上 / 总评价数
+- 超时未提交、被拒次数过多会拉低好评率
+
+---
+
+### 17.4 档案展示
+
+**报名时品牌可查看完整档案：**
+
+```
+赫使档案
+┌──────────────────────────────────┐
+│ 昵称 · 居住地 · 族裔背景          │
+│                                   │
+│ 评级：⭐⭐⭐ Gold  完成 28 单       │
+│ 好评率：91%                       │
+│                                   │
+│ 社交账号                           │
+│  📕 小红书  Micro  · 6,800 粉     │
+│  🎵 TikTok  Nano   · 450 粉      │
+│  🌐 全网参考：约 7,250 粉          │
+│                                   │
+│ 代表作品（最近3条，系统自动沉淀）   │
+│  · [小红书] Remitly 推广笔记 ✓    │
+│  · [小红书] 珠宝体验测评 ✓        │
+│  · [TikTok] 美食探店视频 ✓        │
+└──────────────────────────────────┘
+```
+
+---
+
+### 17.5 作品集自动沉淀
+
+任务内容审核通过后 → **自动添加到赫使档案的代表作品**，无需赫使手动维护。
+
+- 最多保留最近 10 条
+- 显示：平台、任务标题、完成时间
+- 品牌方报名审核时可点击查看原链接
+- 赫使可手动设置是否公开某条作品
+
+---
+
+### 17.6 成长路径可视化
+
+在赫使 Dashboard 显示当前段位和下一级别的距离：
+
+```
+你目前：Micro 段位（小红书 6,800 粉）
+距离 Mid：还差 3,200 粉
+
+任务评级：⭐⭐⭐ Gold（28 单完成）
+距离 Platinum：还差 22 单，好评率需保持 95%+
+```
+
+---
+
+### 17.7 品牌复购机制
+
+品牌方对某位赫使满意后，可直接发出"再次合作邀请"：
+
+- 入口：任务审核通过页面 / 赫使档案页
+- 流程：品牌选定任务 → 直接发邀约 → 赫使接受 → 跳过公开报名
+- 对赫使：高评级赫使可获得稳定的直接邀约收入
+- 对品牌：省去重新筛选的时间成本
+
+---
+
+## 18. 定价矩阵（2026-06-09 新增）
+
+### 18.1 定价维度
+
+任务报酬由**两个维度**决定：
+1. **平台**：不同平台内容制作成本和受众价值不同
+2. **段位**：赫使粉丝规模决定基础报价范围
+
+### 18.2 参考定价表（人民币/篇，含平台服务费）
+
+| | Nano <1K | Micro 1K-1万 | Mid 1万-10万 | Macro 10万+ |
+|--|---------|------------|------------|-----------|
+| **YouTube / B站** | ¥200-400 | ¥400-1,000 | ¥1,000-5,000 | 议价 |
+| **小红书** | ¥80-150 | ¥150-500 | ¥500-2,000 | 议价 |
+| **Instagram** | ¥100-200 | ¥200-600 | ¥600-2,500 | 议价 |
+| **TikTok** | ¥80-150 | ¥150-400 | ¥400-1,500 | 议价 |
+| **微信** | ¥50-100 | ¥100-300 | ¥300-800 | 议价 |
+
+### 18.3 产品实现
+
+- 商家创建任务时选择目标平台 → 系统显示该平台的建议报酬范围
+- 商家在范围内设定具体金额（可高于建议值，不可低于最低值）
+- 赫使报名时系统校验：平台段位是否达标
+
+### 18.4 平台服务费模型（透明抽佣）
+
+```
+品牌支付总额 = 赫使报酬 + 平台服务费（约 15-20%）
+赫使看到：自己的报酬（透明）
+品牌看到：含服务费的总价（透明）
+```
+
+平台不赚信息差，靠效率和规模赚服务费，是与 PR 公司的核心竞争差异。
+
+---
+
+## 19. 产品路线图（2026-06-09 新增）
+
+### 一期（当前 → MVP 完整）
+
+| 功能 | 说明 | 优先级 |
+|------|------|-------|
+| 评级 + 段位体系 | 按本文档 17.2/17.3 实现 | P0 |
+| 报名档案展示 | 品牌审核时可查看赫使完整档案 | P0 |
+| 作品集自动沉淀 | 审核通过自动入档 | P0 |
+| 资金链（充值+托管+打款）| 商家充值、发布锁定、审核通过记账、赫使提现 | P0 |
+| 成长路径可视化 | Dashboard 显示段位进度 | P1 |
+| 品牌复购机制 | 直接邀约已合作赫使 | P1 |
+| 定价矩阵引导 | 创建任务时显示建议报酬范围 | P1 |
+| KYC / 在留资格审核 | 运营后台完整审核流程 | P1 |
+
+### 二期（工具化）
+
+| 功能 | 说明 |
+|------|------|
+| AI 内容辅助 | 输入任务简报 → 生成各平台适配文案（接 Claude API）|
+| 培训内容库 | 小红书种草文、TikTok 脚本、IG 图文制作教程 |
+| 税务计算器 | 日本副业收入申报指引 |
+| 品牌评价库 | 哪些品牌好合作（付费用户可见）|
+
+### 三期（创作者成长平台）
+
+| 功能 | 说明 |
+|------|------|
+| 赫使付费订阅 | Pro 版解锁全部工具（¥99-299/月）|
+| 个人媒体资料包 | 一键生成专业赫使简介（发给品牌用）|
+| 品牌主动发现模式 | 品牌浏览赫使库，按社群/平台/段位筛选，主动发邀约 |
+| 汇款服务（MSO 牌照后）| 赫使跨境收款一站式解决 |
+
+---
+
+## 20. 数据库架构（2026-06-11）
+
+### 20.1 设计原则
+
+遵循以下 7 条原则（db-design-review 标准）：
+
+| 原则 | 要求 |
+|------|------|
+| 业务发生源写入 | 每个业务事件立即写 DB，禁止延迟写入 |
+| 软删除 | 业务记录不物理删除，用 status/closed_at 标记 |
+| 唯一 Key 关联 | 跨表关联只用 PK/FK，禁止字符串匹配 |
+| 适当冗余 | 历史记录允许冗余字段，避免 join 失去历史语义 |
+| 避免结构重复 | 80%+ 字段相同的表合并，加 status 区分 |
+| 全链路可追踪 | 每笔资金的完整生命周期可从 DB 重建 |
+| 历史独立查询 | 历史记录表不依赖 join 可独立返回完整信息 |
+
+---
+
+### 20.2 表结构总览（16张表）
+
+| 表名 | 用途 | 关键字段 |
+|------|------|---------|
+| `users` | 用户主表，多角色 | roles TEXT（JSON 数组）|
+| `brand_profiles` | 品牌档案 | user_id FK |
+| `herald_profiles` | 赫使档案 | tier_snapshot, social_platforms_updated_at |
+| `tasks` | 任务主表 | status, escrow_amount, is_escrowed |
+| `task_applications` | 报名记录 | status: PENDING/APPROVED/REJECTED/WITHDRAWN |
+| `task_submissions` | 提交内容 | status, commission_amount（金额快照）|
+| `task_ratings` | 品牌评分 | score 1-5 |
+| `task_promo_codes` | 推广码池 | task_id, herald_id |
+| `ambassador_tasks` | 推广码任务参与记录 | unique_code |
+| `referrals` | 推荐转化记录 | qualified |
+| `transactions` | 资金流水总账 | type, status, reference_type, reference_id |
+| `topup_requests` | 品牌充值申请 | brand_id, status: pending/confirmed/rejected |
+| `withdrawal_requests` | 赫使提现申请 | herald_id, status: pending/processing/paid/failed |
+| `withdrawal_methods` | 赫使收款方式 | type: BANK/ALIPAY/WECHAT/WISE |
+| `payouts` | 推广码绩效结算 | period, qualified_count |
+| `declarations` | 在留资格声明（日本）| visa_type, status |
+
+---
+
+### 20.3 资金全链路事件追踪
+
+所有资金事件均写入 `transactions` 表，完整生命周期可重建：
+
+```
+① 品牌充值申请（topup_requests: pending）
+    ↓ 管理员确认
+② 充值到账（transactions: ESCROW_DEPOSIT COMPLETED）
+    ↓ 品牌发布任务
+③ 资金锁定（transactions: ESCROW_DEPOSIT PENDING，reference_type='task_publish'）
+    ↓ 赫使提交 → 品牌审核通过
+④ 报酬发放（transactions: ESCROW_RELEASE COMPLETED）
+⑤ 平台服务费（transactions: PLATFORM_FEE COMPLETED）
+    ↓ 任务关闭
+⑥ 未使用退款（transactions: ESCROW_REFUND COMPLETED，reference_type='task_complete'）
+    ↓ 赫使申请提现
+⑦ 提现预占（transactions: WITHDRAWAL PENDING）
+    ↓ 管理员确认打款
+⑧ 提现完成（transactions: WITHDRAWAL COMPLETED）
+```
+
+---
+
+### 20.4 transactions 类型定义
+
+| type | 含义 | user_id | from_user_id |
+|------|------|---------|-------------|
+| ESCROW_DEPOSIT | 充值到账 / 发布锁定 | 品牌 | NULL |
+| ESCROW_RELEASE | 报酬发放给赫使 | 赫使 | 品牌 |
+| ESCROW_REFUND | 任务结束退还锁定余额 | 品牌 | NULL |
+| PLATFORM_FEE | 平台服务费（15%）| 品牌 | 品牌 |
+| WITHDRAWAL | 赫使提现 | 赫使 | NULL |
+
+---
+
+### 20.5 已知设计权衡
+
+| 问题 | 决策 | 原因 |
+|------|------|------|
+| `payouts` 与 `transactions` 功能重叠 | 保留两表 | payouts 服务推广码绩效结算（按期），transactions 服务内容任务结算（按单），语义不同 |
+| 无统一 `deleted_at` 软删除 | 用 status 字段代替 | 业务实体（任务/赫使）通过状态流转管理，无需物理删除 |
+| `herald_profiles.tier_snapshot` 非实时 | 更新档案时重算 | 段位以社交账号数据为准，实时计算成本低 |
+
+---
+
+### 20.6 关键索引清单
+
+```sql
+-- 核心查询索引
+idx_transactions_user        (user_id)         -- 赫使余额计算
+idx_transactions_from_user   (from_user_id)    -- 品牌余额计算
+idx_transactions_type        (type)            -- 按类型筛选流水
+idx_task_ratings_herald      (herald_id)       -- 评级聚合查询
+idx_topup_requests_brand     (brand_id)        -- 品牌充值记录
+idx_topup_requests_status    (status)          -- 管理员待确认列表
+idx_withdrawal_requests_herald (herald_id)     -- 赫使提现记录
+idx_withdrawal_requests_status (status)        -- 管理员待打款列表
+idx_submissions_status       (status)          -- 待审核提交列表
+idx_declarations_user        (user_id)         -- 声明查询
+idx_wallet_entries_wallet    (wallet_id)       -- 钱包流水查询
+idx_wallet_entries_type      (type)            -- 按类型筛流水
+idx_wallet_entries_ref       (reference_type, reference_id) -- 关联查询
+idx_wallets_user             (user_id, wallet_type)         -- 余额查询
+idx_task_txn_task            (task_id)         -- 任务业务事件
+idx_task_txn_from            (from_user_id)    -- 品牌侧业务查询
+idx_task_txn_to              (to_user_id)      -- 赫使侧业务查询
+```
+
+---
+
+## 21. 钱包架构（2026-06-12）
+
+### 21.1 核心设计决策
+
+钱包与业务事件**完全分离**，参考支付宝/微信支付/PayPal 设计经验：
+
+| 原则 | 实现 |
+|------|------|
+| **幂等性**（PayPal 教训）| `idempotency_key UNIQUE`，重复调用返回相同结果，防止重复扣款 |
+| **原子性**（支付宝做法）| `BEGIN/COMMIT`，余额更新与流水写入在同一 DB transaction |
+| **不可变**（账本原则）| `wallet_entries` 只追加，永不修改，撤销用对冲记录 |
+| **余额快照**（微信做法）| 每条流水存 `available_after / frozen_after`，O(1) 查询无需重算历史 |
+| **显式货币**（早期微信坑）| 所有操作必须传 `currency`，默认 JPY，为多币种预留 |
+| **冻结/可用分离**（支付宝做法）| `available_balance + frozen_balance`，任务锁定走冻结，不影响可用 |
+
+### 21.2 双账本架构
+
+```
+task_transactions（任务业务事件）   wallet_entries（钱包流水）
+───────────────────────────────     ──────────────────────────
+记录"发生了什么业务"                记录"每个账户的资金变动"
+必须有 task_id                      user_id + wallet_type 区分
+
+TASK_LOCK    任务发布锁定            TOPUP              品牌充值入账
+TASK_RELEASE 报酬发放               TASK_FREEZE        发布：可用→冻结
+PLATFORM_FEE 平台服务费             TASK_UNFREEZE      退款：冻结→可用
+TASK_REFUND  任务退款               TASK_SETTLE        结算：冻结清零
+                                    TASK_CREDIT        赫使收入
+                                    PLATFORM_FEE       平台服务费
+                                    WITHDRAWAL_FREEZE  提现：可用→冻结
+                                    WITHDRAWAL_DEBIT   提现完成：冻结清零
+                                    WITHDRAWAL_UNFREEZE 提现取消：冻结→可用
+                                    ADJUSTMENT         人工调整
+```
+
+### 21.3 一笔任务完成的完整分录
+
+品牌任务 ¥10,000，赫使实得 ¥8,500，平台费 ¥1,500（15%）：
+
+```
+task_transactions:
+  TASK_RELEASE | task_id=T1 | task_amount=10,000 | amount=8,500 | platform_fee=1,500
+
+wallet_entries（三笔，幂等 key 各不同）：
+  brand   | TASK_SETTLE  | amount=+10,000→frozen-10,000 | idempotency=SETTLE:{txn_id}
+  herald  | TASK_CREDIT  | amount=+8,500                | idempotency=CREDIT:{txn_id}
+  platform| PLATFORM_FEE | amount=+1,500                | idempotency=FEE:{txn_id}
+
+借贷验证：10,000 = 8,500 + 1,500 ✓
+```
+
+### 21.4 钱包类型扩展性
+
+```
+wallet_type 当前值：'brand' | 'herald' | 'platform'
+
+将来无需改表结构即可扩展：
+  'partner'   合作伙伴账户
+  'bonus'     赫使奖励积分账户
+  'referral'  推荐奖励账户
+```
+
+### 21.5 推广码任务统一资金链（2026-06-12）
+
+PERFORMANCE（推广码）任务与 STANDARD（内容）任务现在走完全相同的账本逻辑：
+
+```
+每次 CSV 上传，新增转化 delta 笔：
+  → 写 task_transactions(TASK_RELEASE)
+  → settleTask()    品牌冻结 -= delta × commission
+  → creditHerald()  赫使可用 += delta × payout
+  → creditPlatformFee() 平台 += delta × fee
+
+paid_conversions 字段防止重复计费（每次上传只付增量）
+```
+
+`payouts` 表已完全废弃并删除。
+
+### 21.6 充值 UI（4步向导，2026-06-12）
+
+merchant.html 充值页重构为类支付宝/微信的 4 步流程：
+
+```
+Step 1 选择金额 → 快选按钮（¥1K/3K/5K/10K/30K/50K）+ 自定义
+Step 2 支付方式 → 銀行振込（可用）/ 微信支付（预留）
+Step 3 付款详情 → 收款账户 + 参考编号（高亮可复制）+ 信任标志
+Step 4 完成确认 → 参考编号卡片 + 预计到账时间
+```
+
+参考编号格式：`HERIX-YYYYMMDD-XXXX`，用于对账识别。
+
+---
+
+## 22. 品牌结算分层与素材体系（2026-06-14 新增）
+
+### 22.1 定价方案（Pricing Plans）
+
+品牌方在入驻时选择以下三档方案，方案决定抽成比例与结算模式：
+
+| | **Launch** | **Scale** | **Alliance** |
+|---|---|---|---|
+| **定位** | 按次快速启动，适合试用期或低频投放 | 规模化持续运营，适合高频投放品牌 | 深度战略合作，定制服务 |
+| **平台抽成** | 任务预算的 **25%** | 任务预算的 **8%** | 合同约定 |
+| **月额固定費** | 无 | **¥300,000 / 月** | 合同约定 |
+| **入驻路径** | 自助 onboarding 向导 | 销售线下签约，运营后台人工开通 | 销售线下签约，运营后台人工开通 |
+| **充值方式** | 银行转账预充值钱包 | 授信额度，月末批量结算（NET30） | 授信额度，月末批量结算（NET30） |
+| **钱包余额** | 必须 ≥ 0 | 在授信额度内可为负 | 在授信额度内可为负 |
+| **财务单据** | 請求書（充值申请）+ 領収書（到账确认） | 月结請求書（消費汇总） | 月结請求書（消費汇总） |
+| **品牌素材** | 选填 | 签约时由销售收集（见 22.4） | 签约时由销售收集（见 22.4） |
+
+> **方案切换参考**：月任务预算超过约 ¥176万（= ¥300,000 ÷ 17%）时，Scale 的经济性显著优于 Launch，是自然的升级触发点。
+>
+> **信用卡**：日本信用卡收单费率约3-4%，相对平台服务费比例过高，暂不实现。Launch 档统一走银行转账预充值。
+
+---
+
+### 22.2 Launch 档：充值单据自动化
+
+充值流程对应日本企业会计的"前受金"处理：
+
+```
+品牌提交充值申请（topup_requests: pending）
+  → 系统自动生成請求書 PDF（チャージ依頼，载明金额+收款账户+参考编号）
+  → 品牌完成银行转账
+  → 管理员确认到账（topup_requests: confirmed）
+  → 系统自动生成領収書 PDF（证明该笔前受金已到账）
+  → wallet_entries: TOPUP 入账
+```
+
+**当前阶段说明**：Herix 为免税事业者，本流程产出的請求書/領収書无需载入インボイス制度要求的「登録番号」。待营收规模触发课税事业者登记后，需在「任务消费产生平台服务费」的环节（而非充值环节）补充適格請求書，对应真实的役务提供时点。
+
+---
+
+### 22.3 Scale / Alliance 档：信用额度 + 月结
+
+```
+销售线下签约 → 运营后台「人工创建品牌账号」
+  → 设置 credit_limit（授信额度）
+  → wallets.available_balance 允许在 [-credit_limit, +∞) 区间
+
+任务消费 → 正常走 TASK_FREEZE / TASK_SETTLE，余额可为负
+月末批处理 → 汇总当月消费 → 生成月结請求書（按 NET30 等条款）
+管理员确认收款 → 生成領収書，余额恢复至 0/授信额度内
+```
+
+---
+
+### 22.4 品牌素材：LOGO + 宣传图
+
+签约/入驻时收集，用于任务列表/详情页展示品牌视觉：
+
+| 素材 | 规格建议 | 用途 |
+|------|---------|------|
+| LOGO | 方形头像/App图标版，≥400×400px，PNG优先 | 任务卡片品牌头像 |
+| 宣传图 | 16:9横版，≥1200×675px | 任务详情页banner |
+
+**系统统一适配（sharp）**：
+- 宣传图非16:9 → 自动 center-crop 到16:9
+- LOGO非方形（如横版文字Logo）→ 展示位用 `object-fit: contain` + 背景填充，不裁切
+- 未提供素材时使用默认占位图
+
+---
+
+### 22.5 受影响流程与开发清单
+
+| 模块 | 改动内容 |
+|------|---------|
+| `brand_profiles` | 新增 `logo_url`、`promo_image_url`；新增 `plan`（launch/scale/alliance）、Scale/Alliance 档相关字段 |
+| `wallets` | 新增 `credit_limit`（默认0，仅 Scale/Alliance 档使用），余额校验逻辑允许负值在额度内 |
+| 文件上传 | 新增 LOGO/宣传图上传接口 + sharp 裁切/压缩处理 |
+| `topup_requests` 流程 | 申请时生成請求書PDF，确认到账时生成領収書PDF |
+| 月结批处理 | 新增月末批量生成請求書任务（Scale / Alliance 档） |
+| admin.html | 新增「人工创建品牌账号」入口（Scale / Alliance 档入驻）；品牌LOGO/宣传图/授信额度/方案编辑 |
+| preview.html / merchant.html | 任务卡片/详情页展示品牌LOGO与宣传图 |
+
+---
+
+### 22.6 业务流程变化
+
+```
+┌─ Launch 档入驻向导（自助）────────────────────┐
+│ 步骤1：方案选择 → 选 Launch                   │
+│ 步骤2：品牌信息（公司名、行业、官网）            │
+│ 步骤3：联系方式（联系人、电话、简介）            │
+│ + 品牌形象（选填）：上传 LOGO + 宣传图          │
+└──────────────────────────────────────────────┘
+
+┌─ Scale / Alliance 档入驻（admin 人工创建账号）─┐
+│ 销售签约时收集 LOGO + 宣传图（必填）            │
+│ → admin 后台创建品牌账号时一并上传              │
+└──────────────────────────────────────────────┘
+
+merchant.html 新增「品牌资料」页面
+  → 品牌可自助更新 LOGO/宣传图（固定文件名覆盖式更新，无需清理旧文件）
+```
+
+**展示层级关系**（理清 `tasks.cover_image` 与品牌素材的关系）：
+
+```
+任务详情页 banner：
+  tasks.cover_image（任务级，商家发任务时可选填）
+    └─ 未设置 → fallback → brand_profiles.promo_image_url（品牌默认宣传图）
+         └─ 未设置 → fallback → 系统默认占位图
+
+品牌身份标识（任务卡片角标 / 详情页品牌信息区）：
+  brand_profiles.logo_url（独立维度，不参与上面的 fallback 链）
+    └─ 未设置 → 系统默认占位 LOGO
+```
+
+---
+
+### 22.7 服务器目录结构与静态资源服务
+
+```
+herix-server/
+├── uploads/                       # 新增目录，运行时生成内容，加入 .gitignore
+│   └── brands/
+│       └── {brand_id}/
+│           ├── logo.{ext}         # 固定文件名，更新即覆盖，避免孤儿文件
+│           └── promo.{ext}
+├── src/
+│   ├── index.ts                   # 新增 express.static('/uploads', uploadsDir)
+│   ├── routes/
+│   │   └── uploads.ts             # POST /api/uploads/brand/logo、/api/uploads/brand/promo
+│   ├── middleware/
+│   │   └── upload.ts              # multer：限制 image/*、≤5MB
+│   └── utils/
+│       └── image.ts               # sharp：裁切适配（16:9 / 方形 contain）+ 压缩转 webp
+```
+
+**URL 规则**：数据库存相对路径 `/uploads/brands/{brand_id}/logo.png`，由 Express 静态中间件直出，前端直接拼到 `<img src>`。
+
+**部署注意（Render 标准 Web 服务文件系统为 ephemeral）**：
+
+| 阶段 | 方案 | 说明 |
+|------|------|------|
+| MVP / 当前 | 本地磁盘 + Render 临时文件系统 | redeploy 会清空 `uploads/`，需重新上传；素材更新频率低，初期可接受 |
+| 规模化前 | Render Persistent Disk | 付费挂载 volume 到 `uploads/`，目录结构不变，解决 ephemeral 问题 |
+| 长期 | 对象存储（Cloudflare R2 / S3） | 数据库仍只存完整 URL，原生支持 CDN；迁移时只需替换 `utils/image.ts` 的存储后端，路由/数据模型不变 |
+
+> 设计原则：存储后端可替换，数据库字段始终是「可直接使用的 URL」，业务代码不感知底层是本地磁盘还是对象存储。
+
+---
+
+## 23. 赫府生态（Agency Ecosystem）（2026-06-18 新增）
+
+### 23.1 赫府在生态中的角色
+
+Herix 生态由三类参与者构成：
+
+| 角色 | 定位 | 平台对其的价值 |
+|------|------|--------------|
+| **品牌** | 需求方，发任务、付费 | 可信赖的营销执行通道，赫使经过验证，资金托管安全 |
+| **赫使** | 执行方，接任务、赚收入 | 职业主页 + 收款通道，积累段位与作品集 |
+| **赫府** | 双向聚合者，带任务进来 + 管理赫使执行 | 业务后台：替代 Excel + 微信群 + 手动转账的操作系统 |
+
+**平台自身定位**：不争客、不争人、不做执行——充当信任与结算层，收取通行费（抽成）。
+
+赫府是生态里唯一同时站在供需两侧的参与者：
+- **供给侧**：维护自己的赫使名册，保证执行质量
+- **需求侧**：代表品牌客户发布任务，将外部营销预算引入平台
+
+赫府分两类，入驻路径不同，但功能完全相同：
+- **个人赫府**：平台赫使做大后升级，以个人身份认证
+- **机构赫府**：现有 MCN / 广告代理公司，以企业资质认证（法人番号等）
+
+这使赫府成为平台早期最值得争取的入驻对象——一个赫府账号同时带来任务量和赫使资源。
+
+---
+
+### 23.2 架构：赫府 = 特殊品牌账号
+
+赫府**不是独立的第四角色**，而是在现有 BRAND 账号基础上增加一个标记：
+
+```
+brand_profiles.is_agency = true
+```
+
+| | 普通品牌账号 | 赫府账号 |
+|---|---|---|
+| `users.roles` | `["BRAND"]` | `["BRAND"]` |
+| 钱包 / 充值 / 结算 | 标准流程 | 完全相同 |
+| 任务创建 / 审批 | 标准流程 | 完全相同 |
+| 定价方案 | Launch / Scale / Alliance | Launch / Scale / Alliance（享早期促销，见 23.3） |
+| 额外功能 | — | 赫使名册管理 |
+| 认证标识 | — | 个人赫府 / 机构赫府 徽章 |
+
+**新增数据表**：
+
+```sql
+agency_herald_relations
+  agency_user_id   → users.id（brand, is_agency=true）
+  herald_user_id   → users.id（herald）
+  status           invited | active | removed
+  invited_at, joined_at
+```
+
+赫府通过邀请链接将现有赫使带入平台，赫使注册后自动建立关联。这是 Herix 赫使池扩张的重要来源之一。
+
+---
+
+### 23.3 赫府早期促销定价
+
+赫府账号与普通品牌使用相同的方案体系（Launch / Scale / Alliance），但在促销期内自动享有以下优惠：
+
+| 优惠项目 | 内容 |
+|---|---|
+| **平台抽成** | 所选方案标准抽成率 × **5折** |
+| **月额固定費** | **全免** |
+| **有效期** | 至 **2026年12月31日**（自然年为单位，到期前30天邮件通知是否续期） |
+
+**各方案促销对照：**
+
+| 方案 | 标准抽成 | 促销抽成 | 标准月费 | 促销月费 |
+|---|---|---|---|---|
+| Launch | 25% | **12.5%** | 无 | 无 |
+| Scale | 8% | **4%** | ¥300,000 | **¥0** |
+| Alliance | 合同约定 | 合同约定（另行优惠） | 合同约定 | — |
+
+促销到期后自动恢复所选方案标准费率。赫府可在到期前选择升级方案或续签。
+
+> 赫府向自己品牌客户收取的服务费属于赫府自己的业务，Herix 不介入、不可见。平台只处理「赫府钱包 → 赫使打款」这一段并收取抽成。
+
+---
+
+### 23.4 平台对赫府的承诺（数据保护）
+
+为打消赫府对平台"会替代我"的顾虑，以下承诺写入平台规则：
+
+1. **客户关系不可见**：赫府任务中涉及的品牌客户信息，平台运营团队不用于主动开发同类客户
+2. **名册赫使不被截流**：通过赫府邀请加入的赫使，平台不主动向其推送绕过赫府的直接合作机会
+3. **赫府是合作伙伴，不是竞争对手**：平台长期定位是基础设施层，不建立自己的代理团队与入驻赫府竞争
+
+---
+
+### 23.5 吸引赫府入驻：阶段策略
+
+**第一阶段（现在，不依赖平台规模）**
+
+核心价值主张：**替代 Excel + 微信群 + 手动转账**
+
+赫府的日常运营痛点：
+- 跨境打款给个人赫使：手动处理，日本还有源泉徴収代扣义务
+- 任务执行跟踪：靠聊天记录，容易丢漏
+- 结果报告：手动汇总给品牌客户
+
+Herix 把这些自动化。促销期抽成若低于赫府手动处理这些事的时间与错误成本，他们自然愿意来。
+
+获客方式：
+- 直销：直接联系 3-5 家目标赫府，手把手带进来
+- 从现有赫使中发现：已在平台的赫使里，谁已经在管别人的任务？他们就是个人赫府的潜在来源
+
+**第二阶段（有规模后）**
+
+核心价值主张：**扩大可用赫使池 + 接收平台导流的品牌客户**
+
+- 平台赫使池扩大后，赫府进来是为了访问平台上自己名册以外的赫使
+- 平台品牌体量达到一定规模后，中小品牌可被引导匹配赫府服务——赫府从中获得新客户线索
+
+---
+
+### 23.6 merchant.html 新增：赫府功能
+
+`is_agency=true` 账号在 merchant.html 额外展示「赫使名册」标签页：
+
+| 功能 | 说明 |
+|------|------|
+| 查看名册 | 列出所有 active 赫使，显示段位、平台、历史任务数 |
+| 邀请赫使 | 生成邀请链接，赫使注册/登录后自动关联至本赫府 |
+| 移除赫使 | 软删除关联关系（status → removed），不影响赫使账号 |
+
+任务创建流程不变；赫府用标准审批流控制哪些赫使参与执行（无需新增任务可见性过滤逻辑）。
+
+---
+
+### 23.7 开发优先级
+
+| 优先级 | 内容 |
+|--------|------|
+| P1 | `brand_profiles.is_agency` 字段 + 促销抽成率逻辑（`is_agency=true` 时抽成 × 0.5，固定费免除） |
+| P1 | `agency_herald_relations` 表 + 邀请机制（生成邀请链接，接受后建立关联） |
+| P1 | merchant.html「赫使名册」标签页（查看 + 邀请 + 移除） |
+| P2 | 赫府入驻向导（个人赫府：赫使升级申请；机构赫府：企业资质提交） |
+| P2 | 促销到期提醒邮件（到期前30天自动发送） |
+| P3 | 赫府公开档案页（供品牌发现，待生态有量后启动） |
+| P3 | 品牌发需求 → 赫府投标（第二阶段功能，现在不做） |
 

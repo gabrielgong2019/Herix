@@ -2,107 +2,124 @@ import { Router, Request, Response } from 'express';
 import db from '../db';
 import { findOne, findMany, insert, update, remove, genId } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
+import { getBalance, getAllBalances, getAggregateBalance, getPeriodFlow, freezeWithdrawal, ENTRY_DIRECTION, ENTRY_TYPE_LABELS, WalletType } from '../utils/wallet';
+import { getRate } from '../utils/exchangeRate';
 
 export const walletRouter = Router();
 
 // 所有钱包接口都需要登录
 walletRouter.use(requireAuth);
 
-/** GET /api/wallet/balance */
+/** 解析期间过滤参数，默认本月初至今 */
+function getPeriodRange(query: any): { from: string; to: string } {
+  const now = new Date();
+  let from: Date, to: Date;
+  if (query.from) {
+    from = new Date(String(query.from));
+  } else {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  to = query.to ? new Date(String(query.to)) : now;
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+/** 该用户在某钱包类型下的展示币种（herald: 赫使设置；brand/platform: 品牌业务市场币种） */
+async function getDisplayCurrency(userId: string, walletType: WalletType): Promise<string> {
+  if (walletType === 'brand') {
+    const brand = await findOne<{ currency: string }>('SELECT currency FROM brand_profiles WHERE user_id = ?', [userId]);
+    return brand?.currency || 'JPY';
+  }
+  const profile = await findOne<{ display_currency: string | null }>(
+    'SELECT display_currency FROM herald_profiles WHERE user_id = ?', [userId]
+  );
+  return profile?.display_currency || 'JPY';
+}
+
+/** GET /api/wallet/balance — 赫使余额（多币种汇总 + 各币种明细 + 期间流入流出）*/
 walletRouter.get('/balance', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
+  const displayCurrency = await getDisplayCurrency(userId, 'herald');
 
-  // 累计收入：ESCROW_RELEASE + 推广结算
-  const income = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
-     WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'COMPLETED'`,
-    [userId]
-  );
+  // 各币种明细（真实余额，不换算）
+  const balances = await getAllBalances(userId, 'herald');
+  // 汇总（按汇率换算为 displayCurrency，仅用于展示）
+  const aggregate = await getAggregateBalance(userId, 'herald', displayCurrency);
 
-  // 已提现
-  const withdrawn = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
-     WHERE user_id = ? AND type = 'WITHDRAWAL' AND status = 'COMPLETED'`,
-    [userId]
-  );
-
-  // 待结算：PENDING 状态的收入 + 推广码收益
-  const pending = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
-     WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'PENDING'`,
-    [userId]
-  );
-
-  const totalIncome = income?.total || 0;
-  const totalWithdrawn = withdrawn?.total || 0;
-  const pendingAmount = pending?.total || 0;
-
-  // 推广码累计收益（从 referrals 表统计 qualified 数量）
-  const codeEarnings = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(r.qualified * t.commission), 0) as total
-     FROM ambassador_tasks at
-     JOIN tasks t ON t.id = at.task_id
-     JOIN referrals r ON r.ambassador_task_id = at.id
-     WHERE at.herald_id = ? AND r.qualified = 1`,
-    [userId]
-  );
-
-  // 当月收入（本月1号至今）
-  const monthlyIncome = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
-     WHERE user_id = ? AND type IN ('ESCROW_RELEASE') AND status = 'COMPLETED'
-     AND created_at >= TO_CHAR(DATE_TRUNC('month', CURRENT_TIMESTAMP), 'YYYY-MM-DD HH24:MI:SS')`,
-    [userId]
-  );
-
-  const available = totalIncome + (codeEarnings?.total || 0) - totalWithdrawn;
-  const totalEarned = totalIncome + (codeEarnings?.total || 0);
+  const { from, to } = getPeriodRange(req.query);
+  const flow = await getPeriodFlow(userId, 'herald', displayCurrency, from, to);
 
   res.json({
-    totalIncome: totalEarned,
-    monthlyIncome: monthlyIncome?.total || 0,
-    totalWithdrawn,
-    pendingAmount,
-    available,
-    codeEarnings: codeEarnings?.total || 0,
+    displayCurrency,
+    balances,                          // [{currency, available, frozen, total}, ...] 真实余额
+    aggregate,                         // 换算到 displayCurrency 后的汇总
+    available: aggregate.available,
+    frozen: aggregate.frozen,
+    pendingAmount: aggregate.frozen,
+    periodFrom: from,
+    periodTo: to,
+    periodInflow: flow.inflow,
+    periodOutflow: flow.outflow,
   });
 });
 
-/** GET /api/wallet/transactions */
+/** GET /api/wallet/exchange-rate — 当前 CNY/JPY 汇率（展示用） */
+walletRouter.get('/exchange-rate', async (req: Request, res: Response) => {
+  const { from = 'CNY', to = 'JPY' } = req.query as { from?: string; to?: string };
+  const rate = await getRate(String(from), String(to));
+  res.json({ from, to, rate });
+});
+
+/** GET /api/wallet/transactions — 钱包流水（按期间过滤 + 期间流入流出 + 分类型明细分页）*/
 walletRouter.get('/transactions', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { type, page = '1', limit = '20' } = req.query;
+  const { type, page = '1', limit = '20', walletType = 'herald' } = req.query;
+  const wt = (walletType as WalletType) || 'herald';
   const skip = (Number(page) - 1) * Number(limit);
+  const { from, to } = getPeriodRange(req.query);
 
-  let where = 't.user_id = ?';
-  const params: any[] = [userId];
+  const typeFilter = type && type !== 'all';
+  const baseParams: any[] = [userId, wt, from, to];
+  let where = 'w.user_id = ? AND w.wallet_type = ? AND we.created_at >= ? AND we.created_at <= ?';
+  if (typeFilter) { where += ' AND we.type = ?'; baseParams.push(type); }
 
-  if (type && type !== 'all') {
-    where += ' AND t.type = ?';
-    params.push(type);
-  }
-
-  const rows = await findMany(
-    `SELECT t.id, t.type, t.amount, t.platform_fee, t.status, t.note, t.created_at, t.completed_at,
-            tk.title as task_title
-     FROM transactions t
-     LEFT JOIN tasks tk ON tk.id = t.task_id
+  const rows = await findMany<any>(
+    `SELECT we.id, we.type, we.amount, we.currency, we.available_after, we.frozen_after,
+            we.note, we.created_at, we.reference_type, we.reference_id
+     FROM wallet_entries we
+     JOIN wallets w ON w.id = we.wallet_id
      WHERE ${where}
-     ORDER BY t.created_at DESC
+     ORDER BY we.created_at DESC
      LIMIT ? OFFSET ?`,
-    [...params, Number(limit), skip]
+    [...baseParams, Number(limit), skip]
   );
 
   const count = await findOne<{ total: number }>(
-    `SELECT COUNT(*) as total FROM transactions t WHERE ${where}`,
-    params
+    `SELECT COUNT(*) as total FROM wallet_entries we
+     JOIN wallets w ON w.id = we.wallet_id
+     WHERE ${where}`,
+    baseParams
   );
 
+  const displayCurrency = await getDisplayCurrency(userId, wt);
+  const flow = await getPeriodFlow(userId, wt, displayCurrency, from, to);
+
   res.json({
-    transactions: rows,
+    transactions: rows.map((r: any) => {
+      const dir = ENTRY_DIRECTION[r.type as keyof typeof ENTRY_DIRECTION];
+      return {
+        ...r,
+        label: ENTRY_TYPE_LABELS[r.type as keyof typeof ENTRY_TYPE_LABELS] || r.type,
+        direction: dir === 'adjustment' ? (Number(r.amount) >= 0 ? 'in' : 'out') : dir,
+      };
+    }),
     total: count?.total || 0,
     page: Number(page),
     limit: Number(limit),
+    periodFrom: from,
+    periodTo: to,
+    periodInflow: flow.inflow,
+    periodOutflow: flow.outflow,
+    displayCurrency,
   });
 });
 
@@ -196,72 +213,106 @@ walletRouter.delete('/methods/:id', async (req: Request, res: Response) => {
   res.json({ message: '收款方式已删除' });
 });
 
-/** POST /api/wallet/withdraw */
-walletRouter.post('/withdraw', async (req: Request, res: Response) => {
+/** GET /api/wallet/brand-balance — 品牌余额（单一币种，取自 brand_profiles.currency + 期间流入流出）*/
+walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { method_id, amount } = req.body;
-
-  if (!amount || amount <= 0) {
-    return res.status(400).json({ error: '请输入有效金额' });
-  }
-  if (!method_id) {
-    return res.status(400).json({ error: '请选择收款方式' });
-  }
-
-  // 验证收款方式
-  const method = await findOne<any>(
-    'SELECT * FROM withdrawal_methods WHERE id = ? AND user_id = ?',
-    [method_id, userId]
-  );
-  if (!method) return res.status(400).json({ error: '收款方式不存在' });
-
-  // 计算可用余额（同上）
-  const income = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
-     WHERE user_id = ? AND type = 'ESCROW_RELEASE' AND status = 'COMPLETED'`,
-    [userId]
-  );
-  const withdrawn = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM transactions
-     WHERE user_id = ? AND type = 'WITHDRAWAL' AND (status = 'COMPLETED' OR status = 'PENDING')`,
-    [userId]
-  );
-  const codeEarnings = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(r.qualified * t.commission), 0) as total
-     FROM ambassador_tasks at
-     JOIN tasks t ON t.id = at.task_id
-     JOIN referrals r ON r.ambassador_task_id = at.id
-     WHERE at.herald_id = ? AND r.qualified = 1`,
-    [userId]
-  );
-
-  const available = (income?.total || 0) + (codeEarnings?.total || 0) - (withdrawn?.total || 0);
-
-  if (amount > available) {
-    return res.status(400).json({ error: `余额不足，可用 ¥${available.toLocaleString()}` });
-  }
-
-  // 计算手续费（5%）
-  const fee = Math.round(amount * 0.05 * 100) / 100;
-  const netAmount = amount - fee;
-
-  // 创建提现交易
-  const txId = await insert('transactions', {
-    user_id: userId,
-    withdrawal_method_id: method_id,
-    type: 'WITHDRAWAL',
-    amount: -netAmount, // 负数表示支出
-    platform_fee: fee,
-    status: 'PENDING',
-    note: `提现至 ${method.type} - ${method.label}`,
-  });
+  const currency = await getDisplayCurrency(userId, 'brand');
+  const bal = await getBalance(userId, 'brand', currency);
+  const { from, to } = getPeriodRange(req.query);
+  const flow = await getPeriodFlow(userId, 'brand', currency, from, to);
 
   res.json({
-    id: txId,
-    amount,
-    fee,
-    netAmount,
-    method: { type: method.type, label: method.label },
-    message: '提现申请已提交，审核通过后到账',
+    currency,
+    available: bal.available,
+    frozen: bal.frozen,
+    periodFrom: from,
+    periodTo: to,
+    periodInflow: flow.inflow,
+    periodOutflow: flow.outflow,
   });
 });
+
+/** POST /api/wallet/topup — 品牌提交充值申请（币种固定为该品牌的业务市场币种） */
+walletRouter.post('/topup', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { amount, note } = req.body;
+
+  if (!amount || Number(amount) <= 0) {
+    return res.status(400).json({ error: '请输入有效金额' });
+  }
+
+  const brand = await findOne<{ currency: string }>('SELECT currency FROM brand_profiles WHERE user_id = ?', [userId]);
+  const currency = brand?.currency || 'JPY';
+
+  const id = await insert('topup_requests', {
+    brand_id: userId,
+    amount: Number(amount),
+    currency,
+    note: note || null,
+    status: 'pending',
+  });
+
+  res.status(201).json({ id, amount, currency, message: '充值申请已提交，运营确认到账后余额增加' });
+});
+
+/** GET /api/wallet/topup-history — 品牌充值记录 */
+walletRouter.get('/topup-history', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const rows = await findMany(
+    `SELECT * FROM topup_requests WHERE brand_id = ? ORDER BY created_at DESC LIMIT 20`,
+    [userId]
+  );
+  res.json(rows);
+});
+
+/** POST /api/wallet/withdraw-request — 赫使提交提现申请（按指定币种钱包扣减） */
+walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const { amount, currency = 'JPY', method, accountDetails } = req.body;
+
+  if (!['JPY', 'CNY'].includes(currency)) {
+    return res.status(400).json({ error: '不支持的币种' });
+  }
+  if (!amount || Number(amount) < 100) {
+    return res.status(400).json({ error: '最低提现金额 100' });
+  }
+  if (!method || !accountDetails) {
+    return res.status(400).json({ error: '请填写收款方式和账号信息' });
+  }
+
+  // 从钱包表读可用余额（O(1)，指定币种）
+  const bal = await getBalance(userId, 'herald', currency);
+  if (Number(amount) > bal.available) {
+    return res.status(400).json({ error: `可提现余额不足，当前可提 ${currency} ${bal.available.toFixed(0)}` });
+  }
+
+  // 检查是否有待处理申请
+  const pending = await findOne(
+    `SELECT id FROM withdrawal_requests WHERE herald_id = ? AND status IN ('pending','processing')`,
+    [userId]
+  );
+  if (pending) return res.status(409).json({ error: '已有待处理的提现申请' });
+
+  const id = await insert('withdrawal_requests', {
+    herald_id: userId,
+    amount: Number(amount),
+    currency,
+    method,
+    account_details: JSON.stringify(accountDetails),
+    status: 'pending',
+  });
+
+  // 赫使钱包：可用→冻结（原子操作，指定币种）
+  await freezeWithdrawal({
+    userId,
+    amount: Number(amount),
+    currency,
+    idempotencyKey: `WITHDRAWAL_FREEZE:${id}`,
+    referenceType: 'withdrawal_request',
+    referenceId: id,
+  });
+
+  res.status(201).json({ id, amount, currency, message: '提现申请已提交，预计1-3个工作日内打款' });
+});
+
+// /withdraw 已废弃，统一走 /withdraw-request

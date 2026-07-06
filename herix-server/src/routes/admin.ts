@@ -2,6 +2,11 @@ import { Router, Request, Response } from 'express';
 import { findMany, findOne, update, insert } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
+import { payoutProvider } from '../services/payout';
+import { topupBrand, debitWithdrawal } from '../utils/wallet';
+import { imageUpload } from '../middleware/upload';
+import { processLogo, processPromo } from '../utils/image';
+import { saveBrandAsset } from '../utils/uploads';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
@@ -18,8 +23,8 @@ adminRouter.get('/stats', async (_req: Request, res: Response) => {
   const thisMonth   = new Date(); thisMonth.setDate(1); thisMonth.setHours(0,0,0,0);
   const monthStr    = thisMonth.toISOString();
   const monthCompletions = await findOne<any>("SELECT COUNT(*) as n FROM task_submissions WHERE status = 'APPROVED' AND reviewed_at >= ?", [monthStr]);
-  const pendingPayout    = await findOne<any>("SELECT COALESCE(SUM(amount),0) as n FROM payouts WHERE status = 'pending'");
-  const monthPayout      = await findOne<any>("SELECT COALESCE(SUM(amount),0) as n FROM payouts WHERE status = 'paid' AND paid_at >= ?", [monthStr]);
+  const pendingPayout    = await findOne<any>("SELECT COALESCE(SUM(amount),0) as n FROM wallet_entries WHERE type='WITHDRAWAL_FREEZE'");
+  const monthPayout      = await findOne<any>("SELECT COALESCE(SUM(amount),0) as n FROM wallet_entries WHERE type='WITHDRAWAL_DEBIT' AND created_at >= ?", [monthStr]);
 
   // 近7日每日完成数
   const daily: any[] = [];
@@ -58,11 +63,14 @@ adminRouter.get('/users', async (req: Request, res: Response) => {
 
   const rows = await findMany<any>(`
     SELECT u.id, u.nickname, u.email, u.role, u.is_verified, u.created_at,
-           hp.residence, hp.kyc_status, hp.is_onboarded as herald_onboarded,
-           bp.company_name, bp.is_onboarded as brand_onboarded
+           u.linked_account_id, lu.nickname as linked_nickname,
+           hp.residence, hp.kyc_status, hp.is_onboarded as herald_onboarded, hp.display_currency,
+           bp.company_name, bp.is_onboarded as brand_onboarded, bp.currency as brand_currency,
+           bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email
     FROM users u
     LEFT JOIN herald_profiles hp ON hp.user_id = u.id
     LEFT JOIN brand_profiles bp ON bp.user_id = u.id
+    LEFT JOIN users lu ON lu.id = u.linked_account_id
     WHERE ${where} AND u.role != 'ADMIN'
     ORDER BY u.created_at DESC LIMIT ? OFFSET ?
   `, [...params, limit, skip]);
@@ -74,6 +82,100 @@ adminRouter.post('/users/:id/suspend', async (req: Request, res: Response) => {
   const { suspend } = req.body;
   await update('users', { is_verified: suspend ? -1 : 0 }, 'id = ?', [req.params.id]);
   res.json({ success: true });
+});
+
+/** POST /api/admin/users/:id/link-account — 绑定/解绑关联账号（双向写入 linked_account_id） */
+adminRouter.post('/users/:id/link-account', async (req: Request, res: Response) => {
+  const { linkedUserId } = req.body as { linkedUserId: string | null };
+  const userId = req.params.id;
+
+  const user = await findOne<{ id: string; linked_account_id: string | null }>(
+    'SELECT id, linked_account_id FROM users WHERE id = ?', [userId]
+  );
+  if (!user) return res.status(404).json({ error: '用户不存在' });
+
+  // 先清除旧的双向绑定
+  if (user.linked_account_id) {
+    await update('users', { linked_account_id: null }, 'id = ?', [user.linked_account_id]);
+  }
+  await update('users', { linked_account_id: null }, 'id = ?', [userId]);
+
+  if (linkedUserId) {
+    if (linkedUserId === userId) return res.status(400).json({ error: '不能关联自己' });
+    const target = await findOne<{ id: string; linked_account_id: string | null }>(
+      'SELECT id, linked_account_id FROM users WHERE id = ?', [linkedUserId]
+    );
+    if (!target) return res.status(404).json({ error: '关联用户不存在' });
+    // 清除目标用户原有的绑定
+    if (target.linked_account_id) {
+      await update('users', { linked_account_id: null }, 'id = ?', [target.linked_account_id]);
+    }
+    await update('users', { linked_account_id: linkedUserId }, 'id = ?', [userId]);
+    await update('users', { linked_account_id: userId }, 'id = ?', [linkedUserId]);
+  }
+
+  res.json({ success: true });
+});
+
+/** GET /api/admin/brands/:userId — 获取品牌资料（用于运营编辑） */
+adminRouter.get('/brands/:userId', async (req: Request, res: Response) => {
+  const profile = await findOne<any>(
+    `SELECT bp.*, u.nickname, u.email FROM brand_profiles bp
+     JOIN users u ON u.id = bp.user_id WHERE bp.user_id = ?`, [req.params.userId]
+  );
+  if (!profile) return res.status(404).json({ error: '品牌资料不存在' });
+  res.json(profile);
+});
+
+/** PATCH /api/admin/brands/:userId — 运营编辑品牌资料（销售代办档签约信息：账单邮箱等） */
+adminRouter.patch('/brands/:userId', async (req: Request, res: Response) => {
+  const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail } = req.body;
+  const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!existing) return res.status(404).json({ error: '品牌资料不存在' });
+
+  const data: Record<string, any> = {};
+  if (companyName !== undefined) data.company_name = companyName;
+  if (industry !== undefined) data.industry = industry || null;
+  if (companyDesc !== undefined) data.company_desc = companyDesc || null;
+  if (website !== undefined) data.website = website || null;
+  if (contactName !== undefined) data.contact_name = contactName;
+  if (contactPhone !== undefined) data.contact_phone = contactPhone || null;
+  if (billingEmail !== undefined) data.billing_email = billingEmail || null;
+
+  await update('brand_profiles', data, 'user_id = ?', [req.params.userId]);
+  res.json({ success: true });
+});
+
+/** POST /api/admin/brands/:userId/logo — 运营为品牌上传LOGO（销售代办档签约时收集） */
+adminRouter.post('/brands/:userId/logo', imageUpload.single('file'), async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: '未提供文件' });
+  const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!existing) return res.status(404).json({ error: '品牌资料不存在' });
+  try {
+    const processed = await processLogo(req.file.buffer);
+    const url = saveBrandAsset(String(req.params.userId), 'logo', processed);
+    await update('brand_profiles', { logo_url: url }, 'user_id = ?', [req.params.userId]);
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('Logo upload error:', err);
+    res.status(500).json({ error: '图片处理失败' });
+  }
+});
+
+/** POST /api/admin/brands/:userId/promo — 运营为品牌上传宣传图（销售代办档签约时收集） */
+adminRouter.post('/brands/:userId/promo', imageUpload.single('file'), async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: '未提供文件' });
+  const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!existing) return res.status(404).json({ error: '品牌资料不存在' });
+  try {
+    const processed = await processPromo(req.file.buffer);
+    const url = saveBrandAsset(String(req.params.userId), 'promo', processed);
+    await update('brand_profiles', { promo_image_url: url }, 'user_id = ?', [req.params.userId]);
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('Promo upload error:', err);
+    res.status(500).json({ error: '图片处理失败' });
+  }
 });
 
 /* ── Tasks ── */
@@ -202,61 +304,38 @@ adminRouter.post('/submissions/:id/reject', async (req: Request, res: Response) 
 
 /* ── Payouts ── */
 
+// 赫使余额：统一从 transactions 表计算（STANDARD + PERFORMANCE 均走此逻辑）
 adminRouter.get('/payouts', async (_req: Request, res: Response) => {
-  // 计算每位赫使的应付金额（已审核通过但未入 payout 的）
+  // 每位赫使：已发放 - 已提现 = 净余额
   const earned = await findMany<any>(`
     SELECT u.id, u.nickname, u.email,
            hp.bank_account, hp.residence,
-           COUNT(ts.id) as completed_tasks,
-           SUM(t.commission) as total_earned
-    FROM task_submissions ts
-    JOIN tasks t ON t.id = ts.task_id
-    JOIN users u ON u.id = ts.herald_id
+           COALESCE(SUM(CASE WHEN txn.type='ESCROW_RELEASE' THEN txn.amount ELSE 0 END), 0) as total_earned,
+           COALESCE(SUM(CASE WHEN txn.type='WITHDRAWAL' AND txn.status='COMPLETED' THEN ABS(txn.amount) ELSE 0 END), 0) as total_withdrawn,
+           COALESCE(SUM(CASE WHEN txn.type='ESCROW_RELEASE' THEN txn.amount ELSE 0 END), 0)
+           - COALESCE(SUM(CASE WHEN txn.type='WITHDRAWAL' THEN ABS(txn.amount) ELSE 0 END), 0) as net_balance,
+           COUNT(DISTINCT CASE WHEN txn.type='ESCROW_RELEASE' THEN txn.task_id END) as tasks_paid
+    FROM users u
     JOIN herald_profiles hp ON hp.user_id = u.id
-    WHERE ts.status = 'APPROVED'
-    GROUP BY u.id
-    ORDER BY total_earned DESC
+    LEFT JOIN transactions txn ON txn.user_id = u.id
+    WHERE 'HERALD' = ANY(string_to_array(COALESCE(u.roles,'["HERALD"]')::text, '"')::text[])
+       OR u.role = 'HERALD'
+    GROUP BY u.id, u.nickname, u.email, hp.bank_account, hp.residence
+    HAVING COALESCE(SUM(CASE WHEN txn.type='ESCROW_RELEASE' THEN txn.amount ELSE 0 END), 0) > 0
+    ORDER BY net_balance DESC
   `);
 
-  const payouts = await findMany<any>(`
-    SELECT p.*, u.nickname, u.email
-    FROM payouts p JOIN users u ON u.id = p.user_id
-    ORDER BY p.created_at DESC LIMIT 100
+  // 历史提现记录（withdrawal_requests 表）
+  const withdrawals = await findMany<any>(`
+    SELECT wr.*, u.nickname, u.email
+    FROM withdrawal_requests wr JOIN users u ON u.id = wr.herald_id
+    ORDER BY wr.created_at DESC LIMIT 50
   `);
 
-  res.json({ earned, payouts });
+  res.json({ earned, withdrawals });
 });
 
-adminRouter.post('/payouts/generate', async (req: Request, res: Response) => {
-  const period = new Date().toISOString().slice(0, 7); // "2026-05"
-  // 找出本月有通过内容的赫使
-  const heralds = await findMany<any>(`
-    SELECT u.id, SUM(t.commission) as amount, COUNT(ts.id) as count
-    FROM task_submissions ts
-    JOIN tasks t ON t.id = ts.task_id
-    JOIN users u ON u.id = ts.herald_id
-    WHERE ts.status = 'APPROVED'
-      AND NOT EXISTS (SELECT 1 FROM payouts p WHERE p.user_id = u.id AND p.period = ?)
-    GROUP BY u.id HAVING amount > 0
-  `, [period]);
-
-  let created = 0;
-  for (const h of heralds) {
-    await insert('payouts', { user_id: h.id, period, qualified_count: h.count, amount: h.amount, status: 'pending' });
-    created++;
-  }
-  res.json({ created, period });
-});
-
-adminRouter.post('/payouts/:id/mark-paid', async (req: Request, res: Response) => {
-  const { method } = req.body;
-  const p = await findOne<any>('SELECT * FROM payouts WHERE id = ?', [req.params.id]);
-  if (!p) return res.status(404).json({ error: '不存在' });
-  await update('payouts', { status: 'paid', paid_at: new Date().toISOString(), payment_method: method || 'wise' }, 'id = ?', [req.params.id]);
-  const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [p.user_id]);
-  if (u?.email) await sendMail(u.email, '【Herix】报酬已打款', `${u.nickname}，${p.period} 期报酬 ¥${p.amount} 已通过 ${method||'银行'} 完成打款，请注意查收。`);
-  res.json({ success: true });
-});
+// payouts 表已废弃，提现打款统一走 /admin/withdrawal-requests/:id/process
 
 /* ── Ambassadors ── */
 
@@ -271,4 +350,129 @@ adminRouter.get('/ambassadors', async (_req: Request, res: Response) => {
     WHERE u.role = 'HERALD'
     ORDER BY u.created_at DESC
   `));
+});
+
+/* ── Topup Requests ── */
+
+adminRouter.get('/topup-requests', async (_req: Request, res: Response) => {
+  const rows = await findMany<any>(`
+    SELECT tr.*, u.nickname, u.email
+    FROM topup_requests tr
+    JOIN users u ON u.id = tr.brand_id
+    ORDER BY tr.created_at DESC
+  `);
+  res.json(rows);
+});
+
+adminRouter.post('/topup-requests/:id/confirm', async (req: Request, res: Response) => {
+  const row = await findOne<any>('SELECT * FROM topup_requests WHERE id = ?', [req.params.id]);
+  if (!row) return res.status(404).json({ error: '申请不存在' });
+  if (row.status !== 'pending') return res.status(400).json({ error: '已处理' });
+
+  await update('topup_requests', {
+    status: 'confirmed',
+    confirmed_by: req.user!.userId,
+    confirmed_at: new Date().toISOString(),
+  }, 'id = ?', [req.params.id]);
+
+  // 品牌钱包充值入账（原子操作，幂等，按申请币种）
+  await topupBrand({
+    userId: row.brand_id,
+    amount: row.amount,
+    currency: row.currency,
+    idempotencyKey: `TOPUP:${row.id}`,
+    referenceType: 'topup_request',
+    referenceId: row.id,
+    note: `充值确认 ${row.currency} ${row.amount}`,
+    createdBy: req.user!.userId,
+  });
+
+  const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [row.brand_id]);
+  if (u?.email) await sendMail(u.email, '【HERIX】充值到账', `${u.nickname}，您的充值 ${row.currency} ${row.amount} 已确认到账，可用于发布任务。`);
+
+  res.json({ success: true });
+});
+
+adminRouter.post('/topup-requests/:id/reject', async (req: Request, res: Response) => {
+  const row = await findOne<any>('SELECT * FROM topup_requests WHERE id = ?', [req.params.id]);
+  if (!row) return res.status(404).json({ error: '申请不存在' });
+  if (row.status !== 'pending') return res.status(400).json({ error: '已处理' });
+
+  await update('topup_requests', {
+    status: 'rejected',
+    confirmed_by: req.user!.userId,
+    confirmed_at: new Date().toISOString(),
+    note: req.body.reason || null,
+  }, 'id = ?', [req.params.id]);
+
+  res.json({ success: true });
+});
+
+/* ── Withdrawal Requests ── */
+
+adminRouter.get('/withdrawal-requests', async (_req: Request, res: Response) => {
+  const rows = await findMany<any>(`
+    SELECT wr.*, u.nickname, u.email,
+           hp.residence, hp.bank_account
+    FROM withdrawal_requests wr
+    JOIN users u ON u.id = wr.herald_id
+    LEFT JOIN herald_profiles hp ON hp.user_id = wr.herald_id
+    ORDER BY wr.created_at DESC
+  `);
+  res.json(rows);
+});
+
+adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: Response) => {
+  const wr = await findOne<any>('SELECT * FROM withdrawal_requests WHERE id = ?', [req.params.id]);
+  if (!wr) return res.status(404).json({ error: '申请不存在' });
+  if (wr.status !== 'pending') return res.status(400).json({ error: '已处理' });
+
+  await update('withdrawal_requests', { status: 'processing' }, 'id = ?', [req.params.id]);
+
+  let payoutRef = 'MANUAL';
+  try {
+    const result = await payoutProvider.send({
+      withdrawalId: wr.id,
+      heraldId: wr.herald_id,
+      amount: wr.amount,
+      currency: wr.currency,
+      method: wr.method,
+      accountDetails: JSON.parse(wr.account_details || '{}'),
+    });
+    if (!result.success) throw new Error(result.error || 'payout failed');
+    payoutRef = result.referenceId || 'MANUAL';
+  } catch (err: any) {
+    // 自动打款失败时仍可手动处理，记录错误但不阻断流程
+    if (payoutProvider.name !== 'manual') {
+      await update('withdrawal_requests', {
+        status: 'failed',
+        note: err.message,
+      }, 'id = ?', [req.params.id]);
+      return res.status(502).json({ error: '自动打款失败: ' + err.message });
+    }
+  }
+
+  await update('withdrawal_requests', {
+    status: 'paid',
+    payout_reference: payoutRef,
+    processed_by: req.user!.userId,
+    processed_at: new Date().toISOString(),
+  }, 'id = ?', [req.params.id]);
+
+  // 赫使钱包：提现冻结清零（按申请币种）
+  await debitWithdrawal({
+    userId: wr.herald_id,
+    amount: wr.amount,
+    currency: wr.currency,
+    idempotencyKey: `WITHDRAWAL_DEBIT:${wr.id}`,
+    referenceType: 'withdrawal_request',
+    referenceId: wr.id,
+    note: `提现打款 ${wr.currency} ${wr.amount} 参考号 ${payoutRef}`,
+    createdBy: req.user!.userId,
+  });
+
+  const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [wr.herald_id]);
+  if (u?.email) await sendMail(u.email, '【HERIX】提现已打款', `${u.nickname}，您申请的 ${wr.currency} ${wr.amount} 提现已完成打款，参考号：${payoutRef}，请查收。`);
+
+  res.json({ success: true, payoutReference: payoutRef, provider: payoutProvider.name });
 });

@@ -17,27 +17,48 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
   try {
     const data = ApplyTaskSchema.parse(req.body);
 
-    const task = await findOne<{ id: string; status: string; max_heralds: number }>(
-      'SELECT id, status, max_heralds FROM tasks WHERE id = ?', [req.params.taskId]
+    const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null }>(
+      'SELECT id, status, max_heralds, platform_requirements FROM tasks WHERE id = ?', [req.params.taskId]
     );
     if (!task) return res.status(404).json({ error: '任务不存在' });
     if (task.status !== 'OPEN') return res.status(400).json({ error: '任务不在招募中' });
 
-    // 居住地合规检查
+    // 获取赫使档案（用于平台账号校验，居住地/KYC 在结算时才要求）
     const profile = await findOne<any>(
-      'SELECT residence, kyc_status, declaration_status FROM herald_profiles WHERE user_id = ?',
+      'SELECT social_platforms FROM herald_profiles WHERE user_id = ?',
       [req.user!.userId]
     );
 
-    if (profile) {
-      if (!profile.residence) {
-        return res.status(403).json({ error: '请先设置居住地后再报名', code: 'RESIDENCE_REQUIRED' });
-      }
-      if (profile.kyc_status !== 'approved') {
-        return res.status(403).json({ error: '请先完成身份核验后再报名', code: 'KYC_REQUIRED' });
-      }
-      if (profile.residence === 'japan' && profile.declaration_status !== 'approved' && profile.declaration_status !== 'exempt') {
-        return res.status(403).json({ error: '请先提交在留资格声明', code: 'DECLARATION_REQUIRED' });
+    // 平台账号要求验证 — 一次性收集所有问题
+    if (task.platform_requirements) {
+      let reqs: Array<{ platformId: string; minFollowers?: number | null; required: boolean }> = [];
+      try { reqs = JSON.parse(task.platform_requirements); } catch { /* ignore */ }
+
+      const requiredReqs = reqs.filter(r => r.required);
+      if (requiredReqs.length > 0) {
+        let heraldPlatforms: Array<{ platformId: string; followers?: number | null }> = [];
+        try { heraldPlatforms = profile?.social_platforms ? JSON.parse(profile.social_platforms) : []; } catch { /* ignore */ }
+
+        const failures: Array<{ platformId: string; type: 'MISSING' | 'INSUFFICIENT'; required?: number; current?: number }> = [];
+
+        for (const req_ of requiredReqs) {
+          const match = heraldPlatforms.find((p: any) => p.platformId === req_.platformId);
+          if (!match) {
+            failures.push({ platformId: req_.platformId, type: 'MISSING' });
+          } else if (req_.minFollowers && (match.followers || 0) < req_.minFollowers) {
+            failures.push({ platformId: req_.platformId, type: 'INSUFFICIENT', required: req_.minFollowers, current: match.followers || 0 });
+          }
+        }
+
+        if (failures.length > 0) {
+          const hasInsufficient = failures.some(f => f.type === 'INSUFFICIENT');
+          return res.status(403).json({
+            error: '不满足任务的社交账号要求',
+            code: 'REQUIREMENTS_NOT_MET',
+            canRetry: !hasInsufficient,
+            failures,
+          });
+        }
       }
     }
 

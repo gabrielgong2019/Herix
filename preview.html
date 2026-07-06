@@ -33,7 +33,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans G
 .card-body{display:flex;gap:14px}.card-c{flex:1;min-width:0}
 .card-title{font-size:15px;font-weight:600;line-height:1.35;margin-bottom:6px}
 .brand-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
-.brand-icon{width:18px;height:18px;border-radius:4px;background:#f0ede8;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#9b8b7a;flex-shrink:0}
+.brand-icon{width:18px;height:18px;border-radius:4px;background:#f0ede8;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:#9b8b7a;flex-shrink:0;overflow:hidden}
+.brand-icon img{width:100%;height:100%;object-fit:contain}
 .brand-name{font-size:11px;color:#888}
 .commission{font-size:22px;font-weight:700;margin-bottom:4px}
 .rating-row{display:flex;align-items:center;gap:2px;margin-bottom:4px}
@@ -91,6 +92,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans G
 
 /* Action bar */
 .act-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:500px;padding:12px 16px;padding-bottom:calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--border);box-shadow:0 -2px 8px rgba(0,0,0,.04);z-index:40}
+
+/* Bottom Sheet */
+.bsheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+.bsheet{background:#fff;border-radius:20px 20px 0 0;padding:20px 20px calc(20px + env(safe-area-inset-bottom));width:100%;max-width:500px;max-height:85vh;overflow-y:auto;animation:slideUp .25s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.bsheet-handle{width:36px;height:4px;background:#e5e5ea;border-radius:2px;margin:0 auto 16px}
+.bsheet-title{font-size:17px;font-weight:700;margin-bottom:4px}
+.bsheet-sub{font-size:13px;color:var(--muted);margin-bottom:20px}
 .btn{width:100%;padding:14px;border-radius:24px;font-size:14px;font-weight:600;border:none;cursor:pointer;text-align:center;display:block}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-success{background:var(--success);color:#fff}
@@ -141,6 +150,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans G
 .ob-chip-sel{background:#111;color:#fff}
 </style>
 <script src="/shared/auth.js"></script>
+<script src="/shared/platforms.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -200,7 +210,7 @@ var API = '/api';
 var CAT = {experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'};
 var DIFF = {easy:{label:'轻松'},medium:{label:'刚好'},hard:{label:'挑战'}};
 var TABS = [{id:'explore',icon:'🔍',label:'探索'},{id:'tasks',icon:'📋',label:'任务'},{id:'messages',icon:'💬',label:'消息'},{id:'profile',icon:'👤',label:'我的'}];
-var state = {view:'list',tasks:[],filter:'',user:null,token:null,showLogin:false,loginTab:'login',loading:true,tab:'explore',detailTask:null,myTasks:[],myApps:[],mySubs:[],myCodes:[],showOnboard:false,onboardStep:1,onboardData:{},ambassadorProfile:null,brandProfile:null,activeRole:null,walletBalance:null,walletMethods:[],walletTxns:[],heraldFilter:'all',txnFilter:'all',methodType:'BANK'};
+var state = {view:'list',tasks:[],filter:'',user:null,token:null,showLogin:false,loginTab:'login',loading:true,tab:'explore',detailTask:null,myTasks:[],myApps:[],mySubs:[],myCodes:[],showOnboard:false,onboardStep:1,onboardData:{},ambassadorProfile:null,brandProfile:null,activeRole:null,walletBalance:null,walletMethods:[],walletTxns:[],heraldFilter:'all',txnFilter:'all',methodType:'BANK',displayCurrency:null,exchangeRate:null};
 
 function qs(s){return document.querySelector(s)}
 function qsa(s){return document.querySelectorAll(s)}
@@ -309,15 +319,16 @@ function listHTML(){
 }
 
 function cardHTML(t){
-  var img=t.cover_image||'',r=parseFloat(t.avg_rating)||0,fs=Math.round(r);
+  var img=t.cover_image||t.brand_promo_image_url||'',r=parseFloat(t.avg_rating)||0,fs=Math.round(r);
   var ml=t.mode==='PERFORMANCE'?'成果报酬':'任务体验',mc=t.mode==='PERFORMANCE'?'mode-perf':'mode-std';
   var diff=DIFF[t.difficulty]||DIFF.easy,ct={photo:'📷',video:'🎬',referral:'🔗'};
+  var brandIcon=t.brand_logo_url?'<img src="'+t.brand_logo_url+'" alt="">':(t.creator_name||'B')[0];
   var h='<a class="task-card" href="javascript:;" data-id="'+t.id+'">';
   h+='<div class="card-top"><span class="tag">'+ct[t.content_type]+' '+(CAT[t.category]||t.category)+'</span><span class="mode-tag '+mc+'">'+ml+'</span><span class="diff-tag"><span class="diff-dot d-'+t.difficulty+'"></span>'+diff.label+'</span></div>';
   h+='<div class="card-body"><div class="card-c">';
   h+='<div class="card-title">'+t.title+'</div>';
-  h+='<div class="brand-row"><span class="brand-icon">'+(t.creator_name||'B')[0]+'</span><span class="brand-name">'+(t.creator_name||'')+'</span></div>';
-  h+='<div class="commission">¥'+t.commission.toLocaleString()+'</div>';
+  h+='<div class="brand-row"><span class="brand-icon">'+brandIcon+'</span><span class="brand-name">'+(t.creator_name||'')+'</span></div>';
+  h+='<div class="commission">'+commissionLabel(t.commission,t.currency)+'</div>';
   h+='<div class="rating-row">';
   for(var s=1;s<=5;s++) h+='<span class="star '+(s<=fs?'on':'off')+'">'+(s<=fs?'★':'☆')+'</span>';
   h+='<span class="rating-num">'+(r>0?r:'新')+'</span></div></div>';
@@ -327,30 +338,206 @@ function cardHTML(t){
 }
 
 /* ── Detail + Apply ── */
+/* 预检任务平台要求，返回 {status:'ok'|'missing'|'insufficient', failures:[]} */
+function checkRequirements(t){
+  if(!t||!t.platform_requirements) return {status:'ok',failures:[]};
+  var reqs=[];
+  try{reqs=JSON.parse(t.platform_requirements);}catch(e){return {status:'ok',failures:[]};}
+  var required=reqs.filter(function(r){return r.required});
+  if(!required.length) return {status:'ok',failures:[]};
+  var platforms=[];
+  try{var ap=state.ambassadorProfile||{};platforms=ap.social_platforms?JSON.parse(ap.social_platforms):[];}catch(e){}
+  var failures=[];
+  for(var i=0;i<required.length;i++){
+    var req=required[i];
+    var match=platforms.find(function(p){return p.platformId===req.platformId});
+    if(!match) failures.push({platformId:req.platformId,type:'MISSING'});
+    else if(req.minFollowers&&(match.followers||0)<req.minFollowers)
+      failures.push({platformId:req.platformId,type:'INSUFFICIENT',required:req.minFollowers,current:match.followers||0});
+  }
+  if(!failures.length) return {status:'ok',failures:[]};
+  if(failures.some(function(f){return f.type==='INSUFFICIENT'})) return {status:'insufficient',failures:failures};
+  return {status:'missing',failures:failures};
+}
+
 function detailHTML(){
-  var t=state.detailTask,img=t.cover_image||'',diff=DIFF[t.difficulty]||DIFF.easy;
+  var t=state.detailTask,img=t.cover_image||t.brand_promo_image_url||'',diff=DIFF[t.difficulty]||DIFF.easy;
   var ml=t.mode==='PERFORMANCE'?'成果报酬':'任务体验';
   var applied=t.applications&&t.applications.some(function(a){return a.herald_id===(state.user||{}).id});
-  var canApply=state.user&&state.user.role==='HERALD'&&t.status==='OPEN'&&!applied;
-  var isReferral=t.mode==='PERFORMANCE'&&t.category==='referral';
+  var isHerald=state.user&&(state.user.role==='HERALD'||(state.user.roles||[]).includes('HERALD'));
+  var canApply=isHerald&&t.status==='OPEN'&&!applied;
+
   var h='<div class="dtl-hdr"><span class="dtl-back" onclick="back()">←</span><span class="dtl-title-h">任务详情</span></div>';
   if(img) h+='<div class="dtl-cover" style="background-image:url('+img+')"></div>';
   else h+='<div class="dtl-cover"></div>';
+  var dtlBrandIcon=t.brand_logo_url?'<img src="'+t.brand_logo_url+'" alt="">':(t.creator_name||'B')[0];
   h+='<div class="dtl-body"><div class="dtl-cat">'+(CAT[t.category]||t.category)+' · '+ml+'</div>';
-  h+='<div class="dtl-name">'+t.title+'</div><div class="dtl-price">¥'+t.commission.toLocaleString()+'</div>';
+  h+='<div class="dtl-name">'+t.title+'</div>';
+  h+='<div class="brand-row"><span class="brand-icon">'+dtlBrandIcon+'</span><span class="brand-name">'+(t.creator_name||'')+'</span></div>';
+  h+='<div class="dtl-price">'+commissionLabel(t.commission,t.currency)+'</div>';
   h+='<div class="dtl-meta"><div class="dtl-mi"><div class="dtl-mv">'+diff.label+'</div><div class="dtl-ml"><span class="diff-dot d-'+t.difficulty+'"></span> 难度</div></div>';
   h+='<div class="dtl-mi"><div class="dtl-mv">'+t.max_heralds+'</div><div class="dtl-ml">名额</div></div>';
   h+='<div class="dtl-mi"><div class="dtl-mv">'+((t.applications||[]).length)+'</div><div class="dtl-ml">已报名</div></div></div>';
-  h+='<div class="dtl-desc">'+(t.description||'')+'</div></div></div>';
-  // 底部按钮 — 不使用 fixed，直接放在内容后面
-  h+='<div style="padding:16px 0 20px;border-top:1px solid var(--border);margin-top:20px">';
-  if(!state.user&&t.status==='OPEN') h+='<button class="btn btn-primary" onclick="openLogin()">登录后报名</button>';
-  else if(canApply) h+='<button class="btn btn-primary" onclick="applyTask()">立即报名</button>';
-  else if(applied) h+='<div style="text-align:center;padding:12px;background:#f9fafb;border-radius:12px;font-size:14px;color:var(--muted)">✅ 已报名，等待品牌审核</div>';
-  h+='</div>';return h;
+  h+='<div class="dtl-desc">'+(t.description||'')+'</div>';
+
+  // 平台资质预检区块（仅赫使已登录时展示）
+  if(isHerald&&t.platform_requirements){
+    var check=checkRequirements(t);
+    var reqs=[];try{reqs=JSON.parse(t.platform_requirements);}catch(e){}
+    if(reqs.length){
+      var reqItems=reqs.filter(function(r){return r.required});
+      var optItems=reqs.filter(function(r){return !r.required});
+      h+='<div style="margin-top:16px;padding:14px;background:#f9fafb;border-radius:12px">';
+      h+='<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:10px">任务资质要求</div>';
+      // 必填项
+      for(var i=0;i<reqItems.length;i++){
+        var req=reqItems[i];
+        var rp=platformById(req.platformId);
+        var rf=check.failures.find(function(x){return x.platformId===req.platformId});
+        var icon,color,desc;
+        if(!rf){icon='✓';color='var(--success)';desc=req.minFollowers?req.minFollowers.toLocaleString()+'+ 粉 ✓':'已添加';}
+        else if(rf.type==='INSUFFICIENT'){icon='✗';color='#ef4444';desc='当前 '+rf.current.toLocaleString()+' 粉，需 '+rf.required.toLocaleString()+'+';}
+        else{icon='○';color='#f59e0b';desc='未添加';}
+        h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+        h+='<span style="font-size:16px">'+rp.icon+'</span>';
+        h+='<span style="font-size:13px;flex:1">'+rp.name+'</span>';
+        h+='<span style="font-size:12px;color:'+color+';font-weight:500">'+icon+' '+desc+'</span>';
+        h+='</div>';
+      }
+      // 可选项
+      if(optItems.length){
+        var optPlatforms=[];
+        try{var ap3=state.ambassadorProfile||{};optPlatforms=ap3.social_platforms?JSON.parse(ap3.social_platforms):[];}catch(e){}
+        var missingOpts=optItems.filter(function(o){return !optPlatforms.find(function(p){return p.platformId===o.platformId});});
+        for(var j=0;j<optItems.length;j++){
+          var opt=optItems[j];
+          var op=platformById(opt.platformId);
+          var hasOpt=optPlatforms.find(function(p){return p.platformId===opt.platformId});
+          h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">';
+          h+='<span style="font-size:16px">'+op.icon+'</span>';
+          h+='<span style="font-size:13px;flex:1;color:#666">'+op.name+'</span>';
+          if(hasOpt) h+='<span style="font-size:12px;color:var(--success)">✓ 已添加</span>';
+          else h+='<span style="font-size:11px;color:var(--muted);background:#e5e5ea;padding:2px 8px;border-radius:8px">可选</span>';
+          h+='</div>';
+        }
+        if(missingOpts.length){
+          h+='<div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border-radius:8px;font-size:12px;color:#92400e">';
+          h+='💡 补充可选账号可提升报名通过率';
+          h+='</div>';
+        }
+      }
+      h+='</div>';
+    }
+  }
+
+  h+='</div>';
+  // 底部操作区
+  h+='<div style="padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);margin-top:20px">';
+  if(!state.user&&t.status==='OPEN'){
+    h+='<button class="btn btn-primary" onclick="openLogin()">登录后报名</button>';
+  } else if(applied){
+    h+='<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:12px;font-size:14px;color:var(--success);font-weight:500">✅ 已报名，等待品牌审核</div>';
+  } else if(canApply){
+    var check2=checkRequirements(t);
+    if(check2.status==='ok'){
+      h+='<button class="btn btn-primary" onclick="applyTask()">立即报名</button>';
+    } else if(check2.status==='missing'){
+      window._detailMissingIds=check2.failures.map(function(f){return f.platformId});
+      h+='<button class="btn btn-primary" onclick="showAddAccountSheet(window._detailMissingIds)">补充账号后报名</button>';
+      h+='<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:8px">添加以上账号即可报名</div>';
+    } else {
+      h+='<button class="btn" style="background:#e5e5ea;color:#8a8a8e;cursor:not-allowed" disabled>不满足粉丝要求</button>';
+      h+='<div style="text-align:center;font-size:11px;color:#ef4444;margin-top:8px">粉丝数不足，暂时无法报名此任务</div>';
+    }
+  }
+  h+='</div>';
+  return h;
 }
 
 function bindDetail(){}
+
+function showAddAccountSheet(missingIds){
+  var overlay=document.createElement('div');
+  overlay.className='bsheet-overlay';
+  overlay.id='add-acct-sheet';
+  overlay.onclick=function(e){if(e.target===overlay) overlay.remove();}
+  var inner='<div class="bsheet">';
+  inner+='<div class="bsheet-handle"></div>';
+  inner+='<div class="bsheet-title">补充社交账号</div>';
+  inner+='<div class="bsheet-sub">添加后即可报名该任务</div>';
+  for(var i=0;i<missingIds.length;i++){
+    var pid=missingIds[i],pm=platformById(pid),isWx=pid==='wechat',isId=pm.inputType==='id';
+    inner+='<div style="margin-bottom:14px">';
+    inner+='<div style="font-size:13px;font-weight:600;margin-bottom:6px">'+pm.icon+' '+pm.name+(isId?' — 账号 ID':' — 主页链接')+'</div>';
+    if(isWx){
+      inner+='<div style="display:flex;gap:6px;align-items:center">';
+      inner+='<div id="as-prefix-'+pid+'" style="padding:11px 10px;background:#f2f3f7;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted);display:none">+86</div>';
+      inner+='<input id="as-val-'+pid+'" class="ob-input" style="flex:1;margin:0" placeholder="微信号 或 手机号" oninput="asWxInput(this,\''+pid+'\')">';
+      inner+='</div><div id="as-hint-'+pid+'" style="font-size:11px;margin-top:3px;color:var(--muted)">纯数字自动识别手机号</div>';
+    } else {
+      inner+='<input id="as-val-'+pid+'" class="ob-input" style="margin:0" placeholder="'+escHtml(pm.placeholder||'')+'">';
+      if(!isId) inner+='<input id="as-fol-'+pid+'" class="ob-input" style="margin:6px 0 0;font-size:13px" type="number" placeholder="粉丝数（选填）">';
+    }
+    inner+='</div>';
+  }
+  inner+='<button class="btn btn-primary" onclick="submitAddAccountSheet('+JSON.stringify(missingIds)+')">保存并报名</button>';
+  inner+='<button class="btn btn-outline" style="margin-top:8px" onclick="document.getElementById(\'add-acct-sheet\').remove()">取消</button>';
+  inner+='</div>';
+  overlay.innerHTML=inner;
+  document.body.appendChild(overlay);
+}
+
+function asWxInput(el,pid){
+  var val=el.value.trim(),prefix=document.getElementById('as-prefix-'+pid),hint=document.getElementById('as-hint-'+pid);
+  if(!hint)return;
+  if(/^\d+$/.test(val)&&val.length>0){
+    if(prefix)prefix.style.display='block';
+    var ok=/^1[3-9]\d{9}$/.test(val);
+    hint.style.color=val.length<11?'var(--muted)':ok?'var(--success)':'#ef4444';
+    hint.textContent=val.length<11?'继续输入（11位）':ok?'✓ +86 '+val:'手机号格式有误';
+  } else {
+    if(prefix)prefix.style.display='none';
+    hint.style.color=val.length>=6?'var(--success)':'var(--muted)';
+    hint.textContent=val.length>=6?'✓ 微信 ID':val.length>0?'微信号至少6位':'纯数字自动识别手机号';
+  }
+}
+
+function submitAddAccountSheet(missingIds){
+  var existing=[];
+  try{var ap=state.ambassadorProfile||{};existing=ap.social_platforms?JSON.parse(ap.social_platforms):[];}catch(e){}
+  var toAdd=[];
+  for(var i=0;i<missingIds.length;i++){
+    var pid=missingIds[i],pm=platformById(pid);
+    var inp=document.getElementById('as-val-'+pid);
+    var val=inp?inp.value.trim():'';
+    if(!val){alert('请填写 '+pm.name+' 账号');return;}
+    if(pid==='wechat'){
+      var check=obValidateWechat(val);
+      if(!check.ok){alert(check.msg);return;}
+      toAdd.push({platformId:pid,accountId:check.saved,url:null,followers:null});
+    } else if(pm.inputType==='id'){
+      toAdd.push({platformId:pid,accountId:val,url:null,followers:null});
+    } else {
+      var folEl=document.getElementById('as-fol-'+pid);
+      toAdd.push({platformId:pid,url:val,accountId:null,followers:folEl&&folEl.value?parseInt(folEl.value,10):null});
+    }
+  }
+  var merged=existing.filter(function(s){return missingIds.indexOf(s.platformId)<0}).concat(toAdd);
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/ambassador/profile',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return;}
+      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      document.getElementById('add-acct-sheet').remove();
+      applyTask();
+    }catch(e){alert('保存失败');}
+  };
+  xhr.send(JSON.stringify({socialPlatforms:merged}));
+}
 
 /* ── Brand Dashboard ── */
 function brandDashHTML(){
@@ -453,15 +640,31 @@ function bindBrandTask(){
 function heraldDashHTML(){
   var h=hdrHTML()+userBarHTML()+'<div class="dash">';
 
-  // === 收入摘要 ===
+  // === 收款信息缺失提示 ===
+  var ap=state.ambassadorProfile||{};
+  if(!ap.residence||!ap.bank_account){
+    var missing=[];
+    if(!ap.residence) missing.push('居住地');
+    if(!ap.bank_account) missing.push('收款账户');
+    h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:8px">';
+    h+='<div><div style="font-size:13px;font-weight:600;color:#92400e">⚠️ 收款信息未完善</div>';
+    h+='<div style="font-size:11px;color:#a16207;margin-top:2px">'+missing.join(' · ')+'未填写，获得报酬时必须完善</div></div>';
+    h+='<span style="font-size:12px;color:var(--primary);white-space:nowrap;cursor:pointer" onclick="switchTab(\'profile\')">立即填写 →</span>';
+    h+='</div>';
+  }
+
+  // === 收支摘要 ===
   var bal=state.walletBalance||{};
-  h+='<div style="display:flex;gap:16px;margin-bottom:20px">';
+  var balCur=bal.displayCurrency||'JPY';
+  var balCurrencies=(bal.balances||[]).filter(function(b){return Number(b.available||0)!==0||Number(b.frozen||0)!==0;});
+  var balApprox=balCurrencies.length>1;
+  h+='<div style="display:flex;gap:16px;margin-bottom:20px;cursor:pointer" onclick="state.view=\'wallet\';loadWalletBalance();loadWalletMethods();loadWalletTxns();render()">';
   h+='<div style="flex:1;background:#fff;border-radius:12px;padding:14px 16px">';
-  h+='<div style="font-size:10px;color:var(--muted);margin-bottom:4px">累计收入</div>';
-  h+='<div style="font-size:18px;font-weight:700">¥'+(bal.totalIncome||0).toLocaleString()+'</div></div>';
+  h+='<div style="font-size:10px;color:var(--muted);margin-bottom:4px">可用余额</div>';
+  h+='<div style="font-size:18px;font-weight:700">'+(balApprox?'≈':'')+'¥'+(bal.available||0).toLocaleString()+' <span style="font-size:11px;font-weight:400;color:var(--muted)">'+balCur+'</span></div></div>';
   h+='<div style="flex:1;background:#fff;border-radius:12px;padding:14px 16px">';
   h+='<div style="font-size:10px;color:var(--muted);margin-bottom:4px">本月收入</div>';
-  h+='<div style="font-size:18px;font-weight:700">¥'+(bal.monthlyIncome||0).toLocaleString()+'</div></div>';
+  h+='<div style="font-size:18px;font-weight:700;color:#16a34a">+¥'+(bal.periodInflow||0).toLocaleString()+' <span style="font-size:11px;font-weight:400;color:var(--muted)">'+balCur+'</span></div></div>';
   h+='</div>';
 
   // === 待办任务 ===
@@ -687,7 +890,7 @@ function profileHTML(){
   h+='<div style="font-size:13px;opacity:.7">→ 钱包</div></div>';
   h+='<div style="display:flex;gap:24px">';
   h+='<div><div style="font-size:10px;opacity:.5">待结算</div><div style="font-size:14px;font-weight:600">¥'+(wb.pendingAmount||0).toLocaleString()+'</div></div>';
-  h+='<div><div style="font-size:10px;opacity:.5">累计收入</div><div style="font-size:14px;font-weight:600">¥'+(wb.totalIncome||0).toLocaleString()+'</div></div>';
+  h+='<div><div style="font-size:10px;opacity:.5">本月收入</div><div style="font-size:14px;font-weight:600;color:#4ade80">+¥'+(wb.periodInflow||0).toLocaleString()+'</div></div>';
   h+='</div></div>';
 
   // 账号信息
@@ -700,14 +903,79 @@ function profileHTML(){
     h+=profileRow('KYC状态', ap.kyc_status==='approved'?'✅ 已通过':ap.kyc_status==='pending'?'⏳ 审核中':'未提交');
     if(ap.residence==='japan') h+=profileRow('在留声明', ap.declaration_status==='submitted'||ap.declaration_status==='approved'?'✅ 已提交':'未提交');
     h+=profileRow('打款方式', ap.bank_account?JSON.parse(ap.bank_account).type||'已设置':'未设置');
+    var dispCur=ap.display_currency||'JPY';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)">';
+    h+='<span style="font-size:13px;color:var(--muted)">结算/展示币种</span>';
+    h+='<span style="font-size:13px;font-weight:500;color:var(--primary);cursor:pointer" onclick="toggleDisplayCurrency()">'+(dispCur==='CNY'?'🇨🇳 CNY':'🇯🇵 JPY')+' · 切换</span>';
+    h+='</div>';
   } else if(!isHerald&&state.brandProfile){
     var bp=state.brandProfile;
     h+=profileRow('公司名称', bp.company_name||'未设置');
     h+=profileRow('行业', bp.industry||'未设置');
     h+=profileRow('联系人', bp.contact_name||'未设置');
+    h+=profileRow('业务市场', (bp.brand_currency||'JPY')==='CNY'?'🇨🇳 中国（CNY）':'🇯🇵 日本（JPY）');
   }
   h+=profileRow('角色', isHerald?'赫使（大使）':'品牌商家');
   h+='</div>';
+
+  // 评级卡片（赫使专属）
+  if(isHerald&&state.ambassadorProfile){
+    var rt=state.ambassadorProfile.rating||{};
+    var ctasks=rt.completedTasks||0;
+    var grate=rt.goodRate||0;
+    var rlevel='未评级';
+    var rlvlColor='var(--muted)';
+    if(ctasks>=50&&grate>=0.95){rlevel='Platinum';rlvlColor='#7c3aed';}
+    else if(ctasks>=25&&grate>=0.85){rlevel='Gold';rlvlColor='#f59e0b';}
+    else if(ctasks>=10&&grate>=0.75){rlevel='Silver';rlvlColor='#9ca3af';}
+    else if(ctasks>=3&&grate>=0.60){rlevel='Bronze';rlvlColor='#cd7f32';}
+    h+='<div style="background:#fff;border-radius:16px;margin:0 16px 12px;padding:16px 20px">';
+    h+='<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:12px">成长档案</div>';
+    h+='<div style="display:flex;gap:20px;margin-bottom:12px">';
+    h+='<div><div style="font-size:10px;opacity:.5">评级</div><div style="font-size:15px;font-weight:700;color:'+rlvlColor+'">'+rlevel+'</div></div>';
+    h+='<div><div style="font-size:10px;opacity:.5">完成任务</div><div style="font-size:15px;font-weight:700">'+ctasks+'单</div></div>';
+    h+='<div><div style="font-size:10px;opacity:.5">好评率</div><div style="font-size:15px;font-weight:700">'+(rt.ratedCount>0?Math.round(grate*100)+'%':'—')+'</div></div>';
+    h+='</div>';
+    // 成长进度提示
+    var nextLevel='',nextHint='';
+    if(rlevel==='未评级'){nextLevel='Bronze';nextHint='还需完成 '+(3-ctasks)+'单';}
+    else if(rlevel==='Bronze'){nextLevel='Silver';nextHint='还需完成 '+(10-ctasks)+'单，好评率达 75%';}
+    else if(rlevel==='Silver'){nextLevel='Gold';nextHint='还需完成 '+(25-ctasks)+'单，好评率达 85%';}
+    else if(rlevel==='Gold'){nextLevel='Platinum';nextHint='还需完成 '+(50-ctasks)+'单，好评率达 95%';}
+    if(nextLevel) h+='<div style="font-size:11px;color:var(--muted);background:#f9fafb;border-radius:8px;padding:8px 10px">距离 <b>'+nextLevel+'</b>：'+nextHint+'</div>';
+    h+='</div>';
+  }
+
+  // 社交账号卡片（赫使专属）
+  if(isHerald){
+    var ap2=state.ambassadorProfile||{};
+    var socials=[];
+    var tierSnap={};
+    try{socials=ap2.social_platforms?JSON.parse(ap2.social_platforms):[];}catch(e){}
+    try{tierSnap=ap2.tier_snapshot?JSON.parse(ap2.tier_snapshot):{};}catch(e){}
+    var updAt=ap2.social_platforms_updated_at?ap2.social_platforms_updated_at.slice(0,10):'';
+    h+='<div style="background:#fff;border-radius:16px;margin:0 16px 12px;overflow:hidden">';
+    h+='<div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">';
+    h+='<span style="font-size:12px;color:var(--muted);font-weight:600">社交账号'+(updAt?' <span style="font-weight:400;opacity:.5">更新于 '+updAt+'</span>':'')+'</span>';
+    h+='<span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="showSocialEdit()">编辑</span></div>';
+    if(socials.length===0){
+      h+='<div style="padding:16px 20px;font-size:13px;color:var(--muted)">未添加 · <span style="color:var(--primary);cursor:pointer" onclick="showSocialEdit()">立即添加</span></div>';
+    } else {
+      for(var si=0;si<socials.length;si++){
+        var s=socials[si];
+        var sp=platformById(s.platformId);
+        var tier=tierSnap[s.platformId];
+        var sval=s.accountId||(s.url?s.url.replace('https://','').split('/')[0]:'—');
+        if(s.followers) sval+=' · '+s.followers.toLocaleString()+'粉';
+        if(tier) sval+=' <span style="font-size:10px;background:#f0f4ff;color:#4f6ef7;border-radius:4px;padding:1px 5px">'+tier+'</span>';
+        h+=profileRow(sp.icon+' '+sp.name, sval);
+      }
+    }
+    h+='<div id="social-edit-area" style="display:none;padding:16px 20px;border-top:1px solid var(--border)">';
+    h+=socialEditFormHTML(socials);
+    h+='</div>';
+    h+='</div>';
+  }
 
   // 操作
   // 开通第二角色
@@ -727,6 +995,14 @@ function profileHTML(){
     h+='🌟 开通赫使功能 <span style="font-size:12px;color:var(--muted)">— 可接取任务赚取报酬</span></div>';
   }
 
+  var fp=state.ambassadorProfile||state.brandProfile;
+  if(fp&&fp.linkedAccount){
+    var la=fp.linkedAccount;
+    var laLabel=la.role==='BRAND'?'品牌商家':'赫使';
+    h+='<div style="padding:14px 20px;font-size:14px;color:var(--primary);cursor:pointer;border-bottom:1px solid var(--border)" onclick="switchAccount()">';
+    h+='🔁 切换到 '+escHtml(la.nickname)+'（'+laLabel+'）</div>';
+  }
+
   h+='<div style="padding:14px 20px;font-size:14px;color:#ff3b30;cursor:pointer" onclick="logout()">退出登录</div>';
   h+='</div>';
 
@@ -738,6 +1014,109 @@ function profileRow(label,val){
   return '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)"><span style="font-size:13px;color:var(--muted)">'+label+'</span><span style="font-size:13px;font-weight:500">'+escHtml(String(val))+'</span></div>';
 }
 
+function socialEditFormHTML(socials){
+  var wechat=socials.find(function(s){return s.platformId==='wechat'});
+  var others=socials.filter(function(s){return s.platformId!=='wechat'});
+  var h='';
+  // 微信 ID / 手机号
+  h+='<div style="margin-bottom:14px">';
+  h+='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">💬 微信 ID / 手机号</div>';
+  h+='<div style="display:flex;gap:6px;align-items:center">';
+  h+='<div id="se-wechat-prefix" style="padding:11px 10px;background:#f2f3f7;border:1px solid var(--border);border-radius:10px;font-size:14px;color:var(--muted);white-space:nowrap;'+(wechat&&wechat.accountId&&/^\+86/.test(wechat.accountId)?'':'display:none')+'">+86</div>';
+  var wval=wechat?((wechat.accountId||'').replace(/^\+86/,'')):'';
+  h+='<input id="se-wechat" class="ob-input" style="flex:1;margin:0" placeholder="微信号 或 手机号（选填）" value="'+escHtml(wval)+'" oninput="seWechatInput(this)">';
+  h+='</div>';
+  h+='<div id="se-wechat-hint" style="font-size:11px;margin-top:4px;color:var(--muted)">手机号输入纯数字自动识别</div>';
+  h+='</div>';
+  // 其他平台
+  var sns=PLATFORM_REGISTRY.filter(function(p){return p.id!=='wechat'});
+  h+='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">其他社交账号</div>';
+  for(var i=0;i<sns.length;i++){
+    var p=sns[i];
+    var ex=others.find(function(o){return o.platformId===p.id});
+    var isId=p.inputType==='id';
+    var exVal=ex?(isId?(ex.accountId||''):(ex.url||'')):'';
+    h+='<div style="margin-bottom:8px">';
+    h+='<div style="font-size:12px;color:#555;margin-bottom:4px">'+p.icon+' '+p.name+' <span style="color:var(--muted)">(选填)</span></div>';
+    h+='<div style="display:flex;gap:6px">';
+    h+='<input class="ob-input" id="se-plat-'+p.id+'" style="flex:1;margin:0;font-size:13px" placeholder="'+escHtml(p.placeholder||'')+'" value="'+escHtml(exVal)+'">';
+    if(!isId){
+      h+='<input class="ob-input" id="se-fol-'+p.id+'" style="width:72px;margin:0;font-size:13px" type="number" placeholder="粉丝数" value="'+(ex&&ex.followers?ex.followers:'')+'">';
+    }
+    h+='</div></div>';
+  }
+  h+='<button class="btn btn-primary" style="margin-top:8px" onclick="saveSocialProfile()">保存</button>';
+  h+='<button class="btn btn-outline" style="margin-top:8px;margin-left:8px" onclick="hideSocialEdit()">取消</button>';
+  return h;
+}
+
+function showSocialEdit(){
+  var el=qs('#social-edit-area');
+  if(el) el.style.display='block';
+}
+
+function hideSocialEdit(){
+  var el=qs('#social-edit-area');
+  if(el) el.style.display='none';
+}
+
+function seWechatInput(el){
+  // 复用同一套检测逻辑，但用 se- 前缀的 DOM id
+  var val=el.value.trim();
+  var prefix=qs('#se-wechat-prefix');
+  var hint=qs('#se-wechat-hint');
+  if(!hint) return;
+  if(/^\d+$/.test(val)&&val.length>0){
+    if(prefix) prefix.style.display='block';
+    var valid=/^1[3-9]\d{9}$/.test(val);
+    if(val.length<11) hint.style.color='var(--muted)',hint.textContent='继续输入（11位）';
+    else if(valid) hint.style.color='var(--success)',hint.textContent='✓ +86 '+val;
+    else hint.style.color='#ef4444',hint.textContent='手机号格式有误';
+  } else {
+    if(prefix) prefix.style.display='none';
+    if(val.length===0) hint.style.color='var(--muted)',hint.textContent='手机号输入纯数字自动识别';
+    else if(val.length<6) hint.style.color='var(--muted)',hint.textContent='微信号至少6位';
+    else hint.style.color='var(--success)',hint.textContent='✓ 微信 ID';
+  }
+}
+
+function saveSocialProfile(){
+  var wInput=qs('#se-wechat');
+  var wVal=wInput?wInput.value.trim():'';
+  var platforms=[];
+  if(wVal){
+    var check=obValidateWechat(wVal);
+    if(!check.ok){alert(check.msg);return}
+    if(check.saved) platforms.push({platformId:'wechat',accountId:check.saved,url:null,followers:null});
+  }
+  var sns=PLATFORM_REGISTRY.filter(function(p){return p.id!=='wechat'});
+  for(var i=0;i<sns.length;i++){
+    var pi=sns[i];
+    var valEl=qs('#se-plat-'+pi.id),folEl=qs('#se-fol-'+pi.id);
+    var val=valEl?valEl.value.trim():'';
+    var fol=folEl&&folEl.value?parseInt(folEl.value,10):null;
+    if(!val) continue;
+    if(pi.inputType==='id') platforms.push({platformId:pi.id,accountId:val,url:null,followers:null});
+    else platforms.push({platformId:pi.id,url:val,followers:fol,accountId:null});
+  }
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/ambassador/profile',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var res=JSON.parse(xhr.responseText);
+      if(res.error){alert(res.error);return}
+      // 刷新本地档案
+      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(platforms)});
+      hideSocialEdit();
+      toast('社交账号已保存');
+      render();
+    }catch(e){alert('保存失败')}
+  };
+  xhr.send(JSON.stringify({socialPlatforms:platforms}));
+}
+
 /* ── Wallet ── */
 function walletHTML(){
   var bal=state.walletBalance||{};
@@ -746,18 +1125,63 @@ function walletHTML(){
   // 返回按钮
   h+='<div style="padding:0 0 16px"><span style="cursor:pointer;font-size:14px;color:var(--primary)" onclick="state.view=\'herald-dashboard\';render()">← 返回任务中心</span></div>';
 
-  // 余额卡片
-  h+='<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:24px;margin-bottom:20px;color:#fff">';
-  h+='<div style="font-size:11px;opacity:.6;margin-bottom:4px">可用余额</div>';
+  // 余额卡片（三栏：可用 / 冻结 / 本期流入流出）
+  var periodLabel=WALLET_PERIOD_LABELS[walletPeriod]||'本月';
+  h+='<div style="background:linear-gradient(135deg,#1a1a2e,#16213e);border-radius:16px;padding:24px;margin-bottom:16px;color:#fff">';
+  h+='<div style="font-size:11px;opacity:.6;margin-bottom:4px">可提现余额</div>';
   h+='<div style="font-size:36px;font-weight:700;margin-bottom:20px">¥'+(bal.available||0).toLocaleString()+'</div>';
-  h+='<div style="display:flex;gap:24px">';
-  h+='<div style="flex:1"><div style="font-size:10px;opacity:.5">累计收入</div><div style="font-size:15px;font-weight:600">¥'+(bal.totalIncome||0).toLocaleString()+'</div></div>';
-  h+='<div style="flex:1"><div style="font-size:10px;opacity:.5">已提现</div><div style="font-size:15px;font-weight:600">¥'+(bal.totalWithdrawn||0).toLocaleString()+'</div></div>';
-  h+='</div></div>';
+  h+='<div style="display:flex;gap:0;background:rgba(255,255,255,.08);border-radius:10px;overflow:hidden">';
+  h+='<div style="flex:1;padding:10px 14px;border-right:1px solid rgba(255,255,255,.1)"><div style="font-size:10px;opacity:.5">冻结中</div><div style="font-size:15px;font-weight:600">¥'+(bal.frozen||0).toLocaleString()+'</div></div>';
+  h+='<div style="flex:1;padding:10px 14px;border-right:1px solid rgba(255,255,255,.1)"><div style="font-size:10px;opacity:.5">'+periodLabel+'流入</div><div style="font-size:15px;font-weight:600;color:#4ade80">+¥'+(bal.periodInflow||0).toLocaleString()+'</div></div>';
+  h+='<div style="flex:1;padding:10px 14px"><div style="font-size:10px;opacity:.5">'+periodLabel+'流出</div><div style="font-size:15px;font-weight:600;color:#f87171">-¥'+(bal.periodOutflow||0).toLocaleString()+'</div></div>';
+  h+='</div>';
+  h+='<div style="font-size:11px;opacity:.5;margin-top:10px">汇总币种：'+(bal.displayCurrency||'JPY')+'</div>';
+  h+='</div>';
 
-  // 提现按钮
-  h+='<div style="margin-bottom:20px">';
-  h+='<button class="btn btn-primary" onclick="state.view=\'withdraw\';render()" style="background:#1a1a2e">提现</button></div>';
+  // 各币种余额明细（多币种汇总）
+  if(bal.balances&&bal.balances.length>1){
+    h+='<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:16px">';
+    h+='<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:8px">各币种余额</div>';
+    for(var bi=0;bi<bal.balances.length;bi++){
+      var b=bal.balances[bi];
+      h+='<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0'+(bi<bal.balances.length-1?';border-bottom:1px solid var(--border)':'')+'">';
+      h+='<span style="font-weight:500">'+b.currency+'</span><span style="color:var(--muted)">可用 ¥'+Number(b.available||0).toLocaleString()+' · 冻结 ¥'+Number(b.frozen||0).toLocaleString()+'</span></div>';
+    }
+    h+='</div>';
+  }
+
+  // 冻结说明
+  if(bal.frozen>0){
+    h+='<div style="background:#fff8e1;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#92400e">';
+    h+='⏳ 冻结中 ¥'+bal.frozen.toLocaleString()+' 为提现处理中的金额，处理完成后将从余额扣除</div>';
+  }
+
+  // 提现申请
+  h+='<div style="background:#fff;border-radius:16px;padding:20px;margin-bottom:16px">';
+  h+='<div style="font-weight:600;font-size:14px;margin-bottom:14px">申请提现</div>';
+  h+='<div style="display:flex;flex-direction:column;gap:10px">';
+  if(bal.balances&&bal.balances.length>1){
+    h+='<div><label style="font-size:12px;color:var(--muted)">提现币种</label>';
+    h+='<select id="wr-currency" class="form-input" style="margin-top:4px">';
+    for(var wci=0;wci<bal.balances.length;wci++){
+      var wb2=bal.balances[wci];
+      h+='<option value="'+wb2.currency+'"'+(wb2.currency===(bal.displayCurrency||'JPY')?' selected':'')+'>'+wb2.currency+'（可用 ¥'+Number(wb2.available||0).toLocaleString()+'）</option>';
+    }
+    h+='</select></div>';
+  }
+  h+='<div><label style="font-size:12px;color:var(--muted)">提现金额（最低 ¥100）</label>';
+  h+='<input id="wr-amount" type="number" min="100" placeholder="例：5000" class="form-input" style="margin-top:4px"></div>';
+  h+='<div><label style="font-size:12px;color:var(--muted)">收款方式</label>';
+  h+='<select id="wr-method" class="form-input" style="margin-top:4px" onchange="renderWrAccount()">';
+  h+='<option value="">请选择...</option>';
+  h+='<option value="alipay">支付宝（推荐）</option>';
+  h+='<option value="wechat">微信支付</option>';
+  h+='<option value="wise">Wise</option>';
+  h+='<option value="bank">银行账户</option>';
+  h+='</select></div>';
+  h+='<div id="wr-account-area"></div>';
+  h+='<button class="btn btn-primary" onclick="submitWithdrawRequest()">提交提现申请</button>';
+  h+='</div></div>';
 
   // 收款方式
   h+='<div style="margin-bottom:24px"><div style="font-size:14px;font-weight:600;margin-bottom:12px">收款方式</div>';
@@ -785,12 +1209,26 @@ function walletHTML(){
   h+='<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="state.view=\'add-method\';render()">+ 添加收款方式</button>';
   h+='</div>';
 
-  // 交易记录
+  // 钱包流水：按期间过滤 + 期间流入流出 + 分类型明细
   var txns=state.walletTxns||[];
-  h+='<div><div style="font-size:14px;font-weight:600;margin-bottom:12px">交易记录</div>';
-  var txnFilters=[{id:'all',label:'全部'},{id:'ESCROW_RELEASE',label:'收入'},{id:'WITHDRAWAL',label:'提现'},{id:'PLATFORM_FEE',label:'手续费'}];
+  var flow=state.walletFlow||{};
+  h+='<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">';
+  h+='<div style="font-size:14px;font-weight:600">钱包流水</div>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  ['month','last_month','7d','30d','all'].forEach(function(p){
+    var active=walletPeriod===p;
+    h+='<div style="padding:4px 10px;border-radius:14px;font-size:11px;cursor:pointer;'+(active?'background:#111;color:#fff':'background:#e5e5ea;color:#555')+'" onclick="setWalletPeriod(\''+p+'\')">'+WALLET_PERIOD_LABELS[p]+'</div>';
+  });
+  h+='</div></div>';
+
+  h+='<div style="display:flex;gap:12px;margin-bottom:12px">';
+  h+='<div style="flex:1;background:#fff;border-radius:10px;padding:10px 14px"><div style="font-size:10px;color:var(--muted)">期间流入</div><div style="font-size:15px;font-weight:700;color:#16a34a">+¥'+(flow.inflow||0).toLocaleString()+'</div></div>';
+  h+='<div style="flex:1;background:#fff;border-radius:10px;padding:10px 14px"><div style="font-size:10px;color:var(--muted)">期间流出</div><div style="font-size:15px;font-weight:700;color:#dc2626">-¥'+(flow.outflow||0).toLocaleString()+'</div></div>';
+  h+='</div>';
+
+  var txnFilters=[{id:'all',label:'全部'},{id:'TASK_CREDIT',label:'任务收入'},{id:'WITHDRAWAL_DEBIT',label:'提现到账'},{id:'WITHDRAWAL_FREEZE',label:'提现申请'},{id:'ADJUSTMENT',label:'调整'}];
   var txnFilter=state.txnFilter||'all';
-  h+='<div style="display:flex;gap:6px;margin-bottom:12px">';
+  h+='<div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">';
   for(var f=0;f<txnFilters.length;f++){
     var tf=txnFilters[f];
     h+='<div style="padding:5px 12px;border-radius:16px;font-size:11px;cursor:pointer;'+(txnFilter===tf.id?'background:#111;color:#fff':'background:#e5e5ea;color:#555')+'" onclick="state.txnFilter=\''+tf.id+'\';loadWalletTxns()">'+tf.label+'</div>';
@@ -798,28 +1236,92 @@ function walletHTML(){
   h+='</div>';
   for(var t=0;t<txns.length;t++){
     var tx=txns[t];
-    var txLabels={ESCROW_RELEASE:'收入',WITHDRAWAL:'提现',PLATFORM_FEE:'手续费',ESCROW_DEPOSIT:'托管',ESCROW_REFUND:'退款'};
-    var txAmount=tx.amount<0?tx.amount:('+'+tx.amount);
-    var txColor=tx.amount<0?'#dc2626':(tx.type==='WITHDRAWAL'?'#dc2626':'#16a34a');
+    var out=tx.direction==='out';
     h+='<div style="background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">';
-    h+='<div><div style="font-size:13px">'+(txLabels[tx.type]||tx.type)+(tx.note?' · '+escHtml(tx.note):'')+'</div>';
-    h+='<div style="font-size:10px;color:var(--muted)">'+(tx.created_at||'').slice(0,10)+'</div></div>';
-    h+='<div style="font-size:14px;font-weight:600;color:'+txColor+'">'+(tx.amount<0?'-':'+')+'¥'+Math.abs(tx.amount).toLocaleString()+'</div>';
+    h+='<div><div style="font-size:13px">'+escHtml(tx.label||tx.type)+(tx.note?' · '+escHtml(tx.note):'')+'</div>';
+    h+='<div style="font-size:10px;color:var(--muted)">'+(tx.created_at||'').slice(0,16).replace('T',' ')+'</div></div>';
+    h+='<div style="font-size:14px;font-weight:600;color:'+(out?'#dc2626':'#16a34a')+'">'+(out?'-':'+')+'¥'+Math.abs(Number(tx.amount)).toLocaleString()+' '+tx.currency+'</div>';
     h+='</div>';
   }
-  if(txns.length===0) h+='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">暂无交易记录</div>';
+  if(txns.length===0) h+='<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">该期间暂无流水记录</div>';
   h+='</div></div>';
   return h;
+}
+
+function renderWrAccount(){
+  var method=(document.getElementById('wr-method')||{}).value;
+  var area=document.getElementById('wr-account-area');
+  if(!area||!method)return;
+  var fields={
+    alipay:'<input id="wr-acc" class="form-input" placeholder="支付宝账号（手机号或邮箱）">',
+    wechat:'<input id="wr-acc" class="form-input" placeholder="微信号">',
+    wise:'<input id="wr-acc" class="form-input" placeholder="Wise 邮箱账号">',
+    bank:'<input id="wr-acc" class="form-input" placeholder="银行账号"><input id="wr-bank" class="form-input" style="margin-top:6px" placeholder="银行名称（例：三菱UFJ）">',
+  };
+  area.innerHTML='<div style="margin-top:4px">'+( fields[method]||'' )+'</div>';
+}
+
+function submitWithdrawRequest(){
+  var amount=parseFloat((document.getElementById('wr-amount')||{}).value);
+  var method=(document.getElementById('wr-method')||{}).value;
+  var acc=((document.getElementById('wr-acc')||{}).value||'').trim();
+  var bank=((document.getElementById('wr-bank')||{}).value||'').trim();
+  if(!amount||amount<100){alert('最低提现金额 ¥100');return;}
+  if(!method){alert('请选择收款方式');return;}
+  if(!acc){alert('请填写收款账号');return;}
+  var accountDetails={account:acc};
+  if(bank) accountDetails.bankName=bank;
+  var currency=(document.getElementById('wr-currency')||{}).value||(state.walletBalance||{}).displayCurrency||'JPY';
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',API+'/wallet/withdraw-request',true);
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){
+    var d=JSON.parse(xhr.responseText);
+    if(d.error){alert(d.error);return;}
+    alert('提现申请已提交！预计1-3个工作日内打款。');
+    loadWalletBalance();render();
+  };
+  xhr.send(JSON.stringify({amount:amount,currency:currency,method:method,accountDetails:accountDetails}));
+}
+
+var walletPeriod='month';
+var WALLET_PERIOD_LABELS={month:'本月', last_month:'上月', '7d':'最近7天', '30d':'最近30天', all:'全部'};
+
+function walletPeriodRange(period){
+  var now=new Date();
+  var from, to=now;
+  if(period==='last_month'){
+    from=new Date(now.getFullYear(), now.getMonth()-1, 1);
+    to=new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if(period==='7d'){
+    from=new Date(now.getTime() - 7*86400000);
+  } else if(period==='30d'){
+    from=new Date(now.getTime() - 30*86400000);
+  } else if(period==='all'){
+    from=new Date('1970-01-01');
+  } else {
+    from=new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return {from:from.toISOString(), to:to.toISOString()};
+}
+
+function setWalletPeriod(p){
+  if(walletPeriod===p)return;
+  walletPeriod=p;
+  loadWalletBalance();
+  loadWalletTxns();
 }
 
 function loadWalletTxns(){
   if(state._loadingTxns)return;state._loadingTxns=true;
   var filter=state.txnFilter||'all';
-  var url=API+'/wallet/transactions'+(filter!=='all'?'?type='+filter:'');
+  var r=walletPeriodRange(walletPeriod);
+  var url=API+'/wallet/transactions?walletType=herald&limit=50&from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to)+(filter!=='all'?'&type='+filter:'');
   var x=new XMLHttpRequest();
   x.open('GET',url,true);
   x.setRequestHeader('Authorization','Bearer '+state.token);
-  x.onload=function(){state._loadingTxns=false;try{state.walletTxns=JSON.parse(x.responseText).transactions||[]}catch(e){}render()};
+  x.onload=function(){state._loadingTxns=false;try{var d=JSON.parse(x.responseText);state.walletTxns=d.transactions||[];state.walletFlow={inflow:d.periodInflow,outflow:d.periodOutflow}}catch(e){}render()};
   x.onerror=function(){state._loadingTxns=false};
   x.send();
 }
@@ -845,8 +1347,9 @@ function deleteMethod(id){
 
 function loadWalletBalance(){
   if(state._loadingBalance)return;state._loadingBalance=true;
+  var r=walletPeriodRange(walletPeriod);
   var x=new XMLHttpRequest();
-  x.open('GET',API+'/wallet/balance',true);
+  x.open('GET',API+'/wallet/balance?from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to),true);
   x.setRequestHeader('Authorization','Bearer '+state.token);
   x.onload=function(){state._loadingBalance=false;try{state.walletBalance=JSON.parse(x.responseText)}catch(e){}render()};
   x.onerror=function(){state._loadingBalance=false};
@@ -1344,7 +1847,19 @@ function loadMyCodes(){
 function openDetail(id){
   var xhr=new XMLHttpRequest();
   xhr.open('GET',API+'/tasks/'+id,true);
-  xhr.onload=function(){try{state.detailTask=JSON.parse(xhr.responseText)}catch(e){}state.view='detail';render()};
+  xhr.onload=function(){
+    try{state.detailTask=JSON.parse(xhr.responseText)}catch(e){}
+    // 确保赫使档案已加载（资质预检需要）
+    if(state.user&&!state.ambassadorProfile){
+      var p=new XMLHttpRequest();
+      p.open('GET',API+'/auth/me',true);
+      p.setRequestHeader('Authorization','Bearer '+state.token);
+      p.onload=function(){try{state.ambassadorProfile=JSON.parse(p.responseText)}catch(e){}state.view='detail';render();};
+      p.send();
+    } else {
+      state.view='detail';render();
+    }
+  };
   xhr.send();
 }
 
@@ -1352,7 +1867,7 @@ function back(){state.view='list';state.detailTask=null;render();loadTasks()}
 
 function openLogin(){
   log('openLogin');
-  Auth.init({onLogin:function(d){afterAuth(d)}, api: API + '/auth'});
+  Auth.init({onLogin:function(d){afterAuth(d)}, onRegister:function(d){afterAuth(d)}, api: API + '/auth'});
   state.showLogin=true;state.loginTab='login';window._r='HERALD';
   var inner = document.getElementById('login-card-inner');
   if(inner) inner.innerHTML = loginHTML();
@@ -1396,7 +1911,55 @@ function applyActiveRole() {
     loadMyTasks();
   } else {
     state.tab = 'explore'; state.view = 'list'; render(); loadTasks();
+    if (r === 'HERALD') loadDisplayCurrency();
   }
+}
+
+/** 加载赫使展示币种 + 汇率（用于任务报酬换算显示） */
+function loadDisplayCurrency(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',API+'/auth/me',true);
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error) return;
+      state.ambassadorProfile=d;
+      state.displayCurrency=d.display_currency||'JPY';
+      loadExchangeRate();
+    }catch(e){}
+  };
+  xhr.send();
+}
+
+function loadExchangeRate(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',API+'/wallet/exchange-rate?from=CNY&to=JPY',true);
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error) return;
+      state.exchangeRate={from:d.from,to:d.to,rate:Number(d.rate)};
+      render();
+    }catch(e){}
+  };
+  xhr.send();
+}
+
+/** 任务报酬展示：若任务币种与赫使展示币种不同，附加换算金额 */
+function commissionLabel(amount, taskCurrency){
+  var cur=taskCurrency||'JPY';
+  var label='¥'+Number(amount).toLocaleString();
+  var disp=state.displayCurrency;
+  var er=state.exchangeRate;
+  if(disp&&cur!==disp&&er&&er.rate){
+    var converted=null;
+    if(er.from===cur&&er.to===disp) converted=Number(amount)*er.rate;
+    else if(er.to===cur&&er.from===disp) converted=Number(amount)/er.rate;
+    if(converted!=null) label+=' <span style="font-size:11px;color:var(--muted)">(≈¥'+Math.round(converted).toLocaleString()+' '+disp+')</span>';
+  }
+  return label;
 }
 
 function switchRole(role) {
@@ -1442,34 +2005,138 @@ function doRegister(){
 
 function logout(){state.token=null;state.user=null;state.tab='explore';state.view='list';render();loadTasks()}
 
-/* ── 大使入驻向导 ── */
+function toggleDisplayCurrency(){
+  var cur=(state.ambassadorProfile&&state.ambassadorProfile.display_currency)||'JPY';
+  var next=cur==='JPY'?'CNY':'JPY';
+  if(!confirm('切换结算/展示币种为 '+next+'？')) return;
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/ambassador/profile',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return}
+      state.ambassadorProfile=d;
+      state.walletBalance=null;
+      loadWalletBalance();
+      render();
+    }catch(e){alert('保存失败')}
+  };
+  xhr.send(JSON.stringify({displayCurrency:next}));
+}
+
+function switchAccount(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',API+'/auth/switch-account',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return}
+      var roles=d.user.roles||[d.user.role];
+      if(d.user.role==='BRAND'&&!roles.includes('HERALD')){
+        sessionStorage.setItem('herix_switch_token',d.token);
+        window.location.href='merchant.html';
+        return;
+      }
+      afterAuth(d);
+    }catch(e){alert('切换失败')}
+  };
+  xhr.send('{}');
+}
+
+function tryResumeSwitchedSession(){
+  var token=sessionStorage.getItem('herix_switch_token');
+  if(!token) return false;
+  sessionStorage.removeItem('herix_switch_token');
+  state.token=token;
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',API+'/auth/me',true);
+  xhr.setRequestHeader('Authorization','Bearer '+token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error||!d.id){state.token=null;render();return}
+      var roles=d.roles||[d.role];
+      if(d.role==='BRAND'&&!roles.includes('HERALD')){
+        sessionStorage.setItem('herix_switch_token',token);
+        window.location.href='merchant.html';
+        return;
+      }
+      state.user={id:d.id,nickname:d.nickname,role:d.role,roles:roles,is_verified:!!d.is_verified,is_onboarded:!!(d.is_onboarded||d.brand_onboarded)};
+      state.activeRole=d.role;
+      if(!state.user.is_onboarded&&d.role==='HERALD'){state.showOnboard=true;state.onboardStep=1;state.onboardData={};render();return}
+      applyActiveRole();
+    }catch(e){state.token=null;render()}
+  };
+  xhr.send();
+  return true;
+}
+
+/* ── 平台注册表 ── */
+// PLATFORM_REGISTRY, calcTier, platformById 均来自 /shared/platforms.js
+
+/* ── 大使入驻向导 (4步) ── */
+// 步骤：1=社交账号  2=居住地  3=签证/银行  4=完成
 function onboardHTML(){
   var step=state.onboardStep,d=state.onboardData;
   var h='<div style="min-height:100vh;background:var(--bg);padding:48px 20px 40px">';
-  // 进度条
+  // 进度条 (4格)
   h+='<div style="display:flex;gap:8px;margin-bottom:32px">';
-  for(var i=1;i<=3;i++) h+='<div style="flex:1;height:4px;border-radius:2px;background:'+(i<=step?'#111':'#ddd')+'"></div>';
-  h+='</div>';
-  h+='<div style="font-size:22px;font-weight:700;margin-bottom:6px">';
-  if(step===1) h+='你在哪里生活？';
-  else if(step===2) h+=(d.residence==='japan'?'在留资格声明':'打款账户信息');
-  else h+='设置完成！';
-  h+='</div>';
-  h+='<div style="font-size:13px;color:var(--muted);margin-bottom:28px">';
-  if(step===1) h+='居住地决定你的税务规则和打款方式';
-  else if(step===2&&d.residence==='japan') h+='请确认你的在留资格，这是日本法规要求';
-  else if(step===2) h+='选择你的收款方式';
-  else h+='欢迎加入赫使！你已可以浏览和接取任务';
+  for(var i=1;i<=4;i++) h+='<div style="flex:1;height:4px;border-radius:2px;background:'+(i<=step?'#111':'#ddd')+'"></div>';
   h+='</div>';
 
+  var titles={1:'你的社交账号',2:'你在哪里生活？',3:(d.residence==='japan'?'在留资格声明':'打款账户信息'),4:'设置完成！'};
+  var subs={1:'帮助品牌方了解你的影响力，入驻后可随时补充',2:'居住地决定你的税务规则和打款方式',3:(d.residence==='japan'?'请确认你的在留资格，这是日本法规要求':'选择你的收款方式'),4:'欢迎加入赫使！你已可以浏览和接取任务'};
+  h+='<div style="font-size:22px;font-weight:700;margin-bottom:6px">'+titles[step]+'</div>';
+  h+='<div style="font-size:13px;color:var(--muted);margin-bottom:28px">'+subs[step]+'</div>';
+
   if(step===1){
+    // 微信 ID / 手机号
+    h+='<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px">';
+    h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:20px">💬</span><div><div style="font-weight:600;font-size:14px">微信 ID / 手机号 <span style="color:var(--muted);font-size:11px">建议填写</span></div><div style="font-size:11px;color:var(--muted)">用于品牌方与你直接沟通</div></div></div>';
+    h+='<div style="display:flex;gap:6px;align-items:center">';
+    h+='<div id="ob-wechat-prefix" style="padding:11px 10px;background:#f2f3f7;border:1px solid var(--border);border-radius:10px;font-size:14px;color:var(--muted);white-space:nowrap;display:none">+86</div>';
+    h+='<input id="ob-wechat" class="ob-input" style="flex:1;margin:0" placeholder="微信号 或 手机号" value="'+(d.wechatId||'')+'" oninput="obWechatInput(this)">';
+    h+='</div>';
+    h+='<div id="ob-wechat-hint" style="font-size:11px;margin-top:6px;color:var(--muted)">微信号：字母+数字，6-20位 · 手机号：输入数字自动识别</div>';
+    h+='</div>';
+    // 可选 SNS 平台
+    h+='<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:12px">';
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px">添加一个社交账号（选填）</div>';
+    var sns=PLATFORM_REGISTRY.filter(function(p){return p.id!=='wechat'});
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">';
+    for(var pi=0;pi<sns.length;pi++){
+      var p=sns[pi];
+      h+='<div class="ob-chip'+(d.snsPlatform===p.id?' ob-chip-sel':'')+'" onclick="obSelect(\'snsPlatform\',\''+p.id+'\')">'+p.icon+' '+p.name+'</div>';
+    }
+    h+='</div>';
+    if(d.snsPlatform){
+      var selP=platformById(d.snsPlatform);
+      var isIdType=selP.inputType==='id';
+      h+='<div style="font-size:12px;color:var(--muted);margin-bottom:4px">'+(isIdType?'账号 ID':'主页链接')+'</div>';
+      h+='<input id="ob-sns-val" class="ob-input" placeholder="'+escHtml(selP.placeholder||'')+'" value="'+(d.snsVal||'')+'" style="margin-bottom:8px">';
+      if(!isIdType){
+        h+='<div style="font-size:12px;color:var(--muted);margin-bottom:4px">粉丝数（选填）</div>';
+        h+='<input id="ob-sns-followers" class="ob-input" type="number" placeholder="例：5000" value="'+(d.snsFollowers||'')+'">';
+      }
+    }
+    h+='</div>';
+    h+='<button class="btn btn-primary" style="margin-top:8px" onclick="obNextPlatforms()">下一步</button>';
+    h+='<div style="text-align:center;margin-top:12px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="obSkipPlatforms()">跳过，稍后再填</span></div>';
+
+  } else if(step===2){
     h+='<div id="ob-res-japan" class="ob-choice'+(d.residence==='japan'?' ob-selected':'')+'" onclick="obSelect(\'residence\',\'japan\')">';
     h+='<div style="font-size:22px;margin-bottom:6px">🇯🇵</div><div style="font-weight:600">在日本居住</div><div style="font-size:12px;color:var(--muted);margin-top:2px">日本银行振込，需提交在留资格声明</div></div>';
     h+='<div id="ob-res-overseas" class="ob-choice'+(d.residence==='overseas'?' ob-selected':'')+'" onclick="obSelect(\'residence\',\'overseas\')" style="margin-top:10px">';
     h+='<div style="font-size:22px;margin-bottom:6px">🌏</div><div style="font-weight:600">海外其他地区</div><div style="font-size:12px;color:var(--muted);margin-top:2px">Wise / PayPal / 国际电汇</div></div>';
-    if(d.residence) h+='<button class="btn btn-primary" style="margin-top:24px" onclick="obNext()">下一步</button>';
+    if(d.residence) h+='<button class="btn btn-primary" style="margin-top:24px" onclick="obNextResidence()">下一步</button>';
+    h+='<div style="text-align:center;margin-top:12px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="obSkipToFinish()">跳过，稍后再填</span></div>';
+    h+='<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">收款时必须完善</div>';
 
-  } else if(step===2&&d.residence==='japan'){
+  } else if(step===3&&d.residence==='japan'){
     var visas=[{v:'永住者',l:'永住者 / 定住者 / 日本人配偶'},
                {v:'就労',l:'就労・人文知識・国際業務等'},
                {v:'留学',l:'留学生（资格外活动许可）'},
@@ -1486,8 +2153,9 @@ function onboardHTML(){
       h+='<input type="checkbox" id="ob-agree" style="width:18px;height:18px"><label for="ob-agree" style="font-size:13px">上記声明内容に同意します</label></div>';
       h+='<button class="btn btn-primary" style="margin-top:20px" onclick="obNextJapan()">确认声明，继续</button>';
     }
+    h+='<div style="text-align:center;margin-top:16px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="obSkipToFinish()">跳过，稍后再填</span></div>';
 
-  } else if(step===2){
+  } else if(step===3){
     var methods=[{v:'wise',l:'Wise',sub:'推荐，手续费最低'},
                  {v:'paypal',l:'PayPal',sub:'快速到账'},
                  {v:'swift',l:'国际电汇 (SWIFT)',sub:'适合大额'}];
@@ -1503,8 +2171,9 @@ function onboardHTML(){
         h+='<div style="margin-top:16px"><label style="font-size:12px;color:var(--muted)">SWIFT Code</label><input id="ob-swift" class="ob-input" placeholder="XXXXXXXX" value="'+(d.swiftCode||'')+'"></div>';
         h+='<div style="margin-top:8px"><label style="font-size:12px;color:var(--muted)">IBAN / 账户号</label><input id="ob-iban" class="ob-input" placeholder="账户号码" value="'+(d.iban||'')+'"></div>';
       }
-      h+='<button class="btn btn-primary" style="margin-top:20px" onclick="obNextBank()">下一步</button>';
+      h+='<button class="btn btn-primary" style="margin-top:20px" onclick="obNextBank()">提交</button>';
     }
+    h+='<div style="text-align:center;margin-top:12px"><span style="font-size:12px;color:var(--primary);cursor:pointer" onclick="obSkipToFinish()">跳过，稍后再填</span></div>';
 
   } else {
     h+='<div style="text-align:center;padding:32px 0">';
@@ -1526,10 +2195,71 @@ function obSelect(key,val){
   render();
 }
 
-function obNext(){
+function obWechatInput(el){
+  var val=el.value.trim();
+  var prefix=qs('#ob-wechat-prefix');
+  var hint=qs('#ob-wechat-hint');
+  if(!hint) return;
+  // 纯数字 → 手机号模式
+  if(/^\d+$/.test(val)&&val.length>0){
+    if(prefix) prefix.style.display='block';
+    var valid=/^1[3-9]\d{9}$/.test(val);
+    if(val.length<11) hint.style.color='var(--muted)',hint.textContent='继续输入手机号（11位）';
+    else if(valid) hint.style.color='var(--success)',hint.textContent='✓ 有效的中国大陆手机号，将以 +86 '+val+' 保存';
+    else hint.style.color='#ef4444',hint.textContent='手机号格式有误，请检查';
+  } else {
+    if(prefix) prefix.style.display='none';
+    if(val.length===0) hint.style.color='var(--muted)',hint.textContent='微信号：字母+数字，6-20位 · 手机号：输入数字自动识别';
+    else if(val.length<6) hint.style.color='var(--muted)',hint.textContent='微信号至少6位';
+    else hint.style.color='var(--success)',hint.textContent='✓ 微信 ID';
+  }
+}
+
+function obValidateWechat(val){
+  if(!val) return {ok:true, saved:null}; // 选填，空也可以
+  if(/^\d+$/.test(val)){
+    if(!/^1[3-9]\d{9}$/.test(val)) return {ok:false, msg:'手机号格式有误（需11位，以1开头）'};
+    return {ok:true, saved:'+86'+val};
+  }
+  if(val.length<6||val.length>20) return {ok:false, msg:'微信号需6-20位'};
+  return {ok:true, saved:val};
+}
+
+function obNextPlatforms(){
+  var wechat=qs('#ob-wechat');
+  var d=state.onboardData;
+  if(wechat&&wechat.value.trim()){
+    var check=obValidateWechat(wechat.value.trim());
+    if(!check.ok){alert(check.msg);return}
+    d.wechatId=check.saved;
+  }
+  // 收集 SNS 信息
+  if(d.snsPlatform){
+    var valEl=qs('#ob-sns-val'),fol=qs('#ob-sns-followers');
+    d.snsVal=valEl?valEl.value.trim():'';
+    d.snsFollowers=fol&&fol.value?parseInt(fol.value,10):null;
+  }
+  state.onboardStep=2;render();
+}
+
+function obSkipPlatforms(){
+  var wechat=qs('#ob-wechat');
+  if(wechat&&wechat.value.trim()){
+    var check=obValidateWechat(wechat.value.trim());
+    if(!check.ok){alert(check.msg);return}
+    if(check.saved) state.onboardData.wechatId=check.saved;
+  }
+  state.onboardStep=2;render();
+}
+
+function obNextResidence(){
   if(!state.onboardData.residence) return;
-  state.onboardStep=2;
-  render();
+  state.onboardStep=3;render();
+}
+
+function obSkipToFinish(){
+  // 直接提交（不含居住地/银行信息）
+  obSubmit();
 }
 
 function obNextJapan(){
@@ -1555,6 +2285,14 @@ function obNextBank(){
 
 function obSubmit(){
   var d=state.onboardData;
+  // 组装 social_platforms
+  var platforms=[];
+  if(d.wechatId) platforms.push({platformId:'wechat',accountId:d.wechatId,url:null,followers:null});
+  if(d.snsPlatform&&d.snsVal){
+    var snsMeta=platformById(d.snsPlatform);
+    if(snsMeta.inputType==='id') platforms.push({platformId:d.snsPlatform,accountId:d.snsVal,url:null,followers:null});
+    else platforms.push({platformId:d.snsPlatform,url:d.snsVal,followers:d.snsFollowers||null,accountId:null});
+  }
   var body={
     residence: d.residence,
     residenceCountry: d.residenceCountry||null,
@@ -1562,6 +2300,7 @@ function obSubmit(){
     hasWorkPermit: true,
     bankAccountType: d.bankType||null,
     bankDetails: d.bankType?{email:d.bankEmail,swiftCode:d.swiftCode,iban:d.iban}:null,
+    socialPlatforms: platforms.length>0?platforms:null,
   };
   var xhr=new XMLHttpRequest();
   xhr.open('POST',API+'/ambassador/onboard',true);
@@ -1572,7 +2311,7 @@ function obSubmit(){
       var res=JSON.parse(xhr.responseText);
       if(res.error){alert(res.error);return}
       state.user.is_onboarded=1;
-      state.onboardStep=3;
+      state.onboardStep=4;
       render();
     }catch(e){alert('提交失败')}
   };
@@ -1596,7 +2335,13 @@ function onboardBrandHTML(){
   if(step===1){
     h+='<div style="font-size:22px;font-weight:700;margin-bottom:6px">品牌信息</div>';
     h+='<div style="font-size:13px;color:var(--muted);margin-bottom:28px">告诉我们你的品牌，帮助赫使了解你</div>';
-    h+='<div><label style="font-size:12px;color:var(--muted)">公司 / 品牌名称 *</label><input id="ob-company" class="ob-input" placeholder="例：周大福珠宝" value="'+(d.companyName||'')+'"></div>';
+    h+='<div><label style="font-size:12px;color:var(--muted)">业务市场 *</label>';
+    h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
+    h+='<div class="ob-chip'+(d.currency==='JPY'?' ob-chip-sel':'')+'" onclick="obSelect(\'currency\',\'JPY\')">🇯🇵 日本市场（JPY）</div>';
+    h+='<div class="ob-chip'+(d.currency==='CNY'?' ob-chip-sel':'')+'" onclick="obSelect(\'currency\',\'CNY\')">🇨🇳 中国市场（CNY）</div>';
+    h+='</div>';
+    h+='<div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
+    h+='<div style="margin-top:16px"><label style="font-size:12px;color:var(--muted)">公司 / 品牌名称 *</label><input id="ob-company" class="ob-input" placeholder="例：周大福珠宝" value="'+(d.companyName||'')+'"></div>';
     h+='<div style="margin-top:12px"><label style="font-size:12px;color:var(--muted)">所属行业</label>';
     var industries=['美妆','时尚','食品饮料','金融服务','旅游','母婴','电商','其他'];
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
@@ -1628,6 +2373,7 @@ function onboardBrandHTML(){
 
 function obBrandStep1(){
   var company=qs('#ob-company'),website=qs('#ob-website');
+  if(!state.onboardData.currency){alert('请选择业务市场');return}
   if(!company||!company.value.trim()){alert('请填写品牌名称');return}
   state.onboardData.companyName=company.value.trim();
   state.onboardData.website=website?website.value.trim():'';
@@ -1653,7 +2399,7 @@ function obBrandStep2(){
       state.onboardStep=3;render();
     }catch(e){alert('提交失败')}
   };
-  xhr.send(JSON.stringify({companyName:d.companyName,industry:d.industry||'',website:d.website,contactName:d.contactName,contactPhone:d.contactPhone,companyDesc:d.companyDesc}));
+  xhr.send(JSON.stringify({companyName:d.companyName,industry:d.industry||'',website:d.website,contactName:d.contactName,contactPhone:d.contactPhone,companyDesc:d.companyDesc,currency:d.currency}));
 }
 
 function applyTask(){
@@ -1663,11 +2409,330 @@ function applyTask(){
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
-      alert('报名成功！');openDetail(state.detailTask.id)
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){
+        if(d.code==='REQUIREMENTS_NOT_MET'){
+          showRequirementsModal(d.failures, d.canRetry, function(){ applyTask(); });
+          return;
+        }
+        alert(d.error);return;
+      }
+      toast('报名成功！');openDetail(state.detailTask.id);
     }catch(e){alert('报名失败')}
   };
   xhr.send('{}');
+}
+
+function showRequirementsModal(failures, canRetry, onSuccess){
+  var modal=document.createElement('div');
+  modal.className='modal-overlay';
+  modal.id='req-modal';
+  var inner='<div class="modal-card">';
+  inner+='<div class="modal-title">不满足报名条件</div>';
+  inner+='<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:16px">请查看以下问题</div>';
+
+  var missingIds=[];
+  for(var i=0;i<failures.length;i++){
+    var f=failures[i];
+    var p=platformById(f.platformId);
+    inner+='<div style="padding:10px 12px;border-radius:10px;margin-bottom:8px;';
+    if(f.type==='INSUFFICIENT'){
+      // 硬拒绝，红色背景
+      inner+='background:#fef2f2;border:1px solid #fecaca">';
+      inner+='<div style="display:flex;align-items:center;gap:8px">';
+      inner+='<span style="font-size:18px">'+p.icon+'</span>';
+      inner+='<div><div style="font-size:13px;font-weight:600;color:#dc2626">'+p.name+' 粉丝数不足</div>';
+      inner+='<div style="font-size:11px;color:#ef4444;margin-top:2px">当前 '+f.current.toLocaleString()+' · 要求 '+f.required.toLocaleString()+'+ 粉</div></div></div>';
+    } else {
+      // 缺失，橙色背景，可补充
+      inner+='background:#fffbeb;border:1px solid #fde68a">';
+      inner+='<div style="display:flex;align-items:center;gap:8px">';
+      inner+='<span style="font-size:18px">'+p.icon+'</span>';
+      inner+='<div><div style="font-size:13px;font-weight:600;color:#92400e">'+p.name+' 账号未添加</div>';
+      inner+='<div style="font-size:11px;color:#a16207;margin-top:2px">添加后可重新报名</div></div></div>';
+      missingIds.push(f.platformId);
+    }
+    inner+='</div>';
+  }
+
+  if(canRetry && missingIds.length>0){
+    // 有缺失账号 → 展开添加表单
+    inner+='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">';
+    inner+='<div style="font-size:12px;font-weight:600;margin-bottom:10px">补充缺失账号</div>';
+    for(var j=0;j<missingIds.length;j++){
+      var pid=missingIds[j];
+      var pm=platformById(pid);
+      var isWechat=pid==='wechat';
+      var isIdType=pm.inputType==='id';
+      inner+='<div style="margin-bottom:10px">';
+      inner+='<div style="font-size:12px;color:#555;margin-bottom:4px">'+pm.icon+' '+pm.name+(isIdType?' 账号 ID':' 主页链接')+'</div>';
+      if(isWechat){
+        inner+='<div style="display:flex;gap:6px;align-items:center">';
+        inner+='<div id="req-wx-prefix-'+pid+'" style="padding:11px 10px;background:#f2f3f7;border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted);display:none">+86</div>';
+        inner+='<input id="req-plat-'+pid+'" class="ob-input" style="flex:1;margin:0;font-size:13px" placeholder="微信号 或 手机号" oninput="reqWxInput(this,\''+pid+'\')">';
+        inner+='</div>';
+        inner+='<div id="req-wx-hint-'+pid+'" style="font-size:11px;margin-top:3px;color:var(--muted)">纯数字自动识别手机号</div>';
+      } else {
+        inner+='<input id="req-plat-'+pid+'" class="ob-input" style="margin:0;font-size:13px" placeholder="'+escHtml(pm.placeholder||'')+'">';
+        if(!isIdType){
+          inner+='<input id="req-fol-'+pid+'" class="ob-input" style="margin:4px 0 0;font-size:13px" type="number" placeholder="粉丝数（选填）">';
+        }
+      }
+      inner+='</div>';
+    }
+    inner+='<button class="btn btn-primary" style="margin-top:4px" onclick="submitRequirementsAdd('+JSON.stringify(missingIds)+')">保存并重新报名</button>';
+  } else {
+    // 全是粉丝不足 → 纯告知，无操作
+    inner+='<div style="margin-top:4px;padding:10px;background:#f9fafb;border-radius:8px;font-size:12px;color:var(--muted);text-align:center">你目前不满足该任务的资质要求</div>';
+  }
+
+  inner+='<div class="link" style="margin-top:12px" onclick="document.getElementById(\'req-modal\').remove()">关闭</div>';
+  inner+='</div>';
+  modal.innerHTML=inner;
+  window._reqModalCallback=onSuccess;
+  document.body.appendChild(modal);
+}
+
+function reqWxInput(el, pid){
+  var val=el.value.trim();
+  var prefix=document.getElementById('req-wx-prefix-'+pid);
+  var hint=document.getElementById('req-wx-hint-'+pid);
+  if(!hint) return;
+  if(/^\d+$/.test(val)&&val.length>0){
+    if(prefix) prefix.style.display='block';
+    var valid=/^1[3-9]\d{9}$/.test(val);
+    if(val.length<11) hint.style.color='var(--muted)',hint.textContent='继续输入（11位）';
+    else if(valid) hint.style.color='var(--success)',hint.textContent='✓ +86 '+val;
+    else hint.style.color='#ef4444',hint.textContent='手机号格式有误';
+  } else {
+    if(prefix) prefix.style.display='none';
+    hint.style.color=val.length>=6?'var(--success)':'var(--muted)';
+    hint.textContent=val.length>=6?'✓ 微信 ID':val.length>0?'微信号至少6位':'纯数字自动识别手机号';
+  }
+}
+
+function submitRequirementsAdd(missingIds){
+  var existing=[];
+  try{var ap=state.ambassadorProfile||{};existing=ap.social_platforms?JSON.parse(ap.social_platforms):[];}catch(e){}
+  var toAdd=[];
+  for(var i=0;i<missingIds.length;i++){
+    var pid=missingIds[i];
+    var pm=platformById(pid);
+    var inp=document.getElementById('req-plat-'+pid);
+    var val=inp?inp.value.trim():'';
+    if(!val){alert('请填写 '+pm.name+' 账号');return}
+    if(pid==='wechat'){
+      var check=obValidateWechat(val);
+      if(!check.ok){alert(check.msg);return}
+      toAdd.push({platformId:pid,accountId:check.saved,url:null,followers:null});
+    } else if(pm.inputType==='id'){
+      toAdd.push({platformId:pid,accountId:val,url:null,followers:null});
+    } else {
+      var folEl=document.getElementById('req-fol-'+pid);
+      var fol=folEl&&folEl.value?parseInt(folEl.value,10):null;
+      toAdd.push({platformId:pid,url:val,accountId:null,followers:fol});
+    }
+  }
+  var merged=existing.filter(function(s){return missingIds.indexOf(s.platformId)<0}).concat(toAdd);
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/ambassador/profile',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return}
+      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      var m=document.getElementById('req-modal');
+      if(m) m.remove();
+      if(window._reqModalCallback) window._reqModalCallback();
+    }catch(e){alert('保存失败')}
+  };
+  xhr.send(JSON.stringify({socialPlatforms:merged}));
+}
+
+function showPlatformCollectModal(platformId, errMsg, onSuccess){
+  var pInfo=platformById(platformId);
+  var isWechat=(platformId==='wechat');
+  var existingPlatforms=[];
+  try{
+    var ap=state.ambassadorProfile||{};
+    existingPlatforms=ap.social_platforms?JSON.parse(ap.social_platforms):[];
+  }catch(e){}
+
+  var modal=document.createElement('div');
+  modal.className='modal-overlay';
+  modal.id='plat-collect-modal';
+  var inner='<div class="modal-card">';
+  inner+='<div class="modal-title">补充账号信息</div>';
+  inner+='<div class="modal-sub" style="color:#ef4444;font-size:12px">'+escHtml(errMsg)+'</div>';
+
+  var isIdType=pInfo.inputType==='id';
+  if(isWechat){
+    inner+='<div style="margin-bottom:12px">';
+    inner+='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+pInfo.icon+' 微信 ID / 手机号</div>';
+    inner+='<div style="display:flex;gap:6px;align-items:center">';
+    inner+='<div id="pc-wechat-prefix" style="padding:11px 10px;background:#f2f3f7;border:1px solid var(--border);border-radius:10px;font-size:14px;color:var(--muted);white-space:nowrap;display:none">+86</div>';
+    inner+='<input id="pc-platform-input" class="ob-input" style="flex:1;margin:0" placeholder="微信号 或 手机号" oninput="pcWechatInput(this)">';
+    inner+='</div>';
+    inner+='<div id="pc-wechat-hint" style="font-size:11px;margin-top:4px;color:var(--muted)">手机号输入纯数字自动识别</div>';
+    inner+='</div>';
+  } else if(isIdType){
+    inner+='<div class="ig"><label>'+pInfo.icon+' '+pInfo.name+' 账号 ID</label>';
+    inner+='<input id="pc-platform-input" class="ob-input" placeholder="'+escHtml(pInfo.placeholder||'')+'"></div>';
+  } else {
+    inner+='<div class="ig"><label>'+pInfo.icon+' '+pInfo.name+' 主页链接</label>';
+    inner+='<input id="pc-platform-input" class="ob-input" placeholder="'+escHtml(pInfo.placeholder||'')+'"></div>';
+    inner+='<div class="ig"><label>粉丝数（选填）</label>';
+    inner+='<input id="pc-followers-input" class="ob-input" type="number" placeholder="例：5000"></div>';
+  }
+
+  inner+='<button class="btn btn-primary" onclick="submitPlatformCollect(\''+platformId+'\','+isWechat+')" style="margin-top:4px">保存并继续报名</button>';
+  inner+='<div class="link" onclick="document.getElementById(\'plat-collect-modal\').remove()">取消</div>';
+  inner+='</div>';
+  modal.innerHTML=inner;
+
+  // 把回调挂到 window 上，方便 submitPlatformCollect 调用
+  window._platformCollectCallback=onSuccess;
+  document.body.appendChild(modal);
+}
+
+function pcWechatInput(el){
+  var val=el.value.trim();
+  var prefix=qs('#pc-wechat-prefix');
+  var hint=qs('#pc-wechat-hint');
+  if(!hint) return;
+  if(/^\d+$/.test(val)&&val.length>0){
+    if(prefix) prefix.style.display='block';
+    var valid=/^1[3-9]\d{9}$/.test(val);
+    if(val.length<11) hint.style.color='var(--muted)',hint.textContent='继续输入（11位）';
+    else if(valid) hint.style.color='var(--success)',hint.textContent='✓ +86 '+val;
+    else hint.style.color='#ef4444',hint.textContent='手机号格式有误';
+  } else {
+    if(prefix) prefix.style.display='none';
+    if(val.length===0) hint.style.color='var(--muted)',hint.textContent='手机号输入纯数字自动识别';
+    else if(val.length<6) hint.style.color='var(--muted)',hint.textContent='微信号至少6位';
+    else hint.style.color='var(--success)',hint.textContent='✓ 微信 ID';
+  }
+}
+
+function submitPlatformCollect(platformId, isWechat){
+  var inputEl=qs('#pc-platform-input');
+  var val=inputEl?inputEl.value.trim():'';
+  if(!val){alert('请填写账号信息');return}
+
+  var pMeta=platformById(platformId);
+  var newEntry={platformId:platformId};
+  if(isWechat){
+    var check=obValidateWechat(val);
+    if(!check.ok){alert(check.msg);return}
+    newEntry.accountId=check.saved;newEntry.url=null;newEntry.followers=null;
+  } else if(pMeta.inputType==='id'){
+    newEntry.accountId=val;newEntry.url=null;newEntry.followers=null;
+  } else {
+    var folEl=qs('#pc-followers-input');
+    newEntry.url=val;newEntry.accountId=null;
+    newEntry.followers=folEl&&folEl.value?parseInt(folEl.value,10):null;
+  }
+
+  // 合并到现有档案
+  var existing=[];
+  try{var ap=state.ambassadorProfile||{};existing=ap.social_platforms?JSON.parse(ap.social_platforms):[];}catch(e){}
+  var merged=existing.filter(function(s){return s.platformId!==platformId});
+  merged.push(newEntry);
+
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/ambassador/profile',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return}
+      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      var modal=document.getElementById('plat-collect-modal');
+      if(modal) modal.remove();
+      if(window._platformCollectCallback) window._platformCollectCallback();
+    }catch(e){alert('保存失败')}
+  };
+  xhr.send(JSON.stringify({socialPlatforms:merged}));
+}
+
+function showFollowersUpdateModal(platformId, required, onSuccess){
+  var pInfo=platformById(platformId);
+  // 取当前粉丝数
+  var existing=[];
+  try{var ap=state.ambassadorProfile||{};existing=ap.social_platforms?JSON.parse(ap.social_platforms):[];}catch(e){}
+  var current=existing.find(function(s){return s.platformId===platformId});
+  var currentCount=current&&current.followers?current.followers:null;
+
+  var modal=document.createElement('div');
+  modal.className='modal-overlay';
+  modal.id='followers-update-modal';
+  var inner='<div class="modal-card">';
+  inner+='<div class="modal-title">粉丝数不足</div>';
+  inner+='<div style="font-size:13px;color:#555;margin-bottom:16px;text-align:center">';
+  inner+=pInfo.icon+' '+pInfo.name+' 需要 <strong>'+required.toLocaleString()+'</strong> 粉丝以上';
+  if(currentCount) inner+='<br><span style="color:var(--muted);font-size:12px">当前记录：'+currentCount.toLocaleString()+'</span>';
+  inner+='</div>';
+  inner+='<div style="font-size:12px;color:var(--muted);margin-bottom:6px">如果你的粉丝数已增长，可以更新后重试</div>';
+  inner+='<input id="fu-followers" class="ob-input" type="number" placeholder="最新粉丝数" value="'+(currentCount||'')+'">';
+  inner+='<div id="fu-hint" style="font-size:11px;margin-top:6px;min-height:16px"></div>';
+  inner+='<button class="btn btn-primary" style="margin-top:12px" onclick="submitFollowersUpdate(\''+platformId+'\','+required+')">更新并重试</button>';
+  inner+='<div class="link" style="margin-top:8px;color:var(--muted)" onclick="document.getElementById(\'followers-update-modal\').remove()">取消报名</div>';
+  inner+='</div>';
+  modal.innerHTML=inner;
+  window._followersUpdateCallback=onSuccess;
+  document.body.appendChild(modal);
+
+  // 实时提示是否满足要求
+  setTimeout(function(){
+    var inp=document.getElementById('fu-followers');
+    var hint=document.getElementById('fu-hint');
+    if(!inp||!hint) return;
+    inp.oninput=function(){
+      var v=parseInt(inp.value,10);
+      if(isNaN(v)||v<=0){hint.style.color='var(--muted)';hint.textContent='';return}
+      if(v>=required){hint.style.color='var(--success)';hint.textContent='✓ 满足要求，可以报名';}
+      else{hint.style.color='#ef4444';hint.textContent='仍不足 '+required.toLocaleString()+' 粉，无法报名此任务';}
+    };
+    if(inp.value) inp.oninput();
+  },50);
+}
+
+function submitFollowersUpdate(platformId, required){
+  var inp=document.getElementById('fu-followers');
+  var newCount=inp?parseInt(inp.value,10):NaN;
+  if(isNaN(newCount)||newCount<=0){alert('请输入有效的粉丝数');return}
+  if(newCount<required){
+    // 明确告知不符合，不再循环
+    document.getElementById('followers-update-modal').remove();
+    alert('你的 '+platformById(platformId).name+' 粉丝数（'+newCount.toLocaleString()+'）不满足该任务要求（'+required.toLocaleString()+'+ 粉），暂时无法报名。');
+    return;
+  }
+  // 更新档案里的粉丝数
+  var existing=[];
+  try{var ap=state.ambassadorProfile||{};existing=ap.social_platforms?JSON.parse(ap.social_platforms):[];}catch(e){}
+  var merged=existing.map(function(s){
+    if(s.platformId!==platformId) return s;
+    return Object.assign({},s,{followers:newCount});
+  });
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/ambassador/profile',true);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return}
+      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      var modal=document.getElementById('followers-update-modal');
+      if(modal) modal.remove();
+      if(window._followersUpdateCallback) window._followersUpdateCallback();
+    }catch(e){alert('保存失败')}
+  };
+  xhr.send(JSON.stringify({socialPlatforms:merged}));
 }
 
 function assignReferral(){
@@ -1814,7 +2879,7 @@ window.onerror = function(msg, src, line, col, err){
   log('GLOBAL ERROR: '+(msg||'')+' at '+src+':'+line+':'+col+' stack='+((err||{}).stack||''));
 };
 /* ── Init ── */
-loadTasks();
+if(!tryResumeSwitchedSession()) loadTasks();
 </script>
 <div id="db-panel" class="db-panel"></div>
 <button class="db-btn" onclick="toggleDb()" id="db-btn">DBG</button><button class="db-btn" style="right:44px;border-color:#f44;color:#f44" onclick="freezeDb()" id="db-freeze-btn">FRZ</button>

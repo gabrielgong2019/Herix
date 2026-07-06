@@ -13,6 +13,8 @@ import { ambassadorRouter } from './routes/ambassador';
 import { referralsRouter } from './routes/referrals';
 import { adminRouter } from './routes/admin';
 import { walletRouter } from './routes/wallet';
+import { uploadsRouter } from './routes/uploads';
+import { UPLOADS_DIR } from './utils/uploads';
 
 (async () => {
   await initDatabase();
@@ -27,6 +29,8 @@ app.use(cors());
 app.use('/', express.static(path.join(__dirname, '../../herix-miniapp/dist')));
 // 后备：项目根目录的静态文件
 app.use('/', express.static(path.join(__dirname, '../../')));
+// 用户上传的品牌素材（LOGO/宣传图）
+app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
@@ -43,6 +47,7 @@ app.use('/api/ambassador', ambassadorRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/wallet', walletRouter);
+app.use('/api/uploads', uploadsRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);

@@ -1,5 +1,37 @@
 import { z } from 'zod';
 
+// ── 段位阈值（粉丝数） ──
+export const TIER_THRESHOLDS = {
+  NANO:  { label: 'Nano',  max: 1_000 },
+  MICRO: { label: 'Micro', min: 1_000,   max: 10_000 },
+  MID:   { label: 'Mid',   min: 10_000,  max: 100_000 },
+  MACRO: { label: 'Macro', min: 100_000 },
+} as const;
+
+export function calcTier(followers: number): string {
+  if (followers < TIER_THRESHOLDS.NANO.max)  return 'Nano';
+  if (followers < TIER_THRESHOLDS.MICRO.max) return 'Micro';
+  if (followers < TIER_THRESHOLDS.MID.max)   return 'Mid';
+  return 'Macro';
+}
+
+// ── 评级等级 ──
+export const RATING_LEVELS = [
+  { name: 'Platinum', minTasks: 50, minGoodRate: 0.95 },
+  { name: 'Gold',     minTasks: 25, minGoodRate: 0.85 },
+  { name: 'Silver',   minTasks: 10, minGoodRate: 0.75 },
+  { name: 'Bronze',   minTasks: 3,  minGoodRate: 0.60 },
+] as const; // 从高到低排列，取第一个满足的
+
+export function calcRatingLevel(completedTasks: number, goodRate: number): string {
+  for (const level of RATING_LEVELS) {
+    if (completedTasks >= level.minTasks && goodRate >= level.minGoodRate) {
+      return level.name;
+    }
+  }
+  return 'Unrated';
+}
+
 // ── Auth ──
 
 export const RegisterSchema = z.object({
@@ -34,6 +66,11 @@ export const CreateTaskSchema = z.object({
   coverImage: z.string().optional(),
   userBenefit: z.string().optional(),
   codeMode: z.enum(['auto', 'custom']).default('auto'),
+  platformRequirements: z.array(z.object({
+    platformId: z.string(),
+    minFollowers: z.number().int().min(0).nullish(),
+    required: z.boolean().default(true),
+  })).optional(),
 });
 
 export const ApplyTaskSchema = z.object({
@@ -60,6 +97,7 @@ export const UpdateBrandProfileSchema = z.object({
   industry: z.string().optional(),
   contactName: z.string().min(1),
   contactPhone: z.string().optional(),
+  billingEmail: z.string().email().optional().or(z.literal('')),
 });
 
 export const UpdateHeraldProfileSchema = z.object({

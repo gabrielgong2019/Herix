@@ -124,10 +124,13 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
   const user = await findOne<any>(
     `SELECT u.id, u.phone, u.email, u.nickname, u.avatar_url, u.role, u.roles, u.is_verified, u.created_at,
-            bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded,
+            u.linked_account_id,
+            bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded, bp.currency as brand_currency,
+            bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email,
             hp.display_name, hp.country, hp.diaspora_group, hp.social_platforms, hp.specialties,
             hp.is_onboarded, hp.residence, hp.residence_country, hp.kyc_status,
-            hp.declaration_status, hp.visa_type, hp.bank_account
+            hp.declaration_status, hp.visa_type, hp.bank_account, hp.display_currency,
+            hp.tier_snapshot, hp.social_platforms_updated_at
      FROM users u
      LEFT JOIN brand_profiles bp ON bp.user_id = u.id
      LEFT JOIN herald_profiles hp ON hp.user_id = u.id
@@ -137,5 +140,66 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
   if (!user) return res.status(404).json({ error: '用户不存在' });
 
   user.roles = parseRoles(user.roles, user.role);
+
+  // 赫使评级摘要（实时计算）
+  if (user.roles?.includes('HERALD')) {
+    const ratingRow = await findOne<any>(
+      `SELECT
+         COUNT(DISTINCT ts.id) AS completed_tasks,
+         COUNT(tr.id) AS rated_count,
+         SUM(CASE WHEN tr.score >= 4 THEN 1 ELSE 0 END) AS good_count
+       FROM task_submissions ts
+       LEFT JOIN task_ratings tr ON tr.task_id = ts.task_id AND tr.herald_id = ts.herald_id
+       WHERE ts.herald_id = ? AND ts.status = 'APPROVED'`,
+      [req.user!.userId]
+    );
+    const completedTasks = Number(ratingRow?.completed_tasks || 0);
+    const ratedCount = Number(ratingRow?.rated_count || 0);
+    const goodCount = Number(ratingRow?.good_count || 0);
+    const goodRate = ratedCount > 0 ? Math.round((goodCount / ratedCount) * 100) / 100 : 0;
+    user.rating = { completedTasks, ratedCount, goodRate };
+  }
+
+  // 关联账号简要信息（用于前端"切换账号"入口）
+  if (user.linked_account_id) {
+    const linked = await findOne<any>(
+      `SELECT u.id, u.nickname, u.role, u.roles
+       FROM users u WHERE u.id = ?`, [user.linked_account_id]
+    );
+    if (linked) {
+      user.linkedAccount = {
+        id: linked.id, nickname: linked.nickname, role: linked.role,
+        roles: parseRoles(linked.roles, linked.role),
+      };
+    }
+  }
+
   res.json(user);
+});
+
+/** POST /api/auth/switch-account — 切换到关联账号（同一自然人的另一业务实体） */
+authRouter.post('/switch-account', requireAuth, async (req: Request, res: Response) => {
+  const user = await findOne<any>('SELECT id, linked_account_id FROM users WHERE id = ?', [req.user!.userId]);
+  if (!user?.linked_account_id) return res.status(404).json({ error: '未绑定关联账号' });
+
+  const linked = await findOne<any>(
+    `SELECT u.id, u.nickname, u.role, u.roles, u.is_verified,
+            COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded
+     FROM users u
+     LEFT JOIN herald_profiles hp ON hp.user_id = u.id
+     LEFT JOIN brand_profiles bp ON bp.user_id = u.id
+     WHERE u.id = ?`, [user.linked_account_id]
+  );
+  if (!linked) return res.status(404).json({ error: '关联账号不存在' });
+
+  const linkedRoles = parseRoles(linked.roles, linked.role);
+  const token = signToken({ userId: linked.id, role: linked.role, roles: linkedRoles });
+
+  res.json({
+    token,
+    user: {
+      id: linked.id, nickname: linked.nickname, role: linked.role,
+      roles: linkedRoles, isVerified: !!linked.is_verified, is_onboarded: !!linked.is_onboarded,
+    },
+  });
 });

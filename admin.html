@@ -133,7 +133,8 @@ function shell(inner){
   var nav=[
     {id:'dashboard',icon:'📊',label:'数据看板'},
     {id:'reviews',icon:'✅',label:'审核中心',badge:(st.data.stats?.pendingDeclarations||0)+(st.data.stats?.pendingSubmissions||0)+(st.data.stats?.pendingApplications||0)},
-    {id:'payouts',icon:'💰',label:'结算管理'},
+    {id:'topups',icon:'🏦',label:'充值确认',badge:Array.isArray(st.data.topups)?st.data.topups.filter(function(r){return r.status==='pending'}).length:0},
+    {id:'withdrawals',icon:'💸',label:'提现打款',badge:Array.isArray(st.data.withdrawals)?st.data.withdrawals.filter(function(r){return r.status==='pending'}).length:0},
     {id:'users',icon:'👥',label:'用户管理'},
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
@@ -148,9 +149,8 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',payouts:'结算管理',users:'用户管理',tasks:'任务管理',ambassadors:'赫使列表'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表'}[st.page]||''}
 function topActions(){
-  if(st.page==='payouts') return '<button class="btn btn-primary btn-sm" onclick="generatePayouts()">生成本月账单</button>';
   return '';
 }
 
@@ -158,8 +158,10 @@ function pageCont(){
   switch(st.page){
     case 'dashboard': return dashPage();
     case 'reviews': return reviewsPage();
-    case 'payouts': return payoutsPage();
+    case 'topups': return topupsPage();
+    case 'withdrawals': return withdrawalsPage();
     case 'users': return usersPage();
+    case 'brand-edit': return brandEditPage();
     case 'tasks': return tasksPage();
     case 'ambassadors': return ambassadorsPage();
     default: return dashPage();
@@ -278,62 +280,7 @@ function reviewsPage(){
 function switchTab(t){st.subPage=t;render()}
 
 /* ── Payouts ── */
-function payoutsPage(){
-  var data=st.data.payouts||{};
-  var earned=data.earned||[];
-  var history=data.payouts||[];
-  var tab=st.subPage||'pending';
-
-  var tabs='<div class="tabs"><div class="tab'+(tab==='pending'?' active':'')+'" onclick="st.subPage=\'pending\';render()">待结算 ('+earned.length+')</div>'
-    +'<div class="tab'+(tab==='history'?' active':'')+'" onclick="st.subPage=\'history\';render()">结算历史 ('+history.length+')</div></div>';
-
-  var content='';
-  if(tab==='pending'){
-    if(!earned.length) content='<div class="empty"><div class="empty-icon">💰</div>暂无待结算记录</div>';
-    else content=earned.map(function(h){
-      var bank=h.bank_account?JSON.parse(h.bank_account):{};
-      return '<div class="prow"><div class="prow-info"><div class="prow-name">'+esc(h.nickname)+'</div>'
-        +'<div class="prow-meta">'+esc(h.email||'')+(bank.type?' · '+bank.type.toUpperCase():'')+(h.residence==='japan'?' · 🇯🇵':' · 🌏')+'</div>'
-        +'<div class="prow-meta">已完成 '+h.completed_tasks+' 个任务</div></div>'
-        +'<div class="prow-amount">¥'+Number(h.total_earned).toLocaleString()+'</div>'
-        +'<div><select id="pm-'+h.id+'" style="margin-bottom:6px;padding:5px;border:1px solid var(--border);border-radius:6px;font-size:12px">'
-        +(h.residence==='japan'?'<option value="jp_bank">日本银行</option>':'')
-        +'<option value="wise">Wise</option><option value="swift">SWIFT</option></select><br>'
-        +'<button class="btn btn-primary btn-sm" onclick="markPaid(\''+h.id+'\')">标记已付款</button></div></div>';
-    }).join('');
-  } else {
-    if(!history.length) content='<div class="empty"><div class="empty-icon">📜</div>暂无结算历史</div>';
-    else content='<div class="tcard"><table><thead><tr><th>赫使</th><th>期间</th><th>完成数</th><th>金额</th><th>方式</th><th>状态</th><th>付款时间</th></tr></thead><tbody>'
-      +history.map(function(p){
-        return '<tr><td>'+esc(p.nickname)+'</td><td>'+p.period+'</td><td>'+p.qualified_count+'</td>'
-          +'<td>¥'+Number(p.amount).toLocaleString()+'</td><td>'+(p.payment_method||'-')+'</td>'
-          +'<td><span class="tag tag-'+(p.status==='paid'?'paid':'pending')+'">'+p.status+'</span></td>'
-          +'<td>'+(p.paid_at?p.paid_at.slice(0,10):'-')+'</td></tr>';
-      }).join('')+'</tbody></table></div>';
-  }
-  return tabs+content;
-}
-
-function generatePayouts(){
-  post('/admin/payouts/generate',{},function(d){
-    if(d.error){alert(d.error);return}
-    st.msg='已生成 '+d.created+' 条账单（'+d.period+'期）';st.msgType='success';
-    load('payouts');render();
-  });
-}
-
-function markPaid(userId){
-  var sel=document.getElementById('pm-'+userId);
-  var method=sel?sel.value:'wise';
-  if(!confirm('确认已向该赫使完成打款？')) return;
-  // find pending payout for this user
-  var payout=(st.data.payouts?.payouts||[]).find(function(p){return p.user_id===userId&&p.status==='pending'});
-  if(!payout){alert('请先点击「生成本月账单」');return}
-  post('/admin/payouts/'+payout.id+'/mark-paid',{method:method},function(d){
-    if(d.error){alert(d.error);return}
-    st.msg='已标记打款完成';st.msgType='success';load('payouts');render();
-  });
-}
+// payouts 相关函数已删除，提现管理统一走「💸 提现打款」页面
 
 /* ── Users ── */
 function usersPage(){
@@ -343,17 +290,130 @@ function usersPage(){
     +'<input id="uq" placeholder="搜索昵称/邮箱" value="'+esc(q)+'" onkeydown="if(event.key===\'Enter\')searchUsers()">'
     +'<select id="urole" onchange="searchUsers()"><option value="">所有角色</option><option value="HERALD"'+(role==='HERALD'?' selected':'')+'>赫使</option><option value="BRAND"'+(role==='BRAND'?' selected':'')+'>品牌</option></select>'
     +'<button class="btn btn-outline btn-sm" onclick="searchUsers()">搜索</button></div>'
-    +(users.length?'<div class="tcard"><table><thead><tr><th>昵称</th><th>邮箱</th><th>角色</th><th>入驻</th><th>KYC</th><th>注册时间</th><th>操作</th></tr></thead><tbody>'
+    +(users.length?'<div class="tcard"><table><thead><tr><th>昵称</th><th>邮箱</th><th>角色</th><th>入驻</th><th>币种</th><th>KYC</th><th>关联账号</th><th>注册时间</th><th>操作</th></tr></thead><tbody>'
     +users.map(function(u){
       var onboarded=u.role==='HERALD'?u.herald_onboarded:u.brand_onboarded;
+      var currency=u.role==='HERALD'?(u.display_currency||'JPY'):(u.brand_currency||'-');
       return '<tr><td style="font-weight:500">'+esc(u.nickname)+'</td><td style="color:var(--muted)">'+esc(u.email||'')+'</td>'
         +'<td><span class="tag '+(u.role==='HERALD'?'tag-open':'tag-completed')+'">'+u.role+'</span></td>'
         +'<td>'+(onboarded?'✅':'❌')+'</td>'
+        +'<td style="color:var(--muted)">'+esc(currency)+'</td>'
         +'<td>'+(u.kyc_status==='approved'?'✅':u.kyc_status==='pending'?'⏳':'-')+'</td>'
+        +'<td style="color:var(--muted);font-size:12px">'+(u.linked_account_id?esc(u.linked_nickname||u.linked_account_id):'-')+'</td>'
         +'<td style="color:var(--muted)">'+u.created_at.slice(0,10)+'</td>'
-        +'<td><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="suspendUser(\''+u.id+'\')">封禁</button></td></tr>';
+        +'<td>'
+        +(u.role==='BRAND'?'<button class="btn btn-outline btn-sm" onclick="editBrandProfile(\''+u.id+'\')">编辑资料</button> ':'')
+        +'<button class="btn btn-outline btn-sm" onclick="linkUser(\''+u.id+'\',\''+esc(u.nickname)+'\')">'+(u.linked_account_id?'修改关联':'设置关联')+'</button> '
+        +(u.linked_account_id?'<button class="btn btn-outline btn-sm" onclick="unlinkUser(\''+u.id+'\')">解绑</button> ':'')
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="suspendUser(\''+u.id+'\')">封禁</button>'
+        +'</td></tr>';
     }).join('')+'</tbody></table></div>'
     :'<div class="empty"><div class="empty-icon">👥</div>暂无用户</div>');
+}
+
+function linkUser(id,nickname){
+  var targetId=prompt('为「'+nickname+'」设置关联账号（输入对方的用户ID）：');
+  if(!targetId) return;
+  post('/admin/users/'+id+'/link-account',{linkedUserId:targetId.trim()},function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='关联已设置';st.msgType='success';load('users');render();
+  });
+}
+
+function unlinkUser(id){
+  if(!confirm('确认解绑该用户的关联账号？')) return;
+  post('/admin/users/'+id+'/link-account',{linkedUserId:null},function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='关联已解除';st.msgType='success';load('users');render();
+  });
+}
+
+function editBrandProfile(userId){
+  apiGet('/admin/brands/'+userId,function(d){
+    if(d.error){alert(d.error);return}
+    st.data.brandEdit=d;
+    st.page='brand-edit';
+    st.msg=null;
+    render();
+  });
+}
+
+function brandEditPage(){
+  var p=st.data.brandEdit||{};
+  var logoUrl=p.logo_url||'',promoUrl=p.promo_image_url||'';
+  var h='<button class="btn btn-outline btn-sm" onclick="go(\'users\')" style="margin-bottom:14px">← 返回用户列表</button>';
+
+  h+='<div class="panel" style="max-width:640px">';
+  h+='<div class="panel-title">品牌资料 — '+esc(p.nickname||'')+'</div>';
+  h+='<div class="field"><label>公司/品牌名称</label><input id="be_company_name" value="'+esc(p.company_name||'')+'"></div>';
+  h+='<div class="field"><label>行业</label><input id="be_industry" value="'+esc(p.industry||'')+'"></div>';
+  h+='<div class="field"><label>官网</label><input id="be_website" value="'+esc(p.website||'')+'"></div>';
+  h+='<div class="field"><label>联系人姓名</label><input id="be_contact_name" value="'+esc(p.contact_name||'')+'"></div>';
+  h+='<div class="field"><label>联系电话</label><input id="be_contact_phone" value="'+esc(p.contact_phone||'')+'"></div>';
+  h+='<div class="field"><label>账单邮箱（用于接收请求书/領収書）</label><input id="be_billing_email" type="email" value="'+esc(p.billing_email||'')+'" placeholder="accounting@company.com"></div>';
+  h+='<div class="field"><label>品牌简介</label><input id="be_company_desc" value="'+esc(p.company_desc||'')+'"></div>';
+  h+='<button class="btn btn-primary btn-sm" onclick="saveBrandProfile(\''+p.user_id+'\')">保存</button>';
+  h+='</div>';
+
+  h+='<div class="panel" style="max-width:640px">';
+  h+='<div class="panel-title">品牌形象</div>';
+  h+='<div style="display:flex;gap:32px;flex-wrap:wrap">';
+  h+='<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">LOGO（方形头像/App图标，建议≥400×400px）</div>'
+    +(logoUrl?'<img src="'+esc(logoUrl)+'" style="width:80px;height:80px;border-radius:12px;object-fit:contain;background:#f9fafb;border:1px solid var(--border)">'
+             :'<div style="width:80px;height:80px;border-radius:12px;background:#f1f5f9;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">未设置</div>')
+    +'<input type="file" accept="image/*" onchange="uploadAdminBrandAsset(\'logo\',\''+p.user_id+'\',this)" style="display:block;margin-top:8px;font-size:12px;max-width:160px"></div>';
+  h+='<div><div style="font-size:12px;color:var(--muted);margin-bottom:6px">宣传图（16:9横版，建议≥1200×675px）</div>'
+    +(promoUrl?'<img src="'+esc(promoUrl)+'" style="width:180px;height:101px;border-radius:8px;object-fit:cover;background:#f9fafb;border:1px solid var(--border)">'
+              :'<div style="width:180px;height:101px;border-radius:8px;background:#f1f5f9;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">未设置</div>')
+    +'<input type="file" accept="image/*" onchange="uploadAdminBrandAsset(\'promo\',\''+p.user_id+'\',this)" style="display:block;margin-top:8px;font-size:12px;max-width:180px"></div>';
+  h+='</div>';
+  h+='<div id="beAssetMsg" style="font-size:12px;color:var(--muted);margin-top:10px"></div>';
+  h+='</div>';
+  return h;
+}
+
+function saveBrandProfile(userId){
+  var body={
+    companyName:(document.getElementById('be_company_name')||{}).value,
+    industry:(document.getElementById('be_industry')||{}).value,
+    website:(document.getElementById('be_website')||{}).value,
+    contactName:(document.getElementById('be_contact_name')||{}).value,
+    contactPhone:(document.getElementById('be_contact_phone')||{}).value,
+    billingEmail:(document.getElementById('be_billing_email')||{}).value,
+    companyDesc:(document.getElementById('be_company_desc')||{}).value,
+  };
+  apiPatch('/admin/brands/'+userId,body,function(d){
+    if(d.error){alert(d.error);return}
+    st.msg='品牌资料已保存';st.msgType='success';
+    Object.assign(st.data.brandEdit,{
+      company_name:body.companyName,industry:body.industry,website:body.website,
+      contact_name:body.contactName,contact_phone:body.contactPhone,
+      billing_email:body.billingEmail,company_desc:body.companyDesc,
+    });
+    render();
+  });
+}
+
+function uploadAdminBrandAsset(type,userId,input){
+  var file=input.files&&input.files[0];
+  if(!file) return;
+  var msgEl=document.getElementById('beAssetMsg');
+  if(msgEl) msgEl.textContent='上传中...';
+  var fd=new FormData();
+  fd.append('file',file);
+  var x=new XMLHttpRequest();
+  x.open('POST',API+'/admin/brands/'+userId+'/'+type,true);
+  if(st.token) x.setRequestHeader('Authorization','Bearer '+st.token);
+  x.onload=function(){
+    var d;try{d=JSON.parse(x.responseText)}catch(e){d={}}
+    if(d.error){if(msgEl)msgEl.textContent=d.error;return}
+    if(type==='logo') st.data.brandEdit.logo_url=d.url;
+    else st.data.brandEdit.promo_image_url=d.url;
+    if(msgEl)msgEl.textContent='上传成功';
+    render();
+  };
+  x.onerror=function(){if(msgEl)msgEl.textContent='上传失败'};
+  x.send(fd);
 }
 
 function searchUsers(){
@@ -405,6 +465,104 @@ function changeTaskStatus(id,s){
 }
 
 /* ── Ambassadors ── */
+/* ── Topups Page ── */
+function topupsPage(){
+  var list=st.data.topups||[];
+  if(!list.length) return '<div class="empty"><div class="empty-icon">🏦</div>暂无充值申请</div>';
+  var pending=list.filter(function(r){return r.status==='pending'});
+  var done=list.filter(function(r){return r.status!=='pending'});
+  var h='';
+  if(pending.length){
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--warning)">待确认 ('+pending.length+')</div>';
+    h+='<div class="tcard" style="margin-bottom:24px"><table><thead><tr><th>品牌</th><th>金额</th><th>备注</th><th>申请时间</th><th>操作</th></tr></thead><tbody>';
+    h+=pending.map(function(r){
+      return '<tr><td><b>'+esc(r.nickname)+'</b><br><span style="font-size:11px;color:var(--muted)">'+esc(r.email)+'</span></td>'
+        +'<td><b style="color:var(--success)">¥'+Number(r.amount).toLocaleString()+'</b></td>'
+        +'<td>'+esc(r.note||'—')+'</td>'
+        +'<td>'+r.created_at.slice(0,16).replace('T',' ')+'</td>'
+        +'<td><button class="btn btn-success btn-sm" onclick="confirmTopup(\''+r.id+'\')">✓ 确认到账</button> '
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="rejectTopup(\''+r.id+'\')">✗ 拒绝</button></td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
+  if(done.length){
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px">历史记录</div>';
+    h+='<div class="tcard"><table><thead><tr><th>品牌</th><th>金额</th><th>状态</th><th>确认时间</th></tr></thead><tbody>';
+    h+=done.map(function(r){
+      var sc={confirmed:'var(--success)',rejected:'var(--danger)'};
+      var sl={confirmed:'已到账',rejected:'已拒绝'};
+      return '<tr><td>'+esc(r.nickname)+'</td><td>¥'+Number(r.amount).toLocaleString()+'</td>'
+        +'<td><span style="color:'+sc[r.status]+';font-weight:600">'+sl[r.status]+'</span></td>'
+        +'<td>'+(r.confirmed_at||'').slice(0,16).replace('T',' ')+'</td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
+  return h;
+}
+
+function confirmTopup(id){
+  if(!confirm('确认该笔充值已到账？将增加品牌余额。'))return;
+  post('/admin/topup-requests/'+id+'/confirm',{},function(d){
+    if(d.error){alert(d.error);return;}
+    st.msg='充值已确认，品牌余额已增加';st.msgType='success';load('topups');render();
+  });
+}
+function rejectTopup(id){
+  var reason=prompt('拒绝原因（可选）');
+  if(reason===null)return;
+  post('/admin/topup-requests/'+id+'/reject',{reason:reason},function(d){
+    if(d.error){alert(d.error);return;}
+    st.msg='已拒绝';st.msgType='success';load('topups');render();
+  });
+}
+
+/* ── Withdrawals Page ── */
+function withdrawalsPage(){
+  var list=st.data.withdrawals||[];
+  if(!list.length) return '<div class="empty"><div class="empty-icon">💸</div>暂无提现申请</div>';
+  var pending=list.filter(function(r){return r.status==='pending'});
+  var done=list.filter(function(r){return r.status!=='pending'});
+  var h='';
+  if(pending.length){
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--warning)">待处理 ('+pending.length+')</div>';
+    h+='<div class="tcard" style="margin-bottom:24px"><table><thead><tr><th>赫使</th><th>金额</th><th>收款方式</th><th>账号</th><th>申请时间</th><th>操作</th></tr></thead><tbody>';
+    h+=pending.map(function(r){
+      var acc=JSON.parse(r.account_details||'{}');
+      return '<tr><td><b>'+esc(r.nickname)+'</b><br><span style="font-size:11px;color:var(--muted)">'+esc(r.email)+'</span></td>'
+        +'<td><b style="color:var(--primary)">¥'+Number(r.amount).toLocaleString()+'</b></td>'
+        +'<td>'+esc(r.method)+'</td>'
+        +'<td style="font-size:12px">'+esc(acc.account||'')+(acc.bankName?' / '+esc(acc.bankName):'')+'</td>'
+        +'<td>'+r.created_at.slice(0,16).replace('T',' ')+'</td>'
+        +'<td><button class="btn btn-primary btn-sm" onclick="processWithdrawal(\''+r.id+'\')">打款确认</button></td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
+  if(done.length){
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px">历史记录</div>';
+    h+='<div class="tcard"><table><thead><tr><th>赫使</th><th>金额</th><th>状态</th><th>参考号</th><th>处理时间</th></tr></thead><tbody>';
+    h+=done.map(function(r){
+      var sc={paid:'var(--success)',failed:'var(--danger)',processing:'var(--warning)'};
+      var sl={paid:'已打款',failed:'失败',processing:'处理中'};
+      return '<tr><td>'+esc(r.nickname)+'</td><td>¥'+Number(r.amount).toLocaleString()+'</td>'
+        +'<td><span style="color:'+sc[r.status]+';font-weight:600">'+(sl[r.status]||r.status)+'</span></td>'
+        +'<td style="font-size:11px;color:var(--muted)">'+esc(r.payout_reference||'—')+'</td>'
+        +'<td>'+(r.processed_at||'').slice(0,16).replace('T',' ')+'</td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
+  return h;
+}
+
+function processWithdrawal(id){
+  if(!confirm('确认已完成打款？将通知赫使并标记完成。'))return;
+  post('/admin/withdrawal-requests/'+id+'/process',{},function(d){
+    if(d.error){alert(d.error);return;}
+    var msg='打款完成';
+    if(d.provider==='airwallex') msg='Airwallex 自动打款成功，参考号：'+d.payoutReference;
+    st.msg=msg;st.msgType='success';load('withdrawals');render();
+  });
+}
+
 function ambassadorsPage(){
   var list=st.data.ambassadors||[];
   if(!list.length) return '<div class="empty"><div class="empty-icon">🌟</div>暂无赫使</div>';
@@ -453,9 +611,10 @@ function load(page){
     apiGet('/admin/declarations',function(d){st.data.decls=d});
     apiGet('/admin/submissions',function(d){st.data.subs=d});
     apiGet('/admin/applications',function(d){st.data.apps=d;render()});
-  } else if(page==='payouts'){
-    st.subPage=st.subPage||'pending';
-    apiGet('/admin/payouts',function(d){st.data.payouts=d;render()});
+  } else if(page==='topups'){
+    apiGet('/admin/topup-requests',function(d){st.data.topups=Array.isArray(d)?d:[];render()});
+  } else if(page==='withdrawals'){
+    apiGet('/admin/withdrawal-requests',function(d){st.data.withdrawals=Array.isArray(d)?d:[];render()});
   } else if(page==='users'){
     apiGet('/admin/users',function(d){st.data.users=d;render()});
   } else if(page==='tasks'){

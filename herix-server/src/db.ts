@@ -29,6 +29,7 @@ export async function initDatabase() {
       is_verified INTEGER NOT NULL DEFAULT 0,
       wechat_open_id TEXT UNIQUE,
       roles TEXT,
+      linked_account_id TEXT REFERENCES users(id),  -- 中日账号一键切换（临时方案，待合规要求时拆分）
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
@@ -43,7 +44,8 @@ export async function initDatabase() {
       contact_name TEXT NOT NULL DEFAULT '',
       contact_phone TEXT,
       is_enterprise_verified INTEGER NOT NULL DEFAULT 0,
-      is_onboarded INTEGER NOT NULL DEFAULT 0
+      is_onboarded INTEGER NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))  -- 业务市场：CNY=中国业务 JPY=日本业务，入驻时选定后不可变
     );
 
     CREATE TABLE IF NOT EXISTS herald_profiles (
@@ -62,7 +64,10 @@ export async function initDatabase() {
       declaration_status TEXT NOT NULL DEFAULT 'none',
       declaration_submitted_at TEXT,
       visa_type TEXT,
-      bank_account TEXT
+      bank_account TEXT,
+      tier_snapshot TEXT,
+      social_platforms_updated_at TEXT,
+      display_currency TEXT CHECK(display_currency IN ('JPY','CNY'))  -- 赫使设置的默认展示币种，用于换算和钱包汇总
     );
 
     CREATE TABLE IF NOT EXISTS tasks (
@@ -74,6 +79,7 @@ export async function initDatabase() {
       requirements TEXT,
       budget DOUBLE PRECISION NOT NULL DEFAULT 0,
       commission DOUBLE PRECISION NOT NULL DEFAULT 0,
+      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY')),  -- 创建时快照自 brand_profiles.currency
       max_heralds INTEGER NOT NULL DEFAULT 1,
       deadline TEXT,
       promo_code TEXT,
@@ -88,6 +94,7 @@ export async function initDatabase() {
       escrow_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
       is_escrowed INTEGER NOT NULL DEFAULT 0,
       code_mode TEXT NOT NULL DEFAULT 'auto',
+      platform_requirements TEXT,
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
@@ -135,17 +142,7 @@ export async function initDatabase() {
       UNIQUE(ambassador_task_id, referred_token)
     );
 
-    CREATE TABLE IF NOT EXISTS payouts (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id),
-      period TEXT NOT NULL,
-      qualified_count INTEGER NOT NULL DEFAULT 0,
-      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','paid')),
-      paid_at TEXT DEFAULT NULL,
-      payment_method TEXT DEFAULT NULL CHECK(payment_method IN ('jp_bank','wise','swift','BANK','PAYPAL','WECHAT','ALIPAY')),
-      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
-    );
+    -- payouts 表已废弃（2026-06-11），结算统一走 transactions + withdrawal_requests
 
     CREATE TABLE IF NOT EXISTS task_applications (
       id TEXT PRIMARY KEY,
@@ -171,21 +168,64 @@ export async function initDatabase() {
       reviewed_at TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS transactions (
+    -- task_transactions: 任务业务事件（不含钱包充提）
+    CREATE TABLE IF NOT EXISTS task_transactions (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL REFERENCES users(id),
-      from_user_id TEXT REFERENCES users(id),
-      withdrawal_method_id TEXT,
-      task_id TEXT REFERENCES tasks(id),
-      type TEXT NOT NULL CHECK(type IN ('ESCROW_DEPOSIT','ESCROW_RELEASE','ESCROW_REFUND','PLATFORM_FEE','WITHDRAWAL')),
-      amount DOUBLE PRECISION NOT NULL DEFAULT 0,
-      platform_fee DOUBLE PRECISION NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','COMPLETED','FAILED')),
+      task_id TEXT NOT NULL REFERENCES tasks(id),
+      type TEXT NOT NULL CHECK(type IN ('TASK_LOCK','TASK_RELEASE','PLATFORM_FEE','TASK_REFUND')),
+      task_amount DOUBLE PRECISION NOT NULL DEFAULT 0,   -- 任务总金额快照
+      amount DOUBLE PRECISION NOT NULL DEFAULT 0,        -- 赫使实得/品牌支出
+      platform_fee DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 平台服务费
+      from_user_id TEXT REFERENCES users(id),            -- 品牌方
+      to_user_id TEXT REFERENCES users(id),              -- 赫使（TASK_RELEASE 时有值）
+      parent_txn_id TEXT REFERENCES task_transactions(id), -- 对冲链
+      status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('pending','completed','failed')),
       note TEXT,
       reference_type TEXT,
       reference_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    );
+
+    -- wallets: 每个用户每种钱包一条记录，存余额快照（支付宝/微信做法）
+    CREATE TABLE IF NOT EXISTS wallets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      wallet_type TEXT NOT NULL CHECK(wallet_type IN ('brand','herald','platform')),
+      currency TEXT NOT NULL DEFAULT 'JPY',
+      available_balance DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 可用余额
+      frozen_balance DOUBLE PRECISION NOT NULL DEFAULT 0,     -- 冻结余额（任务锁定/提现中）
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
-      completed_at TEXT
+      updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      UNIQUE(user_id, wallet_type, currency)
+    );
+
+    -- wallet_entries: 钱包流水，append-only，绝不修改（PayPal 核心原则）
+    CREATE TABLE IF NOT EXISTS wallet_entries (
+      id TEXT PRIMARY KEY,
+      idempotency_key TEXT NOT NULL UNIQUE,              -- 幂等键防重复（PayPal 早期没有这个吃了大亏）
+      wallet_id TEXT NOT NULL REFERENCES wallets(id),
+      amount DOUBLE PRECISION NOT NULL,                  -- 正=入账 负=出账
+      currency TEXT NOT NULL DEFAULT 'JPY',
+      available_after DOUBLE PRECISION NOT NULL,         -- 操作后可用余额快照（微信/支付宝做法）
+      frozen_after DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 操作后冻结余额快照
+      type TEXT NOT NULL CHECK(type IN (
+        'TOPUP',               -- 品牌充值入账
+        'TASK_FREEZE',         -- 任务发布，可用→冻结
+        'TASK_UNFREEZE',       -- 任务退款，冻结→可用
+        'TASK_SETTLE',         -- 任务结算完成，冻结清零
+        'TASK_CREDIT',         -- 赫使任务收入
+        'PLATFORM_FEE',        -- 平台服务费
+        'WITHDRAWAL_FREEZE',   -- 提现申请，可用→冻结
+        'WITHDRAWAL_DEBIT',    -- 提现完成，冻结清零
+        'WITHDRAWAL_UNFREEZE', -- 提现取消，冻结→可用
+        'ADJUSTMENT'           -- 人工调整
+      )),
+      reference_type TEXT,     -- 'topup_request'|'task_transaction'|'withdrawal_request'
+      reference_id TEXT,
+      parent_entry_id TEXT REFERENCES wallet_entries(id),  -- 对冲记录
+      note TEXT,
+      created_by TEXT,         -- 'system' | user_id | admin_id
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
 
     CREATE TABLE IF NOT EXISTS task_ratings (
@@ -195,6 +235,43 @@ export async function initDatabase() {
       score INTEGER NOT NULL CHECK(score >= 1 AND score <= 5),
       comment TEXT,
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    );
+
+    CREATE TABLE IF NOT EXISTS topup_requests (
+      id TEXT PRIMARY KEY,
+      brand_id TEXT NOT NULL REFERENCES users(id),
+      amount DOUBLE PRECISION NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY')),
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','confirmed','rejected')),
+      note TEXT,
+      confirmed_by TEXT REFERENCES users(id),
+      confirmed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    );
+
+    CREATE TABLE IF NOT EXISTS withdrawal_requests (
+      id TEXT PRIMARY KEY,
+      herald_id TEXT NOT NULL REFERENCES users(id),
+      amount DOUBLE PRECISION NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY')),  -- 从哪个币种钱包提现
+      method TEXT NOT NULL,
+      account_details TEXT NOT NULL DEFAULT '{}',
+      status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','paid','failed')),
+      payout_reference TEXT,
+      processed_by TEXT REFERENCES users(id),
+      processed_at TEXT,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    );
+
+    -- exchange_rates: 仅用于赫使端"换算展示"，不参与实际结算（结算永远是原币种）
+    CREATE TABLE IF NOT EXISTS exchange_rates (
+      id TEXT PRIMARY KEY,
+      base_currency TEXT NOT NULL,
+      quote_currency TEXT NOT NULL,
+      rate DOUBLE PRECISION NOT NULL,  -- 1 base_currency = rate quote_currency
+      updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      UNIQUE(base_currency, quote_currency)
     );
 
     CREATE TABLE IF NOT EXISTS withdrawal_methods (
@@ -221,13 +298,58 @@ export async function initDatabase() {
     'CREATE INDEX IF NOT EXISTS idx_applications_herald ON task_applications(herald_id)',
     'CREATE INDEX IF NOT EXISTS idx_submissions_task ON task_submissions(task_id)',
     'CREATE INDEX IF NOT EXISTS idx_submissions_herald ON task_submissions(herald_id)',
-    'CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id)',
-    'CREATE INDEX IF NOT EXISTS idx_transactions_task ON transactions(task_id)',
     'CREATE INDEX IF NOT EXISTS idx_withdrawal_methods_user ON withdrawal_methods(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_topup_requests_brand ON topup_requests(brand_id)',
+    'CREATE INDEX IF NOT EXISTS idx_topup_requests_status ON topup_requests(status)',
+    'CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_herald ON withdrawal_requests(herald_id)',
+    'CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status ON withdrawal_requests(status)',
+    'CREATE INDEX IF NOT EXISTS idx_task_ratings_herald ON task_ratings(herald_id)',
+    'CREATE INDEX IF NOT EXISTS idx_submissions_status ON task_submissions(status)',
+    'CREATE INDEX IF NOT EXISTS idx_declarations_user ON declarations(user_id)',
   ];
 
   for (const idx of indexes) {
     await pool.query(idx);
+  }
+
+  // 迁移：为已有表添加新列
+  const migrations = [
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS platform_requirements TEXT`,
+    `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS tier_snapshot TEXT`,
+    `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS social_platforms_updated_at TEXT`,
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS commission_amount DOUBLE PRECISION`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS lock_txn_id TEXT`,
+    `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS registered_count INTEGER DEFAULT 0`,
+    `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0`,
+    `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS paid_conversions INTEGER DEFAULT 0`,
+    `DROP TABLE IF EXISTS payouts`,
+    // 多币种支持（2026-06-12）
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_account_id TEXT REFERENCES users(id)`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
+    `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS display_currency TEXT CHECK(display_currency IN ('JPY','CNY'))`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
+    `ALTER TABLE topup_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
+    // 初始汇率占位（updated_at 设为很早，首次读取时会触发 API 刷新）
+    `INSERT INTO exchange_rates (id, base_currency, quote_currency, rate, updated_at) VALUES ('CNY_JPY','CNY','JPY',20.5,'1970-01-01 00:00:00') ON CONFLICT (id) DO NOTHING`,
+    // wallet_entries 索引
+    `CREATE INDEX IF NOT EXISTS idx_wallet_entries_wallet ON wallet_entries(wallet_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_wallet_entries_type ON wallet_entries(type)`,
+    `CREATE INDEX IF NOT EXISTS idx_wallet_entries_ref ON wallet_entries(reference_type, reference_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_wallets_user ON wallets(user_id, wallet_type)`,
+    // task_transactions 索引
+    `CREATE INDEX IF NOT EXISTS idx_task_txn_task ON task_transactions(task_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_task_txn_from ON task_transactions(from_user_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_task_txn_to ON task_transactions(to_user_id)`,
+    // 旧 transactions 表迁移（如果存在则重命名，不存在则跳过）
+    `DO $$ BEGIN IF EXISTS (SELECT FROM information_schema.tables WHERE table_name='transactions' AND table_schema='public') THEN ALTER TABLE transactions RENAME TO transactions_legacy; END IF; END $$`,
+    // 品牌素材 + 账单邮箱（2026-06-14）
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS logo_url TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS promo_image_url TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS billing_email TEXT`,
+  ];
+  for (const m of migrations) {
+    await pool.query(m);
   }
 }
 

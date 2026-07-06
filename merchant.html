@@ -153,6 +153,7 @@ tr:hover td { background:#f9fafb; cursor:pointer; }
 </style>
 <script src="/shared/auth.js"></script>
 <script src="/shared/sidebar.js"></script>
+<script src="/shared/platforms.js"></script>
 </head>
 <body>
 
@@ -190,6 +191,7 @@ function layout(inner) {
     { id:'dashboard', icon:'📊', label:'概览' },
     { id:'tasks', icon:'📋', label:'任务管理' },
     { id:'reviews', icon:'✅', label:'审核中心', badge: pending },
+    { id:'wallet', icon:'💰', label:'钱包充值' },
     { id:'csv', icon:'📤', label:'数据上传' },
     { id:'settings', icon:'⚙️', label:'账户设置' },
   ];
@@ -197,6 +199,11 @@ function layout(inner) {
   sb += '<div class="sb-logo">HERIX<span>.</span><div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:2px;letter-spacing:0">商户后台</div></div>';
   sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
   sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">品牌商家</span></div>';
+  var linked = state.brandProfile?.linkedAccount;
+  if (linked) {
+    var linkedRoleLabel = (linked.roles||[]).includes('HERALD') ? '赫使' : '商家';
+    sb += '<div class="sb-logout" onclick="switchAccount()" style="margin-bottom:4px">🔁 切换到'+esc(linked.nickname)+'（'+linkedRoleLabel+'）</div>';
+  }
   sb += '<div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
 
   var main = '<div class="main"><div class="topbar">';
@@ -210,7 +217,7 @@ function layout(inner) {
 }
 
 function getPageTitle() {
-  var m = {dashboard:'概览', tasks:'任务管理', reviews:'审核中心', csv:'数据上传', settings:'账户设置', task_detail:'任务详情', task_create:'创建任务', task_edit:'编辑任务'};
+  var m = {dashboard:'概览', tasks:'任务管理', reviews:'审核中心', wallet:'钱包充值', csv:'数据上传', settings:'账户设置', task_detail:'任务详情', task_create:'创建任务', task_edit:'编辑任务', task_meta_edit:'编辑任务'};
   return m[state.page] || '';
 }
 
@@ -220,10 +227,13 @@ function topbarActions() {
     var t = state.currentTask;
     var btns = '<button class="btn btn-outline btn-sm" onclick="go(\'tasks\')">← 返回</button>';
     if (t.status === 'DRAFT') btns += ' <button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button>';
-    if (t.status === 'OPEN') btns += ' <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="closeTask(\''+t.id+'\')">关闭任务</button>';
+    if (t.status === 'OPEN' || t.status === 'IN_PROGRESS') {
+      btns += ' <button class="btn btn-outline btn-sm" onclick="editTaskMeta()">编辑</button>';
+      if (t.status === 'OPEN') btns += ' <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="closeTask(\''+t.id+'\')">关闭任务</button>';
+    }
     return btns;
   }
-  if (state.page === 'task_create' || state.page === 'task_edit') return '<button class="btn btn-outline btn-sm" onclick="go(\'tasks\')">取消</button>';
+  if (state.page === 'task_create' || state.page === 'task_edit' || state.page === 'task_meta_edit') return '<button class="btn btn-outline btn-sm" onclick="go(\'task_detail\')">取消</button>';
   return '';
 }
 
@@ -232,9 +242,11 @@ function pageContent() {
     case 'dashboard':   return dashPage();
     case 'tasks':       return tasksPage();
     case 'task_detail': return taskDetailPage();
-    case 'task_create': return taskFormPage(null);
-    case 'task_edit':   return taskFormPage(state.editingTask);
+    case 'task_create': taskPlatformReqs=[]; return taskFormPage(null);
+    case 'task_edit':   taskPlatformReqs=[]; return taskFormPage(state.editingTask);
+    case 'task_meta_edit': taskPlatformReqs=[]; return taskMetaEditPage();
     case 'reviews':     return reviewsPage();
+    case 'wallet':      return walletPage();
     case 'csv':         return csvPage();
     case 'settings':    return settingsPage();
     default: return dashPage();
@@ -274,7 +286,7 @@ function bindLogin() {
       }
       state.token=d.token;state.user=d.user;
       state.msg='登录成功';state.msgType='success';
-      loadDashStats();loadMyTasks();
+      loadDashStats();loadMyTasks();loadBrandProfile();
     },
     onError: function(msg) {
       var el=document.getElementById('auth-form-err');
@@ -294,13 +306,18 @@ function activateBrandPage() {
   h += '</div>';
 
   if (step === 1) {
+    var actCur = state.activateData?.currency;
     h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">开通品牌商家功能</div>';
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">你好，'+esc(state.user.nickname)+'！填写品牌信息后即可发布任务、招募赫使。</div>';
-    h += '<div class="field"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Remitly Japan"></div>';
+    h += '<div class="field"><label>业务市场 *</label><div style="display:flex;gap:10px;margin-top:6px">';
+    h += '<div class="btn btn-outline btn-sm" style="flex:1;'+(actCur==='JPY'?'border-color:var(--primary);color:var(--primary)':'')+'" onclick="state.activateData=Object.assign({},state.activateData,{currency:\'JPY\'});render()">🇯🇵 日本市场（JPY）</div>';
+    h += '<div class="btn btn-outline btn-sm" style="flex:1;'+(actCur==='CNY'?'border-color:var(--primary);color:var(--primary)':'')+'" onclick="state.activateData=Object.assign({},state.activateData,{currency:\'CNY\'});render()">🇨🇳 中国市场（CNY）</div>';
+    h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
+    h += '<div class="field" style="margin-top:12px"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Remitly Japan" value="'+esc(state.activateData?.companyName||'')+'"></div>';
     h += '<div class="field" style="margin-top:12px"><label>所属行业</label><select id="act-industry">';
     ['金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他'].forEach(function(i){h+='<option>'+i+'</option>'});
     h += '</select></div>';
-    h += '<div class="field" style="margin-top:12px"><label>官网（选填）</label><input id="act-website" placeholder="https://..."></div>';
+    h += '<div class="field" style="margin-top:12px"><label>官网（选填）</label><input id="act-website" placeholder="https://..." value="'+esc(state.activateData?.website||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
     h += '<button class="btn btn-outline" style="flex:1" onclick="cancelActivate()">取消</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep2()">下一步</button>';
@@ -323,12 +340,13 @@ function activateBrandPage() {
 
 function activateStep2() {
   var company = (document.getElementById('act-company')||{}).value||'';
+  if (!state.activateData?.currency) { alert('请选择业务市场'); return; }
   if (!company.trim()) { alert('请填写品牌名称'); return; }
-  state.activateData = {
+  state.activateData = Object.assign({}, state.activateData, {
     companyName: company.trim(),
     industry: (document.getElementById('act-industry')||{}).value||'',
     website: (document.getElementById('act-website')||{}).value||'',
-  };
+  });
   state.activateStep = 2;
   render();
 }
@@ -583,16 +601,44 @@ function taskDetailPage() {
   return '<div class="detail-grid">'+left+right+'</div>';
 }
 
+function tierBadge(tierSnapshot) {
+  if (!tierSnapshot) return '';
+  try {
+    var snap = typeof tierSnapshot === 'string' ? JSON.parse(tierSnapshot) : tierSnapshot;
+    return Object.keys(snap).map(function(pid) {
+      var p = platformById(pid);
+      return '<span style="font-size:10px;background:#f0f4ff;color:#4f6ef7;border-radius:4px;padding:1px 6px;margin-right:3px">'
+        + p.icon + ' ' + snap[pid] + '</span>';
+    }).join('');
+  } catch(e) { return ''; }
+}
+
+function ratingBadge(completedTasks, goodRate) {
+  if (!completedTasks || completedTasks < 3) return '<span style="font-size:10px;color:var(--muted)">未评级</span>';
+  var rate = Number(goodRate) || 0;
+  var level = 'Bronze';
+  if (completedTasks >= 50 && rate >= 0.95) level = 'Platinum';
+  else if (completedTasks >= 25 && rate >= 0.85) level = 'Gold';
+  else if (completedTasks >= 10 && rate >= 0.75) level = 'Silver';
+  var colors = {Bronze:'#cd7f32',Silver:'#9ca3af',Gold:'#f59e0b',Platinum:'#7c3aed'};
+  return '<span style="font-size:10px;font-weight:600;color:'+colors[level]+'">⭐ '+level+'</span>'
+    + '<span style="font-size:10px;color:var(--muted);margin-left:4px">'+completedTasks+'单 好评'+Math.round(rate*100)+'%</span>';
+}
+
 function applicantsPanel(apps) {
   if (!apps.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">👤</div>暂无报名</div>';
   return apps.map(function(a) {
     var color = a.status==='APPROVED'?'var(--success)':a.status==='REJECTED'?'var(--danger)':'var(--warning)';
     var country = a.country ? ' · '+esc(a.country) : '';
+    var tiers = tierBadge(a.tier_snapshot);
+    var rating = ratingBadge(a.completed_tasks, a.good_rate);
     return '<div class="applicant-card">'
       +'<div class="applicant-hdr"><div class="av">'+esc((a.nickname||'?')[0])+'</div>'
       +'<div><div style="font-weight:600;font-size:13px">'+esc(a.nickname)+'</div>'
       +'<div style="font-size:11px;color:var(--muted)">'+esc(a.display_name||'')+''+country+'</div></div>'
       +'<span style="margin-left:auto;font-size:12px;font-weight:600;color:'+color+'">'+appStatusLabel(a.status)+'</span></div>'
+      +(tiers ? '<div style="margin-bottom:6px">'+tiers+'</div>' : '')
+      +'<div style="margin-bottom:8px">'+rating+'</div>'
       +(a.message?'<div style="font-size:12px;color:#555;margin-bottom:8px;padding:8px;background:#f9fafb;border-radius:6px">'+esc(a.message)+'</div>':'')
       +(a.status==='PENDING'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewApp(\''+a.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewApp(\''+a.id+'\',\'REJECTED\')">✗ 拒绝</button></div>':'')
       +'</div>';
@@ -698,6 +744,10 @@ function attachAuthHeader(el, url) {
 var CATS = ['experience','beauty','travel','fashion','food','lifestyle','referral','baby'];
 var CAT_LABELS = {experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'};
 
+// PLATFORM_REGISTRY, calcTier, platformById 均来自 /shared/platforms.js
+// 当前任务表单中已选平台要求 [{platformId, minFollowers, required}]
+var taskPlatformReqs = [];
+
 function taskFormPage(t) {
   var isEdit = !!t;
   return '<div class="form-card"><div class="form-grid">'
@@ -723,6 +773,7 @@ function taskFormPage(t) {
     + field('截止日期', 'deadline', 'date', t&&t.deadline?t.deadline.slice(0,10):'', '')
     + '<div class="field form-full"><label>任务描述 *</label><textarea id="description" rows="4" placeholder="详细说明任务要求、目标受众、品牌背景...">'+esc(t&&t.description||'')+'</textarea></div>'
     + '<div class="field form-full"><label>具体要求</label><textarea id="requirements" rows="3" placeholder="可选：发布平台要求、内容关键词、存续时间等...">'+esc(t&&t.requirements||'')+'</textarea></div>'
+    + platformReqsFormHTML(t)
     + field('封面图链接', 'coverImage', 'text', t&&t.cover_image||'', 'https://... 图片URL（可选）')
     // 推广码模式（仅 PERFORMANCE 任务显示）
     +'<div class="field form-full" id="code-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>推广码来源</label>'
@@ -744,6 +795,57 @@ function taskFormPage(t) {
 
 function field(label, id, type, val, placeholder) {
   return '<div class="field"><label>'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc(String(val))+'" placeholder="'+esc(placeholder)+'"></div>';
+}
+
+function platformReqsFormHTML(t) {
+  // 初始化：若是编辑模式，从任务数据加载
+  if(t && t.platform_requirements && taskPlatformReqs.length === 0){
+    try{ taskPlatformReqs = JSON.parse(t.platform_requirements); }catch(e){}
+  }
+  var h = '<div class="field form-full" data-plat-reqs="1"><label>赫使社交平台要求 <span style="font-weight:400;font-size:11px;color:var(--muted)">（选填）</span></label>';
+  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">选择赫使必须拥有的社交账号及最低粉丝要求</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
+  for(var i=0;i<PLATFORM_REGISTRY.length;i++){
+    var p=PLATFORM_REGISTRY[i];
+    var selected = taskPlatformReqs.some(function(r){return r.platformId===p.id});
+    h += '<div class="ob-chip'+(selected?' ob-chip-sel':'')+'" style="cursor:pointer" onclick="togglePlatformReq(\''+p.id+'\')">'+p.icon+' '+p.name+'</div>';
+  }
+  h += '</div>';
+  // 已选平台：显示最低粉丝数输入
+  for(var j=0;j<taskPlatformReqs.length;j++){
+    var req=taskPlatformReqs[j];
+    var pInfo=PLATFORM_REGISTRY.find(function(p){return p.id===req.platformId})||{icon:'🔗',name:req.platformId};
+    h += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:8px;margin-bottom:6px">';
+    h += '<span style="font-size:15px">'+pInfo.icon+'</span><span style="font-weight:500;font-size:12px;min-width:64px">'+pInfo.name+'</span>';
+    h += '<span style="font-size:11px;color:var(--muted)">最低粉丝数</span>';
+    h += '<input type="number" value="'+(req.minFollowers||'')+'" min="0" placeholder="不限" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="updatePlatformReqFollowers(\''+req.platformId+'\',this.value)">';
+    h += '<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto"><input type="checkbox"'+(req.required?' checked':'')+' onchange="updatePlatformReqRequired(\''+req.platformId+'\',this.checked)"> 必须</label>';
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function togglePlatformReq(platformId){
+  var idx = taskPlatformReqs.findIndex(function(r){return r.platformId===platformId});
+  if(idx>=0){ taskPlatformReqs.splice(idx,1); }
+  else { taskPlatformReqs.push({platformId:platformId,minFollowers:null,required:true}); }
+  var reqSection = document.querySelector('[data-plat-reqs]');
+  if(!reqSection) return;
+  var tmp = document.createElement('div');
+  tmp.innerHTML = platformReqsFormHTML(null);
+  var newEl = tmp.firstElementChild;
+  if(newEl) reqSection.replaceWith(newEl);
+}
+
+function updatePlatformReqFollowers(platformId, val){
+  var req = taskPlatformReqs.find(function(r){return r.platformId===platformId});
+  if(req) req.minFollowers = val ? parseInt(val,10) : null;
+}
+
+function updatePlatformReqRequired(platformId, checked){
+  var req = taskPlatformReqs.find(function(r){return r.platformId===platformId});
+  if(req) req.required = checked;
 }
 
 /* ── Reviews ── */
@@ -812,9 +914,375 @@ function csvPage() {
 }
 
 /* ── Settings ── */
+/* ── Wallet Page ── */
+var brandBalance = null;
+var walletLedger = null;
+var walletPeriod = 'month';
+var topupHistory = [];
+var topupStep = 1;
+var topupAmount = 0;
+var topupMethod = 'bank';
+var topupRef = null;
+
+var WALLET_PERIOD_LABELS = {month:'本月', last_month:'上月', '7d':'最近7天', '30d':'最近30天', all:'全部'};
+
+function walletPeriodRange(period) {
+  var now = new Date();
+  var from, to = now;
+  if (period === 'last_month') {
+    from = new Date(now.getFullYear(), now.getMonth()-1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else if (period === '7d') {
+    from = new Date(now.getTime() - 7*86400000);
+  } else if (period === '30d') {
+    from = new Date(now.getTime() - 30*86400000);
+  } else if (period === 'all') {
+    from = new Date('1970-01-01');
+  } else { // month
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+  }
+  return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function setWalletPeriod(p) {
+  if (walletPeriod === p) return;
+  walletPeriod = p;
+  brandBalance = null;
+  walletLedger = null;
+  render();
+}
+
+function loadBrandWallet() {
+  var r = walletPeriodRange(walletPeriod);
+  var qs = '?from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to);
+  api('GET', '/wallet/brand-balance'+qs, null, function(d) { brandBalance = d; render(); });
+  api('GET', '/wallet/transactions'+qs+'&walletType=brand&limit=50', null, function(d) { walletLedger = d; render(); });
+  api('GET', '/wallet/topup-history', null, function(d) { topupHistory = d || []; render(); });
+}
+
+function genTopupRef() {
+  var d = new Date();
+  var dt = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
+  return 'HERIX-'+dt+'-'+String(Math.floor(Math.random()*9000)+1000);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(function() {
+    var t = document.createElement('div');
+    t.textContent = '已复制';
+    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none';
+    document.body.appendChild(t);
+    setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);}, 1500);
+  });
+}
+
+function walletPage() {
+  if (!brandBalance) { loadBrandWallet(); return '<div style="padding:80px;text-align:center;color:var(--muted)">加载中...</div>'; }
+  var b = brandBalance;
+  var cur = b.currency || 'JPY';
+  var h = '';
+
+  // 余额汇总：可用 / 冻结 / 本期流入 / 本期流出
+  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">';
+  h += wStatCard('可用余额', '¥'+(b.available||0).toLocaleString()+' '+cur, '#16a34a', '发布任务前需保证充足');
+  h += wStatCard('冻结中', '¥'+(b.frozen||0).toLocaleString()+' '+cur, '#f59e0b', '进行中任务已锁定');
+  h += wStatCard(WALLET_PERIOD_LABELS[walletPeriod]+'流入', '+¥'+(b.periodInflow||0).toLocaleString(), '#16a34a', '充值到账');
+  h += wStatCard(WALLET_PERIOD_LABELS[walletPeriod]+'流出', '-¥'+(b.periodOutflow||0).toLocaleString(), '#dc2626', '任务结算支出');
+  h += '</div>';
+
+  // 充值向导卡片
+  h += '<div class="card" style="margin-bottom:20px;padding:32px">';
+  h += topupWizardHTML();
+  h += '</div>';
+
+  // 充值申请 + 钱包流水（第4步成功后不展示，避免分散）
+  if (topupStep !== 4) { h += pendingTopupHTML(); h += walletLedgerHTML(); }
+
+  return h;
+}
+
+function wStatCard(label, value, color, sub) {
+  return '<div class="card" style="padding:20px">'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:4px">'+label+'</div>'
+    +'<div style="font-size:24px;font-weight:700;color:'+color+';margin-bottom:4px">'+value+'</div>'
+    +'<div style="font-size:11px;color:var(--muted)">'+sub+'</div>'
+    +'</div>';
+}
+
+function topupWizardHTML() {
+  var steps = ['选择金额','支付方式','付款详情','完成'];
+  var h = '';
+
+  // 步骤指示器
+  h += '<div style="display:flex;align-items:center;justify-content:center;margin-bottom:32px">';
+  for (var i = 0; i < steps.length; i++) {
+    var active = (i+1) === topupStep;
+    var done   = (i+1) < topupStep;
+    var dotBg  = done ? '#16a34a' : active ? 'var(--primary)' : '#e5e7eb';
+    var txtClr = active ? 'var(--primary)' : done ? '#16a34a' : '#9ca3af';
+    h += '<div style="display:flex;flex-direction:column;align-items:center;gap:6px;min-width:56px">';
+    h += '<div style="width:30px;height:30px;border-radius:50%;background:'+dotBg+';color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all .2s">'+(done?'✓':(i+1))+'</div>';
+    h += '<div style="font-size:11px;color:'+txtClr+';font-weight:'+(active?'600':'400')+';white-space:nowrap">'+steps[i]+'</div>';
+    h += '</div>';
+    if (i < steps.length-1) h += '<div style="flex:1;height:2px;background:'+(i+1<topupStep?'#16a34a':'#e5e7eb')+';margin:0 4px;margin-bottom:22px"></div>';
+  }
+  h += '</div>';
+
+  switch(topupStep) {
+    case 1: h += topupStep1(); break;
+    case 2: h += topupStep2(); break;
+    case 3: h += topupStep3(); break;
+    case 4: h += topupStep4(); break;
+  }
+  return h;
+}
+
+/* Step 1 — 选择金额 */
+function topupStep1() {
+  var presets = [1000, 3000, 5000, 10000, 30000, 50000];
+  var ok = topupAmount >= 1000;
+  var h = '<div style="max-width:420px;margin:0 auto">';
+  h += '<div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:16px">充值金额（日元）</div>';
+
+  // 顶部金额：可直接编辑
+  h += '<div style="text-align:center;margin-bottom:6px">';
+  h += '<div style="display:inline-flex;align-items:center;gap:6px;border-bottom:2px solid var(--primary);padding:0 4px 8px">';
+  h += '<span style="font-size:32px;font-weight:700;color:#111">¥</span>';
+  h += '<input type="number" inputmode="numeric" id="topup-amount-input" placeholder="0" value="'+(topupAmount>0?topupAmount:'')+'" oninput="onTopupAmountInput(this)" style="font-size:40px;font-weight:800;color:#111;border:none;outline:none;width:200px;background:transparent;padding:0">';
+  h += '</div></div>';
+
+  h += '<div style="text-align:center;margin-bottom:24px">';
+  h += '<span onclick="topupAmount=0;render()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">清空</span>';
+  h += '</div>';
+
+  // 点击累加金额
+  h += '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">点击下方金额可累加</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">';
+  presets.forEach(function(p) {
+    h += '<div onclick="topupAmount=(topupAmount||0)+'+p+';render()" style="padding:14px 8px;border-radius:10px;cursor:pointer;text-align:center;font-weight:600;font-size:15px;border:2px solid #e5e7eb;background:#fff;color:#374151;transition:all .15s">';
+    h += '+¥'+p.toLocaleString();
+    h += '</div>';
+  });
+  h += '</div>';
+
+  h += '<div style="text-align:center">';
+  h += '<button id="topup-next-btn" class="btn btn-primary" style="min-width:160px;padding:12px 24px;font-size:15px" onclick="onTopupNext()" '+(ok?'':'disabled')+'>下一步 →</button>';
+  h += '<div id="topup-min-hint" style="font-size:12px;color:var(--muted);margin-top:8px'+(ok?';display:none':'')+'">最低充值金额 ¥1,000</div>';
+  h += '</div></div>';
+  return h;
+}
+
+// 编辑金额：仅更新变量和按钮状态，不触发整页 render（避免输入框失焦）
+function onTopupAmountInput(el) {
+  var v = parseFloat(el.value);
+  topupAmount = (isNaN(v) || v < 0) ? 0 : v;
+  var ok = topupAmount >= 1000;
+  var btn = document.getElementById('topup-next-btn');
+  var hint = document.getElementById('topup-min-hint');
+  if (btn) btn.disabled = !ok;
+  if (hint) hint.style.display = ok ? 'none' : '';
+}
+
+function onTopupNext() {
+  if (topupAmount >= 1000) { topupStep = 2; render(); }
+}
+
+/* Step 2 — 支付方式 */
+function topupStep2() {
+  var h = '<div style="max-width:400px;margin:0 auto">';
+  h += '<div style="text-align:center;margin-bottom:20px">';
+  h += '<div style="font-size:13px;color:var(--muted)">充值金额</div>';
+  h += '<div style="font-size:28px;font-weight:800;color:#111">¥'+topupAmount.toLocaleString()+'</div>';
+  h += '</div>';
+
+  // 银行转账
+  var bSel = topupMethod === 'bank';
+  h += '<div onclick="topupMethod=\'bank\';render()" style="border:2px solid '+(bSel?'var(--primary)':'#e5e7eb')+';border-radius:14px;padding:18px 20px;margin-bottom:12px;cursor:pointer;background:'+(bSel?'#eff6ff':'#fff')+';transition:all .15s">';
+  h += '<div style="display:flex;align-items:center;gap:16px">';
+  h += '<div style="font-size:32px;width:48px;text-align:center">🏦</div>';
+  h += '<div style="flex:1">';
+  h += '<div style="font-weight:600;font-size:14px;color:#111">銀行振込（银行转账）</div>';
+  h += '<div style="font-size:12px;color:var(--muted);margin-top:3px">手续费：免费 · 到账：1个工作日内</div>';
+  h += '</div>';
+  h += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(bSel?'var(--primary)':'#d1d5db')+';background:'+(bSel?'var(--primary)':'#fff')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
+  if (bSel) h += '<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>';
+  h += '</div></div></div>';
+
+  // 微信支付（即将开放）
+  h += '<div style="border:2px solid #e5e7eb;border-radius:14px;padding:18px 20px;margin-bottom:24px;opacity:.45;cursor:not-allowed;background:#fafafa">';
+  h += '<div style="display:flex;align-items:center;gap:16px">';
+  h += '<div style="font-size:32px;width:48px;text-align:center">💚</div>';
+  h += '<div style="flex:1">';
+  h += '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14px;color:#9ca3af">微信支付</span><span style="font-size:10px;background:#f3f4f6;color:#9ca3af;border-radius:4px;padding:2px 7px">即将开放</span></div>';
+  h += '<div style="font-size:12px;color:#d1d5db;margin-top:3px">扫码支付 · 实时到账 · 手续费 0.6%</div>';
+  h += '</div></div></div>';
+
+  h += '<div style="display:flex;gap:10px;justify-content:center">';
+  h += '<button class="btn btn-outline" onclick="topupStep=1;render()">← 返回</button>';
+  h += '<button class="btn btn-primary" style="min-width:120px" onclick="topupRef=genTopupRef();topupStep=3;render()">下一步 →</button>';
+  h += '</div></div>';
+  return h;
+}
+
+/* Step 3 — 付款详情 */
+function topupStep3() {
+  if (!topupRef) topupRef = genTopupRef();
+  var h = '<div style="max-width:440px;margin:0 auto">';
+
+  // 金额醒目展示
+  h += '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center;margin-bottom:20px">';
+  h += '<div style="font-size:13px;color:#166534;margin-bottom:4px">请将以下金额转账至指定账户</div>';
+  h += '<div style="font-size:36px;font-weight:800;color:#15803d">¥'+topupAmount.toLocaleString()+'</div>';
+  h += '</div>';
+
+  // 账户明细
+  h += '<div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px">';
+  h += aRow('収款方', 'HUAXUE合同会社（HERIX）', false);
+  h += aRow('銀行名', 'GMOあおぞらネット銀行', true);
+  h += aRow('口座種別', '普通預金', false);
+  h += aRow('口座番号', '※ 请联系运营获取', false);
+  h += aRowHL('振込附言（必填）', topupRef);
+  h += '</div>';
+
+  // 警告
+  h += '<div style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px">';
+  h += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">⚠️ 转账时必须填写附言</div>';
+  h += '<div style="font-size:12px;color:#92400e;line-height:1.6">附言 <b>'+topupRef+'</b> 用于识别您的充值，<b>缺少附言将导致无法自动到账</b>。</div>';
+  h += '</div>';
+
+  // 信任标志
+  h += '<div style="display:flex;gap:20px;justify-content:center;margin-bottom:24px">';
+  ['🔒 安全支付', '✅ 运营确认', '📧 到账通知'].forEach(function(s) {
+    h += '<div style="font-size:11px;color:var(--muted)">'+s+'</div>';
+  });
+  h += '</div>';
+
+  h += '<div style="display:flex;gap:10px;justify-content:center">';
+  h += '<button class="btn btn-outline" onclick="topupStep=2;render()">← 返回</button>';
+  h += '<button class="btn btn-primary" style="padding:12px 28px;font-size:14px" onclick="submitTopupFinal()">✓ 已完成转账，提交申请</button>';
+  h += '</div></div>';
+  return h;
+}
+
+function aRow(label, value, copyable) {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;border-bottom:1px solid #f3f4f6">'
+    +'<span style="font-size:12px;color:var(--muted);min-width:90px">'+label+'</span>'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +'<span style="font-size:13px;font-weight:500">'+value+'</span>'
+    +(copyable?'<button onclick="copyText(\''+value+'\')" style="font-size:10px;padding:2px 8px;border:1px solid #e5e7eb;border-radius:4px;cursor:pointer;color:var(--muted);background:#f9fafb">复制</button>':'')
+    +'</div></div>';
+}
+
+function aRowHL(label, value) {
+  return '<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#fffbeb">'
+    +'<span style="font-size:12px;color:#92400e;font-weight:700;min-width:90px">'+label+'</span>'
+    +'<div style="display:flex;align-items:center;gap:8px">'
+    +'<span style="font-size:14px;font-weight:800;color:#b45309;letter-spacing:.5px">'+value+'</span>'
+    +'<button onclick="copyText(\''+value+'\')" style="font-size:11px;padding:3px 10px;border:1px solid #f59e0b;border-radius:6px;cursor:pointer;color:#92400e;background:#fff;font-weight:600">复制</button>'
+    +'</div></div>';
+}
+
+/* Step 4 — 成功 */
+function topupStep4() {
+  var h = '<div style="text-align:center;padding:8px 0">';
+  h += '<div style="width:70px;height:70px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:32px">✅</div>';
+  h += '<div style="font-size:20px;font-weight:700;margin-bottom:8px">申请已提交</div>';
+  h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">运营确认收款后，余额将自动增加，并发送邮件通知</div>';
+
+  h += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:20px;max-width:300px;margin:0 auto 24px">';
+  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">参考编号</div>';
+  h += '<div style="font-size:18px;font-weight:800;letter-spacing:1px;color:#111;margin-bottom:12px">'+topupRef+'</div>';
+  h += '<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1px solid #e5e7eb">';
+  h += '<span style="color:var(--muted)">充值金额</span><b>¥'+topupAmount.toLocaleString()+'</b>';
+  h += '</div>';
+  h += '<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1px solid #e5e7eb">';
+  h += '<span style="color:var(--muted)">预计到账</span><b>1个工作日内</b>';
+  h += '</div></div>';
+
+  h += '<div style="font-size:12px;color:var(--muted);margin-bottom:24px">如有问题请联系 support@herix.com</div>';
+  h += '<button class="btn btn-outline" onclick="topupStep=1;topupAmount=0;topupRef=null;loadBrandWallet();render()">← 返回钱包</button>';
+  h += '</div>';
+  return h;
+}
+
+/* 待处理 / 被拒绝的充值申请（已到账的会出现在下方钱包流水中，不重复展示） */
+function pendingTopupHTML() {
+  var pending = (topupHistory||[]).filter(function(r){ return r.status !== 'confirmed'; });
+  if (!pending.length) return '';
+  var h = '<div class="card" style="margin-bottom:20px">';
+  h += '<div style="font-weight:600;font-size:14px;margin-bottom:16px">充值申请</div>';
+  h += '<table class="data-table"><thead><tr><th>参考编号</th><th>金额</th><th>申请时间</th><th>状态</th></tr></thead><tbody>';
+  pending.forEach(function(r) {
+    var sc = {pending:'#f59e0b', rejected:'#ef4444'};
+    var sl = {pending:'⏳ 待确认', rejected:'❌ 已拒绝'};
+    h += '<tr>';
+    h += '<td style="font-family:monospace;font-size:12px;color:var(--muted)">'+esc(r.note||'—')+'</td>';
+    h += '<td><b>¥'+Number(r.amount).toLocaleString()+' '+(r.currency||'')+'</b></td>';
+    h += '<td>'+r.created_at.slice(0,16).replace('T',' ')+'</td>';
+    h += '<td><span style="color:'+sc[r.status]+';font-weight:600">'+(sl[r.status]||r.status)+'</span></td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table></div>';
+  return h;
+}
+
+/* 钱包流水：按期间过滤，显示期间流入/流出汇总 + 分类型明细 */
+function walletLedgerHTML() {
+  var h = '<div class="card">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">';
+  h += '<div style="font-weight:600;font-size:14px">钱包流水</div>';
+  h += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  ['month','last_month','7d','30d','all'].forEach(function(p) {
+    var active = walletPeriod === p;
+    h += '<div onclick="setWalletPeriod(\''+p+'\')" style="padding:5px 12px;border-radius:16px;font-size:12px;cursor:pointer;'+(active?'background:#111;color:#fff':'background:#f3f4f6;color:#555')+'">'+WALLET_PERIOD_LABELS[p]+'</div>';
+  });
+  h += '</div></div>';
+
+  if (!walletLedger) {
+    h += '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">加载中...</div></div>';
+    return h;
+  }
+
+  h += '<div style="display:flex;gap:24px;margin-bottom:16px;padding:12px 16px;background:#f9fafb;border-radius:10px">';
+  h += '<div><div style="font-size:11px;color:var(--muted)">期间流入</div><div style="font-size:16px;font-weight:700;color:#16a34a">+¥'+(walletLedger.periodInflow||0).toLocaleString()+'</div></div>';
+  h += '<div><div style="font-size:11px;color:var(--muted)">期间流出</div><div style="font-size:16px;font-weight:700;color:#dc2626">-¥'+(walletLedger.periodOutflow||0).toLocaleString()+'</div></div>';
+  h += '</div>';
+
+  var rows = walletLedger.transactions || [];
+  if (!rows.length) {
+    h += '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">该期间暂无流水记录</div>';
+  } else {
+    h += '<table class="data-table"><thead><tr><th>时间</th><th>类型</th><th>备注</th><th>金额</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+      var out = r.direction === 'out';
+      h += '<tr>';
+      h += '<td style="font-size:12px;color:var(--muted)">'+r.created_at.slice(0,16).replace('T',' ')+'</td>';
+      h += '<td>'+esc(r.label)+'</td>';
+      h += '<td style="font-size:12px;color:var(--muted)">'+esc(r.note||'—')+'</td>';
+      h += '<td style="font-weight:600;color:'+(out?'#dc2626':'#16a34a')+'">'+(out?'-':'+')+'¥'+Math.abs(Number(r.amount)).toLocaleString()+' '+r.currency+'</td>';
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+  }
+
+  h += '</div>';
+  return h;
+}
+
+function submitTopupFinal() {
+  api('POST', '/wallet/topup', {amount: topupAmount, note: topupRef}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    topupStep = 4;
+    render();
+  });
+}
+
 function settingsPage() {
   var p = state.brandProfile || {};
-  return '<div class="form-card" style="max-width:600px"><div class="panel-title">品牌信息</div>'
+  var logoUrl = p.logo_url || p.brand_logo_url || '';
+  var promoUrl = p.promo_image_url || p.brand_promo_image_url || '';
+  var billingEmail = p.billing_email!==undefined ? p.billing_email : (p.brand_billing_email||'');
+  var h = '<div class="form-card" style="max-width:600px"><div class="panel-title">品牌信息</div>'
     +'<div class="form-grid">'
     + field('公司/品牌名称', 'company_name', 'text', p.company_name||'', '')
     + '<div class="field"><label>行业</label><select id="industry">'
@@ -823,8 +1291,54 @@ function settingsPage() {
     + field('官网', 'website', 'text', p.website||'', 'https://...')
     + field('联系人姓名', 'contact_name', 'text', p.contact_name||'', '')
     + field('联系电话', 'contact_phone', 'text', p.contact_phone||'', '')
+    + field('账单邮箱（用于接收请求书/領収書）', 'billing_email', 'email', billingEmail, 'accounting@company.com')
     + '<div class="field form-full"><label>品牌简介</label><textarea id="company_desc" rows="3">'+esc(p.company_desc||'')+'</textarea></div>'
     +'</div><div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">保存</button></div></div>';
+
+  h += '<div class="form-card" style="max-width:600px;margin-top:16px"><div class="panel-title">品牌形象</div>'
+    + '<div style="display:flex;gap:32px;flex-wrap:wrap">'
+    + '<div>'
+    +   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">LOGO（方形头像/App图标，建议≥400×400px）</div>'
+    +   (logoUrl
+          ? '<img src="'+esc(logoUrl)+'" style="width:80px;height:80px;border-radius:12px;object-fit:contain;background:#f9fafb;border:1px solid #eee">'
+          : '<div style="width:80px;height:80px;border-radius:12px;background:#f3f4f6;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">未设置</div>')
+    +   '<input type="file" accept="image/*" onchange="uploadBrandAsset(\'logo\',this)" style="display:block;margin-top:8px;font-size:12px;max-width:160px">'
+    + '</div>'
+    + '<div>'
+    +   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">宣传图（16:9横版，建议≥1200×675px）</div>'
+    +   (promoUrl
+          ? '<img src="'+esc(promoUrl)+'" style="width:180px;height:101px;border-radius:8px;object-fit:cover;background:#f9fafb;border:1px solid #eee">'
+          : '<div style="width:180px;height:101px;border-radius:8px;background:#f3f4f6;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">未设置</div>')
+    +   '<input type="file" accept="image/*" onchange="uploadBrandAsset(\'promo\',this)" style="display:block;margin-top:8px;font-size:12px;max-width:180px">'
+    + '</div>'
+    + '</div>'
+    + '<div id="assetUploadMsg" style="font-size:12px;color:var(--muted);margin-top:10px"></div>'
+    + '</div>';
+
+  return h;
+}
+
+function uploadBrandAsset(type, input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var msgEl = document.getElementById('assetUploadMsg');
+  if (msgEl) msgEl.textContent = '上传中...';
+  var fd = new FormData();
+  fd.append('file', file);
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API+'/uploads/brand/'+type, true);
+  if (state.token) xhr.setRequestHeader('Authorization', 'Bearer '+state.token);
+  xhr.onload = function() {
+    var d; try { d = JSON.parse(xhr.responseText); } catch(e) { d = {}; }
+    if (d.error) { if (msgEl) msgEl.textContent = d.error; return; }
+    state.brandProfile = state.brandProfile || {};
+    if (type === 'logo') state.brandProfile.logo_url = d.url;
+    else state.brandProfile.promo_image_url = d.url;
+    if (msgEl) msgEl.textContent = '上传成功';
+    render();
+  };
+  xhr.onerror = function() { if (msgEl) msgEl.textContent = '上传失败'; };
+  xhr.send(fd);
 }
 
 /* ── Helpers ── */
@@ -840,6 +1354,7 @@ function appStatusLabel(s) { return {PENDING:'待审核',APPROVED:'已通过',RE
 function subStatusLabel(s) { return {PENDING_REVIEW:'待审核',APPROVED:'已通过',REJECTED:'已拒绝'}[s]||s; }
 
 /* ── API ── */
+function api(method, path, body, cb) { patch(method, path, body, cb); }
 function get(path, cb) {
   var xhr = new XMLHttpRequest();
   xhr.open('GET', API+path, true);
@@ -875,6 +1390,7 @@ function nav(page) {
   if (page === 'dashboard') loadDashStats();
   if (page === 'tasks') { state.taskFilter = ''; loadMyTasks(); }
   if (page === 'reviews') loadPendingReviews();
+  if (page === 'wallet') { brandBalance = null; loadBrandWallet(); }
   if (page === 'settings') loadBrandProfile();
   closeSidebar();
   render();
@@ -983,6 +1499,66 @@ function editTask() {
   go('task_edit');
 }
 
+function editTaskMeta() {
+  state.editingTask = state.currentTask;
+  go('task_meta_edit');
+}
+
+function taskMetaEditPage() {
+  var t = state.editingTask;
+  if (!t) return '<div class="empty">未选择任务</div>';
+
+  // 初始化平台要求
+  if (t.platform_requirements && taskPlatformReqs.length === 0) {
+    try { taskPlatformReqs = JSON.parse(t.platform_requirements); } catch(e) {}
+  }
+
+  var h = '<div class="form-card"><div class="form-grid">';
+  h += '<div class="field form-full" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">';
+  h += '以下字段不可修改：<strong>报酬金额、任务类型、推广码方式</strong>（如需修改请关闭任务重新创建）</div>';
+
+  h += '<div class="field form-full"><label>任务描述 *</label><textarea id="meta-description" rows="4">'+esc(t.description||'')+'</textarea></div>';
+  h += '<div class="field form-full"><label>具体要求</label><textarea id="meta-requirements" rows="3">'+esc(t.requirements||'')+'</textarea></div>';
+  h += '<div class="field"><label>截止日期</label><input id="meta-deadline" type="date" value="'+(t.deadline?t.deadline.slice(0,10):'')+'"></div>';
+  h += '<div class="field"><label>招募名额（当前 '+t.max_heralds+' 人，只能增加）</label><input id="meta-maxHeralds" type="number" min="'+t.max_heralds+'" value="'+t.max_heralds+'"></div>';
+  h += '<div class="field form-full"><label>封面图链接</label><input id="meta-coverImage" type="text" value="'+esc(t.cover_image||'')+'" placeholder="https://...（选填）"></div>';
+  h += platformReqsFormHTML(t);
+  h += '<div class="form-actions">';
+  h += '<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>';
+  h += '<button class="btn btn-primary" onclick="saveTaskMeta()">保存</button>';
+  h += '</div></div></div>';
+  return h;
+}
+
+function saveTaskMeta() {
+  var t = state.editingTask;
+  if (!t) return;
+  var desc = (document.getElementById('meta-description')||{}).value || '';
+  var req  = (document.getElementById('meta-requirements')||{}).value || '';
+  var dl   = (document.getElementById('meta-deadline')||{}).value || '';
+  var mh   = Number((document.getElementById('meta-maxHeralds')||{}).value || t.max_heralds);
+  var ci   = (document.getElementById('meta-coverImage')||{}).value || '';
+  if (!desc.trim()) { alert('描述不能为空'); return; }
+  if (mh < t.max_heralds) { alert('名额不能减少'); return; }
+  var body = {
+    description: desc,
+    requirements: req || undefined,
+    deadline: dl || undefined,
+    maxHeralds: mh,
+    coverImage: ci || undefined,
+    platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
+  };
+  patch('PATCH', '/tasks/'+t.id+'/meta', body, function(d) {
+    if (d.error) { alert(d.error); return; }
+    state.currentTask = Object.assign(state.currentTask, d);
+    state.editingTask = null;
+    taskPlatformReqs = [];
+    showMsg('保存成功');
+    go('task_detail');
+    loadMyTasks();
+  });
+}
+
 function saveTask(publish) {
   var body = {
     title: (document.getElementById('title')||{}).value,
@@ -998,6 +1574,7 @@ function saveTask(publish) {
     coverImage: (document.getElementById('coverImage')||{}).value || undefined,
     deadline: (document.getElementById('deadline')||{}).value || undefined,
     codeMode: document.getElementById('codeMode-custom')?.checked ? 'custom' : 'auto',
+    platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
   };
   if (!body.title || !body.description || !body.commission) { alert('请填写标题、描述和报酬'); return; }
 
@@ -1081,7 +1658,12 @@ function publishTask(id) {
   } else {
     if (!confirm('确认发布？发布后赫使即可看到并报名。')) return;
     patch('PATCH', '/tasks/'+id+'/publish', {}, function(d) {
-      if (d.error) { alert(d.error); return; }
+      if (d.error) {
+        if (d.code === 'INSUFFICIENT_BALANCE') {
+          if (confirm('余额不足（需 ¥'+d.needed+'，可用 ¥'+(d.available||0).toFixed(0)+'）。\n前往充值？')) nav('wallet');
+        } else { alert(d.error); }
+        return;
+      }
       state.msg = '任务已发布'; state.msgType = 'success';
       if (state.currentTask) state.currentTask.status = 'OPEN';
       loadMyTasks(); loadDashStats(); render();
@@ -1115,6 +1697,7 @@ function reviewApp(id, status, fromAll) {
 function reviewSub(id, status, fromAll) {
   patch('PATCH', '/submissions/'+id+'/review', {status:status}, function(d) {
     if (d.error) { alert(d.error); return; }
+    if (d.needsRating) { showRatingModal(id, fromAll); return; }
     if (fromAll) {
       state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==id});
       render();
@@ -1123,6 +1706,54 @@ function reviewSub(id, status, fromAll) {
       loadMyTasks();
       loadDashStats();
     }
+  });
+}
+
+function showRatingModal(submissionId, fromAll) {
+  var selected = 0;
+  var overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;width:320px;max-width:90vw">'
+    +'<div style="font-size:16px;font-weight:700;margin-bottom:6px;text-align:center">为这次合作打分</div>'
+    +'<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">帮助其他品牌了解赫使质量（可选）</div>'
+    +'<div id="stars" style="display:flex;justify-content:center;gap:8px;font-size:32px;margin-bottom:16px;cursor:pointer">'
+    +'<span data-v="1">☆</span><span data-v="2">☆</span><span data-v="3">☆</span><span data-v="4">☆</span><span data-v="5">☆</span>'
+    +'</div>'
+    +'<textarea id="rate-comment" placeholder="写点评语（可选）" style="width:100%;height:64px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;resize:none;box-sizing:border-box;margin-bottom:14px"></textarea>'
+    +'<div style="display:flex;gap:8px">'
+    +'<button id="skip-rate" class="btn btn-outline" style="flex:1">跳过</button>'
+    +'<button id="submit-rate" class="btn btn-primary" style="flex:1" disabled>提交评分</button>'
+    +'</div></div>';
+
+  document.body.appendChild(overlay);
+
+  var stars = overlay.querySelectorAll('#stars span');
+  function setStars(v) {
+    selected = v;
+    stars.forEach(function(s){ s.textContent = Number(s.dataset.v) <= v ? '★' : '☆'; });
+    overlay.querySelector('#submit-rate').disabled = false;
+  }
+  stars.forEach(function(s){ s.addEventListener('click', function(){ setStars(Number(s.dataset.v)); }); });
+
+  function close() {
+    document.body.removeChild(overlay);
+    if (fromAll) {
+      state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==submissionId});
+      render();
+    } else {
+      openTask(state.currentTask.id);
+      loadMyTasks();
+      loadDashStats();
+    }
+  }
+
+  overlay.querySelector('#skip-rate').addEventListener('click', close);
+  overlay.querySelector('#submit-rate').addEventListener('click', function() {
+    var comment = overlay.querySelector('#rate-comment').value.trim();
+    patch('POST', '/submissions/'+submissionId+'/rate', {score:selected, comment:comment||undefined}, function(d) {
+      if (d.error) { alert(d.error); return; }
+      close();
+    });
   });
 }
 
@@ -1203,6 +1834,7 @@ function saveSettings() {
     contactName: (document.getElementById('contact_name')||{}).value,
     contactPhone: (document.getElementById('contact_phone')||{}).value,
     companyDesc: (document.getElementById('company_desc')||{}).value,
+    billingEmail: (document.getElementById('billing_email')||{}).value,
   };
   patch('PATCH', '/users/profile/brand', body, function(d) {
     if (d.error) { alert(d.error); return; }
@@ -1215,6 +1847,39 @@ function saveSettings() {
 function logout() {
   state.token = null; state.user = null; state.tasks = [];
   render();
+}
+
+function switchAccount() {
+  post('/auth/switch-account', {}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    var roles = d.user.roles || [d.user.role];
+    sessionStorage.setItem('herix_switch_token', d.token);
+    window.location.href = roles.includes('BRAND') ? 'merchant.html' : 'preview.html';
+  });
+}
+
+function tryResumeSwitchedSession() {
+  var token = sessionStorage.getItem('herix_switch_token');
+  if (!token) return false;
+  sessionStorage.removeItem('herix_switch_token');
+  state.token = token;
+  get('/auth/me', function(d) {
+    if (d.error || !d.id) { state.token = null; render(); return; }
+    var roles = d.roles || [d.role];
+    if (!roles.includes('BRAND')) {
+      // 切到的账号没有品牌身份，跳转到赫使端
+      sessionStorage.setItem('herix_switch_token', state.token);
+      window.location.href = 'preview.html';
+      return;
+    }
+    state.user = {
+      id: d.id, nickname: d.nickname, role: d.role, roles: roles,
+      isVerified: !!d.is_verified, is_onboarded: !!d.brand_onboarded,
+    };
+    state.brandProfile = d;
+    loadDashStats(); loadMyTasks();
+  });
+  return true;
 }
 
 function toggleSidebar() {
@@ -1246,7 +1911,7 @@ function bindPage() {
 }
 
 // Init
-loadDashStats();
+if (!tryResumeSwitchedSession()) loadDashStats();
 </script>
 </body>
 </html>

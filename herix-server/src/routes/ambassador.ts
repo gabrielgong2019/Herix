@@ -1,6 +1,18 @@
 import { Router, Request, Response } from 'express';
 import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
+import { calcTier } from '../types';
+
+/** 根据 social_platforms JSON 计算各平台段位快照 */
+function buildTierSnapshot(socialPlatforms: any[]): Record<string, string> {
+  const snapshot: Record<string, string> = {};
+  for (const p of socialPlatforms) {
+    if (p.followers != null && p.platformId) {
+      snapshot[p.platformId] = calcTier(Number(p.followers));
+    }
+  }
+  return snapshot;
+}
 
 export const ambassadorRouter = Router();
 
@@ -48,7 +60,7 @@ ambassadorRouter.get('/status', requireAuth, async (req: Request, res: Response)
 
 /** PATCH /api/ambassador/profile — 更新大使身份 */
 ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Response) => {
-  const { residence, residenceCountry, kycStatus, visaType, bankAccount } = req.body;
+  const { residence, residenceCountry, kycStatus, visaType, bankAccount, socialPlatforms, displayCurrency } = req.body;
 
   const data: Record<string, any> = {};
   if (residence) data.residence = residence;
@@ -56,6 +68,17 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
   if (kycStatus) data.kyc_status = kycStatus;
   if (visaType) data.visa_type = visaType;
   if (bankAccount) data.bank_account = JSON.stringify(bankAccount);
+  if (displayCurrency) {
+    if (!['JPY', 'CNY'].includes(displayCurrency)) {
+      return res.status(400).json({ error: '不支持的币种' });
+    }
+    data.display_currency = displayCurrency;
+  }
+  if (socialPlatforms !== undefined) {
+    data.social_platforms = JSON.stringify(socialPlatforms);
+    data.tier_snapshot = JSON.stringify(buildTierSnapshot(socialPlatforms));
+    data.social_platforms_updated_at = new Date().toISOString();
+  }
 
   // 查找或创建 profile
   const existing = await findOne<{ id: string }>(
@@ -109,43 +132,45 @@ ambassadorRouter.post('/declaration', requireAuth, async (req: Request, res: Res
 
 /** POST /api/ambassador/onboard — 一次性完成大使入驻 */
 ambassadorRouter.post('/onboard', requireAuth, async (req: Request, res: Response) => {
-  const { residence, residenceCountry, visaType, hasWorkPermit, bankAccountType, bankDetails } = req.body;
+  const { residence, residenceCountry, visaType, hasWorkPermit, bankAccountType, bankDetails, socialPlatforms } = req.body;
 
-  if (!residence || !['japan', 'overseas'].includes(residence)) {
-    return res.status(400).json({ error: '请选择居住地（japan 或 overseas）' });
-  }
-
+  // 居住地选填：有就保存，没有也能完成入驻
   const profileData: Record<string, any> = {
-    residence,
-    residence_country: residenceCountry || null,
     is_onboarded: 1,
-    bank_account: bankDetails ? JSON.stringify({ type: bankAccountType, ...bankDetails }) : null,
+    social_platforms: socialPlatforms ? JSON.stringify(socialPlatforms) : null,
+    tier_snapshot: socialPlatforms ? JSON.stringify(buildTierSnapshot(socialPlatforms)) : null,
+    social_platforms_updated_at: socialPlatforms ? new Date().toISOString() : null,
   };
 
-  if (residence === 'japan') {
-    if (!visaType) return res.status(400).json({ error: '在日赫使请选择在留资格类型' });
-    profileData.visa_type = visaType;
-    profileData.kyc_status = 'pending';
-    profileData.declaration_status = 'submitted';
-    profileData.declaration_submitted_at = new Date().toISOString();
+  if (residence && ['japan', 'overseas'].includes(residence)) {
+    profileData.residence = residence;
+    profileData.residence_country = residenceCountry || null;
+    profileData.bank_account = bankDetails ? JSON.stringify({ type: bankAccountType, ...bankDetails }) : null;
 
-    // 记录声明
-    const existing = await findOne<{ id: string }>(
-      "SELECT id FROM declarations WHERE user_id = ?", [req.user!.userId]
-    );
-    if (!existing) {
-      await insert('declarations', {
-        user_id: req.user!.userId,
-        visa_type: visaType,
-        has_work_permit: hasWorkPermit ? 1 : 0,
-        work_permit_hours_per_week: req.body.workPermitHours || null,
-        status: 'pending',
-      });
+    if (residence === 'japan') {
+      if (visaType) {
+        profileData.visa_type = visaType;
+        profileData.kyc_status = 'pending';
+        profileData.declaration_status = 'submitted';
+        profileData.declaration_submitted_at = new Date().toISOString();
+
+        const existing = await findOne<{ id: string }>(
+          'SELECT id FROM declarations WHERE user_id = ?', [req.user!.userId]
+        );
+        if (!existing) {
+          await insert('declarations', {
+            user_id: req.user!.userId,
+            visa_type: visaType,
+            has_work_permit: hasWorkPermit ? 1 : 0,
+            work_permit_hours_per_week: req.body.workPermitHours || null,
+            status: 'pending',
+          });
+        }
+      }
+    } else {
+      profileData.kyc_status = 'approved';
+      profileData.declaration_status = 'exempt';
     }
-  } else {
-    // 海外大使：MVP 简化，直接通过
-    profileData.kyc_status = 'approved';
-    profileData.declaration_status = 'exempt';
   }
 
   await update('herald_profiles', profileData, 'user_id = ?', [req.user!.userId]);

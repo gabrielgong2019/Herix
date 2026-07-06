@@ -4,6 +4,7 @@ import { requireAuth, requireRole, optionalAuth } from '../middleware/auth';
 import { CreateTaskSchema } from '../types';
 import { ZodError } from 'zod';
 import crypto from 'crypto';
+import { freezeForTask, unfreezeTask, settleTask, creditHerald, creditPlatformFee, getBalance, PLATFORM_USER_ID } from '../utils/wallet';
 
 function genCode(): string {
   return 'HERIX-' + crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -50,11 +51,13 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
 
   const tasks = await findMany<any>(
     `SELECT t.*, u.nickname as creator_name,
+            bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
             (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
      FROM tasks t
      JOIN users u ON u.id = t.creator_id
+     LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      WHERE ${where}
      ORDER BY t.created_at DESC
      LIMIT ? OFFSET ?`,
@@ -186,9 +189,12 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
   res.json({ added, skipped, total: cleaned.length, maxHeralds: task.max_heralds });
 });
 
-/** POST /api/tasks/:id/csv — 上传推广码转化数据 (类型A) */
+/** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, mode, commission FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>(
+    'SELECT id, creator_id, mode, commission, currency, title, lock_txn_id FROM tasks WHERE id = ?',
+    [req.params.id]
+  );
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
@@ -196,26 +202,87 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
   const { records } = req.body as { records: Array<{ code: string; registered_count?: number; used_count?: number }> };
   if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: 'records 不能为空' });
 
-  let processed = 0, skipped = 0;
+  const PLATFORM_FEE_RATE = 0.15;
+  let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
+
   for (const row of records) {
-    const ambassadorTask = await findOne<any>(
-      'SELECT id, herald_id FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?', [row.code, task.id]
+    const at = await findOne<any>(
+      'SELECT id, herald_id, paid_conversions FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?',
+      [row.code, task.id]
     );
-    if (!ambassadorTask) { skipped++; continue; }
+    if (!at) { skipped++; continue; }
 
-    const regCount = Math.max(0, parseInt(String(row.registered_count || '0'), 10));
-    const usedCount = Math.max(0, parseInt(String(row.used_count || '0'), 10));
-    const earnedAmount = usedCount * task.commission;
+    const newUsedCount = Math.max(0, parseInt(String(row.used_count || '0'), 10));
+    const newRegCount  = Math.max(0, parseInt(String(row.registered_count || '0'), 10));
+    const alreadyPaid  = Number(at.paid_conversions || 0);
+    const delta        = newUsedCount - alreadyPaid;  // 新增转化数
 
+    // 更新原始数据（用于报表）
     await update('ambassador_tasks', {
-      registered_count: regCount,
-      used_count: usedCount
-    }, 'id = ?', [ambassadorTask.id]);
+      registered_count: newRegCount,
+      used_count: newUsedCount,
+    }, 'id = ?', [at.id]);
 
+    if (delta <= 0) { processed++; continue; }  // 无新增转化，跳过打款
+
+    // 每个新转化：写一笔 ESCROW_RELEASE
+    const commissionPerConv = task.commission;
+    const feePerConv        = Math.round(commissionPerConv * PLATFORM_FEE_RATE * 100) / 100;
+    const payoutPerConv     = commissionPerConv - feePerConv;
+
+    // task_transactions 记录业务事件
+    const releaseTxnId = await insert('task_transactions', {
+      task_id:       task.id,
+      type:          'TASK_RELEASE',
+      task_amount:   commissionPerConv * delta,
+      amount:        payoutPerConv * delta,
+      platform_fee:  feePerConv * delta,
+      from_user_id:  task.creator_id,
+      to_user_id:    at.herald_id,
+      parent_txn_id: task.lock_txn_id || null,
+      status:        'completed',
+      note:          `推广码 ${row.code} 新增 ${delta} 次转化`,
+    });
+
+    // 品牌冻结清零，赫使+收入，平台+手续费（三笔钱包操作）
+    const idKey = `CSV:${task.id}:${row.code}:${newUsedCount}`;
+    await Promise.all([
+      settleTask({
+        userId: task.creator_id, amount: commissionPerConv * delta, currency: task.currency,
+        idempotencyKey: `SETTLE:${releaseTxnId}`,
+        referenceType: 'task_transaction', referenceId: releaseTxnId,
+        note: `推广码 ${row.code} 结算 ${delta} 次`,
+      }),
+      creditHerald({
+        userId: at.herald_id, amount: payoutPerConv * delta, currency: task.currency,
+        idempotencyKey: `CREDIT:${releaseTxnId}`,
+        referenceType: 'task_transaction', referenceId: releaseTxnId,
+        note: `任务《${task.title}》推广收入`,
+      }),
+      creditPlatformFee({
+        userId: PLATFORM_USER_ID, amount: feePerConv * delta, currency: task.currency,
+        idempotencyKey: `FEE:${releaseTxnId}`,
+        referenceType: 'task_transaction', referenceId: releaseTxnId,
+        note: `平台服务费 15%`,
+      }),
+    ]);
+
+    // 更新已付转化数，防止重复计费
+    await update('ambassador_tasks', { paid_conversions: newUsedCount }, 'id = ?', [at.id]);
+
+    totalNewConversions += delta;
+    totalPaid           += payoutPerConv * delta;
     processed++;
   }
 
-  res.json({ processed, skipped, total: records.length, commissionPerUser: task.commission });
+  res.json({
+    processed,
+    skipped,
+    total: records.length,
+    newConversions: totalNewConversions,
+    totalPaid,
+    commissionPerConversion: task.commission,
+  });
 });
 
 /** PATCH /api/tasks/:id/publish});
@@ -224,16 +291,22 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
 tasksRouter.get('/:id', async (req: Request, res: Response) => {
   const task = await findOne<any>(
     `SELECT t.*, u.nickname as creator_name,
+            bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
             (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
      FROM tasks t JOIN users u ON u.id = t.creator_id
+     LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      WHERE t.id = ?`, [req.params.id]
   );
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
   const applications = await findMany<any>(
-    `SELECT ta.*, u.nickname, hp.display_name, hp.country, hp.social_platforms
+    `SELECT ta.*, u.nickname, hp.display_name, hp.country, hp.social_platforms,
+            hp.tier_snapshot, hp.social_platforms_updated_at,
+            (SELECT COUNT(*) FROM task_submissions ts2 WHERE ts2.herald_id = ta.herald_id AND ts2.status = 'APPROVED') AS completed_tasks,
+            (SELECT ROUND(AVG(CASE WHEN tr.score >= 4 THEN 1.0 ELSE 0 END) * 100) / 100.0
+             FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate
      FROM task_applications ta
      JOIN users u ON u.id = ta.herald_id
      LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id
@@ -254,6 +327,9 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
   try {
     const data = CreateTaskSchema.parse(req.body);
 
+    // 任务币种快照自品牌资料（CNY=中国业务 / JPY=日本业务），创建后不可变
+    const brand = await findOne<{ currency: string }>('SELECT currency FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+
     const taskId = await insert('tasks', {
       creator_id: req.user!.userId,
       mode: data.mode,
@@ -262,6 +338,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       requirements: data.requirements || null,
       budget: data.budget,
       commission: data.commission,
+      currency: brand?.currency || 'JPY',
       max_heralds: data.maxHeralds,
       deadline: data.deadline || null,
       category: data.category || null,
@@ -269,6 +346,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       difficulty: data.difficulty,
       cover_image: data.coverImage || null,
       code_mode: data.codeMode || 'auto',
+      platform_requirements: data.platformRequirements ? JSON.stringify(data.platformRequirements) : null,
       status: 'DRAFT',
     });
 
@@ -295,7 +373,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
 
-  const { title, description, requirements, commission, maxHeralds, deadline, category, contentType, difficulty, coverImage } = req.body;
+  const { title, description, requirements, commission, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements } = req.body;
   const data: Record<string, any> = {};
   if (title) data.title = title;
   if (description) data.description = description;
@@ -307,14 +385,49 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (contentType) data.content_type = contentType;
   if (difficulty) data.difficulty = difficulty;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
+  if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
 
+  await update('tasks', data, 'id = ?', [req.params.id]);
+  res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
+});
+
+/** PATCH /api/tasks/:id/meta — 已发布任务的有限字段编辑 */
+tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<{ id: string; creator_id: string; status: string; max_heralds: number }>(
+    'SELECT id, creator_id, status, max_heralds FROM tasks WHERE id = ?', [req.params.id]
+  );
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限' });
+  }
+  if (!['OPEN', 'IN_PROGRESS'].includes(task.status)) {
+    return res.status(400).json({ error: '只有进行中的任务可以编辑' });
+  }
+
+  const { description, requirements, deadline, coverImage, platformRequirements, maxHeralds } = req.body;
+  const data: Record<string, any> = {};
+  if (description !== undefined) data.description = description;
+  if (requirements !== undefined) data.requirements = requirements || null;
+  if (deadline !== undefined) data.deadline = deadline || null;
+  if (coverImage !== undefined) data.cover_image = coverImage || null;
+  if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  // 名额只允许增加
+  if (maxHeralds !== undefined) {
+    if (maxHeralds < task.max_heralds) return res.status(400).json({ error: '名额不能减少' });
+    data.max_heralds = maxHeralds;
+  }
+
+  if (!Object.keys(data).length) return res.status(400).json({ error: '没有可更新的字段' });
   await update('tasks', data, 'id = ?', [req.params.id]);
   res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
 });
 
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<{ id: string; creator_id: string; status: string }>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>(
+    'SELECT id, creator_id, status, commission, currency, max_heralds, title FROM tasks WHERE id = ?',
+    [req.params.id]
+  );
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '只有创建者可以发布' });
@@ -323,43 +436,104 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     return res.status(400).json({ error: '只有草稿状态可以发布' });
   }
 
-  await update('tasks', { status: 'OPEN', published_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
-  const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
-  res.json(updated);
-});
+  // 检查品牌钱包余额（从 wallets 表读，O(1)，按任务币种）
+  const needed = task.commission * task.max_heralds;
+  const bal = await getBalance(task.creator_id, 'brand', task.currency);
 
-/** PATCH /api/tasks/:id/escrow — 托管资金 */
-tasksRouter.patch('/:id/escrow', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
-  const task = await findOne<{ id: string; creator_id: string; commission: number; max_heralds: number; title: string }>(
-    'SELECT id, creator_id, commission, max_heralds, title FROM tasks WHERE id = ?', [req.params.id]
-  );
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.creator_id !== req.user!.userId) return res.status(403).json({ error: '只有创建者可以操作' });
+  if (bal.available < needed) {
+    return res.status(402).json({
+      error: `余额不足，需要 ${task.currency} ${needed}，当前可用 ${task.currency} ${bal.available.toFixed(0)}`,
+      code: 'INSUFFICIENT_BALANCE',
+      needed,
+      available: bal.available,
+      currency: task.currency,
+    });
+  }
 
-  const escrowAmount = task.commission * task.max_heralds;
+  // 发布任务
+  await update('tasks', {
+    status: 'OPEN',
+    published_at: new Date().toISOString(),
+    escrow_amount: needed,
+    is_escrowed: 1,
+  }, 'id = ?', [req.params.id]);
 
-  await update('tasks', { escrow_amount: escrowAmount, is_escrowed: 1 }, 'id = ?', [req.params.id]);
-  await insert('transactions', {
-    user_id: req.user!.userId,
-    task_id: task.id,
-    type: 'ESCROW_DEPOSIT',
-    amount: escrowAmount,
-    status: 'COMPLETED',
-    note: `任务 ${task.title} 资金托管`,
-    completed_at: new Date().toISOString(),
+  // 品牌钱包：可用→冻结（原子操作，按任务币种）
+  const { entryId: lockEntryId } = await freezeForTask({
+    userId: task.creator_id,
+    amount: needed,
+    currency: task.currency,
+    idempotencyKey: `TASK_FREEZE:${req.params.id}`,
+    referenceType: 'task',
+    referenceId: String(req.params.id),
+    note: `任务《${task.title}》发布锁定 ${task.currency} ${needed}`,
   });
 
+  // task_transactions 记录业务事件
+  const lockTxnId = await insert('task_transactions', {
+    task_id: req.params.id,
+    type: 'TASK_LOCK',
+    task_amount: needed,
+    amount: needed,
+    platform_fee: 0,
+    from_user_id: task.creator_id,
+    status: 'completed',
+    note: `任务《${task.title}》发布锁定`,
+    reference_type: 'wallet_entry',
+    reference_id: lockEntryId,
+  });
+
+  await update('tasks', { lock_txn_id: lockTxnId }, 'id = ?', [req.params.id]);
+
   const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });
 
-/** PATCH /api/tasks/:id/complete — 完成任务 */
+// /escrow 端点已废弃，资金锁定在 /publish 时自动完成
+
+/** PATCH /api/tasks/:id/complete — 完成/关闭任务，退还未使用锁定资金 */
 tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
-  const task = await findOne<{ id: string; creator_id: string }>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id, title, currency, escrow_amount, is_escrowed, commission, max_heralds, lock_txn_id FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId) return res.status(403).json({ error: '无权限' });
 
+  // 已结算金额：从 task_transactions 查（只算 TASK_RELEASE）
+  const paid = await findOne<{ total: number }>(
+    `SELECT COALESCE(SUM(amount), 0) as total FROM task_transactions
+     WHERE task_id = ? AND type = 'TASK_RELEASE' AND status = 'completed'`,
+    [req.params.id]
+  );
+  const refundAmount = (task.escrow_amount || 0) - (Number(paid?.total) || 0);
+
   await update('tasks', { status: 'COMPLETED', completed_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
+
+  if (refundAmount > 0) {
+    // 品牌钱包：冻结→可用（退还未使用预算）
+    const { entryId: refundEntryId } = await unfreezeTask({
+      userId: task.creator_id,
+      amount: refundAmount,
+      currency: task.currency,
+      idempotencyKey: `TASK_UNFREEZE:${req.params.id}`,
+      referenceType: 'task',
+      referenceId: String(req.params.id),
+      note: `任务《${task.title}》关闭退还 ${task.currency} ${refundAmount.toFixed(0)}`,
+    });
+
+    await insert('task_transactions', {
+      task_id: req.params.id,
+      type: 'TASK_REFUND',
+      task_amount: refundAmount,
+      amount: refundAmount,
+      platform_fee: 0,
+      from_user_id: task.creator_id,
+      parent_txn_id: task.lock_txn_id || null,
+      status: 'completed',
+      note: `任务《${task.title}》关闭退还 ¥${refundAmount.toFixed(0)}`,
+      reference_type: 'wallet_entry',
+      reference_id: refundEntryId,
+    });
+  }
+
   const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });

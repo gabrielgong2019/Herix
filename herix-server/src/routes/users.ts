@@ -20,6 +20,7 @@ usersRouter.patch('/profile/brand', requireAuth, async (req: Request, res: Respo
         industry: data.industry || null,
         contact_name: data.contactName,
         contact_phone: data.contactPhone || null,
+        billing_email: data.billingEmail || null,
       }, 'user_id = ?', [req.user!.userId]);
     } else {
       await insert('brand_profiles', {
@@ -30,6 +31,7 @@ usersRouter.patch('/profile/brand', requireAuth, async (req: Request, res: Respo
         industry: data.industry || null,
         contact_name: data.contactName,
         contact_phone: data.contactPhone || null,
+        billing_email: data.billingEmail || null,
       });
     }
 
@@ -121,20 +123,36 @@ usersRouter.post('/add-role', requireAuth, async (req: Request, res: Response) =
 
 /** POST /api/users/brand/onboard — 品牌入驻 */
 usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {
-  const { companyName, industry, companyDesc, website, contactName, contactPhone } = req.body;
+  const { companyName, industry, companyDesc, website, contactName, contactPhone, currency, billingEmail } = req.body;
   if (!companyName || !contactName) {
     return res.status(400).json({ error: '公司名称和联系人姓名为必填项' });
   }
-  await update('brand_profiles', {
+
+  const existing = await findOne<{ is_onboarded: number; currency: string }>(
+    'SELECT is_onboarded, currency FROM brand_profiles WHERE user_id = ?', [req.user!.userId]
+  );
+
+  const data: Record<string, any> = {
     company_name: companyName,
     industry: industry || null,
     company_desc: companyDesc || null,
     website: website || null,
     contact_name: contactName,
     contact_phone: contactPhone || null,
+    billing_email: billingEmail || null,
     is_onboarded: 1,
-  }, 'user_id = ?', [req.user!.userId]);
-  res.json({ success: true });
+  };
+
+  // 业务市场币种：仅在首次入驻时可选定，之后不可变
+  if (!existing?.is_onboarded && currency) {
+    if (!['JPY', 'CNY'].includes(currency)) {
+      return res.status(400).json({ error: '不支持的币种' });
+    }
+    data.currency = currency;
+  }
+
+  await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
+  res.json({ success: true, currency: data.currency || existing?.currency || 'JPY' });
 });
 
 /** GET /api/users/heralds — 赫使列表 (公开) */

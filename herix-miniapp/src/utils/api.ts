@@ -1,7 +1,16 @@
 import Taro from '@tarojs/taro';
 
-// API 基础配置
-const BASE_URL = '/api';
+// 微信原生 wx.cloud API，Taro 未完整封装，运行时在 weapp 端全局存在
+declare const wx: any;
+
+// ── 云托管配置（小程序端专用，需要在微信云托管控制台创建服务后填入）──
+const CLOUD_ENV_ID = 'REPLACE_WITH_CLOUD_ENV_ID'; // 云开发环境ID
+const CLOUD_SERVICE_NAME = 'herix-proxy'; // 云托管服务名称，需与部署时一致
+
+// H5 / 开发调试走的直连地址（真实 HTTPS 域名，不能用相对路径）
+const H5_BASE_URL = 'https://herix.huaxuex.com/api';
+
+const isWeapp = process.env.TARO_ENV === 'weapp';
 
 // 存储 token 的 key
 const TOKEN_KEY = 'herix_token';
@@ -41,8 +50,26 @@ async function request<T = any>(
   }
 
   try {
+    if (isWeapp) {
+      // 小程序端：走微信云托管，绕开服务器域名白名单/备案要求
+      const res = await wx.cloud.callContainer({
+        config: { env: CLOUD_ENV_ID },
+        path: `/api${path}`,
+        method,
+        header: { ...header, 'X-WX-SERVICE': CLOUD_SERVICE_NAME },
+        data,
+      });
+
+      if (res.statusCode >= 400) {
+        throw new Error(res.data?.error || '请求失败');
+      }
+
+      return res.data as T;
+    }
+
+    // H5 端：直连真实后端域名
     const res = await Taro.request({
-      url: `${BASE_URL}${path}`,
+      url: `${H5_BASE_URL}${path}`,
       method,
       header,
       data,

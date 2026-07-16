@@ -207,9 +207,16 @@ export const categories = {
   list: () => request<any[]>('GET', '/categories', undefined, false),
 };
 
+// ── i18n（公开，不需登录）──
+export const i18n = {
+  dict: (locale: string) => request<{ version: string; locale: string; entries: Record<string, string> }>(
+    'GET', `/i18n/${locale}`, undefined, false,
+  ),
+};
+
 // ── Notifications ──
 export const notifications = {
-  list: () => request<any[]>('GET', '/notifications'),
+  list: () => request<{ unread: number; notifications: any[] }>('GET', '/notifications'),
   markRead: (id: string) => request<any>('PATCH', `/notifications/${id}/read`),
   markAllRead: () => request<any>('PATCH', '/notifications/read-all'),
 };

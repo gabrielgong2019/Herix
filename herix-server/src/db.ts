@@ -281,6 +281,17 @@ export async function initDatabase() {
       active BOOLEAN NOT NULL DEFAULT TRUE,
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
+
+    -- i18n_entries: UI 词条（中日英）。key 由代码 seed 创建（scripts/seed-i18n.ts），
+    -- 运营在 admin「本地化」矩阵里只改译文不建 key；规范式存储，加语言=加行不动表结构
+    CREATE TABLE IF NOT EXISTS i18n_entries (
+      key TEXT NOT NULL,
+      locale TEXT NOT NULL CHECK(locale IN ('zh','ja','en')),
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      updated_by TEXT,
+      PRIMARY KEY (key, locale)
+    );
   `;
 
   await pool.query(schema);

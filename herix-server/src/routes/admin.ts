@@ -9,9 +9,13 @@ import { getSetting, setSetting, getEffectiveCommissionRate } from '../utils/set
 import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo } from '../utils/image';
 import { saveBrandAsset } from '../utils/uploads';
+import { i18nAdminRouter } from './i18n';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
+
+// 本地化词条矩阵（鉴权继承上面的 ADMIN 检查）
+adminRouter.use('/i18n', i18nAdminRouter);
 
 /* ── Stats & Dashboard ── */
 

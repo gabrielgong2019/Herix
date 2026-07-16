@@ -139,6 +139,7 @@ function shell(inner){
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
     {id:'categories',icon:'🏷️',label:'任务分类'},
+    {id:'i18n',icon:'🌐',label:'本地化'},
   ];
   var sb='<div class="sidebar" id="sb"><div class="sb-brand"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-icon-filled.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: st.page, onclick: "go('%s')" });
@@ -150,7 +151,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类',i18n:'本地化'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -166,6 +167,7 @@ function pageCont(){
     case 'tasks': return tasksPage();
     case 'ambassadors': return ambassadorsPage();
     case 'categories': return categoriesPage();
+    case 'i18n': return i18nPage();
     default: return dashPage();
   }
 }
@@ -792,8 +794,41 @@ function doSub(id,approve){
 }
 
 /* ── Data Loading ── */
+
+/* ── 本地化词条矩阵 ──
+   key 由代码 seed（herix-server/scripts/seed-i18n.ts）创建，此处只改译文不建 key。
+   缺译输入框标红；保存按行提交。空值=清空该语言译文（前端回退打包词典/中文）。*/
+function i18nPage(){
+  var rows=st.data.i18n||[];
+  var q=(st.filter.q||'');var ql=q.toLowerCase();
+  var shown=q?rows.filter(function(r){return r.key.toLowerCase().indexOf(ql)>=0||(r.zh||'').indexOf(q)>=0||(r.ja||'').indexOf(q)>=0||(r.en||'').toLowerCase().indexOf(ql)>=0}):rows;
+  var h='<div class="search-bar"><input id="i18nq" placeholder="搜索 key / 译文" value="'+esc(q)+'" onkeydown="if(event.key===\'Enter\')searchI18n()">'
+    +'<button class="btn btn-outline btn-sm" onclick="searchI18n()">搜索</button>'
+    +'<span style="font-size:12px;color:var(--muted);margin-left:8px">共 '+rows.length+' 词条 · 缺译标红 · key 由代码管理，此处只改译文</span></div>';
+  if(!shown.length) return h+'<div class="empty"><div class="empty-icon">🌐</div>'+(rows.length?'无匹配词条':'暂无词条，先在服务器执行 scripts/seed-i18n.ts')+'</div>';
+  h+='<div class="tcard"><table><thead><tr><th style="width:24%">key</th><th>中文</th><th>日本語</th><th>English</th><th style="width:64px"></th></tr></thead><tbody>';
+  h+=shown.map(function(r){
+    var kid=r.key.replace(/[^a-zA-Z0-9]/g,'_');
+    function cell(loc){var v=r[loc]||'';return '<td><input id="i18n-'+loc+'-'+kid+'" value="'+esc(v)+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid '+(v?'var(--border)':'var(--danger)')+';border-radius:6px;font-size:12px"></td>'}
+    return '<tr><td style="font-family:monospace;font-size:11px;color:var(--muted);word-break:break-all">'+esc(r.key)+'</td>'+cell('zh')+cell('ja')+cell('en')
+      +'<td><button class="btn btn-primary btn-sm" onclick="saveI18n(\''+esc(r.key)+'\',\''+kid+'\')">保存</button></td></tr>';
+  }).join('');
+  return h+'</tbody></table></div>';
+}
+function searchI18n(){st.filter.q=document.getElementById('i18nq').value;render()}
+function saveI18n(key,kid){
+  var body={zh:document.getElementById('i18n-zh-'+kid).value,ja:document.getElementById('i18n-ja-'+kid).value,en:document.getElementById('i18n-en-'+kid).value};
+  apiPatch('/admin/i18n/'+encodeURIComponent(key),body,function(d){
+    if(d.error){st.msg=d.error;st.msgType='danger';render();return}
+    st.msg='已保存：'+key;st.msgType='success';
+    apiGet('/admin/i18n',function(dd){st.data.i18n=dd.rows||[];render()});
+  });
+}
+
 function load(page){
-  if(page==='dashboard'){
+  if(page==='i18n'){
+    apiGet('/admin/i18n',function(d){st.data.i18n=d.rows||[];render()});
+  } else if(page==='dashboard'){
     apiGet('/admin/stats',function(d){st.data.stats=d;render()});
   } else if(page==='reviews'){
     st.subPage=st.subPage||'decls';

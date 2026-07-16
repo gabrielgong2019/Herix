@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { notifications as notifApi, getToken } from '../../utils/api';
+import { t } from '../../utils/i18n';
 import './index.scss';
 
 const ACCENT_MAP: Record<string, string> = {
@@ -22,16 +23,17 @@ const ICON_MAP: Record<string, string> = {
 // 相对时间（等价 herix formatNotifTime）
 function timeAgo(iso: string): string {
   if (!iso) return '';
-  const t = new Date(iso).getTime();
-  if (isNaN(t)) return iso.slice(0, 10);
-  const diff = Date.now() - t;
+  // 注意变量名不能叫 t——会遮蔽 i18n 的 t() 函数
+  const ts = new Date(iso).getTime();
+  if (isNaN(ts)) return iso.slice(0, 10);
+  const diff = Date.now() - ts;
   const MIN = 60000;
   const HR = 3600000;
   const DAY = 86400000;
-  if (diff < MIN) return '刚刚';
-  if (diff < HR) return `${Math.floor(diff / MIN)}分钟前`;
-  if (diff < DAY) return `${Math.floor(diff / HR)}小时前`;
-  if (diff < 7 * DAY) return `${Math.floor(diff / DAY)}天前`;
+  if (diff < MIN) return t('common.justNow');
+  if (diff < HR) return t('common.minutesAgo', { n: Math.floor(diff / MIN) });
+  if (diff < DAY) return t('common.hoursAgo', { n: Math.floor(diff / HR) });
+  if (diff < 7 * DAY) return t('common.daysAgo', { n: Math.floor(diff / DAY) });
   return iso.slice(0, 10);
 }
 
@@ -68,8 +70,10 @@ export default class Messages extends Component<{}, State> {
 
   load = async () => {
     try {
-      const list = await notifApi.list();
-      this.setState({ notifs: list || [], loading: false });
+      // 接口返回 {unread, notifications}，不是裸数组
+      const d: any = await notifApi.list();
+      const list = Array.isArray(d) ? d : d?.notifications || [];
+      this.setState({ notifs: list, loading: false });
     } catch (err) {
       console.error('load notifications error:', err);
       this.setState({ loading: false });
@@ -81,7 +85,7 @@ export default class Messages extends Component<{}, State> {
       await notifApi.markAllRead();
       this.setState({ notifs: this.state.notifs.map(n => ({ ...n, is_read: true })) });
     } catch (err) {
-      Taro.showToast({ title: '操作失败', icon: 'none' });
+      Taro.showToast({ title: t('common.opFailed'), icon: 'none' });
     }
   };
 
@@ -124,7 +128,7 @@ export default class Messages extends Component<{}, State> {
                 this.goTask(taskId);
               }}
             >
-              查看任务 →
+              {t('messages.viewTask')}
             </Text>
           )}
         </View>
@@ -139,7 +143,7 @@ export default class Messages extends Component<{}, State> {
       return (
         <View className='messages-page'>
           <View className='empty-state'>
-            <Text className='empty-text'>请先登录后查看消息</Text>
+            <Text className='empty-text'>{t('messages.needLogin')}</Text>
           </View>
         </View>
       );
@@ -152,35 +156,35 @@ export default class Messages extends Component<{}, State> {
     return (
       <View className='messages-page'>
         <View className='msg-head'>
-          <Text className='msg-title'>消息</Text>
+          <Text className='msg-title'>{t('messages.title')}</Text>
           {unreadList.length > 0 && (
             <Text className='msg-readall' onClick={this.markAll}>
-              全部已读
+              {t('messages.readAll')}
             </Text>
           )}
         </View>
 
         {loading ? (
           <View className='empty-state'>
-            <Text className='empty-text'>加载中…</Text>
+            <Text className='empty-text'>{t('common.loading')}</Text>
           </View>
         ) : notifs.length === 0 ? (
           <View className='empty-state'>
             <Text className='empty-emoji'>📭</Text>
-            <Text className='empty-title'>暂无消息</Text>
-            <Text className='empty-sub'>任务审核、报名结果等通知会出现在这里</Text>
+            <Text className='empty-title'>{t('messages.emptyTitle')}</Text>
+            <Text className='empty-sub'>{t('messages.emptySub')}</Text>
           </View>
         ) : (
           <View>
             {unreadList.length > 0 && (
               <View>
-                {hasBoth && <Text className='group-label'>新消息</Text>}
+                {hasBoth && <Text className='group-label'>{t('messages.newGroup')}</Text>}
                 {unreadList.map(this.renderCard)}
               </View>
             )}
             {readList.length > 0 && (
               <View>
-                <Text className={`group-label ${hasBoth ? 'gap' : ''}`}>历史消息</Text>
+                <Text className={`group-label ${hasBoth ? 'gap' : ''}`}>{t('messages.historyGroup')}</Text>
                 {readList.map(this.renderCard)}
               </View>
             )}

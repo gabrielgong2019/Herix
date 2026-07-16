@@ -1,0 +1,27 @@
+{
+  "tabbar.explore": "探索",
+  "tabbar.tasks": "任务",
+  "tabbar.messages": "消息",
+  "tabbar.profile": "我的",
+
+  "common.loading": "加载中...",
+  "common.confirm": "确认",
+  "common.cancel": "取消",
+  "common.save": "保存",
+  "common.opFailed": "操作失败",
+  "common.justNow": "刚刚",
+  "common.minutesAgo": "{n}分钟前",
+  "common.hoursAgo": "{n}小时前",
+  "common.daysAgo": "{n}天前",
+
+  "messages.title": "消息",
+  "messages.readAll": "全部已读",
+  "messages.needLogin": "请先登录后查看消息",
+  "messages.emptyTitle": "暂无消息",
+  "messages.emptySub": "任务审核、报名结果等通知会出现在这里",
+  "messages.viewTask": "查看任务 →",
+  "messages.newGroup": "新消息",
+  "messages.historyGroup": "历史消息",
+
+  "profile.language": "语言 / Language"
+}

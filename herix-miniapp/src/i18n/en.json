@@ -1,0 +1,27 @@
+{
+  "tabbar.explore": "Explore",
+  "tabbar.tasks": "Tasks",
+  "tabbar.messages": "Inbox",
+  "tabbar.profile": "Me",
+
+  "common.loading": "Loading...",
+  "common.confirm": "Confirm",
+  "common.cancel": "Cancel",
+  "common.save": "Save",
+  "common.opFailed": "Something went wrong",
+  "common.justNow": "just now",
+  "common.minutesAgo": "{n}m ago",
+  "common.hoursAgo": "{n}h ago",
+  "common.daysAgo": "{n}d ago",
+
+  "messages.title": "Inbox",
+  "messages.readAll": "Mark all read",
+  "messages.needLogin": "Log in to view your messages",
+  "messages.emptyTitle": "No messages yet",
+  "messages.emptySub": "Task reviews and application updates will appear here",
+  "messages.viewTask": "View task →",
+  "messages.newGroup": "New",
+  "messages.historyGroup": "Earlier",
+
+  "profile.language": "Language"
+}

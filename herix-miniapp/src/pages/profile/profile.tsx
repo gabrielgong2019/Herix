@@ -11,6 +11,7 @@ import {
   clearToken,
 } from '../../utils/api';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
+import { t, LOCALES, getLocale, setLocale } from '../../utils/i18n';
 import './profile.scss';
 
 const AVATAR_COLORS = ['#D43B27', '#34c759', '#f5a623', '#ff3b30', '#5856d6', '#ff9500'];
@@ -216,6 +217,19 @@ export default class Profile extends Component<{}, State> {
 
   goOnboard = () => Taro.navigateTo({ url: '/pages/onboard/index' });
   goWallet = () => Taro.navigateTo({ url: '/pages/wallet/index' });
+
+  switchLanguage = async () => {
+    try {
+      const res = await Taro.showActionSheet({ itemList: LOCALES.map(l => l.label) });
+      const picked = LOCALES[res.tapIndex];
+      if (picked && picked.id !== getLocale()) {
+        await setLocale(picked.id);
+        this.forceUpdate(); // 本页文案立即生效；其他页面在重新进入时生效
+      }
+    } catch {
+      /* 用户取消 */
+    }
+  };
 
   // ── 社交编辑 ──
   openSocialEdit = () => {
@@ -455,6 +469,9 @@ export default class Profile extends Component<{}, State> {
 
         {/* 操作 */}
         <View className='card actions'>
+          <Text className='action-item' onClick={this.switchLanguage}>
+            🌐 {t('profile.language')}：{LOCALES.find(l => l.id === getLocale())?.label}
+          </Text>
           {!u.is_onboarded && <Text className='action-item primary' onClick={this.goOnboard}>完成入驻设置 →</Text>}
           {!roles.includes('BRAND') && roles.includes('HERALD') && (
             <Text className='action-item' onClick={this.addBrandRole}>🏢 开通品牌商家功能</Text>

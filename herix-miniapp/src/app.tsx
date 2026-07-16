@@ -1,4 +1,5 @@
 import { Component, PropsWithChildren } from 'react';
+import { initI18n } from './utils/i18n';
 import './app.scss';
 
 declare const wx: any;
@@ -10,6 +11,7 @@ class App extends Component<PropsWithChildren> {
     if (process.env.TARO_ENV === 'weapp' && wx.cloud) {
       wx.cloud.init({ env: CLOUD_ENV_ID });
     }
+    initI18n(); // 语言检测 + 词典缓存加载 + 远端词典异步更新
   }
 
   render() {

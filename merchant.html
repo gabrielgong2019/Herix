@@ -252,9 +252,9 @@ function pageContent() {
     case 'dashboard':   return dashPage();
     case 'tasks':       return tasksPage();
     case 'task_detail': return taskDetailPage();
-    case 'task_create': taskPlatformReqs=[]; return taskFormPage(null);
-    case 'task_edit':   taskPlatformReqs=[]; return taskFormPage(state.editingTask);
-    case 'task_meta_edit': taskPlatformReqs=[]; return taskMetaEditPage();
+    case 'task_create': taskPlatformReqs=[]; taskReqMode='ALL'; taskReqMinCount=1; return taskFormPage(null);
+    case 'task_edit':   taskPlatformReqs=[]; taskReqMode='ALL'; taskReqMinCount=1; return taskFormPage(state.editingTask);
+    case 'task_meta_edit': taskPlatformReqs=[]; taskReqMode='ALL'; taskReqMinCount=1; return taskMetaEditPage();
     case 'reviews':     return reviewsPage();
     case 'wallet':      return walletPage();
     case 'csv':         return csvPage();
@@ -582,12 +582,20 @@ function taskDetailPage() {
     + (t.status === 'DRAFT'
       ? '<div style="margin:8px 12px 4px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted)">🔗 任务发布后可获取分享链接与海报</div>'
       : '<div style="margin:8px 12px 4px;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe">'
-    + '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">'+(t.visibility==='INVITE'?'🔒 赫使邀请链接':'🔗 任务分享链接')+'</div>'
+    // 行1：H5 链接（浏览器/微信外社交平台，永久有效）
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">'+(t.visibility==='INVITE'?'🔒 赫使邀请链接（H5）':'🔗 H5 分享链接')+' <span style="font-weight:400">— 浏览器/社交平台通用</span></div>'
     + '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:8px" id="invite-link-text">'+taskShareUrl(t.id)+'</div>'
-    + '<div style="display:flex;gap:8px">'
+    + '<div style="display:flex;gap:8px;margin-bottom:12px">'
     + '<button class="btn btn-outline btn-sm" onclick="copyInviteLink(\''+t.id+'\')">复制链接</button>'
     + '<button class="btn btn-primary btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成分享海报</button>'
-    + '</div></div>')
+    + '</div>'
+    // 行2：小程序 URL Link（短信/邮件引流进小程序，30天有效自动续期）
+    + '<div style="font-size:11px;color:var(--muted);margin:0 0 6px;font-weight:600;border-top:1px solid #dbeafe;padding-top:10px">📱 小程序链接 <span style="font-weight:400">— 点击直接拉起微信小程序（30天有效）</span></div>'
+    + '<div id="weapp-link-box" style="margin-bottom:12px"><button class="btn btn-outline btn-sm" onclick="loadWeappLink(\''+t.id+'\')">获取小程序链接</button></div>'
+    // 行3：小程序码（海报/线下物料，永久有效）
+    + '<div style="font-size:11px;color:var(--muted);margin:0 0 6px;font-weight:600;border-top:1px solid #dbeafe;padding-top:10px">▣ 小程序码 <span style="font-weight:400">— 扫码进小程序，适合海报/线下物料（永久）</span></div>'
+    + '<div id="weapp-qr-box"><button class="btn btn-outline btn-sm" onclick="loadWeappQr(\''+t.id+'\')">生成小程序码</button></div>'
+    + '</div>')
     +'</div>';
 
   if (t.status === 'DRAFT') {
@@ -836,6 +844,8 @@ function loadCategories(){ var x=new XMLHttpRequest(); x.open('GET',API+'/catego
 // PLATFORM_REGISTRY, calcTier, platformById 均来自 /shared/platforms.js
 // 当前任务表单中已选平台要求 [{platformId, minFollowers, required}]
 var taskPlatformReqs = [];
+var taskReqMode = 'ALL';      // ALL=必须项全部满足 | ANY_N=任 N 项满足
+var taskReqMinCount = 1;
 
 function taskFormPage(t) {
   var isEdit = !!t;
@@ -907,6 +917,8 @@ function platformReqsFormHTML(t) {
   // 初始化：若是编辑模式，从任务数据加载
   if(t && t.platform_requirements && taskPlatformReqs.length === 0){
     try{ taskPlatformReqs = JSON.parse(t.platform_requirements); }catch(e){}
+    taskReqMode = t.req_mode === 'ANY_N' ? 'ANY_N' : 'ALL';
+    taskReqMinCount = Math.max(1, parseInt(t.req_min_count,10) || 1);
   }
   var h = '<div class="field form-full" data-plat-reqs="1"><label>赫使社交平台要求 <span style="font-weight:400;font-size:11px;color:var(--muted)">（选填）</span></label>';
   h += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">选择赫使必须拥有的社交账号及最低粉丝要求</div>';
@@ -925,11 +937,44 @@ function platformReqsFormHTML(t) {
     h += '<span style="font-size:15px">'+pInfo.icon+'</span><span style="font-weight:500;font-size:12px;min-width:64px">'+pInfo.name+'</span>';
     h += '<span style="font-size:11px;color:var(--muted)">最低粉丝数</span>';
     h += '<input type="number" value="'+(req.minFollowers||'')+'" min="0" placeholder="不限" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="updatePlatformReqFollowers(\''+req.platformId+'\',this.value)">';
-    h += '<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto"><input type="checkbox"'+(req.required?' checked':'')+' onchange="updatePlatformReqRequired(\''+req.platformId+'\',this.checked)"> 必须</label>';
+    // ANY_N 模式下单项"必须"标志被忽略，不展示避免误导
+    if(taskReqMode !== 'ANY_N'){
+      h += '<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto"><input type="checkbox"'+(req.required?' checked':'')+' onchange="updatePlatformReqRequired(\''+req.platformId+'\',this.checked)"> 必须</label>';
+    }
+    h += '</div>';
+  }
+  // 满足模式：≥2 项时才有意义
+  if(taskPlatformReqs.length >= 2){
+    h += '<div style="display:flex;align-items:center;gap:14px;padding:8px;background:#f0f7ff;border-radius:8px;margin-top:4px;font-size:12px">';
+    h += '<span style="font-weight:600;color:var(--text)">满足方式</span>';
+    h += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="req-mode"'+(taskReqMode==='ALL'?' checked':'')+' onchange="setReqMode(\'ALL\')"> 全部"必须"项都满足</label>';
+    h += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="req-mode"'+(taskReqMode==='ANY_N'?' checked':'')+' onchange="setReqMode(\'ANY_N\')"> 满足任意';
+    h += ' <input type="number" value="'+taskReqMinCount+'" min="1" max="'+taskPlatformReqs.length+'"'+(taskReqMode!=='ANY_N'?' disabled':'')+' style="width:44px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="setReqMinCount(this.value)"> 项即可</label>';
     h += '</div>';
   }
   h += '</div>';
   return h;
+}
+
+function setReqMode(mode){
+  taskReqMode = mode;
+  if(mode === 'ANY_N' && taskReqMinCount > taskPlatformReqs.length) taskReqMinCount = taskPlatformReqs.length;
+  rerenderPlatformReqs();
+}
+
+function setReqMinCount(val){
+  var n = parseInt(val,10) || 1;
+  taskReqMinCount = Math.min(Math.max(1, n), Math.max(1, taskPlatformReqs.length));
+  rerenderPlatformReqs();
+}
+
+function rerenderPlatformReqs(){
+  var reqSection = document.querySelector('[data-plat-reqs]');
+  if(!reqSection) return;
+  var tmp = document.createElement('div');
+  tmp.innerHTML = platformReqsFormHTML(null);
+  var newEl = tmp.firstElementChild;
+  if(newEl) reqSection.replaceWith(newEl);
 }
 
 function togglePlatformReq(platformId){
@@ -2051,6 +2096,8 @@ function saveTaskMeta() {
     deadline: dl || undefined,
     maxHeralds: mh,
     platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
+    reqMode: taskReqMode,
+    reqMinCount: taskReqMode === 'ANY_N' ? taskReqMinCount : undefined,
   };
   patch('PATCH', '/tasks/'+t.id+'/meta', body, function(d) {
     if (d.error) { alert(d.error); return; }
@@ -2154,6 +2201,8 @@ function saveTask(publish) {
     deadline: (document.getElementById('deadline')||{}).value || undefined,
     codeMode: document.getElementById('codeMode-custom')?.checked ? 'custom' : 'auto',
     platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
+    reqMode: taskReqMode,
+    reqMinCount: taskReqMode === 'ANY_N' ? taskReqMinCount : undefined,
     visibility: (document.getElementById('visibility')||{}).value || 'PUBLIC',
   };
   showFormError('');  // 清除旧错误
@@ -2628,6 +2677,53 @@ function copyInviteLink(taskId) {
     var el = document.getElementById('invite-link-text');
     if (el) { var r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy'); showMsg('链接已复制', 'success'); }
   }
+}
+
+/* ── 小程序分享入口（URL Link + 小程序码） ── */
+function loadWeappLink(taskId) {
+  var box = document.getElementById('weapp-link-box');
+  if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">获取中…</span>';
+  get('/tasks/'+taskId+'/weapp-link', function(d) {
+    if (!box) return;
+    if (d.available && d.link) {
+      box.innerHTML = '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:6px" id="weapp-link-text">'+esc(d.link)+'</div>'
+        +'<button class="btn btn-outline btn-sm" onclick="copyWeappLink()">复制小程序链接</button>'
+        +'<span style="font-size:11px;color:var(--muted);margin-left:8px">有效期至 '+(d.expiresAt||'').slice(0,10)+'（过期自动续）</span>';
+    } else {
+      box.innerHTML = '<span style="font-size:12px;color:var(--muted)">⏳ '+esc(d.reason||'小程序发布后可用')+'</span>';
+    }
+  });
+}
+
+function copyWeappLink() {
+  var el = document.getElementById('weapp-link-text');
+  if (!el) return;
+  var url = el.textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() { showMsg('小程序链接已复制', 'success'); });
+  } else {
+    var r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy'); showMsg('小程序链接已复制', 'success');
+  }
+}
+
+function loadWeappQr(taskId) {
+  var box = document.getElementById('weapp-qr-box');
+  if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">生成中…</span>';
+  // img 标签带不了 Authorization 头，用 fetch blob → objectURL
+  fetch(API+'/tasks/'+taskId+'/weapp-qrcode', { headers: state.token ? { 'Authorization': 'Bearer '+state.token } : {} })
+    .then(function(r) {
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.reason || '小程序发布后可用'); });
+      return r.blob();
+    })
+    .then(function(blob) {
+      if (!box) return;
+      var url = URL.createObjectURL(blob);
+      box.innerHTML = '<img src="'+url+'" style="width:160px;height:160px;border:1px solid #dbeafe;border-radius:8px;background:#fff;padding:6px" alt="小程序码">'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:4px">右键/长按保存图片，可放进海报或线下物料</div>';
+    })
+    .catch(function(e) {
+      if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">⏳ '+esc(e.message)+'</span>';
+    });
 }
 
 function showMsg(msg, type) {

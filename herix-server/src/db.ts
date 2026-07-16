@@ -392,6 +392,12 @@ export async function initDatabase() {
     `INSERT INTO users (id, password_hash, nickname, role, created_at, updated_at)
       VALUES ('HERIX_PLATFORM', '!', 'Herix Platform', 'PLATFORM', now()::text, now()::text)
       ON CONFLICT (id) DO NOTHING`,
+    // 小程序 URL Link 缓存（30天有效，过期重新生成）（2026-07-17）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS weapp_link TEXT`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS weapp_link_expires TEXT`,
+    // 资格要求满足模式：ALL=required项全须满足(默认，现行为)；ANY_N=列出项满足任意 req_min_count 项即可（2026-07-17）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS req_mode TEXT NOT NULL DEFAULT 'ALL'`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS req_min_count INTEGER`,
     // 定价模块（2026-07-09）
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,

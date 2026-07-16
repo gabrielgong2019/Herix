@@ -157,6 +157,7 @@
   "taskCard.fastPayout": "⚡ 即時払い",
   "taskCard.new": "NEW",
   "req.title": "タスクの応募条件",
+  "req.anyNHint": "以下のうち任意の {n} 項目を満たせば応募できます（現在 {c} 項目クリア）",
   "req.followersOk": "{n}+ フォロワー ✓",
   "req.added": "追加済み",
   "req.addedCheck": "✓ 追加済み",

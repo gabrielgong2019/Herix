@@ -36,7 +36,9 @@ export default class Landing extends Component<{}, State> {
 
   componentDidMount() {
     const params = Taro.getCurrentInstance().router?.params || {};
-    const taskId = (params.task || params.taskId || '') as string;
+    // scene：小程序码扫码进入时参数在 scene 里（值即 taskId，见服务端 weapp-qrcode）
+    const scene = params.scene ? decodeURIComponent(params.scene as string) : '';
+    const taskId = (params.task || params.taskId || scene || '') as string;
     this.loadCategories();
     if (taskId) {
       this.setState({ taskId, taskLoading: true });

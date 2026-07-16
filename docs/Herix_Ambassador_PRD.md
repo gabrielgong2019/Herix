@@ -695,6 +695,10 @@ TaskPlatformRequirement {
 ○ 小红书（可选）— 最低粉丝：不限
 ```
 
+**满足模式**（2026-07-17，`tasks.req_mode` + `req_min_count`，≥2 项时创建表单显示选择）：
+- `ALL`（默认，即上述现行为）：required=true 的项全部必须满足，required=false 仅作加分展示
+- `ANY_N`：列出的**所有**项都算候选，满足其中任意 `req_min_count` 项即可报名；此模式下忽略单项"必须"标志（创建 UI 隐藏该勾选框）。服务端校验 403 响应带 `reqMode/needCount/satisfiedCount`，赫使端预检面板显示"满足任意 N 项即可报名（当前满足 C 项）"
+
 ---
 
 ### 15.0.5 报名时的验证逻辑

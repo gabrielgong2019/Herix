@@ -124,6 +124,8 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 部署到任何新环境的必做步骤：`initDatabase()` 启动自动建表（幂等）→ 手动跑一次 `npx tsx scripts/seed-i18n.ts` 灌词条。
 
+小程序分享入口（URL Link + 小程序码，`utils/wechat.ts`）需要环境变量 `WECHAT_MINI_APPID` / `WECHAT_MINI_SECRET`（可选 `WECHAT_MINI_ENV=trial` 测体验版）。未配置时端点返回 `available:false` 优雅降级，商家端显示"小程序发布后可用"——**前提是小程序已发布**，发布后在 launchd plist（生产环境同理）配上凭据即自动生效，无需改代码。
+
 ### 产品路线图（v1.3）
 
 见 `docs/Herix_Ambassador_PRD.md` 第19节，分三期：

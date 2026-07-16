@@ -157,6 +157,7 @@
   "taskCard.fastPayout": "⚡ 极速打款",
   "taskCard.new": "新",
   "req.title": "任务资质要求",
+  "req.anyNHint": "满足下列任意 {n} 项即可报名（当前满足 {c} 项）",
   "req.followersOk": "{n}+ 粉 ✓",
   "req.added": "已添加",
   "req.addedCheck": "✓ 已添加",

@@ -18,8 +18,8 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
   try {
     const data = ApplyTaskSchema.parse(req.body);
 
-    const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null }>(
-      'SELECT id, status, max_heralds, platform_requirements FROM tasks WHERE id = ?', [req.params.taskId]
+    const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null; req_mode: string | null; req_min_count: number | null }>(
+      'SELECT id, status, max_heralds, platform_requirements, req_mode, req_min_count FROM tasks WHERE id = ?', [req.params.taskId]
     );
     if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
     if (task.status !== 'OPEN') return res.status(400).json({ error: '任务不在招募中', code: 'TASK_NOT_RECRUITING' });
@@ -31,18 +31,22 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     );
 
     // 平台账号要求验证 — 一次性收集所有问题
+    // 模式（与前端 utils/requirements.ts 语义保持一致，改动须两边同步）：
+    //   ALL(默认)：required=true 的项全部必须满足，required=false 仅展示
+    //   ANY_N：列出的所有项都算候选，满足其中 ≥ req_min_count 项即可（忽略单项 required 标志）
     if (task.platform_requirements) {
       let reqs: Array<{ platformId: string; minFollowers?: number | null; required: boolean }> = [];
       try { reqs = JSON.parse(task.platform_requirements); } catch { /* ignore */ }
 
-      const requiredReqs = reqs.filter(r => r.required);
-      if (requiredReqs.length > 0) {
+      const anyN = task.req_mode === 'ANY_N';
+      const candidates = anyN ? reqs : reqs.filter(r => r.required);
+      if (candidates.length > 0) {
         let heraldPlatforms: Array<{ platformId: string; followers?: number | null }> = [];
         try { heraldPlatforms = profile?.social_platforms ? JSON.parse(profile.social_platforms) : []; } catch { /* ignore */ }
 
         const failures: Array<{ platformId: string; type: 'MISSING' | 'INSUFFICIENT'; required?: number; current?: number }> = [];
 
-        for (const req_ of requiredReqs) {
+        for (const req_ of candidates) {
           const match = heraldPlatforms.find((p: any) => p.platformId === req_.platformId);
           if (!match) {
             failures.push({ platformId: req_.platformId, type: 'MISSING' });
@@ -51,13 +55,20 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
           }
         }
 
-        if (failures.length > 0) {
+        const needCount = anyN ? Math.min(Math.max(1, Number(task.req_min_count) || 1), candidates.length) : candidates.length;
+        const satisfiedCount = candidates.length - failures.length;
+        const passed = anyN ? satisfiedCount >= needCount : failures.length === 0;
+
+        if (!passed) {
           const hasInsufficient = failures.some(f => f.type === 'INSUFFICIENT');
           return res.status(403).json({
-            error: '不满足任务的社交账号要求',
+            error: anyN ? `需满足任意 ${needCount} 项账号要求（当前满足 ${satisfiedCount} 项）` : '不满足任务的社交账号要求',
             code: 'REQUIREMENTS_NOT_MET',
             canRetry: !hasInsufficient,
             failures,
+            reqMode: anyN ? 'ANY_N' : 'ALL',
+            needCount,
+            satisfiedCount,
           });
         }
       }

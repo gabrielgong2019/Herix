@@ -89,6 +89,8 @@
 | 未登录语言切换入口 | ✅ | 2026-07-16：landing + profile 登录页均可切换三语 |
 | 通知角色隔离 | ✅ | 2026-07-16 修复：隔离维度从"拥有的角色集合"改为"当前端声明角色"（?role= + 服务端校验），双角色账号商家端不再看到赫使侧通知，read-all 也按端隔离 |
 | 转化数据上传生效 + 赫使通知 | ✅ | 2026-07-16：修3处根因——①历史 PERFORMANCE 任务 upload_token 为 NULL（迁移回填）②码匹配不归一化+全跳过仍显示绿色成功（归一化+skippedCodes 如实警示）③HERIX_PLATFORM 用户缺失致首次结算 FK 崩服务器（迁移种子+unhandledRejection 兜底）。新增 CONVERSION_SETTLED/CONVERSION_UPDATED 赫使通知（三语），行为测试 11/11（详见 PRD §4） |
+| 分享区块三入口 | ✅ | 2026-07-17：H5链接（永久）+ 小程序 URL Link（30天DB缓存自动续，`GET /tasks/:id/weapp-link`）+ 小程序码（永久，`GET /tasks/:id/weapp-qrcode`，landing 支持 scene 参数）。凭据未配置/小程序未发布时优雅降级显示占位——**待用户发布小程序后配 WECHAT_MINI_APPID/SECRET**（见 CLAUDE.md 部署节） |
+| 资格要求"任N满足/全部满足" | ✅ | 2026-07-17：tasks.req_mode(ALL/ANY_N)+req_min_count；ANY_N=列出项全算候选、满足任意N项即可（忽略单项"必须"标志）；ALL=现行为不变。创建/草稿编辑/meta编辑三处UI+接口，服务端校验带 needCount/satisfiedCount，Taro 预检面板同语义+anyN提示行（三语）。行为测试 7/7 |
 
 ---
 

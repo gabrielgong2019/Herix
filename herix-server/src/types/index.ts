@@ -71,6 +71,9 @@ export const CreateTaskSchema = z.object({
     minFollowers: z.number().int().min(0).nullish(),
     required: z.boolean().default(true),
   })).optional(),
+  // 资格要求满足模式：ALL=required项全须满足；ANY_N=列出项满足任意 reqMinCount 项即可（此模式下忽略单项 required 标志）
+  reqMode: z.enum(['ALL', 'ANY_N']).default('ALL'),
+  reqMinCount: z.number().int().min(1).optional(),
 });
 
 export const ApplyTaskSchema = z.object({

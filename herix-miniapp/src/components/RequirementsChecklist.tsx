@@ -9,7 +9,7 @@ import { t } from '../utils/i18n';
  */
 
 interface Props {
-  task: { platform_requirements?: string | null };
+  task: { platform_requirements?: string | null; req_mode?: string | null; req_min_count?: number | null };
   ambassadorProfile: { social_platforms?: string | null } | null;
 }
 
@@ -25,8 +25,10 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
   if (!reqs.length) return null;
 
   const check = checkRequirements(task, ambassadorProfile);
-  const requiredItems = reqs.filter(r => r.required);
-  const optionalItems = reqs.filter(r => !r.required);
+  // ANY_N：所有项都是候选，逐项显示满足状态；ALL：按 required/选填 分组（现行为）
+  const anyN = check.mode === 'ANY_N';
+  const requiredItems = anyN ? reqs : reqs.filter(r => r.required);
+  const optionalItems = anyN ? [] : reqs.filter(r => !r.required);
 
   let ownedPlatforms: SocialPlatformEntry[] = [];
   try {
@@ -41,6 +43,11 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
   return (
     <View className='requirements-checklist'>
       <Text className='requirements-title'>{t('req.title')}</Text>
+      {anyN && (
+        <View className='requirements-hint' style={{ marginBottom: '8px' }}>
+          <Text>{t('req.anyNHint', { n: check.needCount, c: check.satisfiedCount })}</Text>
+        </View>
+      )}
 
       {requiredItems.map(req => {
         const platform = platformById(req.platformId);

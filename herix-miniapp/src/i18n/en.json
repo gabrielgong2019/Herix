@@ -157,6 +157,7 @@
   "taskCard.fastPayout": "⚡ Fast payout",
   "taskCard.new": "New",
   "req.title": "Requirements",
+  "req.anyNHint": "Meet any {n} of the requirements below to apply (you currently meet {c})",
   "req.followersOk": "{n}+ followers ✓",
   "req.added": "Added",
   "req.addedCheck": "✓ Added",

@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { settleCreditTask, creditHerald, creditPlatformFee, getBalance, PLATFORM_USER_ID } from '../utils/wallet';
 import { createNotification } from './notifications';
 import { notify } from '../utils/notify';
+import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
 import pool from '../db';
 
@@ -212,6 +213,65 @@ tasksRouter.get('/:id/upload-info', async (req: Request, res: Response) => {
     [task.id]
   );
   res.json({ id: task.id, title: task.title, status: task.status, maxHeralds: task.max_heralds, codes });
+});
+
+/** GET /api/tasks/:id/weapp-link — 小程序 URL Link（30天有效，DB 缓存自动续期）。
+ *  未配置微信凭据/小程序未发布 → available:false 优雅降级，前端显示占位。 */
+tasksRouter.get('/:id/weapp-link', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>(
+    'SELECT id, creator_id, status, weapp_link, weapp_link_expires FROM tasks WHERE id = ?', [req.params.id]
+  );
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+  }
+  if (task.status === 'DRAFT') return res.status(400).json({ error: '任务发布后才能分享', code: 'TASK_NOT_PUBLISHED' });
+
+  if (!isWechatConfigured()) {
+    return res.json({ available: false, reason: '小程序发布后可用（服务端未配置微信凭据）', code: 'WEAPP_NOT_CONFIGURED' });
+  }
+  // 缓存有效直接返回
+  if (task.weapp_link && task.weapp_link_expires && new Date(task.weapp_link_expires) > new Date()) {
+    return res.json({ available: true, link: task.weapp_link, expiresAt: task.weapp_link_expires });
+  }
+  try {
+    const { link, expiresAt } = await generateUrlLink('pages/landing/index', `task=${task.id}`);
+    await update('tasks', { weapp_link: link, weapp_link_expires: expiresAt }, 'id = ?', [task.id]);
+    res.json({ available: true, link, expiresAt });
+  } catch (e: any) {
+    console.error('[weapp-link]', e.message);
+    res.json({ available: false, reason: '小程序链接生成失败（小程序可能未发布）', code: e.code || 'WEAPP_API_ERROR' });
+  }
+});
+
+/** GET /api/tasks/:id/weapp-qrcode — 小程序码 PNG（永久有效，内存缓存）。失败返回 JSON。 */
+const weappQrCache = new Map<string, Buffer>();
+tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+  }
+  if (task.status === 'DRAFT') return res.status(400).json({ error: '任务发布后才能分享', code: 'TASK_NOT_PUBLISHED' });
+
+  if (!isWechatConfigured()) {
+    return res.status(404).json({ available: false, reason: '小程序发布后可用', code: 'WEAPP_NOT_CONFIGURED' });
+  }
+  const cached = weappQrCache.get(task.id);
+  if (cached) {
+    res.setHeader('Content-Type', 'image/png');
+    return res.send(cached);
+  }
+  try {
+    // scene 只放 taskId（32 hex 恰好顶满长度上限），landing 页负责解析
+    const buf = await getUnlimitedQRCode(task.id, 'pages/landing/index');
+    weappQrCache.set(task.id, buf);
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buf);
+  } catch (e: any) {
+    console.error('[weapp-qrcode]', e.message);
+    res.status(404).json({ available: false, reason: '小程序码生成失败（小程序可能未发布）', code: e.code || 'WEAPP_API_ERROR' });
+  }
 });
 
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
@@ -424,6 +484,8 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       cover_image:       data.coverImage || null,
       code_mode:         data.codeMode || 'auto',
       platform_requirements: data.platformRequirements ? JSON.stringify(data.platformRequirements) : null,
+      req_mode:          data.reqMode,
+      req_min_count:     data.reqMode === 'ANY_N' ? (data.reqMinCount || 1) : null,
       visibility:        data.visibility || 'PUBLIC',
       status:            'DRAFT',
       // cost_per_herald 和 commission_rate 在发布时计算快照
@@ -452,7 +514,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
 
-  const { title, description, requirements, payoutPerHerald, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements, visibility } = req.body;
+  const { title, description, requirements, payoutPerHerald, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements, visibility, reqMode, reqMinCount } = req.body;
   const data: Record<string, any> = {};
   if (title) data.title = title;
   if (description) data.description = description;
@@ -466,6 +528,10 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
   if (visibility && ['PUBLIC', 'INVITE'].includes(visibility)) data.visibility = visibility;
+  if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
+    data.req_mode = reqMode;
+    data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;
+  }
 
   await update('tasks', data, 'id = ?', [req.params.id]);
   res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
@@ -484,13 +550,17 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     return res.status(400).json({ error: '只有进行中的任务可以编辑' });
   }
 
-  const { description, requirements, deadline, coverImage, platformRequirements, maxHeralds } = req.body;
+  const { description, requirements, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount } = req.body;
   const data: Record<string, any> = {};
   if (description !== undefined) data.description = description;
   if (requirements !== undefined) data.requirements = requirements || null;
   if (deadline !== undefined) data.deadline = deadline || null;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
+    data.req_mode = reqMode;
+    data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;
+  }
   // 名额只允许增加
   if (maxHeralds !== undefined) {
     if (maxHeralds < task.max_heralds) return res.status(400).json({ error: '名额不能减少' });

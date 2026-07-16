@@ -409,7 +409,10 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             </Text>
           </View>
           <Text className='price'>
-            {isPerformance ? t('task.perConversion', { n: task.commission }) : t('task.perPerson', { n: task.commission })}
+            {/* 赫使视角单价 = payout_per_herald（到手报酬）；commission 是重构前废弃字段，新任务恒 0，仅作老数据兜底 */}
+            {isPerformance
+              ? t('task.perConversion', { n: task.payout_per_herald ?? task.commission })
+              : t('task.perPerson', { n: task.payout_per_herald ?? task.commission })}
           </Text>
           <Text className='meta'>{t('task.budgetMeta', { b: task.budget, n: task.max_heralds })}</Text>
         </View>

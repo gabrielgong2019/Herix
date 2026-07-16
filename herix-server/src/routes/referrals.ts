@@ -61,12 +61,15 @@ referralsRouter.post('/assign/:taskId', requireAuth, requireRole('HERALD'), asyn
 
 /** GET /api/referrals/my-codes — 我的推广码列表 */
 referralsRouter.get('/my-codes', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  // 计数直读 ambassador_tasks 聚合列（CSV 上传的唯一写入点）；收入按 task_transactions 实际入账。
+  // 旧版从 referrals 明细表统计——那张表 CSV 上传从不写，赫使端永远显示 0（2026-07-17 修复）
   const codes = await findMany<any>(
     `SELECT at.id, at.task_id, at.unique_code, at.status, at.joined_at,
-            t.title as task_title, t.commission, t.mode,
-            (SELECT COUNT(*) FROM referrals r WHERE r.ambassador_task_id = at.id) as registered_count,
-            (SELECT COUNT(*) FROM referrals r WHERE r.ambassador_task_id = at.id AND r.qualified = 1) as used_count,
-            (SELECT COALESCE(SUM(CASE WHEN r.qualified = 1 THEN t.commission ELSE 0 END), 0) FROM referrals r WHERE r.ambassador_task_id = at.id) as earned_amount
+            t.title as task_title, t.payout_per_herald, t.mode,
+            at.registered_count, at.used_count, at.paid_conversions,
+            COALESCE((SELECT SUM(tt.amount) FROM task_transactions tt
+              WHERE tt.task_id = at.task_id AND tt.to_user_id = at.herald_id
+                AND tt.type = 'TASK_RELEASE' AND tt.status = 'completed'), 0) as earned_amount
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
      WHERE at.herald_id = ?
@@ -75,64 +78,17 @@ referralsRouter.get('/my-codes', requireAuth, requireRole('HERALD'), async (req:
   res.json(codes);
 });
 
-/** POST /api/referrals/csv-import — 品牌方上传 CSV 转化数据 */
-referralsRouter.post('/csv-import', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const { taskId, rows } = req.body;
-  // rows: [{ code: "HERIX-XXXX", referred_token: "hash123", registered_at: "...", kyc_at: "...", transfer_at: "...", transfer_amount: 10000 }]
+// legacy POST /csv-import 端点已删除（2026-07-17）：写 referrals 明细表的老路径，无任何调用方，
+// 真实数据回传统一走 POST /api/tasks/:id/csv（写 ambassador_tasks 聚合列 + 钱包结算）
 
-  if (!taskId || !Array.isArray(rows) || rows.length === 0) {
-    return res.status(400).json({ error: '参数错误：需要 taskId 和 rows 数组' });
-  }
-
-  const task = await findOne<{ id: string; creator_id: string }>(
-    'SELECT id, creator_id FROM tasks WHERE id = ?', [taskId]
-  );
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
-    return res.status(403).json({ error: '无权操作' });
-  }
-
-  let imported = 0;
-  let skipped = 0;
-
-  for (const row of rows) {
-    // 通过 code 找到大使任务
-    const at = await findOne<{ id: string }>(
-      'SELECT id FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?',
-      [row.code, taskId]
-    );
-    if (!at) { skipped++; continue; }
-
-    // 检查是否已导入
-    const existing = await findOne<{ id: string }>(
-      'SELECT id FROM referrals WHERE ambassador_task_id = ? AND referred_token = ?',
-      [at.id, row.referred_token]
-    );
-    if (existing) { skipped++; continue; }
-
-    // 判断是否合格（有首次转账就算合格）
-    const hasTransfer = !!row.transfer_at;
-    await insert('referrals', {
-      ambassador_task_id: at.id,
-      referred_token: row.referred_token,
-      registered_at: row.registered_at || null,
-      kyc_completed_at: row.kyc_at || null,
-      first_transfer_at: row.transfer_at || null,
-      first_transfer_amount: row.transfer_amount || null,
-      qualified: hasTransfer ? 1 : 0,
-    });
-    imported++;
-  }
-
-  res.json({ imported, skipped, total: rows.length });
-});
 
 /** GET /api/referrals/stats/:taskId — 推广数据统计（品牌方） */
 referralsRouter.get('/stats/:taskId', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  // 同 my-codes：直读 ambassador_tasks 聚合列，不再从 referrals 死表统计（2026-07-17）
   const stats = await findMany<any>(
     `SELECT at.unique_code, u.nickname as herald_name,
-            (SELECT COUNT(*) FROM referrals r WHERE r.ambassador_task_id = at.id) as total_referred,
-            (SELECT COUNT(*) FROM referrals r WHERE r.ambassador_task_id = at.id AND r.qualified = 1) as qualified_count
+            at.registered_count as total_referred,
+            at.used_count as qualified_count
      FROM ambassador_tasks at
      JOIN users u ON u.id = at.herald_id
      WHERE at.task_id = ?

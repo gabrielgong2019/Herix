@@ -277,7 +277,7 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, mode, commission, currency, title, lock_txn_id, upload_token FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, mode, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -293,7 +293,12 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   const { records } = req.body as { records: Array<{ code: string; registered_count?: number; used_count?: number }> };
   if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: 'records 不能为空' });
 
-  const PLATFORM_FEE_RATE = 0.15;
+  // 单次转化的账：赫使到手 = payout_per_herald，商家扣款 = cost_per_herald（发布时按费率快照算好），
+  // 差额即平台费。不再用废弃的 commission 字段/写死费率——报酬字段重构后新任务 commission 恒 0，曾导致结算 ¥0
+  const payoutPerConv = Number(task.payout_per_herald) || 0;
+  const costPerConv   = Math.max(Number(task.cost_per_herald) || 0, payoutPerConv);
+  const feePerConv    = costPerConv - payoutPerConv;
+
   let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
   const blockedCodes: string[] = [];
   const skippedCodes: string[] = [];
@@ -349,10 +354,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
       continue;
     }
 
-    const commissionPerConv = task.commission;
-    const totalNeeded       = commissionPerConv * delta;
-    const feePerConv        = Math.round(commissionPerConv * PLATFORM_FEE_RATE * 100) / 100;
-    const payoutPerConv     = commissionPerConv - feePerConv;
+    const totalNeeded = costPerConv * delta;
 
     // PERFORMANCE 任务按转化实时扣余额，余额不足则拦截并通知商户
     const brandBal = await getBalance(task.creator_id, 'brand');
@@ -374,7 +376,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     const releaseTxnId = await insert('task_transactions', {
       task_id:       task.id,
       type:          'TASK_RELEASE',
-      task_amount:   commissionPerConv * delta,
+      task_amount:   costPerConv * delta,
       amount:        payoutPerConv * delta,
       platform_fee:  feePerConv * delta,
       from_user_id:  task.creator_id,
@@ -387,7 +389,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     // 品牌扣可用余额，赫使+收入，平台+手续费
     await Promise.all([
       settleCreditTask({
-        userId: task.creator_id, amount: commissionPerConv * delta,
+        userId: task.creator_id, amount: costPerConv * delta,
         idempotencyKey: `SETTLE:${releaseTxnId}`,
         referenceType: 'task_transaction', referenceId: releaseTxnId,
         note: `推广码 ${code} 结算 ${delta} 次`,
@@ -402,7 +404,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
         userId: PLATFORM_USER_ID, amount: feePerConv * delta,
         idempotencyKey: `FEE:${releaseTxnId}`,
         referenceType: 'task_transaction', referenceId: releaseTxnId,
-        note: `平台服务费 15%`,
+        note: `平台服务费（发布时费率快照）`,
       }),
     ]);
 
@@ -436,7 +438,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     total: records.length,
     newConversions: totalNewConversions,
     totalPaid,
-    commissionPerConversion: task.commission,
+    commissionPerConversion: costPerConv, // 商家视角单次转化成本（含服务费）
     ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
     ...(skippedHints.length > 0 ? { skippedHints } : {}),
     ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),

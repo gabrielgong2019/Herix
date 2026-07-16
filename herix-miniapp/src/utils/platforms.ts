@@ -32,22 +32,7 @@ export const PLATFORM_REGISTRY: Platform[] = [
   { id: 'twitter',     name: 'X (Twitter)', icon: '🐦', inputType: 'url', placeholder: 'https://x.com/你的账号',                     hasFollowers: true  },
 ];
 
-/** 段位阈值（与后端 types/index.ts 保持同步） */
-export const TIER_THRESHOLDS = [
-  { name: 'Macro', min: 100000 },
-  { name: 'Mid',   min: 10000  },
-  { name: 'Micro', min: 1000   },
-  { name: 'Nano',  min: 0      },
-];
-
-/** 根据粉丝数计算段位（前端展示用，权威值以后端 tier_snapshot 为准） */
-export function calcTier(followers?: number | null): string {
-  const f = followers || 0;
-  for (const t of TIER_THRESHOLDS) {
-    if (f >= t.min) return t.name;
-  }
-  return 'Nano';
-}
+// calcTier/TIER_THRESHOLDS 已删——前端无引用, 段位权威值以后端 tier_snapshot 为准
 
 /** 按 id 查找平台信息 */
 export function platformById(id: string): Platform {

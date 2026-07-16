@@ -5,17 +5,8 @@ import { ambassador, getToken } from '../../utils/api';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
 import './index.scss';
 import { t } from '../../utils/i18n';
+import { validateWechatOrPhone } from '../../components/WechatOrPhoneInput';
 
-// 微信/手机号校验（等价 herix obValidateWechat）
-function validateWechat(val: string): { ok: boolean; saved?: string | null; msg?: string } {
-  if (!val) return { ok: true, saved: null }; // 选填
-  if (/^\d+$/.test(val)) {
-    if (!/^1[3-9]\d{9}$/.test(val)) return { ok: false, msg: t('wx.phoneInvalidFull') };
-    return { ok: true, saved: '+86' + val };
-  }
-  if (val.length < 6 || val.length > 20) return { ok: false, msg: t('wx.wechatLen') };
-  return { ok: true, saved: val };
-}
 
 // 微信输入实时提示（render 内计算，不操作 DOM）
 function wechatHint(val: string): { text: string; color: string; showPrefix: boolean } {
@@ -97,7 +88,7 @@ export default class Onboard extends Component<{}, State> {
   nextPlatforms = () => {
     const { wechatId } = this.state.data;
     if (wechatId.trim()) {
-      const check = validateWechat(wechatId.trim());
+      const check = validateWechatOrPhone(wechatId.trim());
       if (!check.ok) {
         Taro.showToast({ title: check.msg!, icon: 'none' });
         return;
@@ -133,7 +124,7 @@ export default class Onboard extends Component<{}, State> {
     const d = this.state.data;
     const platforms: any[] = [];
     if (d.wechatId) {
-      const check = validateWechat(d.wechatId.trim());
+      const check = validateWechatOrPhone(d.wechatId.trim());
       if (check.saved) platforms.push({ platformId: 'wechat', accountId: check.saved, url: null, followers: null });
     }
     if (d.snsPlatform && d.snsVal) {

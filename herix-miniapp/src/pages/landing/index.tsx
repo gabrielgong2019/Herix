@@ -4,11 +4,8 @@ import Taro from '@tarojs/taro';
 import { auth, tasks as taskApi, categories as categoriesApi, setToken } from '../../utils/api';
 import './index.scss';
 import { t } from '../../utils/i18n';
+import { fmt } from '../../utils/format';
 
-const fmt = (n: any) => {
-  const v = Math.round(Math.abs(Number(n) || 0));
-  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
 
 interface State {
   taskId: string;

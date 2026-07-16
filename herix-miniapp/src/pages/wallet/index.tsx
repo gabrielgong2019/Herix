@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import { wallet as walletApi, getToken } from '../../utils/api';
 import { t } from '../../utils/i18n';
 import './index.scss';
+import { fmt } from '../../utils/format';
 
 // ── 常量存 labelKey，渲染时 t() 取值——存 t() 结果会冻结在启动时语言 ──
 const PERIODS: { id: string; labelKey: string }[] = [
@@ -28,11 +29,6 @@ const METHOD_TYPE_KEYS: Record<string, string> = {
   CASH: 'wallet.methodType.CASH',
 };
 
-// 千分位（不依赖 toLocaleString，规避小程序引擎差异）
-const fmt = (n: any) => {
-  const v = Math.round(Math.abs(Number(n) || 0));
-  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
 
 // 期间 → ISO 时间范围（对齐 herix walletPeriodRange）
 function periodRange(period: string) {
@@ -160,7 +156,7 @@ export default class Wallet extends Component<{}, State> {
   };
 
   deleteMethod = async (id: string) => {
-    const res = await Taro.showModal({ title: t('wallet.deleteTitle'), content: t('wallet.deleteConfirm') });
+    const res = await Taro.showModal({ title: t('wallet.deleteTitle'), content: t('wallet.deleteConfirm'), confirmText: t('common.confirm'), cancelText: t('common.cancel') });
     if (!res.confirm) return;
     try {
       await walletApi.deleteMethod(id);

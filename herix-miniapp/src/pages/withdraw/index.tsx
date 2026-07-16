@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import { wallet as walletApi, getToken } from '../../utils/api';
 import { t } from '../../utils/i18n';
 import './index.scss';
+import { fmt } from '../../utils/format';
 
 const METHOD_ICONS: Record<string, string> = {
   BANK: '🏦',
@@ -23,10 +24,6 @@ const METHOD_ETA_KEYS: Record<string, string> = {
 const FX_RATE = 0.049; // 参考汇率 JPY→CNY，接入 Airwallex 后替换（对齐 herix）
 const FEE_RATE = 0; // 暂时免手续费
 
-const fmt = (n: any) => {
-  const v = Math.round(Math.abs(Number(n) || 0));
-  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
 
 interface State {
   loading: boolean;

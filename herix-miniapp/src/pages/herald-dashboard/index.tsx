@@ -4,11 +4,8 @@ import Taro from '@tarojs/taro';
 import { wallet as walletApi, applications, submissions, referrals, getToken } from '../../utils/api';
 import './index.scss';
 import { t } from '../../utils/i18n';
+import { fmt } from '../../utils/format';
 
-const fmt = (n: any) => {
-  const v = Math.round(Math.abs(Number(n) || 0));
-  return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-};
 
 // 存 labelKey，渲染时 t() 取值
 const HISTORY_FILTERS = [

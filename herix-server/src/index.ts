@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import { initDatabase } from './db';
-import { seedIfEmpty } from './seed';
 import { authRouter } from './routes/auth';
 import { tasksRouter } from './routes/tasks';
 import { submissionsRouter } from './routes/submissions';
@@ -22,7 +21,8 @@ import { UPLOADS_DIR } from './utils/uploads';
 
 (async () => {
   await initDatabase();
-  await seedIfEmpty().catch(err => console.error('seed failed:', err));
+  // seedIfEmpty 已删除：旧 demo seed 写的是 PG schema 里不存在的旧表 transactions，
+  // 一旦在空库执行就会崩（现库有数据早退才没炸）。需要 demo 数据时另写对齐新 schema 的脚本
 })();
 
 const app = express();

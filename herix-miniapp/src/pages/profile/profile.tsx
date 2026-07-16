@@ -13,9 +13,10 @@ import {
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
 import { t, LOCALES, getLocale, setLocale } from '../../utils/i18n';
 import './profile.scss';
+import { fmt } from '../../utils/format';
+import { validateWechatOrPhone } from '../../components/WechatOrPhoneInput';
 
 const AVATAR_COLORS = ['#D43B27', '#34c759', '#f5a623', '#ff3b30', '#5856d6', '#ff9500'];
-const fmt = (n: any) => String(Math.round(Math.abs(Number(n) || 0))).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 function parseJSON(s: any, fallback: any) {
   if (!s) return fallback;
@@ -25,16 +26,6 @@ function parseJSON(s: any, fallback: any) {
   } catch {
     return fallback;
   }
-}
-// 微信/手机号校验（等价 herix obValidateWechat）
-function validateWechat(val: string): { ok: boolean; saved?: string | null; msg?: string } {
-  if (!val) return { ok: true, saved: null };
-  if (/^\d+$/.test(val)) {
-    if (!/^1[3-9]\d{9}$/.test(val)) return { ok: false, msg: t('wx.phoneInvalidFull') };
-    return { ok: true, saved: '+86' + val };
-  }
-  if (val.length < 6 || val.length > 20) return { ok: false, msg: t('wx.wechatLen') };
-  return { ok: true, saved: val };
 }
 // 评级（等价 herix profileHTML）
 function computeRating(rt: any): { level: string; color: string; next: string } {
@@ -193,7 +184,7 @@ export default class Profile extends Component<{}, State> {
   };
 
   addBrandRole = async () => {
-    const res = await Taro.showModal({ title: t('profile.addBrandTitle'), content: t('profile.addBrandConfirm') });
+    const res = await Taro.showModal({ title: t('profile.addBrandTitle'), content: t('profile.addBrandConfirm'), confirmText: t('common.confirm'), cancelText: t('common.cancel') });
     if (!res.confirm) return;
     try {
       const r = await users.addRole('BRAND');
@@ -253,7 +244,7 @@ export default class Profile extends Component<{}, State> {
     const f = this.state.socialForm;
     const platforms: any[] = [];
     if (f.wechat && f.wechat.trim()) {
-      const check = validateWechat(f.wechat.trim());
+      const check = validateWechatOrPhone(f.wechat.trim());
       if (!check.ok) {
         Taro.showToast({ title: check.msg!, icon: 'none' });
         return;

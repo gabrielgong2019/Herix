@@ -157,11 +157,6 @@ export const submissions = {
 
 // ── Users ──
 export const users = {
-  updateBrandProfile: (data: any) => request<any>('PATCH', '/users/profile/brand', data),
-  updateHeraldProfile: (data: any) => request<any>('PATCH', '/users/profile/herald', data),
-  getHeralds: () => request<any[]>('GET', '/users/heralds', undefined, false),
-  getPublic: (id: string) => request<any>('GET', `/users/${id}`, undefined, false),
-  myTransactions: () => request<any[]>('GET', '/users/me/transactions'),
   addRole: (role: 'HERALD' | 'BRAND') =>
     request<{ token: string; roles: string[] }>('POST', '/users/add-role', { role }),
   updateMe: (data: { nickname?: string }) => request<any>('PATCH', '/users/me', data),
@@ -169,7 +164,6 @@ export const users = {
 
 // ── Ambassador（赫使身份/入驻）──
 export const ambassador = {
-  status: () => request<any>('GET', '/ambassador/status'),
   updateProfile: (data: {
     residence?: string;
     residenceCountry?: string;
@@ -178,8 +172,6 @@ export const ambassador = {
     bankAccount?: any;
     socialPlatforms?: any[];
   }) => request<any>('PATCH', '/ambassador/profile', data),
-  submitDeclaration: (data: { visaType: string; hasWorkPermit?: boolean; workPermitHours?: number }) =>
-    request<any>('POST', '/ambassador/declaration', data),
   onboard: (data: {
     residence?: string;
     residenceCountry?: string;
@@ -200,8 +192,8 @@ export const wallet = {
   methods: () => request<any[]>('GET', '/wallet/methods'),
   addMethod: (data: { type: string; country?: string; label: string; account_details: any; is_default?: boolean }) =>
     request<{ id: string }>('POST', '/wallet/methods', data),
-  updateMethod: (id: string, data: any) => request<any>('PUT', `/wallet/methods/${id}`, data),
   deleteMethod: (id: string) => request<any>('DELETE', `/wallet/methods/${id}`),
+  // TODO: 提现页费用预览应改用本接口(服务端费率为准), 替换页面里的 FX_RATE/FEE_RATE 临时常量
   withdrawalInfo: (amount: number) =>
     request<{ requestAmount: number; fee: number; netAmount: number; scheduleMode: string; nextPayoutDate?: string; note?: string }>(
       'GET', '/wallet/withdrawal-info', { amount },

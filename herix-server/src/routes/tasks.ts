@@ -414,6 +414,9 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     processed++;
   }
 
+  // 诊断日志：转化上传是资金入口，每次调用留痕（此前无请求日志，"上传没生效"无法回溯）
+  console.log(`[csv-upload] task=${task.id}(${task.title}) auth=${isTokenAuth ? 'token' : 'bearer'} records=${records.length} processed=${processed} skipped=${skipped} newConv=${totalNewConversions} paid=${totalPaid}${skippedCodes.length ? ' skippedCodes=' + skippedCodes.join(',') : ''}${blockedCodes.length ? ' blockedCodes=' + blockedCodes.join(',') : ''}`);
+
   res.json({
     processed,
     skipped,

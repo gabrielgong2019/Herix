@@ -1,8 +1,9 @@
 /**
  * i18n 词条 seed —— key 的唯一创建入口（运营在 admin 只改译文，不建 key）
  *
- * 读取 herix-miniapp/src/i18n/{zh,ja,en}.json（代码侧词典 = key 清单 + 初始译文），
- * 全部按 DO NOTHING 插入：只补新 key，绝不覆盖运营在矩阵里改过的任何译文。
+ * 读取 herix-miniapp/src/i18n/{zh,ja,en}.json（代码侧词典 = key 清单 + 初始译文）。
+ * 值的更新语义：新 key 插入；已有行仅当 updated_by='seed'（运营从没碰过）时
+ * 用代码词典刷新——机翻/复审修订能进库，运营的人工改动永不被覆盖。
  *
  * 用法: cd herix-server && npx tsx --env-file=.env scripts/seed-i18n.ts
  */
@@ -35,7 +36,10 @@ async function main() {
       const r = await pool.query(
         `INSERT INTO i18n_entries (key, locale, value, updated_at, updated_by)
          VALUES ($1, $2, $3, $4, 'seed')
-         ON CONFLICT (key, locale) DO NOTHING`,
+         ON CONFLICT (key, locale) DO UPDATE
+           SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at
+           WHERE i18n_entries.updated_by = 'seed'
+             AND i18n_entries.value IS DISTINCT FROM EXCLUDED.value`,
         [key, locale, value, now]
       );
       if (r.rowCount) inserted++;

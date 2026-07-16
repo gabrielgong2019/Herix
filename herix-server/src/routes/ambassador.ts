@@ -67,7 +67,7 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
     // 枚举校验：曾出现前端把显示串("🇨🇳 中国")整个写进来的脏数据，这里挡死。
     // 取值域为 onboard(japan/overseas) 与收款地区(china) 的并集
     if (!['japan', 'china', 'overseas'].includes(residence)) {
-      return res.status(400).json({ error: 'residence 取值无效，允许: japan / china / overseas' });
+      return res.status(400).json({ error: 'residence 取值无效，允许: japan / china / overseas', code: 'INVALID_RESIDENCE' });
     }
     data.residence = residence;
   }

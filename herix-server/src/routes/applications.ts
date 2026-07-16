@@ -21,8 +21,8 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null }>(
       'SELECT id, status, max_heralds, platform_requirements FROM tasks WHERE id = ?', [req.params.taskId]
     );
-    if (!task) return res.status(404).json({ error: '任务不存在' });
-    if (task.status !== 'OPEN') return res.status(400).json({ error: '任务不在招募中' });
+    if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+    if (task.status !== 'OPEN') return res.status(400).json({ error: '任务不在招募中', code: 'TASK_NOT_RECRUITING' });
 
     // 获取赫使档案（用于平台账号校验，居住地/KYC 在结算时才要求）
     const profile = await findOne<any>(
@@ -66,7 +66,7 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     // 防止自我交易：不能报名自己发布的任务（调试阶段关闭）
     // const taskOwner = await findOne<{ creator_id: string }>('SELECT creator_id FROM tasks WHERE id = ?', [req.params.taskId]);
     // if (taskOwner?.creator_id === req.user!.userId) {
-    //   return res.status(403).json({ error: '不能报名自己发布的任务' });
+    //   return res.status(403).json({ error: '不能报名自己发布的任务', code: 'CANNOT_APPLY_OWN_TASK' });
     // }
 
     // 检查是否已报名
@@ -74,7 +74,7 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       'SELECT id FROM task_applications WHERE task_id = ? AND herald_id = ?',
       [req.params.taskId, req.user!.userId]
     );
-    if (existing) return res.status(409).json({ error: '已经报名过该任务' });
+    if (existing) return res.status(409).json({ error: '已经报名过该任务', code: 'ALREADY_APPLIED' });
 
     const appId = await insert('task_applications', {
       task_id: req.params.taskId,
@@ -204,7 +204,8 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
       body: approved
         ? `${notifyHerald.nickname}，您报名的任务「${notifyTask.title}」已通过审核，请前往平台查看任务详情并开始执行。${noteClause}`
         : `${notifyHerald.nickname}，很遗憾，您报名的任务「${notifyTask.title}」未通过本次审核。欢迎继续报名其他任务。${noteClause}`,
-      metadata: { taskId: app.task_id, applicationId: app.id },
+      // taskTitle/note 进 metadata：前端按 type+params 渲染三语通知，title/body 留作旧客户端兜底
+      metadata: { taskId: app.task_id, applicationId: app.id, taskTitle: notifyTask.title, note: reviewNote || null },
     }).catch((e) => console.error('[notify] APP review notification failed:', e));
   }
   const updated = await findOne('SELECT * FROM task_applications WHERE id = ?', [req.params.id]);

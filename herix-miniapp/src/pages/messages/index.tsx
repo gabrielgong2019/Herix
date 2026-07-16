@@ -106,6 +106,15 @@ export default class Messages extends Component<{}, State> {
     const accent = ACCENT_MAP[n.type] || 'var(--primary)';
     const icon = ICON_MAP[n.type] || '💬';
     const taskId = metaTaskId(n);
+    // 通知三语：metadata 带 taskTitle 且词典有该 type 的词条 → 前端按语言渲染；
+    // 否则(老数据/未知类型)兜底展示落库时的中文 title/body
+    let meta: any = {};
+    try { meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata || '{}') : n.metadata || {}; } catch { meta = {}; }
+    const titleKey = `notif.${n.type}.title`;
+    const canTranslate = !!meta.taskTitle && t(titleKey) !== titleKey;
+    const title = canTranslate ? t(titleKey, { taskTitle: meta.taskTitle }) : n.title;
+    let body = canTranslate ? t(`notif.${n.type}.body`, { taskTitle: meta.taskTitle }) : n.body;
+    if (canTranslate && meta.note) body += ' ' + t('task.reason', { note: meta.note });
     return (
       <View
         key={n.id}
@@ -116,10 +125,10 @@ export default class Messages extends Component<{}, State> {
         <View className='nc-icon'>{icon}</View>
         <View className='nc-body'>
           <View className='nc-top'>
-            <Text className={`nc-title ${unread ? 'unread' : ''}`}>{n.title}</Text>
+            <Text className={`nc-title ${unread ? 'unread' : ''}`}>{title}</Text>
             <Text className='nc-time'>{timeAgo(n.created_at)}</Text>
           </View>
-          <Text className='nc-text'>{n.body}</Text>
+          <Text className='nc-text'>{body}</Text>
           {taskId && (
             <Text
               className='nc-link'

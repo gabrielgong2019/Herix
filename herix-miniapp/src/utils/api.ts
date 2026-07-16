@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro';
+import { t } from './i18n'; // 循环引用安全：仅在函数体内使用
 
 // 微信原生 wx.cloud API，Taro 未完整封装，运行时在 weapp 端全局存在
 declare const wx: any;
@@ -15,6 +16,19 @@ const isWeapp = process.env.TARO_ENV === 'weapp';
 
 // 请求失败时，除了错误信息，把后端返回的完整 body（code/failures 等结构化字段）
 // 一并挂在异常上，调用方需要时可以取，比如 applications.apply() 的 REQUIREMENTS_NOT_MET 场景
+
+/** 后端错误 → 用户语言。约定: 后端返回 {error: 中文, code: 'SNAKE_CASE'}，
+ *  词典里有 error.<code> 就用译文(带params插值)，没有则退回后端原文。 */
+function apiErrorMessage(data: any): string {
+  const code = data?.code;
+  if (code) {
+    const key = `error.${code}`;
+    const tx = t(key, data);
+    if (tx !== key) return tx;
+  }
+  return data?.error || t('error.GENERIC');
+}
+
 export class ApiError extends Error {
   data: any;
   constructor(message: string, data?: any) {
@@ -73,7 +87,7 @@ async function request<T = any>(
       });
 
       if (res.statusCode >= 400) {
-        throw new ApiError(res.data?.error || '请求失败', res.data);
+        throw new ApiError(apiErrorMessage(res.data), res.data);
       }
 
       return res.data as T;
@@ -89,13 +103,13 @@ async function request<T = any>(
     });
 
     if (res.statusCode >= 400) {
-      throw new ApiError(res.data?.error || '请求失败', res.data);
+      throw new ApiError(apiErrorMessage(res.data), res.data);
     }
 
     return res.data as T;
   } catch (err: any) {
     if (err.errMsg?.includes('timeout') || err.errMsg?.includes('fail')) {
-      Taro.showToast({ title: '网络连接失败', icon: 'none' });
+      Taro.showToast({ title: t('error.NETWORK'), icon: 'none' });
     }
     throw err;
   }

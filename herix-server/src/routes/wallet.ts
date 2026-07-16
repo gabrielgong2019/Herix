@@ -149,7 +149,7 @@ walletRouter.put('/methods/:id', async (req: Request, res: Response) => {
     'SELECT * FROM withdrawal_methods WHERE id = ? AND user_id = ?',
     [methodId, userId]
   );
-  if (!method) return res.status(404).json({ error: '收款方式不存在' });
+  if (!method) return res.status(404).json({ error: '收款方式不存在', code: 'METHOD_NOT_FOUND' });
 
   if (is_default) {
     await db.query('UPDATE withdrawal_methods SET is_default = 0 WHERE user_id = $1', [userId]);
@@ -175,7 +175,7 @@ walletRouter.delete('/methods/:id', async (req: Request, res: Response) => {
     'SELECT * FROM withdrawal_methods WHERE id = ? AND user_id = ?',
     [methodId, userId]
   );
-  if (!method) return res.status(404).json({ error: '收款方式不存在' });
+  if (!method) return res.status(404).json({ error: '收款方式不存在', code: 'METHOD_NOT_FOUND' });
 
   await remove('withdrawal_methods', 'id = ? AND user_id = ?', [methodId, userId]);
   res.json({ message: '收款方式已删除' });
@@ -296,10 +296,10 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
 
   const amt = Number(amount);
   if (!Number.isFinite(amt) || amt <= 0) {
-    return res.status(400).json({ error: '提现金额无效' });
+    return res.status(400).json({ error: '提现金额无效', code: 'INVALID_AMOUNT' });
   }
   if (!method || !accountDetails) {
-    return res.status(400).json({ error: '请填写收款方式和账号信息' });
+    return res.status(400).json({ error: '请填写收款方式和账号信息', code: 'MISSING_METHOD_INFO' });
   }
 
   let feeInfo: { fee: number; netAmount: number; payoutDate: string };
@@ -312,7 +312,7 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
   // 预检仅为友好报错；最终裁决在事务内的 freezeWithdrawal（余额守卫）
   const bal = await getBalance(userId, 'herald');
   if (amt > bal.available) {
-    return res.status(400).json({ error: `可提现余额不足，当前可提 ¥${bal.available.toFixed(0)}` });
+    return res.status(400).json({ error: `可提现余额不足，当前可提 ¥${bal.available.toFixed(0)}`, code: 'INSUFFICIENT_BALANCE' });
   }
 
   const client = await db.connect();
@@ -333,7 +333,7 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
     );
     if (pending.rows[0]) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: '已有待处理的提现申请' });
+      return res.status(409).json({ error: '已有待处理的提现申请', code: 'PENDING_WITHDRAWAL_EXISTS' });
     }
 
     await client.query(

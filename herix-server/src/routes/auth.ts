@@ -31,7 +31,7 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       const existing = await findOne<{ id: string }>(
         `SELECT id FROM users WHERE ${conditions.join(' OR ')}`, params
       );
-      if (existing) return res.status(409).json({ error: '手机号或邮箱已被注册' });
+      if (existing) return res.status(409).json({ error: '手机号或邮箱已被注册', code: 'ACCOUNT_TAKEN' });
     }
 
     const roles = [data.role];
@@ -70,9 +70,9 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    if (err instanceof ZodError) return res.status(400).json({ error: '参数错误', details: err.errors });
+    if (err instanceof ZodError) return res.status(400).json({ error: '参数错误', code: 'INVALID_PARAMS', details: err.errors });
     console.error('Register error:', err);
-    res.status(500).json({ error: '注册失败' });
+    res.status(500).json({ error: '注册失败', code: 'REGISTER_FAILED' });
   }
 });
 
@@ -85,10 +85,10 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       'SELECT id, password_hash, nickname, role, roles, is_verified FROM users WHERE phone = ? OR email = ?',
       [account, account]
     );
-    if (!user) return res.status(401).json({ error: '账号或密码错误' });
+    if (!user) return res.status(401).json({ error: '账号或密码错误', code: 'BAD_CREDENTIALS' });
 
     const valid = await bcrypt.compare(password, user.password_hash);
-    if (!valid) return res.status(401).json({ error: '账号或密码错误' });
+    if (!valid) return res.status(401).json({ error: '账号或密码错误', code: 'BAD_CREDENTIALS' });
 
     const userRoles = parseRoles(user.roles, user.role);
 
@@ -115,9 +115,9 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    if (err instanceof ZodError) return res.status(400).json({ error: '参数错误', details: err.errors });
+    if (err instanceof ZodError) return res.status(400).json({ error: '参数错误', code: 'INVALID_PARAMS', details: err.errors });
     console.error('Login error:', err);
-    res.status(500).json({ error: '登录失败' });
+    res.status(500).json({ error: '登录失败', code: 'LOGIN_FAILED' });
   }
 });
 

@@ -20,7 +20,7 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       [req.params.taskId, req.user!.userId]
     );
     if (!app || app.status !== 'APPROVED') {
-      return res.status(403).json({ error: '只有被批准的赫使可以提交结果' });
+      return res.status(403).json({ error: '只有被批准的赫使可以提交结果', code: 'NOT_APPROVED_HERALD' });
     }
 
     // 检查是否已有不可重提交的记录（待审/已通过）
@@ -28,7 +28,7 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       "SELECT id FROM task_submissions WHERE task_id = ? AND herald_id = ? AND status IN ('PENDING_REVIEW','APPROVED')",
       [req.params.taskId, req.user!.userId]
     );
-    if (blocking) return res.status(409).json({ error: '已经提交过结果' });
+    if (blocking) return res.status(409).json({ error: '已经提交过结果', code: 'ALREADY_SUBMITTED' });
 
     // 若有被拒记录，复用该行（UPDATE）；否则新建
     const rejected = await findOne<{ id: string }>(
@@ -194,7 +194,8 @@ submissionsRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
         body: approved
           ? `${heraldUser.nickname}，您提交的任务「${task.title}」内容已审核通过，报酬将自动结算至您的钱包。${noteClause}`
           : `${heraldUser.nickname}，您提交的任务「${task.title}」内容审核未通过，请查看反馈后重新提交。${noteClause}`,
-        metadata: { taskId: submission.task_id, submissionId: submission.id },
+        // taskTitle/note 进 metadata：前端按 type+params 渲染三语通知
+        metadata: { taskId: submission.task_id, submissionId: submission.id, taskTitle: task.title, note: data.reviewNote || null },
       }).catch((e) => console.error('[notify] SUB review notification failed:', e));
     }
 

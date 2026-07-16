@@ -140,6 +140,7 @@ function shell(inner){
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
     {id:'categories',icon:'🏷️',label:'任务分类'},
     {id:'i18n',icon:'🌐',label:'本地化'},
+    {id:'pricing',icon:'💰',label:'定价'},
   ];
   var sb='<div class="sidebar" id="sb"><div class="sb-brand"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-icon-filled.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: st.page, onclick: "go('%s')" });
@@ -151,7 +152,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类',i18n:'本地化'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类',i18n:'本地化',pricing:'定价'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -168,6 +169,7 @@ function pageCont(){
     case 'ambassadors': return ambassadorsPage();
     case 'categories': return categoriesPage();
     case 'i18n': return i18nPage();
+    case 'pricing': return pricingPage();
     default: return dashPage();
   }
 }
@@ -795,6 +797,101 @@ function doSub(id,approve){
 
 /* ── Data Loading ── */
 
+
+/* ── 定价管理 ──
+   费率决策链: 有效 = min(商家协议价 ?? 全局默认, 生效促销[全局/商家取低])。
+   促销只降不升; 任务发布时快照费率, 促销影响促销期内新发布的任务。*/
+function pct(r){return r===null||r===undefined?'':String(Math.round(Number(r)*10000)/100)}
+function pricingPage(){
+  var d=st.data.pricing||{};
+  var promos=d.promotions||[], brands=d.brands||[];
+  var nowIso=new Date().toISOString();
+  var h='';
+  // ① 全局默认
+  h+='<div class="tcard" style="padding:18px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:10px">全局默认抽佣</div>'
+    +'<div style="display:flex;gap:10px;align-items:center">'
+    +'<input id="pr-global" type="number" step="0.1" min="0" max="99" value="'+pct(d.globalRate)+'" style="width:100px;padding:8px;border:1px solid var(--border);border-radius:8px"> %'
+    +'<button class="btn btn-primary btn-sm" onclick="savePricingGlobal()">保存</button>'
+    +'<span style="font-size:12px;color:var(--muted)">对所有无协议价商家生效; 任务发布时快照, 不回溯已发布任务</span></div></div>';
+  // ② 商家协议价
+  h+='<div class="tcard" style="padding:18px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:10px">商家协议费率 <span style="font-size:12px;color:var(--muted);font-weight:400">留空=走全局默认; 填0有效(免佣)</span></div>';
+  if(!brands.length){h+='<div style="color:var(--muted);font-size:13px">暂无商家</div>';}
+  else{
+    h+='<table><thead><tr><th>商家</th><th>邮箱</th><th style="width:120px">协议费率 %</th><th style="width:200px">备注</th><th style="width:120px"></th></tr></thead><tbody>';
+    h+=brands.map(function(b){
+      var ov=d.overrides&&d.overrides.find(function(o){return o.user_id===b.id});
+      return '<tr><td style="font-weight:500">'+esc(b.company_name||b.nickname)+'</td><td style="color:var(--muted)">'+esc(b.email||'')+'</td>'
+        +'<td><input id="pr-b-'+b.id+'" type="number" step="0.1" min="0" max="99" value="'+pct(b.commission_rate_override)+'" placeholder="默认" style="width:90px;padding:6px;border:1px solid '+(b.commission_rate_override!==null&&b.commission_rate_override!==undefined?'var(--primary)':'var(--border)')+';border-radius:6px"></td>'
+        +'<td><input id="pr-bn-'+b.id+'" value="'+esc(ov&&ov.note||'')+'" placeholder="协议备注" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:12px"></td>'
+        +'<td><button class="btn btn-primary btn-sm" onclick="savePricingBrand(\''+b.id+'\')">保存</button> <button class="btn btn-outline btn-sm" onclick="clearPricingBrand(\''+b.id+'\')">清除</button></td></tr>';
+    }).join('');
+    h+='</tbody></table>';
+  }
+  h+='</div>';
+  // ③ 促销
+  h+='<div class="tcard" style="padding:18px"><div style="font-weight:700;margin-bottom:10px">促销费率 <span style="font-size:12px;color:var(--muted);font-weight:400">促销只降不升: 有效费率=min(基础费率, 促销)</span></div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;background:var(--bg);padding:12px;border-radius:10px">'
+    +'<select id="pm-scope" onchange="document.getElementById(\'pm-brand\').style.display=this.value===\'brand\'?\'\':\'none\'" style="padding:8px;border:1px solid var(--border);border-radius:8px"><option value="global">全局促销</option><option value="brand">商家促销</option></select>'
+    +'<select id="pm-brand" style="display:none;padding:8px;border:1px solid var(--border);border-radius:8px">'+brands.map(function(b){return '<option value="'+b.id+'">'+esc(b.company_name||b.nickname)+'</option>'}).join('')+'</select>'
+    +'<input id="pm-rate" type="number" step="0.1" min="0" max="99" placeholder="费率%" style="width:90px;padding:8px;border:1px solid var(--border);border-radius:8px">'
+    +'<input id="pm-start" type="datetime-local" style="padding:7px;border:1px solid var(--border);border-radius:8px">'
+    +'<span style="color:var(--muted)">→</span>'
+    +'<input id="pm-end" type="datetime-local" style="padding:7px;border:1px solid var(--border);border-radius:8px">'
+    +'<input id="pm-note" placeholder="备注(如: 开业活动)" style="width:160px;padding:8px;border:1px solid var(--border);border-radius:8px">'
+    +'<button class="btn btn-primary btn-sm" onclick="createPromo()">新建促销</button></div>';
+  if(!promos.length){h+='<div style="color:var(--muted);font-size:13px">暂无促销记录</div>';}
+  else{
+    h+='<table><thead><tr><th>范围</th><th>费率</th><th>起止</th><th>状态</th><th>备注</th><th></th></tr></thead><tbody>';
+    h+=promos.map(function(pm){
+      var status, color;
+      if(pm.cancelled_at){status='已终止';color='var(--muted)';}
+      else if(pm.ends_at<=nowIso){status='已结束';color='var(--muted)';}
+      else if(pm.starts_at>nowIso){status='未开始';color='var(--warning)';}
+      else{status='进行中';color='var(--success)';}
+      return '<tr><td>'+(pm.scope==='global'?'🌍 全局':'🏢 '+esc(pm.brand_nickname||pm.brand_id||''))+'</td>'
+        +'<td style="font-weight:700">'+pct(pm.rate)+'%</td>'
+        +'<td style="font-size:12px;color:var(--muted)">'+pm.starts_at.slice(0,16).replace('T',' ')+' → '+pm.ends_at.slice(0,16).replace('T',' ')+'</td>'
+        +'<td style="color:'+color+';font-weight:600">'+status+'</td>'
+        +'<td style="font-size:12px">'+esc(pm.note||'')+'</td>'
+        +'<td>'+(status==='进行中'||status==='未开始'?'<button class="btn btn-outline btn-sm" onclick="cancelPromo(\''+pm.id+'\')">终止</button>':'')+'</td></tr>';
+    }).join('');
+    h+='</tbody></table>';
+  }
+  h+='</div>';
+  return h;
+}
+function _prReload(msg){st.msg=msg;st.msgType='success';apiGet('/admin/pricing',function(d){st.data.pricing=d;render()})}
+function _prErr(d){st.msg=d.error||'操作失败';st.msgType='danger';render()}
+function savePricingGlobal(){
+  var v=parseFloat(document.getElementById('pr-global').value);
+  if(isNaN(v)||v<0||v>=100){_prErr({error:'费率须为 0~99.9 的百分数'});return}
+  apiPatch('/admin/pricing',{commissionRate:v/100},function(d){if(d.error){_prErr(d);return}_prReload('全局费率已更新为 '+v+'%')});
+}
+function savePricingBrand(id){
+  var v=document.getElementById('pr-b-'+id).value, note=document.getElementById('pr-bn-'+id).value;
+  if(v===''){_prErr({error:'要清除协议价请用「清除」按钮'});return}
+  var r=parseFloat(v);
+  if(isNaN(r)||r<0||r>=100){_prErr({error:'费率须为 0~99.9 的百分数'});return}
+  apiPatch('/admin/pricing/brand/'+id,{rate:r/100,note:note},function(d){if(d.error){_prErr(d);return}_prReload('协议费率已保存: '+r+'%')});
+}
+function clearPricingBrand(id){
+  apiPatch('/admin/pricing/brand/'+id,{rate:null,note:null},function(d){if(d.error){_prErr(d);return}_prReload('已清除协议价, 该商家回到全局默认')});
+}
+function createPromo(){
+  var scope=document.getElementById('pm-scope').value;
+  var body={scope:scope,rate:parseFloat(document.getElementById('pm-rate').value)/100,
+    startsAt:document.getElementById('pm-start').value,endsAt:document.getElementById('pm-end').value,
+    note:document.getElementById('pm-note').value};
+  if(scope==='brand')body.brandId=document.getElementById('pm-brand').value;
+  if(isNaN(body.rate)||body.rate<0||body.rate>=1){_prErr({error:'促销费率须为 0~99.9 的百分数'});return}
+  if(!body.startsAt||!body.endsAt){_prErr({error:'请选择起止时间'});return}
+  post('/admin/pricing/promotions',body,function(d){if(d.error){_prErr(d);return}_prReload('促销已创建')});
+}
+function cancelPromo(id){
+  if(!confirm('确认终止该促销? 终止后立即失效(已发布任务不受影响)'))return;
+  apiPatch('/admin/pricing/promotions/'+id+'/cancel',{},function(d){if(d.error){_prErr(d);return}_prReload('促销已终止')});
+}
+
 /* ── 本地化词条矩阵 ──
    key 由代码 seed（herix-server/scripts/seed-i18n.ts）创建，此处只改译文不建 key。
    缺译输入框标红；保存按行提交。空值=清空该语言译文（前端回退打包词典/中文）。*/
@@ -827,7 +924,9 @@ function saveI18n(key,kid){
 }
 
 function load(page){
-  if(page==='i18n'){
+  if(page==='pricing'){
+    apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});
+  } else if(page==='i18n'){
     apiGet('/admin/i18n',function(d){st.data.i18n=d.rows||[];render()});
   } else if(page==='dashboard'){
     apiGet('/admin/stats',function(d){st.data.stats=d;render()});

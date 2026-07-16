@@ -17,6 +17,10 @@ adminRouter.use(requireAuth, requireRole('ADMIN'));
 // 本地化词条矩阵（鉴权继承上面的 ADMIN 检查）
 adminRouter.use('/i18n', i18nAdminRouter);
 
+// 定价管理（全局费率/商家协议价/促销），鉴权同上
+import { pricingAdminRouter } from './pricing';
+adminRouter.use('/pricing', pricingAdminRouter);
+
 /* ── Stats & Dashboard ── */
 
 adminRouter.get('/stats', async (_req: Request, res: Response) => {

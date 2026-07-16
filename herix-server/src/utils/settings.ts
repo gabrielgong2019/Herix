@@ -138,19 +138,53 @@ export async function getBrandCreditInfo(brandUserId: string): Promise<BrandCred
   };
 }
 
-/** 获取账户的有效抽佣比例（账户协议费率 > 全局默认） */
+/** 有效抽佣比例。决策链（2026-07-16 定稿，含促销层）：
+ *
+ *   有效费率 = min( 基础费率, 生效促销费率 )
+ *     基础费率 = 商家协议价(commission_rate_override) ?? 全局默认(commission_rate, 0.20)
+ *     生效促销 = min( 生效中的全局促销, 生效中的该商家促销 )   // pricing_promotions
+ *     min 保护 = 促销只降不升：协议价已低于促销价时按协议价
+ *
+ *   生效时点：任务【发布】时快照进 tasks.commission_rate（tasks.ts），
+ *   促销影响促销期内新发布的任务，已发布任务不回溯。
+ */
 export async function getEffectiveCommissionRate(brandUserId: string): Promise<{
   rate: number;
-  isOverride: boolean;
+  isOverride: boolean; // 兼容旧调用方
+  source: 'default' | 'brand_override' | 'promo_global' | 'promo_brand';
+  promoId?: string;
 }> {
+  // 基础费率
   const r = await pool.query(
     'SELECT commission_rate_override FROM brand_profiles WHERE user_id = $1',
     [brandUserId],
   );
   const override = r.rows[0]?.commission_rate_override;
+  let rate: number;
+  let source: 'default' | 'brand_override' | 'promo_global' | 'promo_brand';
   if (override !== null && override !== undefined) {
-    return { rate: Number(override), isOverride: true };
+    rate = Number(override);
+    source = 'brand_override';
+  } else {
+    rate = Number(await getSetting('commission_rate')) || 0.20;
+    source = 'default';
   }
-  const global = await getSetting('commission_rate');
-  return { rate: Number(global) || 0.15, isOverride: false };
+
+  // 生效促销（未取消 + 时间窗内；全局 + 该商家），取最低
+  const now = new Date().toISOString();
+  const promos = await pool.query(
+    `SELECT id, scope, rate FROM pricing_promotions
+     WHERE cancelled_at IS NULL AND starts_at <= $1 AND ends_at > $1
+       AND (scope = 'global' OR (scope = 'brand' AND brand_id = $2))
+     ORDER BY rate ASC LIMIT 1`,
+    [now, brandUserId],
+  );
+  const best = promos.rows[0];
+  if (best && Number(best.rate) < rate) {
+    rate = Number(best.rate);
+    source = best.scope === 'global' ? 'promo_global' : 'promo_brand';
+    return { rate, isOverride: false, source, promoId: best.id }; // 促销生效时最终费率非协议价
+  }
+
+  return { rate, isOverride: source === 'brand_override', source };
 }

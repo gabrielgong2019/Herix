@@ -282,6 +282,23 @@ export async function initDatabase() {
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
 
+    -- pricing_promotions: 促销费率（全局/商家维度）。促销只降不升：
+    -- 有效费率 = min(基础费率, 生效促销)，基础 = 商家协议价 ?? 全局默认。
+    -- 任务【发布】时快照进 tasks.commission_rate，促销影响促销期内新发布的任务。
+    -- 软删除：cancelled_at 非空 = 已终止（不物理删，保留审计）
+    CREATE TABLE IF NOT EXISTS pricing_promotions (
+      id TEXT PRIMARY KEY,
+      scope TEXT NOT NULL CHECK(scope IN ('global','brand')),
+      brand_id TEXT REFERENCES users(id),
+      rate DOUBLE PRECISION NOT NULL,
+      starts_at TEXT NOT NULL,
+      ends_at TEXT NOT NULL,
+      note TEXT,
+      created_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      cancelled_at TEXT
+    );
+
     -- i18n_entries: UI 词条（中日英）。key 由代码 seed 创建（scripts/seed-i18n.ts），
     -- 运营在 admin「本地化」矩阵里只改译文不建 key；规范式存储，加语言=加行不动表结构
     CREATE TABLE IF NOT EXISTS i18n_entries (
@@ -375,7 +392,7 @@ export async function initDatabase() {
     )`,
     // platform_settings 初始默认值（ON CONFLICT DO NOTHING 保证幂等）
     `INSERT INTO platform_settings (key, value, note) VALUES
-      ('commission_rate',          '0.15',         '平台抽佣比例'),
+      ('commission_rate',          '0.20',         '平台抽佣比例（2026-07-16 定稿默认 20%）'),
       ('withdrawal_fee_type',      'FLAT',          '提现手续费类型'),
       ('withdrawal_fee_flat',      '500',           '每笔提现固定手续费（JPY）'),
       ('withdrawal_schedule_mode', 'FIXED_DATES',   '打款模式：FIXED_DATES=月中/月末，ON_DEMAND=即时'),
@@ -416,6 +433,7 @@ export async function initDatabase() {
       created_at TEXT NOT NULL
     )`,
     `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_promotions_active ON pricing_promotions(scope, starts_at, ends_at)`,
     // platform_settings：信用系统参数
     `INSERT INTO platform_settings (key, value, note) VALUES
       ('merchant_initial_credit', '5000', '商户信用额度默认值（JPY，可被 credit_limit_override 覆盖）'),

@@ -19,6 +19,10 @@
 
 ---
 
+> **2026-07-16 更新**：全局默认抽佣定稿 **20%**（原 0.15 作废）；新增**促销费率层**（见 §九）。
+> 有效费率决策链升级为：`有效 = min( 商家协议价 ?? 全局默认0.20, 生效促销[全局/商家取低] )`，
+> 促销只降不升；任务【发布】时快照进 tasks.commission_rate，促销影响促销期内新发布的任务，不回溯。
+
 ## 二、费率体系
 
 ### 2.1 平台抽佣比例（commission_rate）
@@ -432,3 +436,48 @@ await insert('task_transactions', {
 - [ ] **Phase 3**：
   - 分级抽佣（按累计任务量阶梯优惠）
   - 消费税处理（待法务确认）
+
+---
+
+## 九、促销费率模块（2026-07-16 新增并已实现）
+
+### 9.1 数据结构
+
+```sql
+CREATE TABLE pricing_promotions (
+  id TEXT PRIMARY KEY,
+  scope TEXT CHECK(scope IN ('global','brand')),  -- 全局 / 商家维度
+  brand_id TEXT REFERENCES users(id),             -- scope=brand 时必填
+  rate DOUBLE PRECISION NOT NULL,                 -- 促销期间费率（如 0.10）
+  starts_at / ends_at TEXT NOT NULL,              -- 生效窗口 [starts, ends)
+  note / created_by / created_at,
+  cancelled_at TEXT                               -- 软删除：非空=已终止，保留审计
+);
+```
+
+### 9.2 决策规则
+
+1. 基础费率 = `brand_profiles.commission_rate_override` ?? `platform_settings.commission_rate`(0.20)
+2. 生效促销 = 未取消且时间窗内的促销中（全局 + 该商家）取**最低**
+3. 有效费率 = `min(基础, 生效促销)` —— **促销只降不升**：协议价已低于促销价时按协议价
+4. 快照时点 = 任务发布（`tasks.ts` 发布路径调 `getEffectiveCommissionRate`，写入 `tasks.commission_rate`），
+   结算读任务快照 → 促销影响促销期内新发布的任务，已发布不回溯，审计干净
+5. 返回含 `source`（default / brand_override / promo_global / promo_brand）+ `promoId`，供审计与前端展示
+
+### 9.3 API（admin，鉴权 requireRole('ADMIN')）
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | /api/admin/pricing | 全局费率 + 协议价列表 + 促销列表 + 商家清单 |
+| PATCH | /api/admin/pricing | 更新全局默认费率 |
+| PATCH | /api/admin/pricing/brand/:userId | 设置/清除(rate=null)商家协议价 |
+| POST | /api/admin/pricing/promotions | 新建促销（scope/brandId/rate/起止/备注） |
+| PATCH | /api/admin/pricing/promotions/:id/cancel | 提前终止（软删） |
+
+### 9.4 admin.html「💰 定价」页
+
+三块：全局默认（百分数输入）· 商家协议价表格（行内设置/清除+备注）· 促销管理（新建表单 + 状态列表：进行中/未开始/已结束/已终止 + 终止按钮）。
+
+### 9.5 已验证（2026-07-16 行为学测试 6/6）
+
+默认20% → 协议12% → 全局促销10%压过协议 → 商家促销8%取最低 → 协议5%时min保护 → 促销终止/过期回默认。

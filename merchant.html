@@ -868,7 +868,7 @@ function taskFormPage(t) {
     + '<div class="field form-full"><label>具体要求</label><textarea id="requirements" rows="3" placeholder="可选：发布平台要求、内容关键词、存续时间等...">'+esc(t&&t.requirements||'')+'</textarea></div>'
     + platformReqsFormHTML(t)
     + '<div class="field form-full" id="cover-upload-wrap"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 16:9 场景图效果最佳</span></label>'
-    + '<div style="width:100%;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'cover-file-input\').click()">'
+    + '<div style="width:100%;max-width:480px;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'cover-file-input\').click()">'
     + '<img id="cover-preview-img" src="'+(t&&t.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(t&&t.cover_image?'':'display:none')+'">'
     + '<div id="cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(t&&t.cover_image?'display:none':'')+'">'
     + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">点击选择图片</div><div style="font-size:11px;margin-top:4px">支持 JPG / PNG / HEIF，自动压缩</div></div>'
@@ -2017,7 +2017,7 @@ function taskMetaEditPage() {
   h += '<div class="field"><label>截止日期</label><input id="meta-deadline" type="date" value="'+(t.deadline?t.deadline.slice(0,10):'')+'"></div>';
   h += '<div class="field"><label>招募名额（当前 '+t.max_heralds+' 人，只能增加）</label><input id="meta-maxHeralds" type="number" min="'+t.max_heralds+'" value="'+t.max_heralds+'"></div>';
   h += '<div class="field form-full"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 选择后自动上传</span></label>'
-    + '<div style="width:100%;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'meta-cover-file-input\').click()">'
+    + '<div style="width:100%;max-width:480px;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'meta-cover-file-input\').click()">'
     + '<img id="meta-cover-preview-img" src="'+esc(t.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(t.cover_image?'':'display:none')+'">'
     + '<div id="meta-cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(t.cover_image?'display:none':'')+'">'
     + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">点击更换封面图</div></div>'

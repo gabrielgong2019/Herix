@@ -3,7 +3,9 @@ import { findMany, findOne, update, insert } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
 import { payoutProvider } from '../services/payout';
-import { topupBrand, debitWithdrawal } from '../utils/wallet';
+import { topupBrand, debitWithdrawal, creditPlatformFee, PLATFORM_USER_ID } from '../utils/wallet';
+import pool from '../db';
+import { getSetting, setSetting, getEffectiveCommissionRate } from '../utils/settings';
 import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo } from '../utils/image';
 import { saveBrandAsset } from '../utils/uploads';
@@ -63,14 +65,12 @@ adminRouter.get('/users', async (req: Request, res: Response) => {
 
   const rows = await findMany<any>(`
     SELECT u.id, u.nickname, u.email, u.role, u.is_verified, u.created_at,
-           u.linked_account_id, lu.nickname as linked_nickname,
-           hp.residence, hp.kyc_status, hp.is_onboarded as herald_onboarded, hp.display_currency,
-           bp.company_name, bp.is_onboarded as brand_onboarded, bp.currency as brand_currency,
+           hp.residence, hp.kyc_status, hp.is_onboarded as herald_onboarded,
+           bp.company_name, bp.is_onboarded as brand_onboarded,
            bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email
     FROM users u
     LEFT JOIN herald_profiles hp ON hp.user_id = u.id
     LEFT JOIN brand_profiles bp ON bp.user_id = u.id
-    LEFT JOIN users lu ON lu.id = u.linked_account_id
     WHERE ${where} AND u.role != 'ADMIN'
     ORDER BY u.created_at DESC LIMIT ? OFFSET ?
   `, [...params, limit, skip]);
@@ -84,38 +84,6 @@ adminRouter.post('/users/:id/suspend', async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-/** POST /api/admin/users/:id/link-account — 绑定/解绑关联账号（双向写入 linked_account_id） */
-adminRouter.post('/users/:id/link-account', async (req: Request, res: Response) => {
-  const { linkedUserId } = req.body as { linkedUserId: string | null };
-  const userId = req.params.id;
-
-  const user = await findOne<{ id: string; linked_account_id: string | null }>(
-    'SELECT id, linked_account_id FROM users WHERE id = ?', [userId]
-  );
-  if (!user) return res.status(404).json({ error: '用户不存在' });
-
-  // 先清除旧的双向绑定
-  if (user.linked_account_id) {
-    await update('users', { linked_account_id: null }, 'id = ?', [user.linked_account_id]);
-  }
-  await update('users', { linked_account_id: null }, 'id = ?', [userId]);
-
-  if (linkedUserId) {
-    if (linkedUserId === userId) return res.status(400).json({ error: '不能关联自己' });
-    const target = await findOne<{ id: string; linked_account_id: string | null }>(
-      'SELECT id, linked_account_id FROM users WHERE id = ?', [linkedUserId]
-    );
-    if (!target) return res.status(404).json({ error: '关联用户不存在' });
-    // 清除目标用户原有的绑定
-    if (target.linked_account_id) {
-      await update('users', { linked_account_id: null }, 'id = ?', [target.linked_account_id]);
-    }
-    await update('users', { linked_account_id: linkedUserId }, 'id = ?', [userId]);
-    await update('users', { linked_account_id: userId }, 'id = ?', [linkedUserId]);
-  }
-
-  res.json({ success: true });
-});
 
 /** GET /api/admin/brands/:userId — 获取品牌资料（用于运营编辑） */
 adminRouter.get('/brands/:userId', async (req: Request, res: Response) => {
@@ -375,20 +343,37 @@ adminRouter.post('/topup-requests/:id/confirm', async (req: Request, res: Respon
     confirmed_at: new Date().toISOString(),
   }, 'id = ?', [req.params.id]);
 
-  // 品牌钱包充值入账（原子操作，幂等，按申请币种）
   await topupBrand({
     userId: row.brand_id,
     amount: row.amount,
-    currency: row.currency,
     idempotencyKey: `TOPUP:${row.id}`,
     referenceType: 'topup_request',
     referenceId: row.id,
-    note: `充值确认 ${row.currency} ${row.amount}`,
+    note: `充值确认 ¥${row.amount}`,
     createdBy: req.user!.userId,
   });
 
+  // 标记商户已充值；如充值后余额达到极速打款门槛，为进行中任务补打标签
+  await pool.query(
+    `UPDATE brand_profiles SET has_topped_up = TRUE WHERE user_id = $1`,
+    [row.brand_id],
+  );
+  const balRow = await pool.query(
+    `SELECT available_balance FROM wallets WHERE user_id = $1 AND wallet_type = 'brand' AND currency = 'JPY'`,
+    [row.brand_id],
+  );
+  const newBal    = Number(balRow.rows[0]?.available_balance) || 0;
+  const fpSetting = await (await import('../utils/settings')).getSetting('fast_payout_threshold');
+  const fpThresh  = Number(fpSetting) || 100000;
+  if (newBal >= fpThresh) {
+    await pool.query(
+      `UPDATE tasks SET fast_payout = TRUE WHERE creator_id = $1 AND status IN ('OPEN','IN_PROGRESS')`,
+      [row.brand_id],
+    );
+  }
+
   const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [row.brand_id]);
-  if (u?.email) await sendMail(u.email, '【HERIX】充值到账', `${u.nickname}，您的充值 ${row.currency} ${row.amount} 已确认到账，可用于发布任务。`);
+  if (u?.email) await sendMail(u.email, '【HERIX】充值到账', `${u.nickname}，您的充值 ${row.currency} ${row.amount} 已确认到账，可用于发布任务。您的任务现已获得「极速打款」标签，赫使可优先选择您的任务。`);
 
   res.json({ success: true });
 });
@@ -459,20 +444,148 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
     processed_at: new Date().toISOString(),
   }, 'id = ?', [req.params.id]);
 
-  // 赫使钱包：提现冻结清零（按申请币种）
+  const fee       = Number(wr.fee) || 0;
+  const netAmount = Number(wr.net_amount) ?? (wr.amount - fee);
+
   await debitWithdrawal({
-    userId: wr.herald_id,
-    amount: wr.amount,
-    currency: wr.currency,
+    userId:         wr.herald_id,
+    amount:         wr.amount,
     idempotencyKey: `WITHDRAWAL_DEBIT:${wr.id}`,
-    referenceType: 'withdrawal_request',
-    referenceId: wr.id,
-    note: `提现打款 ${wr.currency} ${wr.amount} 参考号 ${payoutRef}`,
-    createdBy: req.user!.userId,
+    referenceType:  'withdrawal_request',
+    referenceId:    wr.id,
+    note:           `提现打款 ¥${netAmount} 参考号 ${payoutRef}（手续费 ¥${fee}）`,
+    createdBy:      req.user!.userId,
   });
 
-  const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [wr.herald_id]);
-  if (u?.email) await sendMail(u.email, '【HERIX】提现已打款', `${u.nickname}，您申请的 ${wr.currency} ${wr.amount} 提现已完成打款，参考号：${payoutRef}，请查收。`);
+  if (fee > 0) {
+    await creditPlatformFee({
+      userId:         PLATFORM_USER_ID,
+      amount:         fee,
+      idempotencyKey: `WITHDRAWAL_FEE:${wr.id}`,
+      referenceType:  'withdrawal_request',
+      referenceId:    wr.id,
+      note:           `提现手续费`,
+      createdBy:      req.user!.userId,
+    });
+  }
 
-  res.json({ success: true, payoutReference: payoutRef, provider: payoutProvider.name });
+  const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [wr.herald_id]);
+  if (u?.email) await sendMail(
+    u.email,
+    '【HERIX】提现已打款',
+    `${u.nickname}，您申请的 ${wr.currency} ${wr.amount} 提现已完成打款（手续费 ¥${fee}，实际到账 ¥${netAmount}），参考号：${payoutRef}，请查收。`
+  );
+
+  res.json({ success: true, payoutReference: payoutRef, netAmount, fee, provider: payoutProvider.name });
+});
+
+// ── 定价管理 ──────────────────────────────────────────────────────────────────
+
+const PRICING_KEYS = [
+  'commission_rate',
+  'withdrawal_fee_type',
+  'withdrawal_fee_flat',
+  'withdrawal_schedule_mode',
+  'withdrawal_monthly_limit',
+  'withdrawal_min_amount',
+  'topup_cc_rate',
+] as const;
+
+/** GET /api/admin/pricing — 读取全局定价配置 */
+adminRouter.get('/pricing', async (_req: Request, res: Response) => {
+  const entries = await Promise.all(PRICING_KEYS.map(k => getSetting(k).then(v => [k, v])));
+  const cfg = Object.fromEntries(entries);
+  res.json({
+    commissionRate:          Number(cfg.commission_rate),
+    withdrawalFeeType:       cfg.withdrawal_fee_type,
+    withdrawalFeeFlat:       Number(cfg.withdrawal_fee_flat),
+    withdrawalScheduleMode:  cfg.withdrawal_schedule_mode,
+    withdrawalMonthlyLimit:  Number(cfg.withdrawal_monthly_limit),
+    withdrawalMinAmount:     Number(cfg.withdrawal_min_amount),
+    topupCcRate:             Number(cfg.topup_cc_rate),
+  });
+});
+
+/** PATCH /api/admin/pricing — 更新全局定价配置 */
+adminRouter.patch('/pricing', async (req: Request, res: Response) => {
+  const adminId = req.user!.userId;
+  const { note, commissionRate, withdrawalFeeFlat, withdrawalScheduleMode,
+          withdrawalMonthlyLimit, withdrawalMinAmount, topupCcRate } = req.body;
+
+  const updates: [string, string][] = [];
+  if (commissionRate        !== undefined) updates.push(['commission_rate',          String(commissionRate)]);
+  if (withdrawalFeeFlat     !== undefined) updates.push(['withdrawal_fee_flat',      String(withdrawalFeeFlat)]);
+  if (withdrawalScheduleMode !== undefined) updates.push(['withdrawal_schedule_mode', String(withdrawalScheduleMode)]);
+  if (withdrawalMonthlyLimit !== undefined) updates.push(['withdrawal_monthly_limit', String(withdrawalMonthlyLimit)]);
+  if (withdrawalMinAmount   !== undefined) updates.push(['withdrawal_min_amount',    String(withdrawalMinAmount)]);
+  if (topupCcRate           !== undefined) updates.push(['topup_cc_rate',            String(topupCcRate)]);
+
+  if (!updates.length) return res.status(400).json({ error: '未提供任何更新字段' });
+
+  await Promise.all(updates.map(([k, v]) => setSetting(k, v, adminId, note)));
+  res.json({ updated: updates.map(([k]) => k), note });
+});
+
+/** PATCH /api/admin/brands/:userId/credit-limit — 账户信用额度上限 */
+adminRouter.patch('/brands/:userId/credit-limit', async (req: Request, res: Response) => {
+  const { creditLimit } = req.body;
+
+  const profile = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!profile) return res.status(404).json({ error: '品牌账户不存在' });
+
+  if (creditLimit === null || creditLimit === undefined) {
+    await pool.query('UPDATE brand_profiles SET credit_limit_override = NULL WHERE user_id = $1', [req.params.userId]);
+    res.json({ creditLimitOverride: null, note: '已恢复全局默认信用额度' });
+  } else {
+    const limit = Number(creditLimit);
+    if (isNaN(limit) || limit < 0) {
+      return res.status(400).json({ error: '信用额度须为非负数' });
+    }
+    await pool.query('UPDATE brand_profiles SET credit_limit_override = $1 WHERE user_id = $2', [limit, req.params.userId]);
+    res.json({ userId: req.params.userId, creditLimitOverride: limit });
+  }
+});
+
+/** PATCH /api/admin/brands/:userId/agency — 设置广告代理商标识 */
+adminRouter.patch('/brands/:userId/agency', async (req: Request, res: Response) => {
+  const { isAgency } = req.body;
+  if (typeof isAgency !== 'boolean') return res.status(400).json({ error: 'isAgency 须为布尔值' });
+
+  const profile = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!profile) return res.status(404).json({ error: '品牌账户不存在' });
+
+  await pool.query('UPDATE brand_profiles SET is_agency = $1 WHERE user_id = $2', [isAgency, req.params.userId]);
+  res.json({ userId: req.params.userId, isAgency });
+});
+
+/** PATCH /api/admin/brands/:userId/pricing — 账户协议抽佣费率 */
+adminRouter.patch('/brands/:userId/pricing', async (req: Request, res: Response) => {
+  const adminId = req.user!.userId;
+  const { commissionRateOverride, note } = req.body;
+
+  const profile = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!profile) return res.status(404).json({ error: '品牌账户不存在' });
+
+  if (commissionRateOverride === null) {
+    await update('brand_profiles', {
+      commission_rate_override:      null,
+      commission_rate_override_note: null,
+      commission_rate_override_by:   adminId,
+      commission_rate_override_at:   new Date().toISOString(),
+    }, 'user_id = ?', [req.params.userId]);
+    res.json({ commissionRateOverride: null, note: '已恢复全局默认费率' });
+  } else {
+    const rate = Number(commissionRateOverride);
+    if (isNaN(rate) || rate < 0 || rate > 1) {
+      return res.status(400).json({ error: '费率须为 0~1 之间的小数' });
+    }
+    await update('brand_profiles', {
+      commission_rate_override:      rate,
+      commission_rate_override_note: note || null,
+      commission_rate_override_by:   adminId,
+      commission_rate_override_at:   new Date().toISOString(),
+    }, 'user_id = ?', [req.params.userId]);
+    const { rate: effective } = await getEffectiveCommissionRate(String(req.params.userId));
+    res.json({ commissionRateOverride: rate, effectiveRate: effective, note });
+  }
 });

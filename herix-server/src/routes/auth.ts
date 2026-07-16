@@ -4,6 +4,7 @@ import { findOne, insert, update } from '../utils/db';
 import { requireAuth, signToken } from '../middleware/auth';
 import { RegisterSchema, LoginSchema } from '../types';
 import { ZodError } from 'zod';
+import { getEffectiveCommissionRate } from '../utils/settings';
 
 export const authRouter = Router();
 
@@ -124,12 +125,11 @@ authRouter.post('/login', async (req: Request, res: Response) => {
 authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
   const user = await findOne<any>(
     `SELECT u.id, u.phone, u.email, u.nickname, u.avatar_url, u.role, u.roles, u.is_verified, u.created_at,
-            u.linked_account_id,
-            bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded, bp.currency as brand_currency,
+            bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email,
             hp.display_name, hp.country, hp.diaspora_group, hp.social_platforms, hp.specialties,
             hp.is_onboarded, hp.residence, hp.residence_country, hp.kyc_status,
-            hp.declaration_status, hp.visa_type, hp.bank_account, hp.display_currency,
+            hp.declaration_status, hp.visa_type, hp.bank_account,
             hp.tier_snapshot, hp.social_platforms_updated_at
      FROM users u
      LEFT JOIN brand_profiles bp ON bp.user_id = u.id
@@ -160,46 +160,11 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
     user.rating = { completedTasks, ratedCount, goodRate };
   }
 
-  // 关联账号简要信息（用于前端"切换账号"入口）
-  if (user.linked_account_id) {
-    const linked = await findOne<any>(
-      `SELECT u.id, u.nickname, u.role, u.roles
-       FROM users u WHERE u.id = ?`, [user.linked_account_id]
-    );
-    if (linked) {
-      user.linkedAccount = {
-        id: linked.id, nickname: linked.nickname, role: linked.role,
-        roles: parseRoles(linked.roles, linked.role),
-      };
-    }
+  if (user.roles?.includes('BRAND')) {
+    const { rate } = await getEffectiveCommissionRate(req.user!.userId);
+    user.commission_rate = rate;
   }
 
   res.json(user);
 });
 
-/** POST /api/auth/switch-account — 切换到关联账号（同一自然人的另一业务实体） */
-authRouter.post('/switch-account', requireAuth, async (req: Request, res: Response) => {
-  const user = await findOne<any>('SELECT id, linked_account_id FROM users WHERE id = ?', [req.user!.userId]);
-  if (!user?.linked_account_id) return res.status(404).json({ error: '未绑定关联账号' });
-
-  const linked = await findOne<any>(
-    `SELECT u.id, u.nickname, u.role, u.roles, u.is_verified,
-            COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded
-     FROM users u
-     LEFT JOIN herald_profiles hp ON hp.user_id = u.id
-     LEFT JOIN brand_profiles bp ON bp.user_id = u.id
-     WHERE u.id = ?`, [user.linked_account_id]
-  );
-  if (!linked) return res.status(404).json({ error: '关联账号不存在' });
-
-  const linkedRoles = parseRoles(linked.roles, linked.role);
-  const token = signToken({ userId: linked.id, role: linked.role, roles: linkedRoles });
-
-  res.json({
-    token,
-    user: {
-      id: linked.id, nickname: linked.nickname, role: linked.role,
-      roles: linkedRoles, isVerified: !!linked.is_verified, is_onboarded: !!linked.is_onboarded,
-    },
-  });
-});

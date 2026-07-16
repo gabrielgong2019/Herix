@@ -1,6 +1,6 @@
 import multer from 'multer';
 
-const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB 原始文件上限，sharp 处理后存储约 150~500KB
 
 export const imageUpload = multer({
   storage: multer.memoryStorage(),

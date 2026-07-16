@@ -3,7 +3,8 @@ import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { ApplyTaskSchema } from '../types';
 import { ZodError } from 'zod';
-import { sendMail } from '../utils/mailer';
+import { notify } from '../utils/notify';
+import { getBrandCreditInfo } from '../utils/settings';
 import crypto from 'crypto';
 
 function genPromoCode(): string {
@@ -101,7 +102,13 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
 
 /** PATCH /api/applications/:id/review — 品牌商家审核报名 */
 applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const { status } = req.body as { status: 'APPROVED' | 'REJECTED' };
+  try {
+  // 运行时校验 status，防止任意字符串写入状态机
+  const { reviewNote } = req.body as { reviewNote?: string };
+  const status = req.body.status as string;
+  if (status !== 'APPROVED' && status !== 'REJECTED') {
+    return res.status(400).json({ error: '无效的审核状态' });
+  }
 
   const app = await findOne<{ id: string; status: string; task_id: string; herald_id: string }>(
     'SELECT ta.id, ta.status, ta.task_id, ta.herald_id FROM task_applications ta WHERE ta.id = ?', [req.params.id]
@@ -116,7 +123,25 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
     return res.status(400).json({ error: '该报名已审核' });
   }
 
-  await update('task_applications', { status, updated_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
+  // 报名审核通过前检查信用额度（STANDARD 任务）
+  if (status === 'APPROVED') {
+    const taskCredit = await findOne<{ mode: string; cost_per_herald: number; creator_id: string }>(
+      'SELECT mode, cost_per_herald, creator_id FROM tasks WHERE id = ?', [app.task_id]
+    );
+    if (taskCredit && taskCredit.mode === 'STANDARD' && (taskCredit.cost_per_herald || 0) > 0) {
+      const creditInfo = await getBrandCreditInfo(taskCredit.creator_id);
+      if (creditInfo.totalCapacity < taskCredit.cost_per_herald) {
+        return res.status(402).json({
+          error: '信用额度不足，请充值以保证赫使及时付款',
+          code: 'INSUFFICIENT_CREDIT',
+          needed: taskCredit.cost_per_herald,
+          available: creditInfo.totalCapacity,
+        });
+      }
+    }
+  }
+
+  await update('task_applications', { status, review_note: reviewNote || null, updated_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
 
   // 如果报名通过 → 检查名额是否已满，满了自动关任务
   if (status === 'APPROVED') {
@@ -167,14 +192,27 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
   // 通知赫使
   const notifyHerald = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [app.herald_id]);
   const notifyTask = await findOne<any>('SELECT title FROM tasks WHERE id = ?', [app.task_id]);
-  if (notifyHerald?.email && notifyTask) {
-    const mailMsg = status === 'APPROVED'
-      ? `${notifyHerald.nickname}，您报名的任务「${notifyTask.title}」已通过审核！请前往 Herix 平台查看任务详情并开始执行。`
-      : `${notifyHerald.nickname}，很遗憾，您报名的任务「${notifyTask.title}」未通过本次审核。欢迎继续报名其他任务。`;
-    sendMail(notifyHerald.email, `【Herix】报名${status === 'APPROVED' ? '通过' : '未通过'}`, mailMsg).catch(() => {});
+  if (notifyHerald && notifyTask) {
+    const approved = status === 'APPROVED';
+    const noteClause = reviewNote ? `\n备注：${reviewNote}` : '';
+    await notify({
+      userId: app.herald_id,
+      email: notifyHerald.email,
+      targetRole: 'HERALD',
+      type: approved ? 'APP_APPROVED' : 'APP_REJECTED',
+      title: `报名${approved ? '通过' : '未通过'}：${notifyTask.title}`,
+      body: approved
+        ? `${notifyHerald.nickname}，您报名的任务「${notifyTask.title}」已通过审核，请前往平台查看任务详情并开始执行。${noteClause}`
+        : `${notifyHerald.nickname}，很遗憾，您报名的任务「${notifyTask.title}」未通过本次审核。欢迎继续报名其他任务。${noteClause}`,
+      metadata: { taskId: app.task_id, applicationId: app.id },
+    }).catch((e) => console.error('[notify] APP review notification failed:', e));
   }
   const updated = await findOne('SELECT * FROM task_applications WHERE id = ?', [req.params.id]);
   res.json(updated);
+  } catch (err) {
+    console.error('App review error:', err);
+    res.status(500).json({ error: '审核失败' });
+  }
 });
 
 /** GET /api/applications/my — 我的报名 (赫使侧) */

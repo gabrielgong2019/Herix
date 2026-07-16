@@ -60,7 +60,7 @@ ambassadorRouter.get('/status', requireAuth, async (req: Request, res: Response)
 
 /** PATCH /api/ambassador/profile — 更新大使身份 */
 ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Response) => {
-  const { residence, residenceCountry, kycStatus, visaType, bankAccount, socialPlatforms, displayCurrency } = req.body;
+  const { residence, residenceCountry, kycStatus, visaType, bankAccount, socialPlatforms } = req.body;
 
   const data: Record<string, any> = {};
   if (residence) data.residence = residence;
@@ -68,12 +68,6 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
   if (kycStatus) data.kyc_status = kycStatus;
   if (visaType) data.visa_type = visaType;
   if (bankAccount) data.bank_account = JSON.stringify(bankAccount);
-  if (displayCurrency) {
-    if (!['JPY', 'CNY'].includes(displayCurrency)) {
-      return res.status(400).json({ error: '不支持的币种' });
-    }
-    data.display_currency = displayCurrency;
-  }
   if (socialPlatforms !== undefined) {
     data.social_platforms = JSON.stringify(socialPlatforms);
     data.tier_snapshot = JSON.stringify(buildTierSnapshot(socialPlatforms));

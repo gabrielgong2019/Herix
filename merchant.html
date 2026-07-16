@@ -6,7 +6,7 @@
 <title>Herix 商户后台</title>
 <style>
 :root {
-  --primary: #0070CC; --sidebar: #111827; --sidebar-text: #9ca3af;
+  --primary: #D43B27; --sidebar: #111827; --sidebar-text: #9ca3af;
   --sidebar-active: #fff; --bg: #f5f5f7; --card: #fff;
   --text: #111; --muted: #6b7280; --border: #e5e7eb;
   --success: #16a34a; --warning: #d97706; --danger: #dc2626;
@@ -108,11 +108,13 @@ tr:hover td { background:#f9fafb; cursor:pointer; }
 .info-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
 .info-row:last-child { border-bottom:none; }
 .info-key { color:var(--muted); }
-.applicant-card { padding:14px; border:1px solid var(--border); border-radius:10px; margin-bottom:10px; }
+.applicant-card { padding:16px; border:1px solid var(--border); border-radius:12px; margin-bottom:10px; background:var(--card); transition:box-shadow .15s; }
+.applicant-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
 .applicant-card:last-child { margin-bottom:0; }
 .applicant-hdr { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
 .av { width:32px; height:32px; border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
-.sub-card { border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; }
+.sub-card { border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:10px; background:var(--card); transition:box-shadow .15s; }
+.sub-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
 .sub-card:last-child { margin-bottom:0; }
 
 /* ── Tabs ── */
@@ -173,6 +175,10 @@ function go(page, data) {
   state.page = page;
   if (data) Object.assign(state, data);
   state.msg = null;
+  // 进入任务表单时懒加载额度（不在 render 时触发，避免重渲清空输入）
+  if (page === 'task_create' || page === 'task_edit') {
+    if (!brandBalance) loadBrandWallet();
+  }
   render();
 }
 
@@ -196,7 +202,7 @@ function layout(inner) {
     { id:'settings', icon:'⚙️', label:'账户设置' },
   ];
   var sb = '<div class="sidebar" id="sidebar">';
-  sb += '<div class="sb-logo">HERIX<span>.</span><div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:2px;letter-spacing:0">商户后台</div></div>';
+  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-icon-filled.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">商户后台</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
   sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">品牌商家</span></div>';
   var linked = state.brandProfile?.linkedAccount;
@@ -204,12 +210,16 @@ function layout(inner) {
     var linkedRoleLabel = (linked.roles||[]).includes('HERALD') ? '赫使' : '商家';
     sb += '<div class="sb-logout" onclick="switchAccount()" style="margin-bottom:4px">🔁 切换到'+esc(linked.nickname)+'（'+linkedRoleLabel+'）</div>';
   }
+  var userRoles = (state.user && state.user.roles) || [state.user && state.user.role];
+  if (userRoles.includes('HERALD')) {
+    sb += '<div class="sb-logout" onclick="switchToHerald()" style="margin-bottom:4px">⇄ 切换赫使模式</div>';
+  }
   sb += '<div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
 
   var main = '<div class="main"><div class="topbar">';
   main += '<div style="display:flex;align-items:center;gap:12px"><button class="hamburger" onclick="toggleSidebar()">☰</button>';
   main += '<div class="page-title" id="page-title">'+getPageTitle()+'</div></div>';
-  main += '<div class="topbar-right">'+topbarActions()+'</div></div>';
+  main += '<div class="topbar-right" style="display:flex;align-items:center;gap:8px">'+notifBellHTML()+topbarActions()+'</div></div>';
   if (state.msg) main += '<div style="padding:0 28px;margin-top:16px"><div class="alert alert-'+state.msgType+'">'+esc(state.msg)+'</div></div>';
   main += '<div class="content">'+inner+'</div></div>';
 
@@ -256,7 +266,7 @@ function pageContent() {
 /* ── Login ── */
 function loginPage() {
   return '<div class="login-wrap"><div class="login-card">'
-    +'<div class="login-logo">HERIX<span>.</span></div>'
+    +'<div class="login-logo"><img src="/Logo/herix-icon-filled.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
     +'<div class="login-sub">品牌商家管理后台</div>'
     +Auth.loginForm({
       title: '',
@@ -271,7 +281,7 @@ function loginPage() {
       submitStyle: 'width:100%;padding:12px',
       submitBtnClass: '',
     })
-    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">还没有账号？<a href="preview.html" style="color:var(--primary)">前往注册</a></div>'
+    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">还没有账号？<a href="herix.html" style="color:var(--primary)">前往注册</a></div>'
     +'</div></div>';
 }
 
@@ -287,6 +297,8 @@ function bindLogin() {
       state.token=d.token;state.user=d.user;
       state.msg='登录成功';state.msgType='success';
       loadDashStats();loadMyTasks();loadBrandProfile();
+      loadNotifications();
+      setInterval(loadNotifications, 60000);  // 每分钟轮询一次
     },
     onError: function(msg) {
       var el=document.getElementById('auth-form-err');
@@ -302,7 +314,7 @@ function activateBrandPage() {
 
   // 进度条
   h += '<div style="display:flex;gap:6px;margin-bottom:28px">';
-  for (var i = 1; i <= 2; i++) h += '<div style="flex:1;height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>';
+  for (var i = 1; i <= 3; i++) h += '<div style="flex:1;height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>';
   h += '</div>';
 
   if (step === 1) {
@@ -310,8 +322,7 @@ function activateBrandPage() {
     h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">开通品牌商家功能</div>';
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">你好，'+esc(state.user.nickname)+'！填写品牌信息后即可发布任务、招募赫使。</div>';
     h += '<div class="field"><label>业务市场 *</label><div style="display:flex;gap:10px;margin-top:6px">';
-    h += '<div class="btn btn-outline btn-sm" style="flex:1;'+(actCur==='JPY'?'border-color:var(--primary);color:var(--primary)':'')+'" onclick="state.activateData=Object.assign({},state.activateData,{currency:\'JPY\'});render()">🇯🇵 日本市场（JPY）</div>';
-    h += '<div class="btn btn-outline btn-sm" style="flex:1;'+(actCur==='CNY'?'border-color:var(--primary);color:var(--primary)':'')+'" onclick="state.activateData=Object.assign({},state.activateData,{currency:\'CNY\'});render()">🇨🇳 中国市场（CNY）</div>';
+    h += '<div class="btn btn-outline btn-sm" style="flex:1;border-color:var(--primary);color:var(--primary)">🇯🇵 日本市场（JPY）</div>';
     h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
     h += '<div class="field" style="margin-top:12px"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Remitly Japan" value="'+esc(state.activateData?.companyName||'')+'"></div>';
     h += '<div class="field" style="margin-top:12px"><label>所属行业</label><select id="act-industry">';
@@ -322,16 +333,46 @@ function activateBrandPage() {
     h += '<button class="btn btn-outline" style="flex:1" onclick="cancelActivate()">取消</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep2()">下一步</button>';
     h += '</div>';
-  } else {
+  } else if (step === 2) {
     h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">联系方式</div>';
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">平台将通过此方式与你确认合作细节。</div>';
-    h += '<div class="field"><label>联系人姓名 *</label><input id="act-contact" placeholder="你的姓名"></div>';
-    h += '<div class="field" style="margin-top:12px"><label>联系电话（选填）</label><input id="act-phone" placeholder="+81 ..."></div>';
-    h += '<div id="act-err" style="margin-top:12px"></div>';
+    h += '<div class="field"><label>联系人姓名 *</label><input id="act-contact" placeholder="你的姓名" value="'+esc(state.activateData?.contactName||'')+'"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>联系电话（选填）</label><input id="act-phone" placeholder="+81 ..." value="'+esc(state.activateData?.contactPhone||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=1;render()">返回</button>';
-    h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">开通并进入后台</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep3()">下一步</button>';
     h += '</div>';
+  } else {
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">服务协议</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">请仔细阅读以下协议，确认后完成入驻。</div>';
+
+    h += '<div style="height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:16px">';
+    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">Herix 品牌商家服务协议（版本 2026-07-09-v1）</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">一、服务内容</p>';
+    h += '<p style="margin-bottom:10px">Herix（以下简称"平台"）由 HUAXUE 合同会社运营，提供海外华人赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">二、资金与结算</p>';
+    h += '<p style="margin-bottom:10px">1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，到账时间为 3 个工作日内。</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">三、您的义务</p>';
+    h += '<p style="margin-bottom:10px">1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">四、争议处理</p>';
+    h += '<p style="margin-bottom:10px">平台对赫使提交内容的质量判断有最终解释权。如您对结算结果有异议，须在结算后 7 日内通过平台客服提出，逾期视为认可。</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">五、隐私与数据</p>';
+    h += '<p style="margin-bottom:10px">平台将按照隐私政策处理您的业务数据。赫使的个人信息仅用于任务匹配，不会向第三方出售。</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">六、协议变更</p>';
+    h += '<p>平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。</p>';
+    h += '</div>';
+
+    h += '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:#374151;margin-bottom:20px">';
+    h += '<input type="checkbox" id="agree-checkbox" style="margin-top:2px;width:16px;height:16px;flex-shrink:0">';
+    h += '<span>我已阅读并理解上述服务协议，代表 <strong>'+esc(state.activateData?.companyName||'本公司')+'</strong> 接受协议全部条款。本次确认将记录签署时间及 IP 地址作为电子证据。</span>';
+    h += '</label>';
+
+    h += '<div id="act-err" style="margin-bottom:12px"></div>';
+    h += '<div style="display:flex;gap:10px">';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=2;render()">返回</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">确认签署并开通</button>';
+    h += '</div>';
+    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">协议版本 2026-07-09-v1</div>';
   }
 
   h += '</div></div>';
@@ -340,9 +381,9 @@ function activateBrandPage() {
 
 function activateStep2() {
   var company = (document.getElementById('act-company')||{}).value||'';
-  if (!state.activateData?.currency) { alert('请选择业务市场'); return; }
   if (!company.trim()) { alert('请填写品牌名称'); return; }
   state.activateData = Object.assign({}, state.activateData, {
+    currency: 'JPY',
     companyName: company.trim(),
     industry: (document.getElementById('act-industry')||{}).value||'',
     website: (document.getElementById('act-website')||{}).value||'',
@@ -351,14 +392,25 @@ function activateStep2() {
   render();
 }
 
-function doActivateBrand() {
+function activateStep3() {
   var contact = (document.getElementById('act-contact')||{}).value||'';
   if (!contact.trim()) { alert('请填写联系人姓名'); return; }
-  var data = Object.assign({}, state.activateData||{}, {
+  state.activateData = Object.assign({}, state.activateData, {
     contactName: contact.trim(),
     contactPhone: (document.getElementById('act-phone')||{}).value||'',
   });
+  state.activateStep = 3;
+  render();
+}
+
+function doActivateBrand() {
+  var checked = (document.getElementById('agree-checkbox')||{}).checked;
   var errEl = document.getElementById('act-err');
+  if (!checked) {
+    if (errEl) errEl.innerHTML = '<div class="alert alert-error">请先勾选同意服务协议</div>';
+    return;
+  }
+  var data = Object.assign({}, state.activateData||{}, { agreedToTerms: true });
 
   // Step 1: 添加 BRAND 角色
   patch('POST', '/users/add-role', { role: 'BRAND' }, function(d) {
@@ -404,7 +456,7 @@ function dashPage() {
 
   // 核心指标 — 第一行
   html += '<div class="stats-grid">'
-    + statCard('累计支出', '¥'+Number(sm.totalSpend||0).toLocaleString(), '#0070CC', '💰')
+    + statCard('累计支出', '¥'+Number(sm.totalSpend||0).toLocaleString(), '#D43B27', '💰')
     + statCard('已完成任务', sm.totalCompleted||0, '#16a34a', '✅', '件')
     + statCard('在线任务', sm.openTasks||0, '#7c3aed', '📋', '个')
     + statCard('待处理', pending, pending>0?'#dc2626':'#16a34a', '⚠️', '项')
@@ -415,7 +467,7 @@ function dashPage() {
     + statCard('总报名人次', sm.totalApplicants||0, '#0891b2', '👤', '人')
     + statCard('待审报名', sm.pendingApplicants||0, '#d97706', '⏳', '条')
     + statCard('待审内容', sm.pendingSubmissions||0, '#d97706', '📄', '条')
-    + statCard('推广码转化', sm.qualifiedReferrals||0, '#0070CC', '🔗', '单')
+    + statCard('推广码转化', sm.qualifiedReferrals||0, '#D43B27', '🔗', '单')
     + '</div>';
 
   // 待处理提醒
@@ -434,7 +486,7 @@ function dashPage() {
       +'<table><thead><tr><th>任务名称</th><th>状态</th><th>报名</th><th>通过</th><th>提交</th><th>完成</th><th>转化率</th><th>支出</th></tr></thead><tbody>'
       + tasks.map(function(t) {
           var conversion = t.app_total > 0 ? Math.round((t.sub_approved/t.app_total)*100)+'%' : '-';
-          var spent = (t.sub_approved||0) * t.commission;
+          var spent = (t.sub_approved||0) * (t.cost_per_herald||t.payout_per_herald||0);
           return '<tr onclick="openTask(\''+t.id+'\')" style="cursor:pointer">'
             +'<td><div style="font-weight:500;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(t.title)+'</div>'
             +'<div style="font-size:11px;color:var(--muted);margin-top:1px">'+(t.mode==='PERFORMANCE'?'类A · 推广码':'类B · 内容')+'</div></td>'
@@ -472,6 +524,7 @@ function tasksPage() {
   var status = state.taskFilter || '';
   var filtered = status ? tasks.filter(function(t){return t.status===status}) : tasks;
 
+  var creditBanner = creditStatusBanner();
   var filterBar = '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">';
   var statuses = [{v:'',l:'全部'},{v:'DRAFT',l:'草稿'},{v:'OPEN',l:'招募中'},{v:'COMPLETED',l:'已完成'},{v:'CANCELLED',l:'已取消'}];
   statuses.forEach(function(s){
@@ -479,10 +532,10 @@ function tasksPage() {
   });
   filterBar += '<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go(\'task_create\')">+ 创建任务</button></div>';
 
-  if (!tasks.length && state.tasksLoading) return filterBar+'<div class="empty" style="padding:40px">加载中...</div>';
+  if (!tasks.length && state.tasksLoading) return creditBanner+filterBar+'<div class="empty" style="padding:40px">加载中...</div>';
 
   if (!filtered.length) {
-    return filterBar+'<div class="table-card"><div class="empty"><div class="empty-icon">📋</div>'
+    return creditBanner+filterBar+'<div class="table-card"><div class="empty"><div class="empty-icon">📋</div>'
       +(tasks.length ? '该状态下没有任务' : '<div style="margin-bottom:16px">还没有任务</div><button class="btn btn-primary" onclick="go(\'task_create\')">+ 创建第一个任务</button>')
       +'</div></div>';
   }
@@ -490,19 +543,20 @@ function tasksPage() {
   var rows = filtered.map(function(t) {
     var st = t.status || 'DRAFT';
     var created = t.created_at ? t.created_at.slice(0,10) : '-';
+    var fpBadge = t.fast_payout ? '<span style="display:inline-block;font-size:10px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:5px;vertical-align:middle">⚡ 极速打款</span>' : '';
     return '<tr data-task-id="'+esc(t.id)+'" style="cursor:pointer">'
-      +'<td><div style="font-weight:500">'+esc(t.title)+'</div>'
+      +'<td><div style="font-weight:500">'+esc(t.title)+fpBadge+'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+catLabel(t.category)+'</div></td>'
       +'<td><span class="tag tag-'+st.toLowerCase()+'">'+statusLabel(st)+'</span></td>'
       +'<td><span style="font-size:12px">'+modeLabel(t.mode)+'</span></td>'
-      +'<td>¥'+Number(t.commission||0).toLocaleString()+'</td>'
+      +'<td>¥'+Number(t.payout_per_herald||0).toLocaleString()+'</td>'
       +'<td>'+(t.max_heralds||'-')+'</td>'
       +'<td>'+(t.application_count||t.app_total||0)+'</td>'
       +'<td>'+created+'</td>'
       +'<td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openTask(\''+esc(t.id)+'\')">查看</button></td>'
       +'</tr>';
   }).join('');
-  return filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>任务</th><th>状态</th><th>类型</th><th>报酬/人</th><th>名额</th><th>报名数</th><th>创建</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  return creditBanner+filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>任务</th><th>状态</th><th>类型</th><th>报酬/人</th><th>名额</th><th>报名数</th><th>创建</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 /* ── Task Detail ── */
@@ -516,14 +570,22 @@ function taskDetailPage() {
 
   var left = '<div class="panel">'
     +'<div class="panel-title">任务信息</div>'
-    + infoRow('状态', '<span class="tag tag-'+t.status.toLowerCase()+'">'+statusLabel(t.status)+'</span>')
+    + infoRow('状态', '<span class="tag tag-'+t.status.toLowerCase()+'">'+statusLabel(t.status)+'</span>'+(t.fast_payout?'&nbsp;<span style="font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px">⚡ 极速打款</span>':''))
     + infoRow('类型', modeLabel(t.mode))
     + infoRow('分类', catLabel(t.category))
     + infoRow('内容形式', ctLabel(t.content_type))
-    + infoRow('单份报酬', '¥'+Number(t.commission).toLocaleString())
+    + infoRow('赫使获得', '¥'+Number(t.payout_per_herald||0).toLocaleString()+'（单人成本 ¥'+Number(t.cost_per_herald||0).toLocaleString()+'，含'+(((t.commission_rate||0.15)*100).toFixed(0))+'%服务费）')
     + infoRow('招募名额', t.max_heralds+' 人')
     + infoRow('已报名', apps.length+' 人（'+apps.filter(function(a){return a.status==='APPROVED'}).length+' 通过）')
     + infoRow('发布时间', t.published_at ? t.published_at.slice(0,10) : '未发布')
+    + infoRow('发布范围', t.visibility==='INVITE' ? '🔒 定向' : '🌐 公开')
+    + '<div style="margin:8px 12px 4px;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe">'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">'+(t.visibility==='INVITE'?'🔒 赫使邀请链接':'🔗 任务分享链接')+'</div>'
+    + '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:8px" id="invite-link-text">'+(window.location.origin+'/herix.html?task='+t.id)+'</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button class="btn btn-outline btn-sm" onclick="copyInviteLink(\''+t.id+'\')">复制链接</button>'
+    + '<button class="btn btn-primary btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成分享海报</button>'
+    + '</div></div>'
     +'</div>';
 
   if (t.status === 'DRAFT') {
@@ -580,6 +642,19 @@ function taskDetailPage() {
         +'<div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="editTask()">编辑</button>'
         +'<button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button></div></div>';
     }
+  }
+
+  // 品牌专属上传链接（PERFORMANCE 任务已发布后显示）
+  if (t.mode === 'PERFORMANCE' && ['OPEN','IN_PROGRESS'].includes(t.status) && t.upload_token) {
+    var uploadUrl = window.location.origin + '/upload.html?task=' + t.id + '&token=' + t.upload_token;
+    left += '<div class="panel" style="border:1px solid #e0e7ff;background:#f5f3ff">'
+      +'<div class="panel-title" style="color:#6d28d9">📤 品牌数据上传链接</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-bottom:10px">将此链接发送给品牌方，品牌方无需登录即可上传转化数据</div>'
+      +'<div style="font-family:monospace;font-size:11px;word-break:break-all;background:#fff;border:1px solid #ddd6fe;border-radius:6px;padding:8px;margin-bottom:10px;color:#374151">'+uploadUrl+'</div>'
+      +'<div style="display:flex;gap:8px">'
+      +'<button class="btn btn-outline btn-sm" onclick="copyUploadLink(\''+t.id+'\',\''+t.upload_token+'\')">复制链接</button>'
+      +'<button class="btn btn-outline btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成海报</button>'
+      +'</div></div>';
   }
 
   var tabs = '<div class="tabs">'
@@ -741,8 +816,18 @@ function attachAuthHeader(el, url) {
 }
 
 /* ── Task Form ── */
-var CATS = ['experience','beauty','travel','fashion','food','lifestyle','referral','baby'];
-var CAT_LABELS = {experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'};
+var CATEGORIES = [
+  {id:'experience',label:'体验',icon:'🎪'},
+  {id:'beauty',    label:'美妆',icon:'💄'},
+  {id:'travel',    label:'旅行',icon:'✈️'},
+  {id:'fashion',   label:'穿搭',icon:'👗'},
+  {id:'food',      label:'美食',icon:'🍱'},
+  {id:'lifestyle', label:'生活',icon:'🌿'},
+  {id:'referral',  label:'推荐',icon:'🔗'},
+  {id:'baby',      label:'母婴',icon:'🍼'},
+];
+function catLabel(id){ var c=CATEGORIES.find(function(x){return x.id===id}); return c?c.label:(id||'-'); }
+function loadCategories(){ var x=new XMLHttpRequest(); x.open('GET',API+'/categories',true); x.onload=function(){try{var d=JSON.parse(x.responseText);if(Array.isArray(d)&&d.length)CATEGORIES=d;}catch(e){}}; x.send(); }
 
 // PLATFORM_REGISTRY, calcTier, platformById 均来自 /shared/platforms.js
 // 当前任务表单中已选平台要求 [{platformId, minFollowers, required}]
@@ -750,21 +835,29 @@ var taskPlatformReqs = [];
 
 function taskFormPage(t) {
   var isEdit = !!t;
-  return '<div class="form-card"><div class="form-grid">'
+  return '<div class="form-card">'
+    +'<div id="task-capacity-banner">'+taskCapacityBannerContent()+'</div>'
+    +'<div id="task-cost-meter" style="margin-bottom:4px"></div>'
+    +'<div class="form-grid">'
     + field('任务标题 *', 'title', 'text', t&&t.title||'', '例：Remitly Japan 大使计划')
-    + '<div class="field"><label>任务模式 *</label><select id="mode" onchange="toggleCodeModeSection()">'
+    + '<div class="field"><label>任务模式 *</label><select id="mode" onchange="toggleCodeModeSection();onTaskCostInput()">'
     + '<option value="STANDARD"'+(t&&t.mode==='STANDARD'?' selected':'')+'>类型B — 任务体验（提交内容审核）</option>'
     + '<option value="PERFORMANCE"'+(t&&t.mode==='PERFORMANCE'?' selected':'')+'>类型A — 成果报酬（推广码转化）</option>'
     + '</select></div>'
-    + '<div class="field"><label>分类</label><select id="category">'
-    + CATS.map(function(c){return '<option value="'+c+'"'+(t&&t.category===c?' selected':'')+'>'+CAT_LABELS[c]+'</option>'}).join('')
+    + '<div class="field"><label>分类 *</label><select id="category">'
+    + '<option value="" disabled'+(t&&t.category?'':' selected')+'>请选择分类</option>'
+    + CATEGORIES.map(function(c){return '<option value="'+c.id+'"'+(t&&t.category===c.id?' selected':'')+'>'+c.icon+' '+c.label+'</option>'}).join('')
     + '</select></div>'
+    + '<div class="field"><label>发布范围</label><select id="visibility" onchange="onTaskCostInput()">'
+    + '<option value="PUBLIC"'+((!t||t.visibility==='PUBLIC'||!t.visibility)?' selected':'')+'>公开 — 出现在赫使探索列表</option>'
+    + '<option value="INVITE"'+(t&&t.visibility==='INVITE'?' selected':'')+'>定向 — 仅限链接访问，不公开</option>'
+    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">定向任务不出现在探索列表，只有持有链接的赫使可以看到并报名</div></div>'
     + '<div class="field" id="contentType-field"><label>内容形式</label><select id="contentType" onchange="">'
     + '<option value="photo"'+(t&&t.content_type==='photo'?' selected':'')+'>📷 图文</option>'
     + '<option value="video"'+(t&&t.content_type==='video'?' selected':'')+'>🎬 视频</option>'
     + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">赫使需要提交的内容类型</div></div>'
-    + field('单份报酬 (¥) *', 'commission', 'number', t&&t.commission||'', '每位赫使的报酬金额')
-    + field('招募人数 *', 'maxHeralds', 'number', t&&t.max_heralds||'3', '最多接受多少位赫使')
+    + field('任务报酬 (¥) *', 'payout', 'number', t&&t.payout_per_herald||'', '赫使实际到手金额（已扣除平台服务费）', 'oninput="onTaskCostInput()"')
+    + field('招募人数 *', 'maxHeralds', 'number', t&&t.max_heralds||'3', '最多接受多少位赫使', 'oninput="onTaskCostInput()"')
     + '<div class="field"><label>任务难度</label><select id="difficulty">'
     + '<option value="easy"'+(t&&t.difficulty==='easy'?' selected':'')+'>轻松</option>'
     + '<option value="medium"'+(t&&t.difficulty==='medium'?' selected':'')+'>适中</option>'
@@ -774,7 +867,15 @@ function taskFormPage(t) {
     + '<div class="field form-full"><label>任务描述 *</label><textarea id="description" rows="4" placeholder="详细说明任务要求、目标受众、品牌背景...">'+esc(t&&t.description||'')+'</textarea></div>'
     + '<div class="field form-full"><label>具体要求</label><textarea id="requirements" rows="3" placeholder="可选：发布平台要求、内容关键词、存续时间等...">'+esc(t&&t.requirements||'')+'</textarea></div>'
     + platformReqsFormHTML(t)
-    + field('封面图链接', 'coverImage', 'text', t&&t.cover_image||'', 'https://... 图片URL（可选）')
+    + '<div class="field form-full" id="cover-upload-wrap"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 16:9 场景图效果最佳</span></label>'
+    + '<div style="width:100%;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'cover-file-input\').click()">'
+    + '<img id="cover-preview-img" src="'+(t&&t.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(t&&t.cover_image?'':'display:none')+'">'
+    + '<div id="cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(t&&t.cover_image?'display:none':'')+'">'
+    + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">点击选择图片</div><div style="font-size:11px;margin-top:4px">支持 JPG / PNG / HEIF，自动压缩</div></div>'
+    + '</div>'
+    + '<input type="file" id="cover-file-input" accept="image/*" style="display:none" onchange="onCoverFileSelect(this)">'
+    + '<div id="cover-status" style="font-size:12px;color:var(--muted)"></div>'
+    + '</div>'
     // 推广码模式（仅 PERFORMANCE 任务显示）
     +'<div class="field form-full" id="code-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>推广码来源</label>'
     +'<div style="display:flex;gap:10px;margin-top:4px">'
@@ -783,7 +884,8 @@ function taskFormPage(t) {
     +'</div>'
     +'<div id="custom-code-hint" style="margin-top:8px;font-size:12px;color:var(--muted);'+(t&&t.code_mode==='custom'?'':'display:none')+'">任务创建后，在任务详情页上传推广码文件。</div>'
     +'</div>'
-    +'</div>'
+    +'</div>'  // close form-grid
+    +'<div id="task-form-error" style="display:none;margin-bottom:12px"></div>'
     +'<div class="form-actions">'
     +(isEdit?'<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>':'')
     +'<button class="btn btn-outline" onclick="saveTask(false)" title="保存为草稿，需手动发布后赫使才能看到">保存草稿</button>'
@@ -793,8 +895,8 @@ function taskFormPage(t) {
     +'</div>';
 }
 
-function field(label, id, type, val, placeholder) {
-  return '<div class="field"><label>'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc(String(val))+'" placeholder="'+esc(placeholder)+'"></div>';
+function field(label, id, type, val, placeholder, attrs) {
+  return '<div class="field"><label>'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc(String(val))+'" placeholder="'+esc(placeholder)+'"'+(attrs?' '+attrs:'')+' ></div>';
 }
 
 function platformReqsFormHTML(t) {
@@ -857,36 +959,93 @@ function reviewsPage() {
     +(state.reviewTab==='subs' ? allSubsPanel(subs) : allAppsPanel(apps));
 }
 
+function reviewRow(id, type, info) {
+  // Meta chips (second line)
+  var meta = [];
+  if (info.tiers) meta.push(info.tiers);
+  if (info.rating) meta.push(info.rating);
+  if (info.sub) meta.push('<span style="color:#9ca3af;font-size:11px">'+esc(info.sub)+'</span>');
+  if (info.preview) meta.push('<span style="color:#6b7280;font-size:11px">'+esc(info.preview.slice(0,50))+(info.preview.length>50?'…':'')+'</span>');
+  if (info.contentUrl) meta.push('<a href="'+esc(info.contentUrl)+'" target="_blank" style="color:#6366f1;font-size:11px;text-decoration:none">🔗 查看内容</a>');
+
+  var taskLabel = info.taskTitle
+    ? ' <span style="font-weight:400;color:#9ca3af;font-size:13px">· '+esc(info.taskTitle)+(info.taskId?'<button onclick="event.stopPropagation();openTask(\''+info.taskId+'\')" style="font-size:10px;color:#c4b5fd;background:none;border:none;cursor:pointer;padding:0 2px;vertical-align:middle">↗</button>':'')+'</span>'
+    : '';
+
+  return '<div style="padding:14px 16px;border-bottom:1px solid var(--border)">'
+    +'<div style="display:flex;align-items:flex-start;gap:10px">'
+    +'<div class="av" style="width:36px;height:36px;font-size:14px;flex-shrink:0;margin-top:1px">'+info.initials+'</div>'
+    +'<div style="flex:1;min-width:0">'
+    // Name + task
+    +'<div style="font-size:14px;font-weight:600;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(info.name)+taskLabel+'</div>'
+    // Meta chips
+    +(meta.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:3px">'+meta.join('<span style="color:#e5e7eb;font-size:10px;margin:0 1px">|</span>')+'</div>' : '')
+    // Note textarea (always visible)
+    +'<textarea id="rv-note-'+id+'" rows="1" placeholder="备注 · 拒绝时请说明原因，帮助赫使了解改进方向" style="width:100%;margin-top:10px;border:1.5px solid #e5e7eb;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.5;box-sizing:border-box;resize:none;display:block;font-family:inherit;outline:none;color:#374151;transition:border-color 0.15s" onfocus="this.rows=3;this.style.borderColor=\'#818cf8\'" onblur="if(!this.value)this.rows=1;this.style.borderColor=\'#e5e7eb\'"></textarea>'
+    +'</div>'
+    // Action buttons
+    +'<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:10px">'
+    +'<button onclick="submitReview(\''+id+'\',\''+type+'\',\'APPROVED\')" style="padding:6px 16px;border:none;border-radius:7px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">通过</button>'
+    +'<button onclick="submitReview(\''+id+'\',\''+type+'\',\'REJECTED\')" style="padding:6px 14px;border:1.5px solid #fca5a5;border-radius:7px;background:transparent;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">拒绝</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+}
+
 function allAppsPanel(apps) {
   if (!apps.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审报名</div>';
-  return apps.map(function(a) {
-    return '<div class="applicant-card" style="margin-bottom:10px">'
-      +'<div style="font-size:11px;color:var(--primary);margin-bottom:6px">'+esc(a.task_title)+'</div>'
-      +'<div class="applicant-hdr"><div class="av">'+esc((a.nickname||'?')[0])+'</div>'
-      +'<div><div style="font-weight:600;font-size:13px">'+esc(a.nickname)+'</div>'
-      +'<div style="font-size:11px;color:var(--muted)">'+esc(a.display_name||'')+'</div></div></div>'
-      +(a.message?'<div style="font-size:12px;color:#555;margin:6px 0;padding:8px;background:#f9fafb;border-radius:6px">'+esc(a.message)+'</div>':'')
-      +'<div style="display:flex;gap:8px;margin-top:8px">'
-      +'<button class="btn btn-success btn-sm" onclick="reviewApp(\''+a.id+'\',\'APPROVED\',true)">✓ 通过</button>'
-      +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewApp(\''+a.id+'\',\'REJECTED\',true)">✗ 拒绝</button>'
-      +'<button class="btn btn-outline btn-sm" onclick="openTask(\''+a.task_id+'\')">查看任务 →</button>'
-      +'</div></div>';
-  }).join('');
+  return '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+    + apps.map(function(a) {
+    var sub = [];
+    if (a.display_name && a.display_name !== a.nickname) sub.push(a.display_name);
+    if (a.country) sub.push(a.country);
+    return reviewRow(a.id, 'app', {
+      initials: (a.nickname||'?')[0].toUpperCase(),
+      name: a.nickname || '—',
+      sub: sub.join(' · '),
+      taskTitle: a.task_title,
+      taskId: a.task_id,
+      tiers: tierBadge(a.tier_snapshot),
+      rating: ratingBadge(a.completed_tasks, a.good_rate),
+      preview: a.message,
+    });
+  }).join('')+'</div>';
 }
 
 function allSubsPanel(subs) {
   if (!subs.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审内容</div>';
-  return subs.map(function(s) {
-    return '<div class="sub-card" style="margin-bottom:10px">'
-      +'<div style="font-size:11px;color:var(--primary);margin-bottom:6px">'+esc(s.task_title)+'</div>'
-      +'<div style="font-weight:600;margin-bottom:6px">'+esc(s.herald_name)+'</div>'
-      +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:8px">🔗 '+esc(s.content_url)+'</a>':'')
-      +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
-      +'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\',true)">✓ 通过</button>'
-      +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\',true)">✗ 拒绝</button></div>'
-      +'</div>';
-  }).join('');
+  return '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">'
+    + subs.map(function(s) {
+    var name = s.nickname || s.display_name || (s.herald_id||'').slice(0,8) || '—';
+    return reviewRow(s.id, 'sub', {
+      initials: name[0].toUpperCase(),
+      name: name,
+      sub: s.submitted_at ? s.submitted_at.slice(0,10) : '',
+      taskTitle: s.task_title,
+      taskId: null,
+      tiers: '', rating: '',
+      preview: s.description,
+      contentUrl: s.content_url,
+    });
+  }).join('')+'</div>';
 }
+
+function submitReview(id, type, action) {
+  var ta = document.getElementById('rv-note-' + id);
+  var note = ta ? ta.value.trim() : '';
+  if (action === 'REJECTED' && !note) {
+    if (ta) {
+      ta.style.borderColor = '#dc2626';
+      ta.rows = 3;
+      ta.placeholder = '请填写原因，帮助赫使了解如何改进内容';
+      ta.focus();
+    }
+    return;
+  }
+  if (type === 'app') reviewApp(id, action, true, note);
+  else reviewSub(id, action, true, note);
+}
+
 
 /* ── CSV Upload ── */
 function csvPage() {
@@ -911,6 +1070,99 @@ function csvPage() {
     +'<div id="csv-result"></div>'
     +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="doCsvUpload()">上传数据</button></div>'
     +'</div></div>';
+}
+
+/* ── Notifications ── */
+var notifData = null;   // { unread, notifications[] }
+var notifOpen = false;
+
+function loadNotifications() {
+  get('/notifications', function(d) {
+    notifData = d;
+    // 只更新铃铛，不 render 全页（避免重渲打断用户）
+    var bell = document.getElementById('notif-bell');
+    if (bell) bell.outerHTML = notifBellHTML();
+  });
+}
+
+function notifBellHTML() {
+  var unread = notifData ? notifData.unread : 0;
+  return '<button id="notif-bell" onclick="toggleNotifPanel()" style="position:relative;background:none;border:none;cursor:pointer;padding:4px 6px;border-radius:8px;line-height:1" title="站内信">'
+    +'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--muted)">'
+    +'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>'
+    +(unread > 0 ? '<span style="position:absolute;top:2px;right:2px;background:#ef4444;color:#fff;border-radius:999px;font-size:10px;font-weight:700;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1">'+unread+'</span>' : '')
+    +'</button>';
+}
+
+function toggleNotifPanel() {
+  notifOpen = !notifOpen;
+  var panel = document.getElementById('notif-panel');
+  if (panel) { panel.remove(); notifOpen = false; return; }
+  // 挂载面板
+  var el = document.createElement('div');
+  el.id = 'notif-panel';
+  el.style.cssText = 'position:fixed;top:54px;right:16px;width:340px;max-height:480px;background:var(--card-bg,#fff);border:1px solid var(--border,#e5e7eb);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:1000;display:flex;flex-direction:column;overflow:hidden';
+  var list = (notifData && notifData.notifications.length)
+    ? notifData.notifications.map(function(n) {
+        var isBlocked = n.type === 'SETTLEMENT_BLOCKED';
+        var bg = n.is_read ? '' : 'background:#f0f7ff;';
+        var dot = n.is_read ? '' : '<span style="width:7px;height:7px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:4px"></span>';
+        var ago = timeAgo(n.created_at);
+        return '<div style="'+bg+'padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb);display:flex;gap:10px;cursor:pointer" onclick="readNotif(\''+n.id+'\')">'
+          +dot
+          +'<div style="flex:1;min-width:0">'
+          +'<div style="font-size:13px;font-weight:600;color:var(--text,#111);margin-bottom:2px">'+esc(n.title)+'</div>'
+          +'<div style="font-size:12px;color:var(--muted,#6b7280);line-height:1.5">'+esc(n.body)+'</div>'
+          +(isBlocked ? '<button class="btn btn-primary btn-sm" style="margin-top:8px;font-size:11px" onclick="event.stopPropagation();nav(\'wallet\')">去充值 →</button>' : '')
+          +'<div style="font-size:11px;color:#9ca3af;margin-top:4px">'+ago+'</div>'
+          +'</div>'
+          +'</div>';
+      }).join('')
+    : '<div style="padding:40px 16px;text-align:center;color:var(--muted,#9ca3af);font-size:13px">暂无通知</div>';
+
+  el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb)">'
+    +'<div style="font-weight:600;font-size:14px">站内信</div>'
+    +(notifData&&notifData.unread>0?'<button class="btn btn-outline btn-sm" style="font-size:11px" onclick="markAllRead()">全部已读</button>':'')
+    +'</div>'
+    +'<div style="overflow-y:auto;flex:1">'+list+'</div>';
+  document.body.appendChild(el);
+  // 点击外部关闭
+  setTimeout(function(){
+    document.addEventListener('click', function close(e){
+      if(!el.contains(e.target)&&e.target.id!=='notif-bell'){el.remove();document.removeEventListener('click',close);}
+    });
+  }, 50);
+}
+
+function readNotif(id) {
+  api('PATCH', '/notifications/'+id+'/read', {}, function(){
+    if (notifData) {
+      notifData.notifications.forEach(function(n){ if(n.id===id) n.is_read=1; });
+      notifData.unread = Math.max(0, notifData.unread-1);
+    }
+    var bell = document.getElementById('notif-bell');
+    if (bell) bell.outerHTML = notifBellHTML();
+    var panel = document.getElementById('notif-panel');
+    if (panel) { notifOpen=false; toggleNotifPanel(); }
+  });
+}
+
+function markAllRead() {
+  api('PATCH', '/notifications/read-all', {}, function(){
+    if (notifData) { notifData.notifications.forEach(function(n){n.is_read=1;}); notifData.unread=0; }
+    var bell = document.getElementById('notif-bell');
+    if (bell) bell.outerHTML = notifBellHTML();
+    var panel = document.getElementById('notif-panel');
+    if (panel) { notifOpen=false; toggleNotifPanel(); }
+  });
+}
+
+function timeAgo(iso) {
+  var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return '刚刚';
+  if (diff < 3600) return Math.floor(diff/60)+'分钟前';
+  if (diff < 86400) return Math.floor(diff/3600)+'小时前';
+  return Math.floor(diff/86400)+'天前';
 }
 
 /* ── Settings ── */
@@ -955,15 +1207,29 @@ function setWalletPeriod(p) {
 function loadBrandWallet() {
   var r = walletPeriodRange(walletPeriod);
   var qs = '?from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to);
-  api('GET', '/wallet/brand-balance'+qs, null, function(d) { brandBalance = d; render(); });
-  api('GET', '/wallet/transactions'+qs+'&walletType=brand&limit=50', null, function(d) { walletLedger = d; render(); });
-  api('GET', '/wallet/topup-history', null, function(d) { topupHistory = d || []; render(); });
+  api('GET', '/wallet/brand-balance'+qs, null, function(d) {
+    brandBalance = d;
+    // 在任务表单页，直接更新 banner 节点，不重渲（否则清空用户输入）
+    if (state.page === 'task_create' || state.page === 'task_edit') {
+      var b = document.getElementById('task-capacity-banner');
+      if (b) b.innerHTML = taskCapacityBannerContent();
+      onTaskCostInput();
+    } else {
+      render();
+    }
+  });
+  api('GET', '/wallet/transactions'+qs+'&walletType=brand&limit=50', null, function(d) {
+    walletLedger = d;
+    if (state.page !== 'task_create' && state.page !== 'task_edit') render();
+  });
+  api('GET', '/wallet/topup-history', null, function(d) {
+    topupHistory = d || [];
+    if (state.page !== 'task_create' && state.page !== 'task_edit') render();
+  });
 }
 
 function genTopupRef() {
-  var d = new Date();
-  var dt = d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0');
-  return 'HERIX-'+dt+'-'+String(Math.floor(Math.random()*9000)+1000);
+  return state.user ? state.user.id.slice(0, 6).toUpperCase() : String(Math.floor(Math.random()*900000)+100000);
 }
 
 function copyText(text) {
@@ -982,12 +1248,26 @@ function walletPage() {
   var cur = b.currency || 'JPY';
   var h = '';
 
-  // 余额汇总：可用 / 冻结 / 本期流入 / 本期流出
-  h += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px">';
-  h += wStatCard('可用余额', '¥'+(b.available||0).toLocaleString()+' '+cur, '#16a34a', '发布任务前需保证充足');
-  h += wStatCard('冻结中', '¥'+(b.frozen||0).toLocaleString()+' '+cur, '#f59e0b', '进行中任务已锁定');
-  h += wStatCard(WALLET_PERIOD_LABELS[walletPeriod]+'流入', '+¥'+(b.periodInflow||0).toLocaleString(), '#16a34a', '充值到账');
-  h += wStatCard(WALLET_PERIOD_LABELS[walletPeriod]+'流出', '-¥'+(b.periodOutflow||0).toLocaleString(), '#dc2626', '任务结算支出');
+  // 余额三栏：当前余额 / 冻结中 / 可用余额（钱包会计视角）
+  var avail  = b.available || 0;
+  var frozen = b.frozen    || 0;
+  var total  = avail + frozen;
+
+  function balStat(label, val, color, sub) {
+    return '<div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,0.65);margin-bottom:3px">'+label+'</div>'
+      +'<div style="font-size:20px;font-weight:700;color:'+color+';font-variant-numeric:tabular-nums">¥'+Number(val).toLocaleString()+' '+cur+'</div>'
+      +'<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:2px">'+sub+'</div>'
+      +'</div>';
+  }
+
+  h += '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#1a4731 100%);border-radius:14px;padding:18px 20px;margin-bottom:20px">';
+  h += '<div style="font-weight:600;font-size:14px;color:rgba(255,255,255,0.85);margin-bottom:14px">账户余额</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
+  h += balStat('当前余额', total, '#fff', '充值到账总额，含冻结部分');
+  h += balStat('冻结中',   frozen, frozen > 0 ? '#fbbf24' : 'rgba(255,255,255,0.4)', '进行中任务已锁定');
+  h += balStat('可用余额', avail,  avail < 0 ? '#f87171' : avail > 0 ? '#6ee7b7' : 'rgba(255,255,255,0.4)', '当前余额 − 冻结中');
+  h += '</div>';
   h += '</div>';
 
   // 充值向导卡片
@@ -1007,6 +1287,219 @@ function wStatCard(label, value, color, sub) {
     +'<div style="font-size:24px;font-weight:700;color:'+color+';margin-bottom:4px">'+value+'</div>'
     +'<div style="font-size:11px;color:var(--muted)">'+sub+'</div>'
     +'</div>';
+}
+
+/** 任务表单顶部：可创建额度一览 */
+function taskCapacityBannerContent() {
+  if (!brandBalance) {
+    return '<div style="padding:10px 14px;margin-bottom:16px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted)">加载额度信息...</div>';
+  }
+  var c = brandBalance.credit || {};
+  var capacity = c.totalCapacity != null ? c.totalCapacity : (brandBalance.available || 0);
+  var hasToppedUp = !!c.hasToppedUp;
+  var sub = hasToppedUp
+    ? '真实余额，充值后发布自动获得极速打款'
+    : '信用剩余 ¥'+(c.creditRemaining||0).toLocaleString()+' + 钱包 ¥'+(brandBalance.available||0).toLocaleString()+' = 可发 ¥'+capacity.toLocaleString();
+
+  return '<div style="background:'+(hasToppedUp?'#f0fdf4':'#eff6ff')+';border:1px solid '+(hasToppedUp?'#bbf7d0':'#bfdbfe')+';border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">'
+    +'<div>'
+    +'<span style="font-size:12px;color:var(--muted)">当前可创建额度</span>'
+    +'<span style="font-size:20px;font-weight:700;color:'+(hasToppedUp?'#16a34a':'#1d4ed8')+';margin-left:10px">¥'+Math.round(capacity).toLocaleString()+'</span>'
+    +(hasToppedUp?'<span style="font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:8px">⚡ 极速打款</span>':'')
+    +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+sub+'</div>'
+    +'</div>'
+    +(hasToppedUp?'':'<button class="btn btn-sm" style="background:#3b82f6;color:#fff;white-space:nowrap;flex-shrink:0" onclick="nav(\'wallet\')">充值 →</button>')
+    +'</div>';
+}
+
+/** 报酬 × 人数 实时费用计算器 */
+function onTaskCostInput() {
+  var meter = document.getElementById('task-cost-meter');
+  if (!meter) return;
+
+  var payout = Number((document.getElementById('payout')||{}).value) || 0;
+  var mh     = Number((document.getElementById('maxHeralds')||{}).value) || 0;
+  if (!payout || !mh) { meter.innerHTML = ''; return; }
+
+  var rate = (state.brandProfile && state.brandProfile.commission_rate) || 0.15;
+  var cost  = Math.round(payout / (1 - rate));
+  var fee   = cost - payout;
+  var total = cost * mh;
+  var isPerformance = ((document.getElementById('mode')||{}).value) === 'PERFORMANCE';
+
+  // 额度数据（成果报酬任务按转化付费，无法预估总支出，不做额度预检）
+  var c        = brandBalance && brandBalance.credit;
+  var capacity = !isPerformance ? (c ? c.totalCapacity : (brandBalance ? brandBalance.available : null)) : null;
+  var over     = capacity !== null && total > capacity;
+  var barColor = over ? '#dc2626' : '#16a34a';
+
+  var h = '<div style="background:'+(over?'#fef2f2':'#f8fafc')+';border:1px solid '+(over?'#fca5a5':'#e2e8f0')
+    +';border-radius:10px;padding:14px 16px;margin-bottom:12px">';
+
+  // 三栏：任务报酬 / 平台服务费 / 任务总支出
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:'+(capacity!==null?'10px':'0')+';">';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">任务报酬</div>'
+    +'<div style="font-size:18px;font-weight:700;color:#16a34a">¥'+Number(payout).toLocaleString()+'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">赫使到手 / 人</div></div>';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">平台服务费</div>'
+    +'<div style="font-size:18px;font-weight:700;color:#6b7280">¥'+Number(fee).toLocaleString()+'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">'+(rate*100).toFixed(0)+'% / 人</div></div>';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">任务总支出</div>'
+    +'<div style="font-size:18px;font-weight:700;color:'+(over?'#dc2626':'var(--text)')+'">¥'+Number(total).toLocaleString()+'</div>'
+    +'<div style="font-size:10px;color:var(--muted)">¥'+Number(cost).toLocaleString()+' × '+mh+' 人</div></div>';
+  h += '</div>';
+
+  // 额度占用（仅公开任务 + 有额度数据时显示）
+  if (capacity !== null && taskCap > 0) {
+    var pct = Math.min(100, Math.round(total / taskCap * 100));
+    h += '<div style="height:4px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:4px">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px;transition:width .25s"></div></div>';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center">';
+    if (over) {
+      h += '<span style="font-size:11px;color:#dc2626;font-weight:500">⚠ 超出可发额度，需充值 ¥'+Math.round(total-capacity).toLocaleString()+'</span>'
+        +'<span onclick="nav(\'wallet\')" style="font-size:11px;font-weight:600;color:#dc2626;cursor:pointer;text-decoration:underline">去充值 →</span>';
+    } else {
+      h += '<span style="font-size:11px;color:var(--muted)">额度占用 '+pct+'%</span>'
+        +'<span style="font-size:11px;color:var(--muted)">发布后剩余 ¥'+Math.round(capacity-total).toLocaleString()+'</span>';
+    }
+    h += '</div>';
+  }
+
+  h += '</div>';
+  meter.innerHTML = h;
+}
+
+/** 表单内联错误（替代 alert） */
+function showFormError(msg) {
+  var el = document.getElementById('task-form-error');
+  if (!el) return;
+  if (msg) {
+    el.innerHTML = '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 14px;font-size:13px;color:#dc2626;line-height:1.5">'+esc(msg)+'</div>';
+    el.style.display = 'block';
+    el.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  } else {
+    el.innerHTML = '';
+    el.style.display = 'none';
+  }
+}
+
+/** 任务管理页顶部额度汇总 */
+function taskCapacitySummary() {
+  if (!brandBalance) return '<div style="height:72px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">加载额度信息...</div>';
+  var b      = brandBalance;
+  var c      = b.credit || {};
+  var avail  = b.available || 0;
+  var frozen = b.frozen    || 0;
+  var credit = c.initialCredit || 0;   // 信用额度上限
+  var cUsed  = c.creditUsed   || 0;   // 活跃信用任务占用
+  // 单笔最高可发 = max(钱包余额, 信用剩余)
+  var cRemaining = c.creditRemaining != null ? c.creditRemaining : Math.max(0, credit - cUsed);
+  var taskCap    = Math.max(avail, cRemaining);
+  var remaining  = taskCap;
+  var isFastPayout = c.fastPayoutEligible;
+  var fpThresh    = c.fastPayoutThreshold || 100000;
+
+  // 进度条：信用已占用 / 信用额度上限
+  var pct      = credit > 0 ? Math.min(100, Math.round(cUsed / credit * 100)) : 0;
+  var barColor = pct >= 90 ? '#dc2626' : pct >= 60 ? '#f59e0b' : '#22c55e';
+
+  function stat(label, val, color) {
+    return '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">'+label+'</div>'
+      +'<div style="font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;color:'+color+'">¥'+Number(val).toLocaleString()+'</div></div>';
+  }
+  function sep(sym) {
+    return '<div style="font-size:11px;color:var(--muted);align-self:center;padding:0 3px;white-space:nowrap">'+sym+'</div>';
+  }
+  function vline() {
+    return '<div style="width:1px;background:var(--border);align-self:stretch;margin:2px 0"></div>';
+  }
+
+  var leftStats = '<div style="display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;flex:1">';
+  if (credit > 0) {
+    leftStats += stat('钱包余额', avail, 'var(--text)');
+    leftStats += vline();
+    leftStats += stat('信用剩余', cRemaining, cRemaining <= 0 ? '#dc2626' : '#1d4ed8');
+    leftStats += sep('→');
+    leftStats += stat('单笔最高可发', remaining, remaining <= 0 ? '#dc2626' : '#16a34a');
+    if (frozen > 0) { leftStats += vline(); leftStats += stat('任务冻结', frozen, '#f59e0b'); }
+  } else {
+    leftStats += stat('可用余额', avail, avail < 0 ? '#dc2626' : 'var(--text)');
+    if (frozen > 0) { leftStats += vline(); leftStats += stat('任务冻结', frozen, '#f59e0b'); }
+    leftStats += sep('=');
+    leftStats += stat('可发任务额度', Math.max(0, avail), avail <= 0 ? '#dc2626' : '#1d4ed8');
+  }
+  leftStats += '</div>';
+
+  var rightEl = isFastPayout
+    ? '<div style="align-self:center;text-align:center">'
+        +'<span style="display:block;font-size:12px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:6px;padding:4px 10px;white-space:nowrap;margin-bottom:4px">⚡ 极速打款</span>'
+        +'<button class="btn btn-outline btn-sm" onclick="nav(\'wallet\')">充值</button>'
+      +'</div>'
+    : '<div style="align-self:center;text-align:center">'
+        +'<button class="btn btn-primary btn-sm" style="white-space:nowrap;display:block;margin-bottom:4px" onclick="nav(\'wallet\')">充值 →</button>'
+        +'<div style="font-size:10px;color:var(--muted)">余额≥¥'+Number(fpThresh).toLocaleString()+'开启⚡</div>'
+      +'</div>';
+
+  var border = remaining <= 0 ? '#fecaca' : credit > 0 ? '#bfdbfe' : 'var(--border)';
+
+  var html = '<div style="background:var(--card-bg);border:1px solid '+border+';border-radius:12px;padding:14px 18px;margin-bottom:16px">'
+    +'<div style="display:flex;align-items:stretch;gap:16px">'+leftStats+rightEl+'</div>';
+
+  if (credit > 0) {
+    html += '<div style="display:flex;align-items:center;gap:10px;margin-top:10px">'
+      +'<div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">'
+      +'<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px;transition:width .4s"></div></div>'
+      +'<div style="font-size:11px;color:var(--muted);white-space:nowrap">信用额度 ¥'+Number(credit).toLocaleString()+' · 已占用 '+pct+'%'
+      +(remaining<=0?' · <span style="color:#dc2626;font-weight:600">额度已耗尽，请充值</span>':'')+'</div>'
+      +'</div>';
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function creditStatusBanner() {
+  if (!brandBalance || !brandBalance.credit) return '';
+  var c = brandBalance.credit;
+  if (!c.initialCredit) return '';
+
+  var creditLimit  = c.initialCredit  || 0;
+  var walletAmt    = brandBalance.available || 0;
+  var taskCapacity = creditLimit + walletAmt;   // 信用额度 + 充值金额 = 任务额度
+  var used         = c.creditUsed || 0;
+  var pct          = taskCapacity > 0 ? Math.min(100, Math.round(used / taskCapacity * 100)) : 0;
+  var hasToppedUp  = !!c.hasToppedUp;
+
+  var h = '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid #bfdbfe;border-radius:14px;padding:18px 20px;margin-bottom:20px">';
+  h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">';
+  h += '<div>';
+  h += '<div style="font-weight:600;font-size:14px;color:#1e40af;margin-bottom:3px">任务额度'+(hasToppedUp ? '' : ' · 体验版')+'</div>';
+  h += '<div style="font-size:12px;color:#3b82f6;line-height:1.5">信用额度 + 充值金额 = 可发布任务总上限。充值后任务获得 <strong>⚡ 极速打款</strong> 标签，赫使报名意愿更强。</div>';
+  h += '</div>';
+  if (!hasToppedUp) h += '<button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-left:12px" onclick="nav(\'wallet\')">立即充值 →</button>';
+  h += '</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:center;margin-bottom:14px">';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">信用额度</div>'
+    +'<div style="font-size:20px;font-weight:700;color:#1d4ed8">¥'+Number(creditLimit).toLocaleString()+'</div></div>';
+  h += '<div style="font-size:18px;color:var(--muted);padding:0 4px;padding-top:14px">+</div>';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">充值金额</div>'
+    +'<div style="font-size:20px;font-weight:700;color:'+(walletAmt>0?'#16a34a':'var(--muted)')+'">¥'+Number(walletAmt).toLocaleString()+'</div></div>';
+  h += '<div style="font-size:18px;color:var(--muted);padding:0 4px;padding-top:14px">=</div>';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">任务额度</div>'
+    +'<div style="font-size:20px;font-weight:700;color:#7c3aed">¥'+Number(taskCapacity).toLocaleString()+'</div></div>';
+  h += '</div>';
+  if (used > 0) {
+    h += '<div style="height:6px;background:#e0e7ff;border-radius:3px;overflow:hidden;margin-bottom:8px">'
+      +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#3b82f6,#7c3aed);border-radius:3px;transition:width .4s"></div></div>';
+    h += '<div style="font-size:11px;color:var(--muted)">已承诺 ¥'+Number(used).toLocaleString()+' · 剩余可承诺 ¥'+Number(Math.max(0,taskCapacity-used)).toLocaleString()+'</div>';
+  }
+  if (!hasToppedUp) {
+    h += '<div style="font-size:12px;color:#4338ca;line-height:1.6;margin-top:10px">'
+      +'充值后任务将获得 <strong>⚡ 极速打款</strong> 标签，显著提升赫使报名意愿，任务完成后自动打款无需等待。'
+      +'</div>';
+  }
+  h += '</div>';
+  return h;
 }
 
 function topupWizardHTML() {
@@ -1097,7 +1590,7 @@ function topupStep2() {
 
   // 银行转账
   var bSel = topupMethod === 'bank';
-  h += '<div onclick="topupMethod=\'bank\';render()" style="border:2px solid '+(bSel?'var(--primary)':'#e5e7eb')+';border-radius:14px;padding:18px 20px;margin-bottom:12px;cursor:pointer;background:'+(bSel?'#eff6ff':'#fff')+';transition:all .15s">';
+  h += '<div onclick="topupMethod=\'bank\';render()" style="border:2px solid '+(bSel?'var(--primary)':'#e5e7eb')+';border-radius:14px;padding:18px 20px;margin-bottom:24px;cursor:pointer;background:'+(bSel?'#eff6ff':'#fff')+';transition:all .15s">';
   h += '<div style="display:flex;align-items:center;gap:16px">';
   h += '<div style="font-size:32px;width:48px;text-align:center">🏦</div>';
   h += '<div style="flex:1">';
@@ -1108,14 +1601,6 @@ function topupStep2() {
   if (bSel) h += '<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>';
   h += '</div></div></div>';
 
-  // 微信支付（即将开放）
-  h += '<div style="border:2px solid #e5e7eb;border-radius:14px;padding:18px 20px;margin-bottom:24px;opacity:.45;cursor:not-allowed;background:#fafafa">';
-  h += '<div style="display:flex;align-items:center;gap:16px">';
-  h += '<div style="font-size:32px;width:48px;text-align:center">💚</div>';
-  h += '<div style="flex:1">';
-  h += '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:14px;color:#9ca3af">微信支付</span><span style="font-size:10px;background:#f3f4f6;color:#9ca3af;border-radius:4px;padding:2px 7px">即将开放</span></div>';
-  h += '<div style="font-size:12px;color:#d1d5db;margin-top:3px">扫码支付 · 实时到账 · 手续费 0.6%</div>';
-  h += '</div></div></div>';
 
   h += '<div style="display:flex;gap:10px;justify-content:center">';
   h += '<button class="btn btn-outline" onclick="topupStep=1;render()">← 返回</button>';
@@ -1137,10 +1622,11 @@ function topupStep3() {
 
   // 账户明细
   h += '<div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px">';
-  h += aRow('収款方', 'HUAXUE合同会社（HERIX）', false);
-  h += aRow('銀行名', 'GMOあおぞらネット銀行', true);
+  h += aRow('収款方', 'カ）アフターワークスタジオ', false);
+  h += aRow('銀行名', 'みずほ銀行', true);
+  h += aRow('支店名', '渋谷支店（支店番号 210）', false);
   h += aRow('口座種別', '普通預金', false);
-  h += aRow('口座番号', '※ 请联系运营获取', false);
+  h += aRow('口座番号', '3214958', false);
   h += aRowHL('振込附言（必填）', topupRef);
   h += '</div>';
 
@@ -1282,8 +1768,14 @@ function settingsPage() {
   var logoUrl = p.logo_url || p.brand_logo_url || '';
   var promoUrl = p.promo_image_url || p.brand_promo_image_url || '';
   var billingEmail = p.billing_email!==undefined ? p.billing_email : (p.brand_billing_email||'');
-  var h = '<div class="form-card" style="max-width:600px"><div class="panel-title">品牌信息</div>'
-    +'<div class="form-grid">'
+  var h = '<div class="form-card" style="max-width:600px"><div class="panel-title">品牌信息</div>';
+  if (p.is_agency) {
+    h += '<div style="display:inline-flex;align-items:center;gap:6px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:6px 12px;margin-bottom:16px;font-size:13px;color:#c2410c;font-weight:600">'
+      +'<span>📢</span><span>广告代理商账户</span>'
+      +'<span style="font-weight:400;color:#9a3412;font-size:12px">· 已开通批量管理等代理功能</span>'
+      +'</div>';
+  }
+  h += '<div class="form-grid">'
     + field('公司/品牌名称', 'company_name', 'text', p.company_name||'', '')
     + '<div class="field"><label>行业</label><select id="industry">'
     + ['美妆','时尚','食品饮料','金融服务','旅游','母婴','电商','其他'].map(function(i){return '<option value="'+i+'"'+(p.industry===i?' selected':'')+'>'+i+'</option>'}).join('')
@@ -1349,7 +1841,7 @@ function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function statusLabel(s) { return {DRAFT:'草稿',OPEN:'招募中',IN_PROGRESS:'进行中',COMPLETED:'已完成',CANCELLED:'已取消'}[s]||s; }
 function modeLabel(m) { return m==='PERFORMANCE'?'类型A · 成果报酬':'类型B · 任务体验'; }
 function ctLabel(c) { return {photo:'📷 图文',video:'🎬 视频',referral:'🔗 推广码'}[c]||c||'-'; }
-function catLabel(c) { return ({experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'})[c]||c||'-'; }
+// catLabel defined above at CATEGORIES block
 function appStatusLabel(s) { return {PENDING:'待审核',APPROVED:'已通过',REJECTED:'已拒绝',WITHDRAWN:'已撤回'}[s]||s; }
 function subStatusLabel(s) { return {PENDING_REVIEW:'待审核',APPROVED:'已通过',REJECTED:'已拒绝'}[s]||s; }
 
@@ -1388,9 +1880,10 @@ function nav(page) {
   state.currentTask = null;
   state.msg = null;
   if (page === 'dashboard') loadDashStats();
-  if (page === 'tasks') { state.taskFilter = ''; loadMyTasks(); }
+  if (page === 'tasks') { state.taskFilter = ''; brandBalance = null; loadMyTasks(); loadBrandWallet(); }
   if (page === 'reviews') loadPendingReviews();
   if (page === 'wallet') { brandBalance = null; loadBrandWallet(); }
+  if (page === 'task_create' || page === 'task_edit') { if (!brandBalance) loadBrandWallet(); }
   if (page === 'settings') loadBrandProfile();
   closeSidebar();
   render();
@@ -1402,6 +1895,8 @@ function loadDashStats() {
     state.tasks = d.tasks || [];
     render();
   });
+  // 懒加载余额（仅未加载时触发），供信用状态 banner 使用
+  if (!brandBalance) loadBrandWallet();
 }
 
 function loadMyTasks() {
@@ -1521,7 +2016,14 @@ function taskMetaEditPage() {
   h += '<div class="field form-full"><label>具体要求</label><textarea id="meta-requirements" rows="3">'+esc(t.requirements||'')+'</textarea></div>';
   h += '<div class="field"><label>截止日期</label><input id="meta-deadline" type="date" value="'+(t.deadline?t.deadline.slice(0,10):'')+'"></div>';
   h += '<div class="field"><label>招募名额（当前 '+t.max_heralds+' 人，只能增加）</label><input id="meta-maxHeralds" type="number" min="'+t.max_heralds+'" value="'+t.max_heralds+'"></div>';
-  h += '<div class="field form-full"><label>封面图链接</label><input id="meta-coverImage" type="text" value="'+esc(t.cover_image||'')+'" placeholder="https://...（选填）"></div>';
+  h += '<div class="field form-full"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 选择后自动上传</span></label>'
+    + '<div style="width:100%;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'meta-cover-file-input\').click()">'
+    + '<img id="meta-cover-preview-img" src="'+esc(t.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(t.cover_image?'':'display:none')+'">'
+    + '<div id="meta-cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(t.cover_image?'display:none':'')+'">'
+    + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">点击更换封面图</div></div>'
+    + '</div>'
+    + '<input type="file" id="meta-cover-file-input" accept="image/*" style="display:none" onchange="onMetaCoverFileSelect(this)">'
+    + '<div id="meta-cover-status" style="font-size:12px;color:var(--muted)"></div></div>';
   h += platformReqsFormHTML(t);
   h += '<div class="form-actions">';
   h += '<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>';
@@ -1537,7 +2039,6 @@ function saveTaskMeta() {
   var req  = (document.getElementById('meta-requirements')||{}).value || '';
   var dl   = (document.getElementById('meta-deadline')||{}).value || '';
   var mh   = Number((document.getElementById('meta-maxHeralds')||{}).value || t.max_heralds);
-  var ci   = (document.getElementById('meta-coverImage')||{}).value || '';
   if (!desc.trim()) { alert('描述不能为空'); return; }
   if (mh < t.max_heralds) { alert('名额不能减少'); return; }
   var body = {
@@ -1545,7 +2046,6 @@ function saveTaskMeta() {
     requirements: req || undefined,
     deadline: dl || undefined,
     maxHeralds: mh,
-    coverImage: ci || undefined,
     platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
   };
   patch('PATCH', '/tasks/'+t.id+'/meta', body, function(d) {
@@ -1559,24 +2059,120 @@ function saveTaskMeta() {
   });
 }
 
+/* ── 封面图上传 ── */
+var _pendingCoverBlob = null; // 创建任务时暂存压缩后的图
+
+function compressImage(file, maxLong, quality) {
+  return new Promise(function(resolve, reject) {
+    var reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = function(e) {
+      var img = new Image();
+      img.onerror = reject;
+      img.onload = function() {
+        var w = img.width, h = img.height;
+        var ratio = Math.min(maxLong / Math.max(w, h), 1); // 只缩不放大
+        var cw = Math.round(w * ratio), ch = Math.round(h * ratio);
+        var canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+        canvas.toBlob(function(blob) { resolve(blob); }, 'image/jpeg', quality);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function uploadCoverToTask(taskId, blob, onDone) {
+  var form = new FormData();
+  form.append('file', blob, 'cover.jpg');
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API + '/uploads/task/' + taskId + '/cover', true);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
+  xhr.onload = function() {
+    try { var d = JSON.parse(xhr.responseText); onDone(d.error || null, d.url); }
+    catch(e) { onDone('上传失败'); }
+  };
+  xhr.onerror = function() { onDone('网络错误'); };
+  xhr.send(form);
+}
+
+// 创建表单：选文件后预览，暂存到 _pendingCoverBlob
+function onCoverFileSelect(input) {
+  if (!input.files || !input.files[0]) return;
+  var wrap = document.getElementById('cover-upload-wrap');
+  var status = document.getElementById('cover-status');
+  if (status) status.textContent = '压缩中…';
+  compressImage(input.files[0], 1200, 0.82).then(function(blob) {
+    _pendingCoverBlob = blob;
+    var url = URL.createObjectURL(blob);
+    var preview = document.getElementById('cover-preview-img');
+    if (preview) { preview.src = url; preview.style.display = 'block'; }
+    var ph = document.getElementById('cover-placeholder');
+    if (ph) ph.style.display = 'none';
+    if (status) status.textContent = '已选择（' + Math.round(blob.size/1024) + 'KB），保存任务后上传';
+  }).catch(function() { if (status) status.textContent = '图片读取失败，请重试'; });
+}
+
+// 编辑表单：选文件后直接上传
+function onMetaCoverFileSelect(input) {
+  if (!input.files || !input.files[0]) return;
+  var taskId = state.editingTask && state.editingTask.id;
+  if (!taskId) return;
+  var status = document.getElementById('meta-cover-status');
+  if (status) status.textContent = '压缩中…';
+  compressImage(input.files[0], 1200, 0.82).then(function(blob) {
+    if (status) status.textContent = '上传中（' + Math.round(blob.size/1024) + 'KB）…';
+    uploadCoverToTask(taskId, blob, function(err, url) {
+      if (err) { if (status) status.textContent = '上传失败：' + err; return; }
+      var preview = document.getElementById('meta-cover-preview-img');
+      if (preview) { preview.src = url; preview.style.display = 'block'; }
+      var ph = document.getElementById('meta-cover-placeholder');
+      if (ph) ph.style.display = 'none';
+      if (status) status.textContent = '上传成功 ✓';
+      if (state.currentTask) state.currentTask.cover_image = url;
+    });
+  }).catch(function() { if (status) status.textContent = '图片读取失败'; });
+}
+
 function saveTask(publish) {
   var body = {
     title: (document.getElementById('title')||{}).value,
     description: (document.getElementById('description')||{}).value,
     requirements: (document.getElementById('requirements')||{}).value,
-    commission: Number((document.getElementById('commission')||{}).value),
-    budget: Number((document.getElementById('commission')||{}).value) * Number((document.getElementById('maxHeralds')||{}).value||1),
+    payoutPerHerald: Number((document.getElementById('payout')||{}).value),
     maxHeralds: Number((document.getElementById('maxHeralds')||{}).value||1),
     mode: (document.getElementById('mode')||{}).value,
     category: (document.getElementById('category')||{}).value,
     contentType: (document.getElementById('contentType')||{}).value,
     difficulty: (document.getElementById('difficulty')||{}).value,
-    coverImage: (document.getElementById('coverImage')||{}).value || undefined,
     deadline: (document.getElementById('deadline')||{}).value || undefined,
     codeMode: document.getElementById('codeMode-custom')?.checked ? 'custom' : 'auto',
     platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
+    visibility: (document.getElementById('visibility')||{}).value || 'PUBLIC',
   };
-  if (!body.title || !body.description || !body.commission) { alert('请填写标题、描述和报酬'); return; }
+  showFormError('');  // 清除旧错误
+  if (!body.title || !body.description || !body.payoutPerHerald || !body.category) {
+    showFormError('请填写任务标题、描述、分类和报酬金额'); return;
+  }
+
+  // 发布前客户端额度预检（减少不必要的服务器往返）
+  if (publish) {
+    var rate  = (state.brandProfile && state.brandProfile.commission_rate) || 0.15;
+    var total = Math.round(body.payoutPerHerald / (1 - rate)) * body.maxHeralds;
+    var c        = brandBalance && brandBalance.credit;
+    // 单笔任务只走一个资金池：钱包 OR 信用剩余，取较大值
+    var wallet = brandBalance ? (brandBalance.available || 0) : 0;
+    var creditLeft = c ? (c.creditRemaining || 0) : 0;
+    var maxSingle = Math.max(wallet, creditLeft);
+    if (maxSingle > 0 && total > maxSingle) {
+      showFormError('额度不足，本任务需 ¥'+Number(total).toLocaleString()
+        +'，当前最大可发 ¥'+Math.round(maxSingle).toLocaleString()
+        +'（钱包 ¥'+Math.round(wallet).toLocaleString()+' / 信用剩余 ¥'+Math.round(creditLeft).toLocaleString()+'）。');
+      return;
+    }
+  }
 
   var isEdit = state.page === 'task_edit' && state.editingTask;
   var method = isEdit ? 'PUT' : 'POST';
@@ -1586,28 +2182,42 @@ function saveTask(publish) {
     if (d.error) {
       var msg = d.error;
       if (d.details && d.details.length) {
-        msg += ':\n' + d.details.map(function(e){ return '  - ' + (e.path||[]).join('.') + ': ' + e.message; }).join('\n');
+        msg += '：' + d.details.map(function(e){ return (e.path||[]).join('.')+' '+e.message; }).join('；');
       }
-      alert(msg); return;
+      showFormError(msg); return;
     }
-    // 问题1：创建/更新后刷新任务列表
+    // 上传封面图（仅新建时，编辑时已在选文件时即时上传）
+    if (!isEdit && _pendingCoverBlob) {
+      var blob = _pendingCoverBlob;
+      _pendingCoverBlob = null;
+      uploadCoverToTask(d.id, blob, function(err, url) {
+        if (!err && state.currentTask) state.currentTask.cover_image = url;
+      });
+    }
     loadMyTasks();
     loadDashStats();
 
     if (publish && d.status === 'DRAFT') {
-      // 问题2：直接发布前检查邀请码
       if (body.mode === 'PERFORMANCE') {
         doPublishWithCodeCheck(d.id);
       } else {
         patch('PATCH', '/tasks/'+d.id+'/publish', {}, function(p) {
-          if (p.error) { alert(p.error); return; }
+          if (p.error) {
+            var errMsg = p.error;
+            if (p.code === 'INSUFFICIENT_CREDIT') {
+              errMsg = '额度不足，本任务需 ¥'+(p.needed||0).toLocaleString()
+                +'，当前剩余 ¥'+Math.round((p.creditInfo||{}).totalCapacity||0).toLocaleString()
+                +'。请充值后再发布。';
+            }
+            showFormError(errMsg); return;
+          }
           state.msg = '任务已发布！'; state.msgType = 'success';
+          if (p.topupReminder) setTimeout(function(){ showTopupReminder(p.topupReminder); }, 400);
           loadMyTasks(); loadDashStats();
           openTask(d.id);
         });
       }
     } else {
-      // 问题3：保存草稿后跳转到任务详情，提示需要发布
       state.msg = isEdit ? '任务已更新' : '草稿已保存，请检查推广码后点击「发布任务」使其生效';
       state.msgType = 'success';
       openTask(d.id);
@@ -1623,12 +2233,12 @@ function doPublishWithCodeCheck(id) {
       var isCustom = t.code_mode === 'custom';
 
       if (codeCount === 0) {
-        if (isCustom) {
-          alert('请先上传推广码后再发布任务。\n\n操作：任务详情 → 上传推广码 → 发布任务');
-        } else {
-          alert('推广码生成异常，请重新创建任务。');
-        }
         openTask(id);
+        showMsg(isCustom
+          ? '请先上传推广码再发布：任务详情 → 上传推广码 → 发布任务'
+          : '推广码生成异常，请重新创建任务',
+          'error'
+        );
         return;
       }
 
@@ -1639,13 +2249,19 @@ function doPublishWithCodeCheck(id) {
                     : '⚠️ 系统已自动生成推广码，请确认已下载 CSV 并上传到第三方系统，否则赫使拿到的码将无法使用。')
         + '\n\n推广码未配置到第三方系统将导致赫使推广无效。';
 
-      if (!confirm(msg)) { openTask(id); return; }
-
-      patch('PATCH', '/tasks/'+id+'/publish', {}, function(p) {
-        if (p.error) { alert(p.error); return; }
-        state.msg = '任务已发布！赫使现在可以看到并报名。'; state.msgType = 'success';
-        loadMyTasks(); loadDashStats();
-        openTask(id);
+      showConfirmModal({
+        title: '发布前确认推广码',
+        body: msg,
+        confirmText: '已确认，发布',
+        cancelText: '返回检查',
+        onConfirm: function() {
+          patch('PATCH', '/tasks/'+id+'/publish', {}, function(p) {
+            if (p.error) { showMsg(p.error, 'error'); return; }
+            state.msg = '任务已发布！赫使现在可以看到并报名。'; state.msgType = 'success';
+            loadMyTasks(); loadDashStats();
+            openTask(id);
+          });
+        },
       });
     });
   });
@@ -1656,32 +2272,125 @@ function publishTask(id) {
   if (t && t.mode === 'PERFORMANCE') {
     doPublishWithCodeCheck(id);
   } else {
-    if (!confirm('确认发布？发布后赫使即可看到并报名。')) return;
-    patch('PATCH', '/tasks/'+id+'/publish', {}, function(d) {
-      if (d.error) {
-        if (d.code === 'INSUFFICIENT_BALANCE') {
-          if (confirm('余额不足（需 ¥'+d.needed+'，可用 ¥'+(d.available||0).toFixed(0)+'）。\n前往充值？')) nav('wallet');
-        } else { alert(d.error); }
-        return;
-      }
-      state.msg = '任务已发布'; state.msgType = 'success';
-      if (state.currentTask) state.currentTask.status = 'OPEN';
-      loadMyTasks(); loadDashStats(); render();
+    var payout = t ? Number(t.payout_per_herald || 0) : 0;
+    var mh     = t ? Number(t.max_heralds || 1) : 1;
+    var rate   = (state.brandProfile && state.brandProfile.commission_rate) || 0.15;
+    var cost   = Math.round(payout / (1 - rate));
+    var fee    = cost - payout;
+    var total  = cost * mh;
+    var confirmBody = payout
+      ? '任务报酬 ¥' + Number(payout).toLocaleString() + ' / 人（赫使到手）\n平台服务费 ¥' + Number(fee).toLocaleString() + ' / 人（' + (rate*100).toFixed(0) + '%）\n任务总支出 ¥' + Number(cost).toLocaleString() + ' × ' + mh + ' 人 = ¥' + Number(total).toLocaleString() + '\n\n发布后赫使即可在探索列表看到并报名。'
+      : '发布后赫使可在探索列表看到此任务并报名，确认信息无误后再发布。';
+    showConfirmModal({
+      title: '确认发布任务',
+      body: confirmBody,
+      confirmText: '确认发布',
+      onConfirm: function() {
+        patch('PATCH', '/tasks/'+id+'/publish', {}, function(d) {
+          if (d.error) {
+            if (d.code === 'INSUFFICIENT_CREDIT') {
+              var ci = d.creditInfo || {};
+              showConfirmModal({
+                title: '额度不足，需充值后发布',
+                body: '本任务需 ¥'+Number(d.needed||0).toLocaleString()
+                  +'，当前剩余 ¥'+Math.round(ci.totalCapacity||0).toLocaleString()
+                  +'（可发额度 ¥'+Math.round(ci.taskCapacity||0).toLocaleString()+' - 已占用 ¥'+Math.round(ci.creditUsed||0).toLocaleString()+'）',
+                confirmText: '去充值',
+                cancelText: '稍后再说',
+                onConfirm: function() { nav('wallet'); },
+              });
+            } else {
+              showMsg(d.error, 'error');
+            }
+            return;
+          }
+          state.msg = '任务已发布'; state.msgType = 'success';
+          if (state.currentTask) state.currentTask.status = 'OPEN';
+          loadMyTasks(); loadDashStats();
+          if (d.topupReminder) setTimeout(function(){ showTopupReminder(d.topupReminder); }, 400);
+          render();
+        });
+      },
     });
   }
 }
 
 function closeTask(id) {
-  if (!confirm('确认关闭任务？关闭后赫使无法继续报名。')) return;
-  patch('PATCH', '/tasks/'+id+'/complete', {}, function(d) {
-    if (d.error) { alert(d.error); return; }
-    state.msg = '任务已关闭'; state.msgType = 'success';
-    loadMyTasks();
+  showConfirmModal({
+    title: '关闭任务',
+    body: '关闭后赫使无法继续报名，进行中的内容审核不受影响，未使用的锁定余额将退回。',
+    confirmText: '确认关闭',
+    cancelText: '取消',
+    danger: true,
+    onConfirm: function() {
+      patch('PATCH', '/tasks/'+id+'/complete', {}, function(d) {
+        if (d.error) { showMsg(d.error, 'error'); return; }
+        state.msg = '任务已关闭，锁定余额已退回'; state.msgType = 'success';
+        loadMyTasks(); render();
+      });
+    },
   });
 }
 
-function reviewApp(id, status, fromAll) {
-  patch('PATCH', '/applications/'+id+'/review', {status:status}, function(d) {
+function showReviewModal(opts) {
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:9200;display:flex;align-items:center;justify-content:center';
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#fff;border-radius:16px;padding:24px;width:380px;max-width:92vw;box-shadow:0 20px 60px rgba(0,0,0,.2)';
+  card.addEventListener('click', function(e){ e.stopPropagation(); });
+
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:15px;font-weight:700;margin-bottom:14px';
+  title.textContent = opts.title || '确认';
+
+  var labelEl = document.createElement('div');
+  labelEl.style.cssText = 'font-size:12px;color:#6b7280;margin-bottom:6px';
+  labelEl.textContent = opts.noteLabel || '备注（可选）';
+
+  var ta = document.createElement('textarea');
+  ta.rows = 3;
+  ta.placeholder = opts.notePlaceholder || '';
+  ta.style.cssText = 'width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:9px 10px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;background:#fff;color:#111;display:block';
+
+  var noteWrap = document.createElement('div');
+  noteWrap.style.marginBottom = '16px';
+  noteWrap.appendChild(labelEl);
+  noteWrap.appendChild(ta);
+
+  var btnRow = document.createElement('div');
+  btnRow.style.cssText = 'display:flex;gap:10px;justify-content:flex-end';
+
+  var cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn btn-outline';
+  cancelBtn.textContent = '取消';
+
+  var confirmBtn = document.createElement('button');
+  confirmBtn.className = 'btn';
+  confirmBtn.textContent = opts.confirmText || '确认';
+  if (opts.danger) { confirmBtn.style.background='#dc2626'; confirmBtn.style.color='#fff'; }
+  else { confirmBtn.style.background='#16a34a'; confirmBtn.style.color='#fff'; }
+
+  btnRow.appendChild(cancelBtn);
+  btnRow.appendChild(confirmBtn);
+  card.appendChild(title);
+  card.appendChild(noteWrap);
+  card.appendChild(btnRow);
+  ov.appendChild(card);
+  document.body.appendChild(ov);
+
+  var close = function() { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+  cancelBtn.addEventListener('click', close);
+  confirmBtn.addEventListener('click', function() {
+    var note = ta.value.trim();
+    close();
+    opts.onConfirm(note);
+  });
+  ov.addEventListener('click', close);
+  ta.focus();
+}
+
+function reviewApp(id, status, fromAll, note) {
+  patch('PATCH', '/applications/'+id+'/review', {status:status, reviewNote:note||undefined}, function(d) {
     if (d.error) { alert(d.error); return; }
     if (fromAll) {
       state.allPendingApps = state.allPendingApps.filter(function(a){return a.id!==id});
@@ -1694,8 +2403,8 @@ function reviewApp(id, status, fromAll) {
   });
 }
 
-function reviewSub(id, status, fromAll) {
-  patch('PATCH', '/submissions/'+id+'/review', {status:status}, function(d) {
+function reviewSub(id, status, fromAll, note) {
+  patch('PATCH', '/submissions/'+id+'/review', {status:status, reviewNote:note||undefined}, function(d) {
     if (d.error) { alert(d.error); return; }
     if (d.needsRating) { showRatingModal(id, fromAll); return; }
     if (fromAll) {
@@ -1707,6 +2416,40 @@ function reviewSub(id, status, fromAll) {
       loadDashStats();
     }
   });
+}
+
+/** 替代 confirm() 的无阻塞确认弹窗 */
+function showConfirmModal(opts) {
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9100;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:360px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">'
+    +'<div style="font-size:15px;font-weight:700;margin-bottom:10px">'+esc(opts.title||'确认')+'</div>'
+    +(opts.body?'<div style="font-size:13px;color:#4b5563;line-height:1.65;margin-bottom:18px;white-space:pre-wrap">'+esc(opts.body)+'</div>':'<div style="margin-bottom:18px"></div>')
+    +'<div style="display:flex;gap:10px;justify-content:flex-end">'
+    +'<button id="cm-cancel" class="btn btn-outline">'+esc(opts.cancelText||'取消')+'</button>'
+    +'<button id="cm-confirm" class="btn '+(opts.danger?'':'btn-primary')+'" style="'+(opts.danger?'background:#dc2626;color:#fff':'')+'">'+esc(opts.confirmText||'确认')+'</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  var close = function() { if (ov.parentNode) ov.parentNode.removeChild(ov); };
+  ov.querySelector('#cm-cancel').addEventListener('click', close);
+  ov.querySelector('#cm-confirm').addEventListener('click', function() { close(); if (opts.onConfirm) opts.onConfirm(); });
+  ov.addEventListener('click', function(e) { if (e.target === ov) close(); });
+}
+
+function showTopupReminder(msg) {
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:center;justify-content:center';
+  ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px 24px;width:360px;max-width:92vw">'
+    +'<div style="font-size:22px;text-align:center;margin-bottom:10px">💡</div>'
+    +'<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:10px">任务已发布！</div>'
+    +'<div style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:20px">'+esc(msg)+'</div>'
+    +'<div style="display:flex;gap:10px">'
+    +'<button id="remind-later" class="btn btn-outline" style="flex:1">稍后再说</button>'
+    +'<button id="remind-topup" class="btn btn-primary" style="flex:1">立即充值</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  ov.querySelector('#remind-later').addEventListener('click', function() { document.body.removeChild(ov); });
+  ov.querySelector('#remind-topup').addEventListener('click', function() { document.body.removeChild(ov); nav('wallet'); });
 }
 
 function showRatingModal(submissionId, fromAll) {
@@ -1758,19 +2501,7 @@ function showRatingModal(submissionId, fromAll) {
 }
 
 function reviewSubReject(id, fromAll) {
-  var reason = prompt('拒绝原因（可选）');
-  if (reason === null) return;
-  patch('PATCH', '/submissions/'+id+'/review', {status:'REJECTED', reviewNote:reason}, function(d) {
-    if (d.error) { alert(d.error); return; }
-    if (fromAll) {
-      state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==id});
-      render();
-    } else {
-      openTask(state.currentTask.id);
-      loadMyTasks();
-      loadDashStats();
-    }
-  });
+  reviewSub(id, 'REJECTED', fromAll);
 }
 
 function doCsvUpload() {
@@ -1854,14 +2585,47 @@ function switchAccount() {
     if (d.error) { alert(d.error); return; }
     var roles = d.user.roles || [d.user.role];
     sessionStorage.setItem('herix_switch_token', d.token);
-    window.location.href = roles.includes('BRAND') ? 'merchant.html' : 'preview.html';
+    window.location.href = roles.includes('BRAND') ? 'merchant.html' : 'herix.html';
   });
+}
+
+function copyUploadLink(taskId, token) {
+  var url = window.location.origin + '/upload.html?task=' + taskId + '&token=' + token;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() { showMsg('上传链接已复制', 'success'); });
+  } else {
+    var ta = document.createElement('textarea');
+    ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    showMsg('上传链接已复制', 'success');
+  }
+}
+
+function copyInviteLink(taskId) {
+  var url = window.location.origin + '/herix.html?task=' + taskId;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(function() { showMsg('链接已复制', 'success'); });
+  } else {
+    var el = document.getElementById('invite-link-text');
+    if (el) { var r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy'); showMsg('链接已复制', 'success'); }
+  }
+}
+
+function showMsg(msg, type) {
+  state.msg = msg; state.msgType = type || 'success'; render();
+  setTimeout(function(){ state.msg = ''; render(); }, 3000);
+}
+
+function switchToHerald() {
+  sessionStorage.setItem('herix_switch_token', state.token || '');
+  sessionStorage.setItem('herix_switch_role', 'HERALD');
+  window.location.href = 'herix.html';
 }
 
 function tryResumeSwitchedSession() {
   var token = sessionStorage.getItem('herix_switch_token');
   if (!token) return false;
   sessionStorage.removeItem('herix_switch_token');
+  sessionStorage.removeItem('herix_switch_role');
   state.token = token;
   get('/auth/me', function(d) {
     if (d.error || !d.id) { state.token = null; render(); return; }
@@ -1869,7 +2633,7 @@ function tryResumeSwitchedSession() {
     if (!roles.includes('BRAND')) {
       // 切到的账号没有品牌身份，跳转到赫使端
       sessionStorage.setItem('herix_switch_token', state.token);
-      window.location.href = 'preview.html';
+      window.location.href = 'herix.html';
       return;
     }
     state.user = {
@@ -1910,7 +2674,240 @@ function bindPage() {
   }
 }
 
+/* ── 分享海报 ── */
+function openSharePoster(taskId) {
+  var t = state.currentTask;
+  if (!t) return;
+
+  var inviteUrl = window.location.origin + '/herix.html?task=' + taskId;
+
+  var ov = document.createElement('div');
+  ov.id = 'poster-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML =
+    '<div style="background:#fff;border-radius:20px;padding:24px;width:360px;max-width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between">'
+    +'<span style="font-weight:700;font-size:15px">分享海报</span>'
+    +'<button onclick="document.getElementById(\'poster-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1">✕</button>'
+    +'</div>'
+    +'<canvas id="share-canvas" style="width:100%;border-radius:12px;display:block"></canvas>'
+    +'<div style="display:flex;gap:10px">'
+    +'<button class="btn btn-primary" style="flex:1" onclick="downloadPoster()">下载图片</button>'
+    +'<button class="btn btn-outline" style="flex:1" onclick="copyInviteLink(\''+taskId+'\')">复制链接</button>'
+    +'</div>'
+    +'<div style="font-size:11px;color:#888;text-align:center">长按或右键图片保存，或点击「下载图片」</div>'
+    +'</div>';
+  document.body.appendChild(ov);
+  ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
+
+  drawPoster(t, inviteUrl);
+}
+
+function drawPoster(t, inviteUrl) {
+  var canvas = document.getElementById('share-canvas');
+  if (!canvas) return;
+
+  var W = 640, H = 900;
+  canvas.width = W; canvas.height = H;
+  canvas.style.width = '100%';
+
+  var ctx = canvas.getContext('2d');
+
+  // 背景：深蓝渐变 header + 白色主体
+  var grad = ctx.createLinearGradient(0, 0, W, 0);
+  grad.addColorStop(0, '#D43B27');
+  grad.addColorStop(1, '#A82D1E');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, 260);
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 240, W, H - 240);
+
+  // 圆角过渡块
+  ctx.beginPath();
+  ctx.arc(28, 260, 28, 0, Math.PI*2);
+  ctx.arc(W-28, 260, 28, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.fillRect(28, 232, W-56, 28);
+
+  // Herix wordmark
+  ctx.font = 'bold 18px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fillText('Herix · 赫使平台', 36, 48);
+
+  // 品牌名
+  var brandName = (t.creator_name || '品牌商家');
+  ctx.font = 'bold 28px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(brandName, 36, 100);
+
+  // 任务标签
+  ctx.font = '13px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.65)';
+  ctx.fillText('正在招募赫使', 36, 130);
+
+  // 任务标题
+  var title = t.title || '';
+  ctx.font = 'bold 36px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#fff';
+  wrapText(ctx, title, 36, 175, W-72, 42);
+
+  // ── 白色区域 ──
+  var yBase = 285;
+
+  // 报酬 + 名额
+  drawInfoCard(ctx, 36, yBase, 270, 90, '赫使获得', '¥' + Number(t.payout_per_herald||0).toLocaleString(), '#D43B27');
+  drawInfoCard(ctx, 334, yBase, 270, 90, '招募名额', t.max_heralds + ' 人', '#16a34a');
+
+  // 任务描述
+  var desc = t.description || '';
+  if (desc.length > 120) desc = desc.slice(0, 117) + '…';
+  ctx.font = '15px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#374151';
+  wrapText(ctx, desc, 36, yBase + 120, W-72, 22, 4);
+
+  // 分隔线
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(36, yBase+220); ctx.lineTo(W-36, yBase+220); ctx.stroke();
+
+  // QR 码 + 说明文
+  var qrY = yBase + 240;
+  ctx.font = 'bold 16px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#111827';
+  ctx.fillText('扫码注册，立即领取任务', 36, qrY);
+
+  ctx.font = '13px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#6b7280';
+  ctx.fillText('新用户注册 · 免费加入 · 完成任务即获报酬', 36, qrY + 24);
+
+  // QR 码图像（异步加载 SVG）
+  var qrSize = 200;
+  var qrX = W - qrSize - 36;
+  var qrYPos = qrY - 12;
+
+  // 先画占位框
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  roundRect(ctx, qrX, qrYPos, qrSize, qrSize, 12);
+  ctx.stroke();
+
+  var img = new Image();
+  img.onload = function() {
+    // SVG 转 canvas
+    var svgBlob = new Blob([img._svgText], {type:'image/svg+xml'});
+    var url = URL.createObjectURL(svgBlob);
+    var svgImg = new Image();
+    svgImg.onload = function() {
+      ctx.clearRect(qrX, qrYPos, qrSize, qrSize);
+      // 白底
+      ctx.fillStyle = '#fff';
+      roundRect(ctx, qrX, qrYPos, qrSize, qrSize, 12);
+      ctx.fill();
+      ctx.drawImage(svgImg, qrX+10, qrYPos+10, qrSize-20, qrSize-20);
+      URL.revokeObjectURL(url);
+      drawPosterFooter(ctx, W, H, inviteUrl);
+    };
+    svgImg.onerror = function(){ drawPosterFooter(ctx, W, H, inviteUrl); };
+    svgImg.src = url;
+  };
+  // 通过 XHR 取 SVG 文本，再转 Blob URL（避免跨域 taint）
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', '/api/qr?data=' + encodeURIComponent(inviteUrl), true);
+  xhr.onload = function() {
+    img._svgText = xhr.responseText;
+    img.onload();
+  };
+  xhr.onerror = function() { drawPosterFooter(ctx, W, H, inviteUrl); };
+  xhr.send();
+
+  drawPosterFooter(ctx, W, H, inviteUrl);
+}
+
+function drawPosterFooter(ctx, W, H, url) {
+  // 底部品牌条
+  ctx.fillStyle = '#f9fafb';
+  ctx.fillRect(0, H-60, W, 60);
+  ctx.strokeStyle = '#e5e7eb';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H-60); ctx.lineTo(W, H-60); ctx.stroke();
+
+  ctx.font = 'bold 14px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#D43B27';
+  ctx.fillText('Herix', 36, H-33);
+
+  ctx.font = '12px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillText('herix.jp · 赫使大使平台', 36, H-16);
+
+  // 短链（截断）
+  var shortUrl = url.replace('https://', '').replace('http://', '');
+  if (shortUrl.length > 42) shortUrl = shortUrl.slice(0, 39) + '…';
+  ctx.textAlign = 'right';
+  ctx.font = '11px monospace';
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillText(shortUrl, W-36, H-20);
+  ctx.textAlign = 'left';
+}
+
+function drawInfoCard(ctx, x, y, w, h, label, value, color) {
+  ctx.fillStyle = '#f9fafb';
+  roundRect(ctx, x, y, w, h, 12);
+  ctx.fill();
+
+  ctx.font = '12px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = '#6b7280';
+  ctx.fillText(label, x+16, y+28);
+
+  ctx.font = 'bold 28px -apple-system,BlinkMacSystemFont,sans-serif';
+  ctx.fillStyle = color;
+  ctx.fillText(value, x+16, y+65);
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+  var words = text.split('');
+  var line = '';
+  var lines = 0;
+  var limit = maxLines || 3;
+  for (var i = 0; i < words.length; i++) {
+    var test = line + words[i];
+    if (ctx.measureText(test).width > maxWidth) {
+      if (lines >= limit - 1 && i < words.length - 1) {
+        ctx.fillText(line.slice(0, -1) + '…', x, y + lines * lineHeight);
+        return;
+      }
+      ctx.fillText(line, x, y + lines * lineHeight);
+      line = words[i];
+      lines++;
+    } else {
+      line = test;
+    }
+  }
+  if (line) ctx.fillText(line, x, y + lines * lineHeight);
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+  ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+  ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+  ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+  ctx.closePath();
+}
+
+function downloadPoster() {
+  var canvas = document.getElementById('share-canvas');
+  if (!canvas) return;
+  var link = document.createElement('a');
+  link.download = 'herix-invite.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
 // Init
+loadCategories();
 if (!tryResumeSwitchedSession()) loadDashStats();
 </script>
 </body>

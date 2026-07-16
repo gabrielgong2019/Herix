@@ -4,7 +4,10 @@ import { requireAuth, requireRole, optionalAuth } from '../middleware/auth';
 import { CreateTaskSchema } from '../types';
 import { ZodError } from 'zod';
 import crypto from 'crypto';
-import { freezeForTask, unfreezeTask, settleTask, creditHerald, creditPlatformFee, getBalance, PLATFORM_USER_ID } from '../utils/wallet';
+import { settleCreditTask, creditHerald, creditPlatformFee, getBalance, PLATFORM_USER_ID } from '../utils/wallet';
+import { createNotification } from './notifications';
+import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
+import pool from '../db';
 
 function genCode(): string {
   return 'HERIX-' + crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -33,14 +36,18 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   if (status) { where += ' AND t.status = ?'; params.push(status); }
   if (mode) { where += ' AND t.mode = ?'; params.push(mode); }
   if (creator) { where += ' AND t.creator_id = ?'; params.push(creator); }
-  // 非创建者只看已发布（OPEN）任务
+  // 非创建者只看已发布（OPEN）任务；INVITE 任务不出现在公开列表
   const uid = req.user?.userId;
   if (!uid) {
-    where += " AND t.status = 'OPEN'";
-  } else if (!creator) {
-    // 如果没传 creator 参数（即赫使浏览），也只显示 OPEN
-    where += " AND (t.status = 'OPEN' OR t.creator_id = ?)";
-    params.push(uid);
+    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC'";
+  } else if (creator) {
+    // 商家查自己的任务：显示全部状态和 visibility
+    if (creator !== uid) {
+      where += " AND t.visibility = 'PUBLIC'"; // 不能看别人的 INVITE 任务
+    }
+  } else {
+    // 赫使浏览探索列表：只显示 OPEN 且 PUBLIC
+    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC'";
   }
 
   const totalRow = await findOne<{ cnt: number }>(
@@ -189,14 +196,37 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
   res.json({ added, skipped, total: cleaned.length, maxHeralds: task.max_heralds });
 });
 
-/** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
-tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+/** GET /api/tasks/:id/upload-info — 品牌上传页用，token 鉴权，返回任务基本信息 */
+tasksRouter.get('/:id/upload-info', async (req: Request, res: Response) => {
+  const token = String(req.query.token || '');
+  if (!token) return res.status(401).json({ error: '缺少 token' });
   const task = await findOne<any>(
-    'SELECT id, creator_id, mode, commission, currency, title, lock_txn_id FROM tasks WHERE id = ?',
+    'SELECT id, title, mode, status, upload_token, max_heralds FROM tasks WHERE id = ?',
+    [req.params.id]
+  );
+  if (!task || task.upload_token !== token) return res.status(403).json({ error: '链接无效或已过期' });
+  if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '该任务不支持数据上传' });
+  const codes = await findMany<any>(
+    'SELECT at.unique_code as code, at.registered_count, at.used_count, at.paid_conversions, u.nickname as herald_name FROM ambassador_tasks at JOIN users u ON u.id=at.herald_id WHERE at.task_id=?',
+    [task.id]
+  );
+  res.json({ id: task.id, title: task.title, status: task.status, maxHeralds: task.max_heralds, codes });
+});
+
+/** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
+tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
+  const task = await findOne<any>(
+    'SELECT id, creator_id, mode, commission, currency, title, lock_txn_id, upload_token FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
+
+  // 鉴权：Bearer token（代理商家/管理员）或 upload_token（品牌专属链接）
+  const uploadToken = String(req.query.token || '');
+  const isTokenAuth = uploadToken && task.upload_token && uploadToken === task.upload_token;
+  const isBearerAuth = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
+  if (!isTokenAuth && !isBearerAuth) return res.status(403).json({ error: '无权限' });
+
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
 
   const { records } = req.body as { records: Array<{ code: string; registered_count?: number; used_count?: number }> };
@@ -204,6 +234,7 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
 
   const PLATFORM_FEE_RATE = 0.15;
   let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
+  const blockedCodes: string[] = [];
 
   for (const row of records) {
     const at = await findOne<any>(
@@ -217,7 +248,7 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
     const alreadyPaid  = Number(at.paid_conversions || 0);
     const delta        = newUsedCount - alreadyPaid;  // 新增转化数
 
-    // 更新原始数据（用于报表）
+    // 更新原始数据（用于报表，无论是否有新转化）
     await update('ambassador_tasks', {
       registered_count: newRegCount,
       used_count: newUsedCount,
@@ -225,10 +256,25 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
 
     if (delta <= 0) { processed++; continue; }  // 无新增转化，跳过打款
 
-    // 每个新转化：写一笔 ESCROW_RELEASE
     const commissionPerConv = task.commission;
+    const totalNeeded       = commissionPerConv * delta;
     const feePerConv        = Math.round(commissionPerConv * PLATFORM_FEE_RATE * 100) / 100;
     const payoutPerConv     = commissionPerConv - feePerConv;
+
+    // PERFORMANCE 任务按转化实时扣余额，余额不足则拦截并通知商户
+    const brandBal = await getBalance(task.creator_id, 'brand');
+    if (brandBal.available < totalNeeded) {
+      blockedCodes.push(row.code);
+      await createNotification({
+        userId: task.creator_id,
+        type:   'SETTLEMENT_BLOCKED',
+        title:  '邀请码任务结算失败 — 请充值',
+        body:   `推广码 ${row.code} 新增 ${delta} 次转化，需支付 ¥${totalNeeded}，当前余额 ¥${brandBal.available} 不足，请充值后重新上传数据。`,
+        metadata: { taskId: task.id, code: row.code, needed: totalNeeded, available: brandBal.available },
+      });
+      skipped++;
+      continue;
+    }
 
     // task_transactions 记录业务事件
     const releaseTxnId = await insert('task_transactions', {
@@ -244,23 +290,22 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
       note:          `推广码 ${row.code} 新增 ${delta} 次转化`,
     });
 
-    // 品牌冻结清零，赫使+收入，平台+手续费（三笔钱包操作）
-    const idKey = `CSV:${task.id}:${row.code}:${newUsedCount}`;
+    // 品牌扣可用余额，赫使+收入，平台+手续费
     await Promise.all([
-      settleTask({
-        userId: task.creator_id, amount: commissionPerConv * delta, currency: task.currency,
+      settleCreditTask({
+        userId: task.creator_id, amount: commissionPerConv * delta,
         idempotencyKey: `SETTLE:${releaseTxnId}`,
         referenceType: 'task_transaction', referenceId: releaseTxnId,
         note: `推广码 ${row.code} 结算 ${delta} 次`,
       }),
       creditHerald({
-        userId: at.herald_id, amount: payoutPerConv * delta, currency: task.currency,
+        userId: at.herald_id, amount: payoutPerConv * delta,
         idempotencyKey: `CREDIT:${releaseTxnId}`,
         referenceType: 'task_transaction', referenceId: releaseTxnId,
         note: `任务《${task.title}》推广收入`,
       }),
       creditPlatformFee({
-        userId: PLATFORM_USER_ID, amount: feePerConv * delta, currency: task.currency,
+        userId: PLATFORM_USER_ID, amount: feePerConv * delta,
         idempotencyKey: `FEE:${releaseTxnId}`,
         referenceType: 'task_transaction', referenceId: releaseTxnId,
         note: `平台服务费 15%`,
@@ -282,6 +327,7 @@ tasksRouter.post('/:id/csv', requireAuth, requireRole('BRAND', 'ADMIN'), async (
     newConversions: totalNewConversions,
     totalPaid,
     commissionPerConversion: task.commission,
+    ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),
   });
 });
 
@@ -327,27 +373,25 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
   try {
     const data = CreateTaskSchema.parse(req.body);
 
-    // 任务币种快照自品牌资料（CNY=中国业务 / JPY=日本业务），创建后不可变
-    const brand = await findOne<{ currency: string }>('SELECT currency FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
-
     const taskId = await insert('tasks', {
-      creator_id: req.user!.userId,
-      mode: data.mode,
-      title: data.title,
-      description: data.description,
-      requirements: data.requirements || null,
-      budget: data.budget,
-      commission: data.commission,
-      currency: brand?.currency || 'JPY',
-      max_heralds: data.maxHeralds,
-      deadline: data.deadline || null,
-      category: data.category || null,
-      content_type: data.mode === 'PERFORMANCE' ? null : data.contentType,
-      difficulty: data.difficulty,
-      cover_image: data.coverImage || null,
-      code_mode: data.codeMode || 'auto',
+      creator_id:        req.user!.userId,
+      mode:              data.mode,
+      title:             data.title,
+      description:       data.description,
+      requirements:      data.requirements || null,
+      payout_per_herald: data.payoutPerHerald,
+      currency:          'JPY',
+      max_heralds:       data.maxHeralds,
+      deadline:          data.deadline || null,
+      category:          data.category || null,
+      content_type:      data.mode === 'PERFORMANCE' ? null : data.contentType,
+      difficulty:        data.difficulty,
+      cover_image:       data.coverImage || null,
+      code_mode:         data.codeMode || 'auto',
       platform_requirements: data.platformRequirements ? JSON.stringify(data.platformRequirements) : null,
-      status: 'DRAFT',
+      visibility:        data.visibility || 'PUBLIC',
+      status:            'DRAFT',
+      // cost_per_herald 和 commission_rate 在发布时计算快照
     });
 
     // PERFORMANCE + 自动模式：创建时立即生成推广码池
@@ -373,12 +417,12 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
 
-  const { title, description, requirements, commission, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements } = req.body;
+  const { title, description, requirements, payoutPerHerald, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements, visibility } = req.body;
   const data: Record<string, any> = {};
   if (title) data.title = title;
   if (description) data.description = description;
   if (requirements !== undefined) data.requirements = requirements;
-  if (commission) data.commission = commission;
+  if (payoutPerHerald) data.payout_per_herald = payoutPerHerald;
   if (maxHeralds) data.max_heralds = maxHeralds;
   if (deadline !== undefined) data.deadline = deadline || null;
   if (category !== undefined) data.category = category;
@@ -386,6 +430,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (difficulty) data.difficulty = difficulty;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  if (visibility && ['PUBLIC', 'INVITE'].includes(visibility)) data.visibility = visibility;
 
   await update('tasks', data, 'id = ?', [req.params.id]);
   res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
@@ -425,7 +470,7 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, status, commission, currency, max_heralds, title FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -436,104 +481,56 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     return res.status(400).json({ error: '只有草稿状态可以发布' });
   }
 
-  // 检查品牌钱包余额（从 wallets 表读，O(1)，按任务币种）
-  const needed = task.commission * task.max_heralds;
-  const bal = await getBalance(task.creator_id, 'brand', task.currency);
+  // 发布时计算费率快照和单人成本（含服务费）
+  const { rate: commissionRate } = await getEffectiveCommissionRate(task.creator_id);
+  const costPerHerald = Math.round(task.payout_per_herald / (1 - commissionRate));
 
-  if (bal.available < needed) {
-    return res.status(402).json({
-      error: `余额不足，需要 ${task.currency} ${needed}，当前可用 ${task.currency} ${bal.available.toFixed(0)}`,
-      code: 'INSUFFICIENT_BALANCE',
-      needed,
-      available: bal.available,
-      currency: task.currency,
-    });
-  }
+  const creditInfo  = await getBrandCreditInfo(task.creator_id);
+  const fpThreshold = Number(await getSetting('fast_payout_threshold')) || 100000;
+  const fast_payout = creditInfo.availableBalance >= fpThreshold;
+  const uploadToken = crypto.randomBytes(16).toString('hex');
 
-  // 发布任务
   await update('tasks', {
-    status: 'OPEN',
-    published_at: new Date().toISOString(),
-    escrow_amount: needed,
-    is_escrowed: 1,
+    status:          'OPEN',
+    published_at:    new Date().toISOString(),
+    cost_per_herald: costPerHerald,
+    commission_rate: commissionRate,
+    fast_payout,
+    upload_token:    uploadToken,
   }, 'id = ?', [req.params.id]);
 
-  // 品牌钱包：可用→冻结（原子操作，按任务币种）
-  const { entryId: lockEntryId } = await freezeForTask({
-    userId: task.creator_id,
-    amount: needed,
-    currency: task.currency,
-    idempotencyKey: `TASK_FREEZE:${req.params.id}`,
-    referenceType: 'task',
-    referenceId: String(req.params.id),
-    note: `任务《${task.title}》发布锁定 ${task.currency} ${needed}`,
-  });
+  // 首次发布且未充值 → 响应中附带充值引导提醒
+  const prevPublished = await findOne<{ id: string }>(
+    `SELECT id FROM tasks WHERE creator_id = ? AND status != 'DRAFT' AND id != ?`,
+    [task.creator_id, req.params.id],
+  );
+  const isFirstPublish = !prevPublished && creditInfo.availableBalance === 0;
 
-  // task_transactions 记录业务事件
-  const lockTxnId = await insert('task_transactions', {
-    task_id: req.params.id,
-    type: 'TASK_LOCK',
-    task_amount: needed,
-    amount: needed,
-    platform_fee: 0,
-    from_user_id: task.creator_id,
-    status: 'completed',
-    note: `任务《${task.title}》发布锁定`,
-    reference_type: 'wallet_entry',
-    reference_id: lockEntryId,
-  });
-
-  await update('tasks', { lock_txn_id: lockTxnId }, 'id = ?', [req.params.id]);
+  if (isFirstPublish) {
+    await pool.query(
+      `UPDATE brand_profiles SET first_publish_reminder_sent = TRUE WHERE user_id = $1`,
+      [task.creator_id],
+    );
+  }
 
   const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
-  res.json(updated);
+  res.json({
+    ...updated,
+    ...(isFirstPublish ? {
+      topupReminder: '为提升任务可信度、鼓励赫使积极报名，并在任务完成后自动打款，请尽快完成充值。充值后您的任务将获得「极速打款」标签，显著提升赫使报名意愿。',
+    } : {}),
+  });
 });
 
 // /escrow 端点已废弃，资金锁定在 /publish 时自动完成
 
-/** PATCH /api/tasks/:id/complete — 完成/关闭任务，退还未使用锁定资金 */
+/** PATCH /api/tasks/:id/complete — 完成/关闭任务 */
 tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, title, currency, escrow_amount, is_escrowed, commission, max_heralds, lock_txn_id FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId) return res.status(403).json({ error: '无权限' });
 
-  // 已结算金额：从 task_transactions 查（只算 TASK_RELEASE）
-  const paid = await findOne<{ total: number }>(
-    `SELECT COALESCE(SUM(amount), 0) as total FROM task_transactions
-     WHERE task_id = ? AND type = 'TASK_RELEASE' AND status = 'completed'`,
-    [req.params.id]
-  );
-  const refundAmount = (task.escrow_amount || 0) - (Number(paid?.total) || 0);
-
   await update('tasks', { status: 'COMPLETED', completed_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
-
-  if (refundAmount > 0) {
-    // 品牌钱包：冻结→可用（退还未使用预算）
-    const { entryId: refundEntryId } = await unfreezeTask({
-      userId: task.creator_id,
-      amount: refundAmount,
-      currency: task.currency,
-      idempotencyKey: `TASK_UNFREEZE:${req.params.id}`,
-      referenceType: 'task',
-      referenceId: String(req.params.id),
-      note: `任务《${task.title}》关闭退还 ${task.currency} ${refundAmount.toFixed(0)}`,
-    });
-
-    await insert('task_transactions', {
-      task_id: req.params.id,
-      type: 'TASK_REFUND',
-      task_amount: refundAmount,
-      amount: refundAmount,
-      platform_fee: 0,
-      from_user_id: task.creator_id,
-      parent_txn_id: task.lock_txn_id || null,
-      status: 'completed',
-      note: `任务《${task.title}》关闭退还 ¥${refundAmount.toFixed(0)}`,
-      reference_type: 'wallet_entry',
-      reference_id: refundEntryId,
-    });
-  }
-
   const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });

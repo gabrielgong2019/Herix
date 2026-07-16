@@ -138,8 +138,9 @@ function shell(inner){
     {id:'users',icon:'👥',label:'用户管理'},
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
+    {id:'categories',icon:'🏷️',label:'任务分类'},
   ];
-  var sb='<div class="sidebar" id="sb"><div class="sb-brand">HERIX<span>.</span><div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div>';
+  var sb='<div class="sidebar" id="sb"><div class="sb-brand"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-icon-filled.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: st.page, onclick: "go('%s')" });
   sb+='<div class="sb-bottom"><div>'+esc(st.user.nickname)+'</div><div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
 
@@ -149,7 +150,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -164,6 +165,7 @@ function pageCont(){
     case 'brand-edit': return brandEditPage();
     case 'tasks': return tasksPage();
     case 'ambassadors': return ambassadorsPage();
+    case 'categories': return categoriesPage();
     default: return dashPage();
   }
 }
@@ -171,7 +173,7 @@ function pageCont(){
 /* ── Login ── */
 function loginPage(){
   return '<div class="login-wrap"><div class="login-card">'
-    +'<div class="login-logo">HERIX<span>.</span></div>'
+    +'<div class="login-logo"><img src="/Logo/herix-icon-filled.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:24px">平台运营管理后台</div>'
     +Auth.loginForm({
       title: '',
@@ -355,6 +357,60 @@ function brandEditPage(){
   h+='<button class="btn btn-primary btn-sm" onclick="saveBrandProfile(\''+p.user_id+'\')">保存</button>';
   h+='</div>';
 
+  // 信用授信配置
+  var globalDefault=5000;
+  var hasOverride=(p.credit_limit_override!==null&&p.credit_limit_override!==undefined);
+  var currentLimit=hasOverride?Number(p.credit_limit_override):globalDefault;
+  h+='<div class="panel" style="max-width:640px;border:1px solid #ddd6fe;background:#faf5ff">';
+  h+='<div class="panel-title" style="color:#6d28d9">信用授信配置</div>';
+  h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">';
+  h+='<div style="background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e9d5ff">';
+  h+='<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-bottom:4px">当前信用额度</div>';
+  h+='<div style="font-size:20px;font-weight:700;color:#1e1b4b">¥'+currentLimit.toLocaleString()+'</div>';
+  h+='<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+(hasOverride?'运营手动设置':'全局默认')+'</div>';
+  h+='</div>';
+  h+='<div style="background:#fff;border-radius:8px;padding:12px 16px;border:1px solid #e9d5ff">';
+  h+='<div style="font-size:11px;color:#7c3aed;font-weight:600;margin-bottom:4px">充值状态</div>';
+  h+='<div style="font-size:14px;font-weight:600;color:'+(p.has_topped_up?'#16a34a':'#9ca3af')+'">'+(p.has_topped_up?'✅ 已充值':'⏳ 未充值')+'</div>';
+  h+='</div>';
+  h+='</div>';
+  h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">';
+  h+='<div style="flex:1;min-width:160px"><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">设置信用额度（JPY）</label>';
+  h+='<input id="be_credit_limit" type="number" min="0" step="1000" value="'+(hasOverride?currentLimit:'')+'" placeholder="留空 = 恢复全局默认（¥'+globalDefault.toLocaleString()+'）" style="width:100%"></div>';
+  h+='<button class="btn btn-sm" style="background:#7c3aed;color:#fff;white-space:nowrap" onclick="saveCreditLimit(\''+p.user_id+'\')">保存额度</button>';
+  h+='<button class="btn btn-outline btn-sm" style="white-space:nowrap;color:#9ca3af" onclick="clearCreditLimit(\''+p.user_id+'\')" title="恢复全局默认">清除覆盖</button>';
+  h+='</div>';
+  h+='<div id="creditLimitMsg" style="font-size:12px;margin-top:8px"></div>';
+  h+='</div>';
+
+  // 广告代理商设置
+  var isAgency=!!p.is_agency;
+  h+='<div class="panel" style="max-width:640px;border:1px solid #fed7aa;background:#fff7ed">';
+  h+='<div class="panel-title" style="color:#c2410c">广告代理商</div>';
+  h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">';
+  h+='<div>';
+  h+='<div style="font-size:14px;font-weight:600;color:'+(isAgency?'#c2410c':'#9ca3af')+';margin-bottom:4px">'+(isAgency?'✅ 已开通广告代理':'⬜ 普通商家')+'</div>';
+  h+='<div style="font-size:12px;color:var(--muted)">代理商可代多个客户品牌发布任务，并享有批量管理等额外功能</div>';
+  h+='</div>';
+  h+='<button class="btn btn-sm" style="background:'+(isAgency?'#9ca3af':'#ea580c')+';color:#fff;white-space:nowrap;flex-shrink:0;margin-left:16px" onclick="setAgency(\''+p.user_id+'\','+(isAgency?'false':'true')+')">'+(isAgency?'取消代理商':'开通代理商')+'</button>';
+  h+='</div>';
+  h+='<div id="agencyMsg" style="font-size:12px;margin-top:4px"></div>';
+  h+='</div>';
+
+  // 签约记录
+  h+='<div class="panel" style="max-width:640px;border:1px solid '+(p.agreed_at?'#86efac':'#fca5a5')+';background:'+(p.agreed_at?'#f0fdf4':'#fef2f2')+'">';
+  h+='<div class="panel-title" style="color:'+(p.agreed_at?'#166534':'#991b1b')+'">服务协议签署记录</div>';
+  if (p.agreed_at) {
+    h+='<div style="font-size:13px;display:flex;flex-direction:column;gap:6px">';
+    h+='<div><span style="color:var(--muted);font-size:12px">签署时间</span><br><strong>'+esc(p.agreed_at.slice(0,19).replace('T',' '))+' UTC</strong></div>';
+    h+='<div><span style="color:var(--muted);font-size:12px">协议版本</span><br><strong>'+esc(p.agreed_version||'-')+'</strong></div>';
+    h+='<div><span style="color:var(--muted);font-size:12px">签署 IP</span><br><code style="font-size:12px">'+esc(p.agreed_ip||'-')+'</code></div>';
+    h+='</div>';
+  } else {
+    h+='<div style="font-size:13px;color:#991b1b">⚠️ 该商家尚未完成服务协议签署，入驻流程未完成。</div>';
+  }
+  h+='</div>';
+
   h+='<div class="panel" style="max-width:640px">';
   h+='<div class="panel-title">品牌形象</div>';
   h+='<div style="display:flex;gap:32px;flex-wrap:wrap">';
@@ -390,6 +446,37 @@ function saveBrandProfile(userId){
       contact_name:body.contactName,contact_phone:body.contactPhone,
       billing_email:body.billingEmail,company_desc:body.companyDesc,
     });
+    render();
+  });
+}
+
+function saveCreditLimit(userId){
+  var val=document.getElementById('be_credit_limit')?.value?.trim();
+  var limit=val===''||val===undefined?null:Number(val);
+  if(limit!==null&&(isNaN(limit)||limit<0)){
+    document.getElementById('creditLimitMsg').textContent='请输入有效金额';return;
+  }
+  apiPatch('/admin/brands/'+userId+'/credit-limit',{creditLimit:limit},function(d){
+    var msg=document.getElementById('creditLimitMsg');
+    if(d.error){if(msg)msg.textContent=d.error;return}
+    if(msg)msg.textContent=limit===null?'已恢复全局默认':'已保存，信用额度 ¥'+Number(limit).toLocaleString();
+    st.data.brandEdit.credit_limit_override=limit;
+    render();
+  });
+}
+function clearCreditLimit(userId){
+  document.getElementById('be_credit_limit').value='';
+  saveCreditLimit(userId);
+}
+
+function setAgency(userId, isAgency){
+  var msg=document.getElementById('agencyMsg');
+  if(msg) msg.textContent='保存中...';
+  apiPatch('/admin/brands/'+userId+'/agency',{isAgency:isAgency},function(d){
+    if(d.error){if(msg) msg.textContent=d.error;return;}
+    st.data.brandEdit.is_agency=d.isAgency;
+    if(msg) msg.textContent='';
+    st.msg=(d.isAgency?'已开通广告代理商':'已取消广告代理商');st.msgType='success';
     render();
   });
 }
@@ -443,7 +530,7 @@ function tasksPage(){
       return '<tr><td style="font-weight:500;max-width:200px"><div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(t.title)+'</div></td>'
         +'<td style="color:var(--muted)">'+esc(t.creator_name)+'</td>'
         +'<td><span style="font-size:11px">'+(t.mode==='PERFORMANCE'?'类A':'类B')+'</span></td>'
-        +'<td>¥'+Number(t.commission).toLocaleString()+'</td>'
+        +'<td>¥'+Number(t.payout_per_herald||0).toLocaleString()+'</td>'
         +'<td style="color:var(--muted)">'+t.application_count+' / '+t.approved_count+' / '+t.completed_count+'</td>'
         +'<td><span class="tag tag-'+t.status.toLowerCase()+'">'+{DRAFT:'草稿',OPEN:'招募中',IN_PROGRESS:'进行中',COMPLETED:'完成',CANCELLED:'取消'}[t.status]+'</span></td>'
         +'<td><button class="btn btn-outline btn-sm" onclick="changeTaskStatus(\''+t.id+'\',\'CANCELLED\')">关闭</button></td></tr>';
@@ -579,6 +666,108 @@ function ambassadorsPage(){
     }).join('')+'</tbody></table></div>';
 }
 
+/* ── Categories Page ── */
+function categoriesPage(){
+  var cats = st.data.categories || [];
+  var h = '<div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">';
+  h += '<div style="font-size:13px;color:var(--muted)">共 '+cats.length+' 个分类</div>';
+  h += '<button class="btn btn-primary btn-sm" onclick="showAddCat()">+ 新建分类</button></div>';
+  h += '<div id="cat-msg"></div>';
+
+  h += '<div class="tcard"><table><thead><tr><th>图标</th><th>ID</th><th>名称</th><th>排序</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+  if(!cats.length){
+    h += '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">暂无分类</td></tr>';
+  } else {
+    cats.forEach(function(c){
+      var activeLabel = c.active ? '<span style="color:#16a34a;font-size:12px">● 启用</span>' : '<span style="color:#9ca3af;font-size:12px">● 停用</span>';
+      h += '<tr>';
+      h += '<td style="font-size:20px">'+esc(c.icon)+'</td>';
+      h += '<td style="font-family:monospace;font-size:12px">'+esc(c.id)+'</td>';
+      h += '<td style="font-weight:500">'+esc(c.label)+'</td>';
+      h += '<td>'+c.sort_order+'</td>';
+      h += '<td>'+activeLabel+'</td>';
+      h += '<td><span style="cursor:pointer;color:var(--primary);font-size:12px;margin-right:12px" onclick="editCat(\''+esc(c.id)+'\')">编辑</span>';
+      h += '<span style="cursor:pointer;color:'+(c.active?'#dc2626':'#16a34a')+';font-size:12px" onclick="toggleCat(\''+esc(c.id)+'\','+(c.active?'false':'true')+')">'+( c.active?'停用':'启用')+'</span></td>';
+      h += '</tr>';
+    });
+  }
+  h += '</tbody></table></div>';
+
+  // 新建/编辑表单（modal 风格，默认隐藏）
+  h += '<div id="cat-form-wrap" style="display:none;margin-top:24px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:400px">';
+  h += '<div style="font-size:15px;font-weight:600;margin-bottom:16px" id="cat-form-title">新建分类</div>';
+  h += '<div class="ig"><label>ID（英文，不可修改）</label><input id="cf-id" placeholder="e.g. gaming"></div>';
+  h += '<div class="ig"><label>名称</label><input id="cf-label" placeholder="e.g. 游戏"></div>';
+  h += '<div class="ig"><label>图标（Emoji）</label><input id="cf-icon" placeholder="🎮" style="width:60px"></div>';
+  h += '<div class="ig"><label>排序（数字越小越靠前）</label><input id="cf-sort" type="number" value="99"></div>';
+  h += '<div style="display:flex;gap:10px;margin-top:4px">';
+  h += '<button class="btn btn-primary" onclick="saveCat()">保存</button>';
+  h += '<button class="btn" onclick="document.getElementById(\'cat-form-wrap\').style.display=\'none\'">取消</button>';
+  h += '</div></div>';
+  return h;
+}
+
+function showAddCat(){
+  var w=document.getElementById('cat-form-wrap');
+  if(!w) return;
+  document.getElementById('cat-form-title').textContent='新建分类';
+  document.getElementById('cf-id').value=''; document.getElementById('cf-id').disabled=false;
+  document.getElementById('cf-label').value='';
+  document.getElementById('cf-icon').value='';
+  document.getElementById('cf-sort').value='99';
+  w._editId=null; w.style.display='block';
+  document.getElementById('cf-id').focus();
+}
+
+function editCat(id){
+  var cats=st.data.categories||[];
+  var c=cats.find(function(x){return x.id===id}); if(!c) return;
+  var w=document.getElementById('cat-form-wrap'); if(!w) return;
+  document.getElementById('cat-form-title').textContent='编辑分类';
+  document.getElementById('cf-id').value=c.id; document.getElementById('cf-id').disabled=true;
+  document.getElementById('cf-label').value=c.label;
+  document.getElementById('cf-icon').value=c.icon||'';
+  document.getElementById('cf-sort').value=c.sort_order;
+  w._editId=id; w.style.display='block';
+}
+
+function saveCat(){
+  var w=document.getElementById('cat-form-wrap');
+  var editId=w?w._editId:null;
+  var id=(document.getElementById('cf-id').value||'').trim();
+  var label=(document.getElementById('cf-label').value||'').trim();
+  var icon=(document.getElementById('cf-icon').value||'').trim();
+  var sort=parseInt(document.getElementById('cf-sort').value)||99;
+  if(!label) return showCatMsg('请填写名称','error');
+  if(!editId && !id) return showCatMsg('请填写 ID','error');
+  if(!editId){
+    post('/categories',{id:id,label:label,icon:icon,sort_order:sort},function(d){
+      if(d.error) return showCatMsg(d.error,'error');
+      w.style.display='none';
+      apiGet('/categories/all',function(cats){st.data.categories=cats;render()});
+    });
+  } else {
+    apiPatch('/categories/'+editId,{label:label,icon:icon,sort_order:sort},function(d){
+      if(d.error) return showCatMsg(d.error,'error');
+      w.style.display='none';
+      apiGet('/categories/all',function(cats){st.data.categories=cats;render()});
+    });
+  }
+}
+
+function toggleCat(id,active){
+  apiPatch('/categories/'+id,{active:active},function(d){
+    if(d.error) return alert(d.error);
+    apiGet('/categories/all',function(cats){st.data.categories=cats;render()});
+  });
+}
+
+function showCatMsg(msg,type){
+  var el=document.getElementById('cat-msg'); if(!el) return;
+  el.innerHTML='<div style="padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;background:'+(type==='error'?'#fee2e2':'#dcfce7')+';color:'+(type==='error'?'#dc2626':'#16a34a')+'">'+esc(msg)+'</div>';
+  setTimeout(function(){el.innerHTML=''},3000);
+}
+
 /* ── Review Actions ── */
 function doDecl(id,approve){
   var reason=approve?null:prompt('拒绝原因（可选）');
@@ -621,6 +810,8 @@ function load(page){
     apiGet('/admin/tasks',function(d){st.data.tasks=d;render()});
   } else if(page==='ambassadors'){
     apiGet('/admin/ambassadors',function(d){st.data.ambassadors=d;render()});
+  } else if(page==='categories'){
+    apiGet('/categories/all',function(d){st.data.categories=Array.isArray(d)?d:[];render()});
   }
 }
 

@@ -4,14 +4,14 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <title>Herix 赫使</title>
 <style>
-:root{--bg:#f5f5f7;--card:#fff;--text:#111;--muted:#8a8a8e;--primary:#0070CC;--success:#34c759;--gold:#f5a623;--border:#e5e5ea}
+:root{--bg:#f5f5f7;--card:#fff;--text:#111;--muted:#8a8a8e;--primary:#D43B27;--success:#34c759;--gold:#f5a623;--border:#e5e5ea}
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans GB',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;max-width:500px;margin:0 auto;padding-bottom:70px}
 .header{display:flex;align-items:center;justify-content:space-between;padding:52px 20px 8px;background:var(--bg)}
 .logo{font-size:22px;font-weight:800;letter-spacing:1px}.logo span{color:var(--primary)}
 .sub{font-size:14px;color:var(--muted);font-weight:400;margin-left:8px}
 .hdr-actions{display:flex;gap:6px}.icon-btn{width:36px;height:36px;border-radius:50%;background:#fff;border:none;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
-.user-bar{display:flex;align-items:center;justify-content:space-between;padding:6px 20px 10px;background:var(--bg)}
+.user-bar{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:6px 20px 10px;background:var(--bg)}
 .avatar{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
 .login-btn{font-size:13px;color:var(--primary);cursor:pointer;font-weight:500}
 .filters{display:flex;gap:6px;padding:2px 20px 12px;overflow-x:auto;background:var(--bg);scrollbar-width:none}
@@ -26,7 +26,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Hiragino Sans G
 .card-top{display:flex;align-items:center;gap:6px;margin-bottom:10px;flex-wrap:wrap}
 .tag{display:inline-flex;align-items:center;gap:4px;background:#f0f0f0;border-radius:12px;padding:4px 10px;font-size:11px;color:#555;font-weight:500}
 .mode-tag{font-size:10px;padding:3px 8px;border-radius:4px;font-weight:600}
-.mode-std{background:rgba(0,112,204,.08);color:var(--primary)}
+.mode-std{background:rgba(212,59,39,.08);color:var(--primary)}
 .mode-perf{background:rgba(245,166,35,.1);color:#b8860b}
 .diff-tag{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);margin-left:auto}
 .diff-dot{width:5px;height:5px;border-radius:50%}.d-easy{background:var(--success)}.d-medium{background:var(--gold)}.d-hard{background:var(--primary)}
@@ -207,10 +207,63 @@ function toggleDb(){
 
 
 var API = '/api';
-var CAT = {experience:'体验',beauty:'美妆',travel:'旅行',fashion:'穿搭',food:'美食',lifestyle:'生活',referral:'推荐',baby:'母婴'};
 var DIFF = {easy:{label:'轻松'},medium:{label:'刚好'},hard:{label:'挑战'}};
 var TABS = [{id:'explore',icon:'🔍',label:'探索'},{id:'tasks',icon:'📋',label:'任务'},{id:'messages',icon:'💬',label:'消息'},{id:'profile',icon:'👤',label:'我的'}];
-var state = {view:'list',tasks:[],filter:'',user:null,token:null,showLogin:false,loginTab:'login',loading:true,tab:'explore',detailTask:null,myTasks:[],myApps:[],mySubs:[],myCodes:[],showOnboard:false,onboardStep:1,onboardData:{},ambassadorProfile:null,brandProfile:null,activeRole:null,walletBalance:null,walletMethods:[],walletTxns:[],heraldFilter:'all',txnFilter:'all',methodType:'BANK',displayCurrency:null,exchangeRate:null};
+/* ── 档案缓存（TTL 30s + 请求去重）── */
+var _profileFetchedAt = 0;
+var _profilePendingCbs = null; // null=空闲, []=加载中
+
+function loadProfile(cb) {
+  if (!state.user || !state.token) { if (cb) cb(); return; }
+  // 缓存新鲜，直接用
+  if (state.ambassadorProfile && Date.now() - _profileFetchedAt < 30000) { if (cb) cb(); return; }
+  // 已有请求在飞，排队
+  if (_profilePendingCbs !== null) { if (cb) _profilePendingCbs.push(cb); return; }
+  _profilePendingCbs = cb ? [cb] : [];
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', API + '/auth/me', true);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
+  var _flush = function(d) {
+    if (d && !d.error) {
+      state.ambassadorProfile = d;
+      state.brandProfile = d;
+      _profileFetchedAt = Date.now();
+    }
+    var cbs = _profilePendingCbs || [];
+    _profilePendingCbs = null;
+    for (var i = 0; i < cbs.length; i++) cbs[i]();
+  };
+  xhr.onload = function() { try { _flush(JSON.parse(xhr.responseText)); } catch(e) { _flush(null); } };
+  xhr.onerror = function() { _flush(null); };
+  xhr.send();
+}
+
+function invalidateProfileCache() { _profileFetchedAt = 0; }
+
+// 档案 PATCH 成功后同步本地缓存（避免 Object.assign 与服务器数据不一致）
+function applyProfilePatch(serverRow) {
+  if (!serverRow || serverRow.error) return;
+  if (state.ambassadorProfile) {
+    state.ambassadorProfile.social_platforms = serverRow.social_platforms;
+    state.ambassadorProfile.tier_snapshot = serverRow.tier_snapshot;
+    state.ambassadorProfile.social_platforms_updated_at = serverRow.social_platforms_updated_at;
+  }
+  _profileFetchedAt = Date.now(); // 刚从服务器来的，视为新鲜
+}
+
+var state = {view:'list',tasks:[],filter:'',user:null,token:null,showLogin:false,loginTab:'login',loading:true,tab:'explore',detailTask:null,myTasks:[],myApps:[],mySubs:[],myCodes:[],showOnboard:false,onboardStep:1,onboardData:{},ambassadorProfile:null,brandProfile:null,activeRole:null,walletBalance:null,walletMethods:[],walletTxns:[],heraldFilter:'all',txnFilter:'all',methodType:'BANK',displayCurrency:null,exchangeRate:null,addStep:'region',addRegion:'',addType:'',wMethodId:null,landingTask:null,landingAuthTab:'login',notifications:[],unread:0,_notifsLoaded:false,categories:[
+  {id:'experience',label:'体验',icon:'🎪'},
+  {id:'beauty',    label:'美妆',icon:'💄'},
+  {id:'travel',    label:'旅行',icon:'✈️'},
+  {id:'fashion',   label:'穿搭',icon:'👗'},
+  {id:'food',      label:'美食',icon:'🍱'},
+  {id:'lifestyle', label:'生活',icon:'🌿'},
+  {id:'referral',  label:'推荐',icon:'🔗'},
+  {id:'baby',      label:'母婴',icon:'🍼'},
+]};
+
+function catLabel(id){ var c=(state.categories||[]).find(function(x){return x.id===id}); return c?c.label:(id||''); }
+function catIcon(id){ var c=(state.categories||[]).find(function(x){return x.id===id}); return c?(c.icon||''):''; }
 
 function qs(s){return document.querySelector(s)}
 function qsa(s){return document.querySelectorAll(s)}
@@ -222,6 +275,16 @@ function render(){
     if(!app){log('ERR: #app not found');return}
     // 登录弹窗由 HTML 静态渲染，JS 只负责显示/隐藏
   // 见 <div id="login-modal"> 在 body 中
+    if(state.view==='landing'){
+      log('landing: building HTML, task='+(state.landingTask?state.landingTask.id:'null'));
+      var _lhtml;try{_lhtml=landingHTML();}catch(e){log('ERR landingHTML: '+e.message);return;}
+      log('landing: HTML built ('+_lhtml.length+' chars), setting innerHTML...');
+      try{app.innerHTML=_lhtml;}catch(e){log('ERR innerHTML: '+e.message);return;}
+      log('landing: innerHTML set, binding...');
+      try{bindLanding();}catch(e){log('ERR bindLanding: '+e.message);}
+      log('landing: done');
+      return;
+    }
     if(state.showOnboard&&state.user&&state.user.role==='HERALD'){app.innerHTML = onboardHTML();bindOnboard();return}
     if(state.showOnboard&&state.user&&state.user.role==='BRAND'){app.innerHTML = onboardBrandHTML();return}
     if(state.view === 'detail' && state.detailTask){app.innerHTML = detailHTML()+tabBarHTML();bindDetail();return}
@@ -251,7 +314,16 @@ function tabBarHTML(){
   for(var i=0;i<TABS.length;i++){
     var t=TABS[i];
     h+='<div class="tab-item'+(state.tab===t.id?' active':'')+'" onclick="switchTab(\''+t.id+'\')">';
-    h+='<div class="tab-icon">'+t.icon+'</div><div class="tab-label">'+t.label+'</div></div>';
+    // 消息 tab 加未读红点
+    if(t.id==='messages'&&state.unread>0){
+      h+='<div style="position:relative;display:inline-block">';
+      h+='<div class="tab-icon">'+t.icon+'</div>';
+      h+='<span style="position:absolute;top:-2px;right:-6px;background:#ef4444;color:#fff;font-size:9px;font-weight:700;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px;line-height:1">'+(state.unread>99?'99+':state.unread)+'</span>';
+      h+='</div>';
+    } else {
+      h+='<div class="tab-icon">'+t.icon+'</div>';
+    }
+    h+='<div class="tab-label">'+t.label+'</div></div>';
   }
   return h+'</div>';
 }
@@ -263,13 +335,18 @@ function switchTab(t){
     if(t==='explore'){state.view='list';loadTasks();return}
     if(t==='tasks'){
       if(!state.user){openLogin();return}
-      if(state.user.role==='BRAND'){state.view='brand-dashboard';loadMyTasks();return}
-      if(state.user.role==='HERALD'){state.view='herald-dashboard';loadMyApps();loadMyCodes();render();return}
+      var ar=state.activeRole||state.user.role;
+      if(ar==='BRAND'){state.view='brand-dashboard';loadMyTasks();return}
+      if(ar==='HERALD'){state.view='herald-dashboard';loadMyApps();loadMyCodes();render();return}
       render();return;
     }
-    if(t==='messages'){state.view='messages';render();return}
+    if(t==='messages'){
+      if(!state.user){openLogin();return}
+      state.view='messages';loadNotifications();return
+    }
     if(t==='profile'){
       if(!state.user){openLogin();return}
+      invalidateProfileCache(); // 每次切换到个人页都强制刷新
       state.view='profile';render();return
     }
     render();return;
@@ -282,9 +359,9 @@ function switchTab(t){
 function hdrHTML(title){
   var taglines=['赫赫有名','使命必达','品牌桥梁','酷酷体验','赫然而至','不止于赫','为你而来','以赫为名','赫赫之光','一出好戏'];
   var tag=taglines[Math.floor(Math.random()*taglines.length)];
-  return '<div class="header"><div class="logo">HERIX<span>.</span><span class="sub">赫使</span></div><div class="hdr-actions" style="font-size:12px;color:var(--muted);white-space:nowrap">'+tag+'</div></div>';}
+  return '<div class="header"><div class="logo"><img src="/Logo/herix-icon-filled.png" style="width:24px;height:24px;border-radius:6px;vertical-align:middle;margin-right:6px">Herix</div><div class="hdr-actions" style="font-size:12px;color:var(--muted);white-space:nowrap">'+tag+'</div></div>';}
 function userBarHTML(){
-  if(!state.user) return '<div class="user-bar"><div class="avatar">H</div><span style="font-size:12px;color:var(--muted)">发现适合你的品牌体验</span><span class="login-btn" onclick="openLogin()">登录</span></div>';
+  if(!state.user) return '<div class="user-bar"><span style="font-size:12px;color:var(--muted)">发现适合你的品牌体验</span><span class="login-btn" onclick="openLogin()">登录 →</span></div>';
   var roles=state.user.roles||[state.user.role];
   var activeRole=state.activeRole||roles[0];
   var roleLabel=activeRole==='BRAND'?'品牌':'赫使';
@@ -297,7 +374,8 @@ function userBarHTML(){
     var otherLabel=otherRole==='BRAND'?'切换品牌模式':'切换赫使模式';
     switcher='<span style="font-size:11px;color:var(--primary);cursor:pointer;margin-left:6px;padding:2px 8px;border:1px solid var(--primary);border-radius:10px" onclick="switchRole(\''+otherRole+'\')">⇄ '+otherLabel+'</span>';
   }
-  return '<div class="user-bar"><div class="avatar">'+state.user.nickname[0]+'</div>'
+  return '<div class="user-bar">'
+    +'<div class="avatar">'+state.user.nickname[0]+'</div>'
     +'<span style="font-size:13px;font-weight:600">'+state.user.nickname+'</span>'
     +roleBadge+switcher
     +'<span class="login-btn" onclick="logout()">退出</span></div>';
@@ -305,9 +383,13 @@ function userBarHTML(){
 
 /* ── List ── */
 function listHTML(){
-  var h=hdrHTML()+userBarHTML();
+  var h=hdrHTML();
+  // 只显示当前任务列表中实际有任务的分类
+  var activeCatIds = {};
+  state.tasks.forEach(function(t){ if(t.category) activeCatIds[t.category]=true; });
+  var visibleCats = (state.categories||[]).filter(function(c){ return activeCatIds[c.id]; });
   h+='<div class="filters"><div class="filter'+(state.filter===''?' active':'')+'" data-f="">全部</div>';
-  for(var k in CAT) h+='<div class="filter'+(state.filter===k?' active':'')+'" data-f="'+k+'">'+CAT[k]+'</div>';
+  visibleCats.forEach(function(c){ h+='<div class="filter'+(state.filter===c.id?' active':'')+'" data-f="'+c.id+'">'+c.label+'</div>'; });
   h+='</div><div class="grid">';
   if(state.loading) h+='<div class="loading" style="text-align:center;padding:80px 20px;color:var(--muted)">加载中...</div>';
   else if(state.tasks.length===0) h+='<div style="text-align:center;padding:80px 20px;color:var(--muted)">暂无任务</div>';
@@ -321,14 +403,16 @@ function listHTML(){
 function cardHTML(t){
   var img=t.cover_image||t.brand_promo_image_url||'',r=parseFloat(t.avg_rating)||0,fs=Math.round(r);
   var ml=t.mode==='PERFORMANCE'?'成果报酬':'任务体验',mc=t.mode==='PERFORMANCE'?'mode-perf':'mode-std';
-  var diff=DIFF[t.difficulty]||DIFF.easy,ct={photo:'📷',video:'🎬',referral:'🔗'};
+  var diff=DIFF[t.difficulty]||DIFF.easy;
   var brandIcon=t.brand_logo_url?'<img src="'+t.brand_logo_url+'" alt="">':(t.creator_name||'B')[0];
   var h='<a class="task-card" href="javascript:;" data-id="'+t.id+'">';
-  h+='<div class="card-top"><span class="tag">'+ct[t.content_type]+' '+(CAT[t.category]||t.category)+'</span><span class="mode-tag '+mc+'">'+ml+'</span><span class="diff-tag"><span class="diff-dot d-'+t.difficulty+'"></span>'+diff.label+'</span></div>';
+  var fpTag = t.fast_payout ? '<span style="font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:4px">⚡ 极速打款</span>' : '';
+  var catTag = (catIcon(t.category)||'')+' '+(catLabel(t.category)||t.category||'');
+  h+='<div class="card-top"><span class="tag">'+catTag.trim()+'</span><span class="mode-tag '+mc+'">'+ml+'</span><span class="diff-tag"><span class="diff-dot d-'+t.difficulty+'"></span>'+diff.label+'</span>'+fpTag+'</div>';
   h+='<div class="card-body"><div class="card-c">';
   h+='<div class="card-title">'+t.title+'</div>';
   h+='<div class="brand-row"><span class="brand-icon">'+brandIcon+'</span><span class="brand-name">'+(t.creator_name||'')+'</span></div>';
-  h+='<div class="commission">'+commissionLabel(t.commission,t.currency)+'</div>';
+  h+='<div class="commission">'+commissionLabel(t.payout_per_herald,t.currency)+'</div>';
   h+='<div class="rating-row">';
   for(var s=1;s<=5;s++) h+='<span class="star '+(s<=fs?'on':'off')+'">'+(s<=fs?'★':'☆')+'</span>';
   h+='<span class="rating-num">'+(r>0?r:'新')+'</span></div></div>';
@@ -363,7 +447,9 @@ function checkRequirements(t){
 function detailHTML(){
   var t=state.detailTask,img=t.cover_image||t.brand_promo_image_url||'',diff=DIFF[t.difficulty]||DIFF.easy;
   var ml=t.mode==='PERFORMANCE'?'成果报酬':'任务体验';
-  var applied=t.applications&&t.applications.some(function(a){return a.herald_id===(state.user||{}).id});
+  var myApp=t.applications&&t.applications.find(function(a){return a.herald_id===(state.user||{}).id})||null;
+  var applied=!!myApp;
+  var mySub=state.mySubs.find(function(s){return s.task_id===t.id;})||null;
   var isHerald=state.user&&(state.user.role==='HERALD'||(state.user.roles||[]).includes('HERALD'));
   var canApply=isHerald&&t.status==='OPEN'&&!applied;
 
@@ -371,10 +457,10 @@ function detailHTML(){
   if(img) h+='<div class="dtl-cover" style="background-image:url('+img+')"></div>';
   else h+='<div class="dtl-cover"></div>';
   var dtlBrandIcon=t.brand_logo_url?'<img src="'+t.brand_logo_url+'" alt="">':(t.creator_name||'B')[0];
-  h+='<div class="dtl-body"><div class="dtl-cat">'+(CAT[t.category]||t.category)+' · '+ml+'</div>';
-  h+='<div class="dtl-name">'+t.title+'</div>';
+  h+='<div class="dtl-body"><div class="dtl-cat">'+((catIcon(t.category)+' '+catLabel(t.category)).trim()||t.category)+' · '+ml+'</div>';
+  h+='<div class="dtl-name">'+t.title+(t.fast_payout?'<span style="font-size:11px;font-weight:700;color:#0369a1;background:#e0f2fe;border-radius:5px;padding:2px 8px;margin-left:8px;vertical-align:middle">⚡ 极速打款</span>':'')+'</div>';
   h+='<div class="brand-row"><span class="brand-icon">'+dtlBrandIcon+'</span><span class="brand-name">'+(t.creator_name||'')+'</span></div>';
-  h+='<div class="dtl-price">'+commissionLabel(t.commission,t.currency)+'</div>';
+  h+='<div class="dtl-price">'+commissionLabel(t.payout_per_herald,t.currency)+'</div>';
   h+='<div class="dtl-meta"><div class="dtl-mi"><div class="dtl-mv">'+diff.label+'</div><div class="dtl-ml"><span class="diff-dot d-'+t.difficulty+'"></span> 难度</div></div>';
   h+='<div class="dtl-mi"><div class="dtl-mv">'+t.max_heralds+'</div><div class="dtl-ml">名额</div></div>';
   h+='<div class="dtl-mi"><div class="dtl-mv">'+((t.applications||[]).length)+'</div><div class="dtl-ml">已报名</div></div></div>';
@@ -435,8 +521,28 @@ function detailHTML(){
   h+='<div style="padding:16px 16px calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border);margin-top:20px">';
   if(!state.user&&t.status==='OPEN'){
     h+='<button class="btn btn-primary" onclick="openLogin()">登录后报名</button>';
-  } else if(applied){
-    h+='<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:12px;font-size:14px;color:var(--success);font-weight:500">✅ 已报名，等待品牌审核</div>';
+  } else if(myApp){
+    if(myApp.status==='PENDING'){
+      h+='<div style="text-align:center;padding:12px;background:#fefce8;border-radius:12px;font-size:14px;color:#92400e;font-weight:500">⏳ 已报名，等待品牌审核</div>';
+    } else if(myApp.status==='REJECTED'){
+      h+='<div style="text-align:center;padding:12px;background:#fef2f2;border-radius:12px;font-size:14px;color:#dc2626;font-weight:500">❌ 报名未通过</div>';
+      if(myApp.review_note) h+='<div style="font-size:12px;color:#dc2626;text-align:center;margin-top:6px">原因：'+escHtml(myApp.review_note)+'</div>';
+    } else if(myApp.status==='APPROVED'){
+      if(t.mode==='PERFORMANCE'){
+        h+='<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:12px;font-size:14px;color:var(--success);font-weight:500">✅ 已加入任务，推广中</div>';
+      } else if(!mySub){
+        h+='<button class="btn btn-primary" onclick="openSubmit(\''+t.id+'\')">提交作品</button>';
+        h+='<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:6px">报名已通过，请提交内容链接</div>';
+      } else if(mySub.status==='PENDING_REVIEW'){
+        h+='<div style="text-align:center;padding:12px;background:#fefce8;border-radius:12px;font-size:14px;color:#92400e;font-weight:500">⏳ 作品已提交，等待品牌审核</div>';
+      } else if(mySub.status==='APPROVED'){
+        h+='<div style="text-align:center;padding:12px;background:#f0fdf4;border-radius:12px;font-size:14px;color:var(--success);font-weight:500">✅ 任务完成，报酬已结算</div>';
+      } else if(mySub.status==='REJECTED'){
+        h+='<div style="text-align:center;padding:12px 12px 4px;background:#fef2f2;border-radius:12px;font-size:14px;color:#dc2626;font-weight:500">❌ 内容审核未通过</div>';
+        if(mySub.review_note) h+='<div style="font-size:12px;color:#dc2626;text-align:center;margin:4px 0 8px">原因：'+escHtml(mySub.review_note)+'</div>';
+        h+='<button class="btn btn-primary" style="margin-top:4px" onclick="openSubmit(\''+t.id+'\')">重新提交</button>';
+      }
+    }
   } else if(canApply){
     var check2=checkRequirements(t);
     if(check2.status==='ok'){
@@ -454,7 +560,17 @@ function detailHTML(){
   return h;
 }
 
-function bindDetail(){}
+function bindDetail(){
+  // mySubs 是渲染正确状态的依赖，进入详情页时若未加载则触发一次
+  if(state.user&&(state.user.role==='HERALD'||(state.user.roles||[]).includes('HERALD'))&&!state._subsLoaded){
+    state._subsLoaded=true;
+    var x=new XMLHttpRequest();
+    x.open('GET',API+'/submissions/my',true);
+    x.setRequestHeader('Authorization','Bearer '+state.token);
+    x.onload=function(){try{state.mySubs=JSON.parse(x.responseText)}catch(e){}render();};
+    x.send();
+  }
+}
 
 function showAddAccountSheet(missingIds){
   var overlay=document.createElement('div');
@@ -480,7 +596,7 @@ function showAddAccountSheet(missingIds){
     }
     inner+='</div>';
   }
-  inner+='<button class="btn btn-primary" onclick="submitAddAccountSheet('+JSON.stringify(missingIds)+')">保存并报名</button>';
+  inner+='<button class="btn btn-primary" onclick="submitAddAccountSheet('+JSON.stringify(missingIds).replace(/"/g,'&quot;')+')">保存并报名</button>';
   inner+='<button class="btn btn-outline" style="margin-top:8px" onclick="document.getElementById(\'add-acct-sheet\').remove()">取消</button>';
   inner+='</div>';
   overlay.innerHTML=inner;
@@ -531,7 +647,7 @@ function submitAddAccountSheet(missingIds){
     try{
       var d=JSON.parse(xhr.responseText);
       if(d.error){alert(d.error);return;}
-      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      applyProfilePatch(d);
       document.getElementById('add-acct-sheet').remove();
       applyTask();
     }catch(e){alert('保存失败');}
@@ -541,14 +657,14 @@ function submitAddAccountSheet(missingIds){
 
 /* ── Brand Dashboard ── */
 function brandDashHTML(){
-  var h=hdrHTML()+userBarHTML()+'<div class="dash">';
+  var h=hdrHTML()+'<div class="dash">';
   h+='<div style="display:flex;gap:8px;margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="switchView(\'create-task\')">+ 发布任务</button></div>';
   h+='<div class="sec"><div class="sec-title">我的任务</div>';
   for(var i=0;i<state.myTasks.length;i++){
     var t=state.myTasks[i];
     h+='<div class="item-card" data-id="'+t.id+'">';
     h+='<div class="item-hdr"><span class="item-title">'+t.title+'</span><span class="item-status st-'+(t.status==='OPEN'?'active':t.status.toLowerCase())+'">'+(t.status==='OPEN'?'招募中':t.status==='COMPLETED'?'已完成':t.status==='DRAFT'?'草稿':t.status)+'</span></div>';
-    h+='<div class="item-meta">¥'+t.commission+'/人 · '+(t.application_count||0)+'人报名</div>';
+    h+='<div class="item-meta">¥'+(t.payout_per_herald||0)+'/人 · '+(t.application_count||0)+'人报名</div>';
     h+='<div class="item-actions"><button class="btn btn-sm btn-outline" onclick="openBrandTask(\''+t.id+'\')">管理</button>';
     if(t.status==='DRAFT') h+='<button class="btn btn-sm btn-primary" onclick="publishTask(\''+t.id+'\')">发布</button>';
     h+='</div></div>';
@@ -570,6 +686,7 @@ function openBrandTask(id){
   xhr.open('GET',API+'/tasks/'+id,true);
   xhr.onload=function(){
     try{state.detailTask=JSON.parse(xhr.responseText)}catch(e){}
+    state.taskSubs=[];state._loadingBrandTask=false;
     state.view='brand-task';render();
   };
   xhr.send();
@@ -580,7 +697,7 @@ function brandTaskHTML(){
   var h=hdrHTML()+'<div class="dash">';
   h+='<span class="dtl-back" onclick="switchView(\'brand-dashboard\')" style="cursor:pointer">← 返回</span>';
   h+='<div style="margin-top:12px"><div class="sec-title">'+t.title+'</div>';
-  h+='<div style="font-size:12px;color:var(--muted);margin-bottom:16px">预算 ¥'+t.budget+' · 报酬 ¥'+t.commission+'/人 · '+(t.max_heralds)+'名额</div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin-bottom:16px">任务报酬 ¥'+(t.payout_per_herald||0)+'/人 · '+(t.max_heralds)+'名额</div>';
 
   // 推广码任务 → CSV 导入
   if(t.mode==='PERFORMANCE'&&t.category==='referral'){
@@ -601,57 +718,99 @@ function brandTaskHTML(){
   }else h+='<div style="color:var(--muted);font-size:12px">暂无报名</div>';
   h+='</div>';
 
-  // 提交列表（类型B）
-  var subs = state.taskSubs || [];
-  h+='<div style="margin-top:16px"><div class="sec-title">提交内容 ('+subs.length+')</div>';
-  if(subs.length>0){
-    for(var si=0;si<subs.length;si++){
-      var s=subs[si];
-      h+='<div class="item-card">';
-      h+='<div class="item-hdr"><span class="app-name">'+(s.nickname||'赫使')+'</span>';
-      if(s.status==='PENDING_REVIEW') h+='<span class="item-status st-pending">待审核</span>';
-      else if(s.status==='APPROVED') h+='<span class="item-status st-approved">已通过</span>';
-      else h+='<span class="item-status st-rejected">已拒绝</span>';
-      h+='</div>';
-      h+='<div style="font-size:12px;color:var(--muted);margin:4px 0"><a href="'+(s.content_url||'')+'" target="_blank" style="color:var(--primary)">'+(s.content_url||'无链接')+'</a></div>';
-      if(s.description) h+='<div style="font-size:12px;color:#555">'+s.description+'</div>';
-      if(s.status==='PENDING_REVIEW') h+='<div class="app-actions" style="margin-top:8px"><button class="btn btn-sm btn-success" data-action="approve-sub" data-sid="' + s.id + '">通过并结算</button><button class="btn btn-sm btn-danger" data-action="reject-sub" data-sid="' + s.id + '">拒绝</button></div>';
-      if(s.status==='APPROVED') h+='<div style="font-size:11px;color:var(--success);margin-top:4px">✅ 已结算</div>';
-      if(s.status==='REJECTED'&&s.review_note) h+='<div style="font-size:11px;color:var(--muted);margin-top:4px">原因: '+s.review_note+'</div>';
-      h+='</div>';
-    }
-  }else{ h+='<div style="color:var(--muted);font-size:12px">暂无提交</div>'; }
+  // 提交列表（类型B）— 由 bindBrandTask() 异步填充
+  h+='<div id="brand-task-subs" style="margin-top:16px"><div class="sec-title">提交内容</div><div style="color:var(--muted);font-size:12px">加载中…</div></div>';
 
   return h+'</div></div>';
 }
 
 function bindBrandTask(){
-  // 加载提交列表
+  if(state._loadingBrandTask) return;
+  state._loadingBrandTask=true;
   var xhr=new XMLHttpRequest();
   xhr.open('GET',API+'/submissions/task/'+state.detailTask.id,true);
   xhr.setRequestHeader('Authorization','Bearer '+(state.token||''));
   xhr.onload=function(){
-    try{state.taskSubs=JSON.parse(xhr.responseText);render()}catch(e){}
+    state._loadingBrandTask=false;
+    var subs=[];
+    try{subs=JSON.parse(xhr.responseText);state.taskSubs=subs;}catch(e){}
+    var el=document.getElementById('brand-task-subs');
+    if(!el) return;
+    var h='<div class="sec-title">提交内容 ('+subs.length+')</div>';
+    if(subs.length>0){
+      for(var i=0;i<subs.length;i++){
+        var s=subs[i];
+        h+='<div class="item-card">';
+        h+='<div class="item-hdr"><span class="app-name">'+(s.nickname||'赫使')+'</span>';
+        if(s.status==='PENDING_REVIEW') h+='<span class="item-status st-pending">待审核</span>';
+        else if(s.status==='APPROVED') h+='<span class="item-status st-approved">已通过</span>';
+        else h+='<span class="item-status st-rejected">已拒绝</span>';
+        h+='</div>';
+        h+='<div style="font-size:12px;color:var(--muted);margin:4px 0"><a href="'+(s.content_url||'')+'" target="_blank" style="color:var(--primary)">'+(s.content_url||'无链接')+'</a></div>';
+        if(s.description) h+='<div style="font-size:12px;color:#555">'+s.description+'</div>';
+        if(s.status==='PENDING_REVIEW') h+='<div class="app-actions" style="margin-top:8px"><button class="btn btn-sm btn-success" data-action="approve-sub" data-sid="'+s.id+'">通过并结算</button><button class="btn btn-sm btn-danger" data-action="reject-sub" data-sid="'+s.id+'">拒绝</button></div>';
+        if(s.status==='APPROVED') h+='<div style="font-size:11px;color:var(--success);margin-top:4px">✅ 已结算</div>';
+        if(s.status==='REJECTED'&&s.review_note) h+='<div style="font-size:11px;color:var(--muted);margin-top:4px">原因: '+s.review_note+'</div>';
+        h+='</div>';
+      }
+    }else{ h+='<div style="color:var(--muted);font-size:12px">暂无提交</div>'; }
+    el.innerHTML=h;
+  };
+  xhr.onerror=function(){
+    state._loadingBrandTask=false;
+    var el=document.getElementById('brand-task-subs');
+    if(el) el.innerHTML='<div class="sec-title">提交内容</div><div style="color:var(--muted);font-size:12px">加载失败</div>';
   };
   xhr.send();
 }
 
+/* ── 待办任务卡片统一渲染 ──
+ * opts = {
+ *   title     : string   任务名（自动截断）
+ *   accent    : string   左边框颜色
+ *   meta      : string   副标题文字
+ *   metaColor : string?  副标题颜色（默认同 accent）
+ *   note      : string?  次要备注（灰色，截断）
+ *   right     : {        右侧操作区 — badge 与 button 使用完全相同的 pill 尺寸
+ *     type    : 'badge'|'button'
+ *     text    : string
+ *     color   : string   文字色
+ *     bg      : string   背景色
+ *     onclick : string?  仅 button
+ *   }
+ *   body      : string?  标题行下方扩展 HTML（推广码块等）
+ * }
+ */
+function taskCardHTML(opts){
+  // badge 与 button 共用同一套 pill 样式，保证视觉对齐
+  // badge 与 button 同用 <span>，消除 <button> UA stylesheet 的盒模型差异
+  var PILL='flex-shrink:0;display:inline-block;box-sizing:border-box;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;line-height:1;text-align:center;min-width:68px';
+  var h='<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;border-left:3px solid '+opts.accent+'">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">';
+  h+='<div style="min-width:0;flex:1">';
+  h+='<div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(opts.title)+'</div>';
+  if(opts.meta) h+='<div style="font-size:11px;color:'+(opts.metaColor||opts.accent)+';margin-top:3px">'+opts.meta+'</div>';
+  if(opts.note) h+='<div style="font-size:11px;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(opts.note)+'</div>';
+  h+='</div>';
+  if(opts.right){
+    var r=opts.right;
+    var pillStyle=PILL+';color:'+r.color+';background:'+r.bg;
+    if(r.type==='badge'){
+      h+='<span style="'+pillStyle+'">'+r.text+'</span>';
+    } else {
+      h+='<span role="button" tabindex="0" style="'+pillStyle+';cursor:pointer" onclick="'+r.onclick+'">'+r.text+'</span>';
+    }
+  }
+  h+='</div>';
+  if(opts.body) h+=opts.body;
+  h+='</div>';
+  return h;
+}
+
 /* ── Herald Dashboard ── */
 function heraldDashHTML(){
-  var h=hdrHTML()+userBarHTML()+'<div class="dash">';
+  var h=hdrHTML()+'<div class="dash">';
 
-  // === 收款信息缺失提示 ===
-  var ap=state.ambassadorProfile||{};
-  if(!ap.residence||!ap.bank_account){
-    var missing=[];
-    if(!ap.residence) missing.push('居住地');
-    if(!ap.bank_account) missing.push('收款账户');
-    h+='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:8px">';
-    h+='<div><div style="font-size:13px;font-weight:600;color:#92400e">⚠️ 收款信息未完善</div>';
-    h+='<div style="font-size:11px;color:#a16207;margin-top:2px">'+missing.join(' · ')+'未填写，获得报酬时必须完善</div></div>';
-    h+='<span style="font-size:12px;color:var(--primary);white-space:nowrap;cursor:pointer" onclick="switchTab(\'profile\')">立即填写 →</span>';
-    h+='</div>';
-  }
 
   // === 收支摘要 ===
   var bal=state.walletBalance||{};
@@ -668,42 +827,65 @@ function heraldDashHTML(){
   h+='</div>';
 
   // === 待办任务 ===
-  var actionableA=state.myApps.filter(function(a){return a.status==='APPROVED'&&a.mode==='STANDARD'});
+  var approvedStdApps=state.myApps.filter(function(a){return a.status==='APPROVED'&&a.mode==='STANDARD'});
   var subForTask=function(tid){return state.mySubs.find(function(s){return s.task_id===tid&&s.status==='APPROVED'});};
-  actionableA=actionableA.filter(function(a){return !subForTask(a.task_id);});
+  var rejectedSubForTask=function(tid){return state.mySubs.find(function(s){return s.task_id===tid&&s.status==='REJECTED'});};
+  var pendingSubForTask=function(tid){return state.mySubs.find(function(s){return s.task_id===tid&&s.status==='PENDING_REVIEW'});};
+  // 可提交 = 无APPROVED sub 且 无PENDING_REVIEW sub（REJECTED可重新提交）
+  var actionableA=approvedStdApps.filter(function(a){return !subForTask(a.task_id)&&!pendingSubForTask(a.task_id);});
+  var freshA=actionableA.filter(function(a){return !rejectedSubForTask(a.task_id);});
+  var rejectedA=actionableA.filter(function(a){return !!rejectedSubForTask(a.task_id);});
+  // 已提交等待审核
+  var pendingReviewA=approvedStdApps.filter(function(a){return !!pendingSubForTask(a.task_id);});
 
   var actionableB=state.myApps.filter(function(a){return a.status==='APPROVED'&&a.mode==='PERFORMANCE' && state.myCodes.some(function(c){return c.task_id===a.task_id;});});
 
-  if(actionableA.length>0||actionableB.length>0){
+  var hasAction=rejectedA.length>0||freshA.length>0;
+  var hasInProgress=pendingReviewA.length>0||actionableB.length>0;
+  if(hasAction||hasInProgress){
     h+='<div style="margin-bottom:20px"><div style="font-size:14px;font-weight:600;margin-bottom:12px">待办任务</div>';
 
-    // Type A - 待提交作品
-    for(var i=0;i<actionableA.length;i++){
-      var aa=actionableA[i];
-      h+='<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;border-left:3px solid var(--primary)">';
-      h+='<div style="display:flex;justify-content:space-between;align-items:center">';
-      h+='<div><div style="font-size:13px;font-weight:600">'+escHtml(aa.task_title)+'</div>';
-      h+='<div style="font-size:11px;color:var(--muted);margin-top:2px">内容任务 · ¥'+aa.commission+'</div></div>';
-      h+='<button class="btn btn-sm btn-primary" onclick="openSubmit(\''+aa.task_id+'\')">提交作品</button>';
-      h+='</div></div>';
+    // ── 待操作（需要赫使做事）──
+    if(hasAction){
+      if(hasInProgress) h+='<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.8px;margin-bottom:8px">待操作</div>';
+      for(var i=0;i<rejectedA.length;i++){
+        var ra2=rejectedA[i];var rsub=rejectedSubForTask(ra2.task_id);
+        h+=taskCardHTML({title:ra2.task_title,accent:'#dc2626',meta:'内容审核未通过，请修改后重新提交',
+          note:rsub&&rsub.review_note?'原因：'+rsub.review_note:'',
+          right:{type:'button',text:'重新提交',color:'#fff',bg:'#dc2626',onclick:"openSubmit('"+ra2.task_id+"')"}});
+      }
+      for(var i=0;i<freshA.length;i++){
+        var aa=freshA[i];
+        h+=taskCardHTML({title:aa.task_title,accent:'var(--primary)',
+          meta:'内容任务 · ¥'+(aa.payout_per_herald||aa.commission||0),metaColor:'var(--muted)',
+          right:{type:'button',text:'提交作品',color:'#fff',bg:'var(--primary)',onclick:"openSubmit('"+aa.task_id+"')"}});
+      }
     }
 
-    // Type B - 推广码分享
-    for(var j=0;j<actionableB.length;j++){
-      var ab=actionableB[j];
-      var code=state.myCodes.find(function(c){return c.task_id===ab.task_id});
-      h+='<div style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;border-left:3px solid var(--gold)">';
-      h+='<div style="font-size:13px;font-weight:600;margin-bottom:6px">'+escHtml(ab.task_title)+'</div>';
-      if(code){
-        h+='<div style="background:#fffbf0;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">';
-        h+='<span style="font-family:monospace;font-size:14px;font-weight:700;letter-spacing:1px">'+escHtml(code.unique_code||'')+'</span>';
-        h+='<button class="btn btn-sm" style="background:#f5a623;color:#fff;border:none;font-size:11px" data-code="'+escHtml(code.unique_code||'')+'" onclick="copyCode(this,this.dataset.code);event.stopPropagation()">复制</button></div>';
-        h+='<div style="font-size:11px;color:var(--muted)">收益 ¥'+(code.earned_amount||0).toLocaleString()+' · '+(code.registered_count||0)+'注册 '+(code.used_count||0)+'使用</div>';
-      } else {
-        h+='<div style="font-size:11px;color:var(--muted)">⏳ 推广码正在生成</div>';
+    // ── 进行中（等待品牌 / 持续推广）──
+    if(hasInProgress){
+      if(hasAction) h+='<div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.8px;margin:12px 0 8px">进行中</div>';
+      for(var i=0;i<pendingReviewA.length;i++){
+        var pra=pendingReviewA[i];
+        h+=taskCardHTML({title:pra.task_title,accent:'#0369a1',
+          meta:'内容已提交，等待品牌审核',metaColor:'var(--muted)',
+          right:{type:'badge',text:'审核中',color:'#0369a1',bg:'#eff6ff'}});
       }
-      h+='</div>';
+      for(var j=0;j<actionableB.length;j++){
+        var ab=actionableB[j];
+        var code=state.myCodes.find(function(c){return c.task_id===ab.task_id});
+        var codeBody=code
+          ?'<div style="background:#fffbf0;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-top:8px;display:flex;align-items:center;justify-content:space-between">'
+            +'<span style="font-family:monospace;font-size:14px;font-weight:700;letter-spacing:1px">'+escHtml(code.unique_code||'')+'</span>'
+            +'<span role="button" tabindex="0" style="display:inline-block;box-sizing:border-box;padding:7px 16px;border-radius:20px;font-size:12px;font-weight:600;line-height:1;background:#f5a623;color:#fff;cursor:pointer;white-space:nowrap" data-code="'+escHtml(code.unique_code||'')+'" onclick="copyCode(this,this.dataset.code);event.stopPropagation()">复制</span></div>'
+            +'<div style="font-size:11px;color:var(--muted);margin-top:6px">收益 ¥'+(code.earned_amount||0).toLocaleString()+' · '+(code.registered_count||0)+'注册 '+(code.used_count||0)+'使用</div>'
+          :'<div style="font-size:11px;color:var(--muted);margin-top:6px">⏳ 推广码正在生成</div>';
+        h+=taskCardHTML({title:ab.task_title,accent:'var(--gold)',
+          meta:'推广任务',metaColor:'var(--muted)',body:codeBody,
+          right:{type:'badge',text:'推广中',color:'#92400e',bg:'#fffbeb'}});
+      }
     }
+
     h+='</div>';
   }
 
@@ -735,15 +917,22 @@ function heraldDashHTML(){
       var ra=filteredApps[m];if(!ra)continue;
       var stMap={PENDING:['待审核','#d97706'],APPROVED:['已通过','#16a34a'],REJECTED:['未通过','#dc2626'],WITHDRAWN:['已撤回','#6b7280']};
       if(ra.status==='APPROVED' && ra.mode==='STANDARD'){
-        var doneSub=state.mySubs.some(function(s){return s.task_id===ra.task_id && s.status==='APPROVED'});
-        if(doneSub) stMap.APPROVED=['已完成','#6366f1'];
+        var raSub=state.mySubs.find(function(s){return s.task_id===ra.task_id});
+        if(raSub&&raSub.status==='APPROVED') stMap.APPROVED=['已完成','#6366f1'];
+        else if(raSub&&raSub.status==='PENDING_REVIEW') stMap.APPROVED=['内容审核中','#0369a1'];
+        else if(raSub&&raSub.status==='REJECTED') stMap.APPROVED=['需重新提交','#dc2626'];
       }
       var s=stMap[ra.status]||['','#666'];
       h+='<div style="background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:6px">';
       h+='<div style="display:flex;justify-content:space-between;align-items:center">';
       h+='<div style="font-size:13px;font-weight:500">'+escHtml(ra.task_title)+'</div>';
       h+='<span style="font-size:10px;font-weight:600;color:'+s[1]+'">'+s[0]+'</span></div>';
-      h+='<div style="font-size:11px;color:var(--muted);margin-top:4px">¥'+ra.commission+' · '+(ra.mode==='PERFORMANCE'?'推广任务':'内容任务')+'</div>';
+      h+='<div style="font-size:11px;color:var(--muted);margin-top:4px">¥'+(ra.payout_per_herald||ra.commission||0)+' · '+(ra.mode==='PERFORMANCE'?'推广任务':'内容任务')+'</div>';
+      if(ra.status==='REJECTED'&&ra.review_note) h+='<div style="font-size:11px;color:#dc2626;margin-top:6px;padding:6px 8px;background:#fef2f2;border-radius:6px;border-left:3px solid #dc2626">报名拒绝原因：'+escHtml(ra.review_note)+'</div>';
+      if(ra.status==='APPROVED'&&ra.mode==='STANDARD'){
+        var raSubD=state.mySubs.find(function(s){return s.task_id===ra.task_id});
+        if(raSubD&&raSubD.status==='REJECTED'&&raSubD.review_note) h+='<div style="font-size:11px;color:#dc2626;margin-top:6px;padding:6px 8px;background:#fef2f2;border-radius:6px;border-left:3px solid #dc2626">内容拒绝原因：'+escHtml(raSubD.review_note)+'</div>';
+      }
       h+='</div>';
     }
   }
@@ -821,11 +1010,42 @@ function bindHeraldDash(){
 
 /* ── Submit ── */
 function submitHTML(){
+  var prev=state.prevRejectedSub||null;
+  var prevUrl=prev?prev.content_url||'':'';
+  var prevDesc=prev?prev.description||'':'';
+
+  // 根据任务平台要求，生成获取链接的提示
+  var reqs=[];
+  try{if(state.detailTask&&state.detailTask.platform_requirements) reqs=JSON.parse(state.detailTask.platform_requirements);}catch(e){}
+  var hints=[];
+  var platformHintMap={
+    'xiaohongshu':'小红书：打开笔记 → 右上角「…」→「分享」→「复制链接」',
+    'instagram':'Instagram：打开帖子 → 右上角「⋯」→「复制链接」',
+    'tiktok':'TikTok：打开视频 → 右侧「分享」→「复制链接」',
+    'youtube':'YouTube：视频下方「分享」→「复制链接」',
+    'douyin':'抖音：打开视频 → 右侧「分享」→「复制链接」',
+    'twitter':'X(Twitter)：点推文右下角「分享」→「复制链接」',
+    'facebook':'Facebook：帖子右上角「…」→「复制链接」',
+  };
+  reqs.forEach(function(r){
+    var hint=platformHintMap[r.platformId];
+    if(hint) hints.push(hint);
+  });
+  // 若无平台要求，给小红书默认提示（最常用）
+  if(!hints.length) hints.push('小红书：打开笔记 → 右上角「…」→「分享」→「复制链接」');
+
   var h=hdrHTML()+'<div class="dash">';
   h+='<span class="dtl-back" onclick="back()" style="cursor:pointer">← 返回</span>';
-  h+='<div style="margin-top:12px"><div class="sec-title">提交结果</div>';
-  h+='<div class="ig"><label>内容链接 *</label><input id="sub-url" placeholder="https://instagram.com/p/..."></div>';
-  h+='<div class="ig"><label>内容说明</label><textarea id="sub-desc" placeholder="简单描述你的推广内容..."></textarea></div>';
+  h+='<div style="margin-top:12px"><div class="sec-title">'+(prev?'重新提交内容':'提交结果')+'</div>';
+  if(prev&&prev.review_note){
+    h+='<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:#dc2626">上次被拒原因：'+escHtml(prev.review_note)+'</div>';
+  }
+  h+='<div class="ig"><label>内容链接 *</label>';
+  h+='<input id="sub-url" placeholder="https://..." value="'+escHtml(prevUrl)+'">';
+  h+='<div style="margin-top:6px;font-size:11px;color:var(--muted)">';
+  hints.forEach(function(hint){ h+='<div style="margin-top:3px">💡 '+escHtml(hint)+'</div>'; });
+  h+='</div></div>';
+  h+='<div class="ig"><label>内容说明</label><textarea id="sub-desc" placeholder="简单描述你的推广内容...">'+escHtml(prevDesc)+'</textarea></div>';
   h+='<button class="btn btn-primary" onclick="doSubmit()">提交审核</button></div></div>';
   return h;
 }
@@ -861,9 +1081,19 @@ function bindCsvImport(){}
 
 /* ── 个人主页 ── */
 function profileHTML(){
+  if(!state.user){
+    return hdrHTML()
+      +'<div style="min-height:100vh;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;padding-bottom:80px">'
+      +'<div style="width:80px;height:80px;border-radius:50%;background:#e5e7eb;display:flex;align-items:center;justify-content:center;margin-bottom:20px">'
+      +'<span style="font-size:36px;color:#9ca3af">👤</span></div>'
+      +'<div style="font-size:17px;font-weight:600;margin-bottom:8px;color:var(--text)">登录后查看个人中心</div>'
+      +'<div style="font-size:13px;color:var(--muted);margin-bottom:28px;text-align:center">接取任务、管理收益、查看申请进度</div>'
+      +'<button class="btn btn-primary" style="width:200px;font-size:15px;padding:12px" onclick="openLogin()">登录 / 注册</button>'
+      +'</div>';
+  }
   var u=state.user||{};
   var initial=(u.nickname||'?')[0].toUpperCase();
-  var colors=['#0070CC','#34c759','#f5a623','#ff3b30','#5856d6','#ff9500'];
+  var colors=['#D43B27','#34c759','#f5a623','#ff3b30','#5856d6','#ff9500'];
   var color=colors[(u.nickname||'').charCodeAt(0)%colors.length];
   var isHerald=u.role==='HERALD';
 
@@ -965,10 +1195,12 @@ function profileHTML(){
         var s=socials[si];
         var sp=platformById(s.platformId);
         var tier=tierSnap[s.platformId];
-        var sval=s.accountId||(s.url?s.url.replace('https://','').split('/')[0]:'—');
+        var sval=escHtml(s.accountId||(s.url?s.url.replace('https://','').split('/')[0]:'—'));
         if(s.followers) sval+=' · '+s.followers.toLocaleString()+'粉';
-        if(tier) sval+=' <span style="font-size:10px;background:#f0f4ff;color:#4f6ef7;border-radius:4px;padding:1px 5px">'+tier+'</span>';
-        h+=profileRow(sp.icon+' '+sp.name, sval);
+        if(tier) sval+=' <span style="font-size:10px;background:#f0f4ff;color:#4f6ef7;border-radius:4px;padding:1px 5px">'+escHtml(tier)+'</span>';
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)">'
+          +'<span style="font-size:13px;color:var(--muted)">'+escHtml(sp.icon+' '+sp.name)+'</span>'
+          +'<span style="font-size:13px;font-weight:500">'+sval+'</span></div>';
       }
     }
     h+='<div id="social-edit-area" style="display:none;padding:16px 20px;border-top:1px solid var(--border)">';
@@ -1108,7 +1340,7 @@ function saveSocialProfile(){
       var res=JSON.parse(xhr.responseText);
       if(res.error){alert(res.error);return}
       // 刷新本地档案
-      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(platforms)});
+      applyProfilePatch(res);
       hideSocialEdit();
       toast('社交账号已保存');
       render();
@@ -1206,7 +1438,7 @@ function walletHTML(){
       h+='</div>';
     }
   }
-  h+='<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="state.view=\'add-method\';render()">+ 添加收款方式</button>';
+  h+='<button class="btn btn-outline btn-sm" style="margin-top:8px" onclick="state.view=\'add-method\';state.addStep=\'region\';state.addRegion=\'\';state.addType=\'\';render()">+ 添加收款方式</button>';
   h+='</div>';
 
   // 钱包流水：按期间过滤 + 期间流入流出 + 分类型明细
@@ -1277,10 +1509,12 @@ function submitWithdrawRequest(){
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.onload=function(){
-    var d=JSON.parse(xhr.responseText);
-    if(d.error){alert(d.error);return;}
-    alert('提现申请已提交！预计1-3个工作日内打款。');
-    loadWalletBalance();render();
+    try{
+      var d=JSON.parse(xhr.responseText);
+      if(d.error){alert(d.error);return;}
+      alert('提现申请已提交！预计1-3个工作日内打款。');
+      loadWalletBalance();render();
+    }catch(e){alert('提现失败，请重试');}
   };
   xhr.send(JSON.stringify({amount:amount,currency:currency,method:method,accountDetails:accountDetails}));
 }
@@ -1357,86 +1591,142 @@ function loadWalletBalance(){
 }
 
 /* ── Add Withdrawal Method ── */
+/* ── Add Payment Method — Wise-style 3-step flow ── */
 function addMethodHTML(){
-  var ap=state.ambassadorProfile||{};
-  var residence=ap.residence||'overseas';
-  var h=hdrHTML()+'<div class="dash">';
-  h+='<div style="padding:0 0 16px"><span style="cursor:pointer;font-size:14px;color:var(--primary)" onclick="state.view=\'wallet\';render()">← 返回钱包</span></div>';
-  h+='<div style="font-size:16px;font-weight:600;margin-bottom:20px">添加收款方式</div>';
+  var step = state.addStep || 'region';
+  var region = state.addRegion || '';
+  var type   = state.addType  || '';
 
-  // 根据居住地筛选可用收款方式
-  var types;
-  if(residence==='japan') types=[{id:'BANK',label:'日本银行口座'},{id:'CASH',label:'現金受取'}];
-  else if(residence==='china') types=[{id:'BANK',label:'银行卡'},{id:'WECHAT',label:'微信支付'},{id:'ALIPAY',label:'支付宝'}];
-  else types=[{id:'BANK',label:'银行账户'},{id:'PAYPAL',label:'PayPal'},{id:'WECHAT',label:'微信支付'},{id:'ALIPAY',label:'支付宝'}];
+  var h = hdrHTML() + '<div class="dash" style="max-width:480px;margin:0 auto">';
 
-  var sel=state.methodType||types[0].id;
-  h+='<div class="ig"><label>类型</label><select id="method-type" onchange="state.methodType=this.value;render()">';
-  for(var i=0;i<types.length;i++){h+='<option value="'+types[i].id+'"'+(sel===types[i].id?' selected':'')+'>'+types[i].label+'</option>';}
-  h+='</select></div>';
-  h+='<div class="ig"><label>标签</label><input id="method-label" placeholder="'+(residence==='japan'?'例：三菱UFJ銀行':'例：Bank of China')+'"></div>';
+  // ── 返回链接 ──
+  var backLabel, backFn;
+  if(step === 'region') { backLabel='← 返回钱包'; backFn='state.view=\'wallet\';render()'; }
+  else if(step === 'type') { backLabel='← 选择其他地区'; backFn='state.addStep=\'region\';render()'; }
+  else { backLabel='← 选择其他方式'; backFn='state.addStep=\'type\';render()'; }
+  h += '<div style="margin-bottom:24px"><span style="cursor:pointer;font-size:14px;color:var(--primary)" onclick="'+backFn+'">'+backLabel+'</span></div>';
 
-  if(sel==='BANK'){
-    if(residence==='japan'){
-      // 日本银行格式
-      h+='<div style="font-size:11px;color:var(--muted);margin-bottom:12px">日本国内银行账户，填写完成后会汇入该账户</div>';
-      h+='<div class="ig"><label>金融機関コード <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-jp-code" placeholder="例：0001"></div>';
-      h+='<div class="ig"><label>銀行名 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-bank" placeholder="例：三菱UFJ銀行"></div>';
-      h+='<div class="ig"><label>支店コード <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-branch-code" placeholder="例：001"></div>';
-      h+='<div class="ig"><label>支店名</label><input id="m-branch" placeholder="例：新宿支店"></div>';
-      h+='<div class="ig"><label>口座種別</label><select id="m-acct-type"><option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option></select></div>';
-      h+='<div class="ig"><label>口座番号 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-acct" placeholder="例：1234567"></div>';
-      h+='<div class="ig"><label>口座名義（カナ）<span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-name" placeholder="例：アリス ワン"></div>';
-    } else {
-      // 国际银行格式
-      h+='<div style="font-size:11px;color:var(--muted);margin-bottom:12px">国际银行转账，请填写汇款所需信息</div>';
-      h+='<div class="ig"><label>银行名称 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-bank" placeholder="例：Bank of China"></div>';
-      h+='<div class="ig"><label>账户号码 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-acct" placeholder="例：1234567890"></div>';
-      h+='<div class="ig"><label>账户名 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-name" placeholder="例：ALICE WANG"></div>';
-      h+='<div class="ig"><label>SWIFT/BIC <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-swift" placeholder="例：BKCHCNBJ"></div>';
-      h+='<div class="ig"><label>国家/地区</label><select id="method-country"><option value="JP">JP</option><option value="US">US</option><option value="CN">CN</option><option value="HK">HK</option><option value="SG">SG</option><option value="MY">MY</option><option value="TH">TH</option><option value="KR">KR</option><option value="TW">TW</option><option value="VN">VN</option><option value="PH">PH</option><option value="ID">ID</option><option value="AU">AU</option><option value="GB">GB</option><option value="CA">CA</option><option value="DE">DE</option><option value="FR">FR</option><option value="IT">IT</option><option value="ES">ES</option><option value="NL">NL</option><option value="CH">CH</option><option value="AE">AE</option><option value="SA">SA</option><option value="BR">BR</option><option value="MX">MX</option><option value="Other">Other</option></select></div>';
+  // ══ STEP 1: 选择收款地区 ══
+  if(step === 'region'){
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">选择收款地区</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">我们根据地区为你匹配合适的收款方式</div>';
+
+    var regions = [
+      {id:'japan',  flag:'🇯🇵', name:'日本',    sub:'银行振込'},
+      {id:'china',  flag:'🇨🇳', name:'中国大陆', sub:'支付宝 · 微信支付'},
+      {id:'overseas',flag:'🌐', name:'其他地区', sub:'国际银行 · PayPal'},
+    ];
+    for(var i=0;i<regions.length;i++){
+      var r=regions[i];
+      h += '<div onclick="state.addRegion=\''+r.id+'\';state.addStep=\'type\';render()" style="display:flex;align-items:center;gap:16px;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--primary)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+      h += '<span style="font-size:36px;line-height:1">'+r.flag+'</span>';
+      h += '<div style="flex:1"><div style="font-size:15px;font-weight:600;margin-bottom:2px">'+r.name+'</div><div style="font-size:12px;color:var(--muted)">'+r.sub+'</div></div>';
+      h += '<span style="color:var(--muted);font-size:18px">›</span>';
+      h += '</div>';
     }
-  } else if(sel==='CASH'){
-    h+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:14px 16px;margin-bottom:16px">';
-    h+='<div style="font-size:13px;font-weight:600;color:#166534;margin-bottom:4px">💰 現金受取</div>';
-    h+='<div style="font-size:12px;color:#15803d">当面は現金受取でのお支払いとなります。詳細は後日ご連絡します。</div></div>';
-  } else if(sel==='PAYPAL'){
-    h+='<div class="ig"><label>PayPal 邮箱 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-email" type="email" placeholder="you@paypal.com"></div>';
-  } else if(sel==='WECHAT'){
-    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:12px">请填写微信号或绑定手机号</div>';
-    h+='<div class="ig"><label>微信 ID / 手机号 <span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-wechat-id" placeholder="WeChat ID 或绑定手机号"></div>';
-  } else if(sel==='ALIPAY'){
-    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:12px">请填写支付宝账户邮箱或手机号</div>';
-    h+='<div class="ig"><label>支付宝账号（邮箱/手机）<span style="font-size:10px;color:#aaa">（必須）</span></label><input id="m-alipay-acct" placeholder="alipay@example.com"></div>';
   }
-  h+='<div class="ig"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-default"> 设为默认</label></div>';
-  h+='<button class="btn btn-primary" onclick="doAddMethod()">保存</button></div>';
+
+  // ══ STEP 2: 选择收款方式 ══
+  else if(step === 'type'){
+    var methodMap = {
+      japan: [
+        {id:'BANK', icon:'🏦', name:'日本銀行振込', sub:'到账1-3个工作日，支持全国银行'},
+        {id:'CASH', icon:'💴', name:'現金受取',     sub:'由工作人员当面支付'},
+      ],
+      china: [
+        {id:'ALIPAY', icon:'🔵', name:'支付宝',   sub:'即时到账，手机号或账号收款'},
+        {id:'WECHAT', icon:'🟢', name:'微信支付',  sub:'即时到账，微信号收款'},
+        {id:'BANK',   icon:'🏦', name:'银行卡',    sub:'1-3个工作日，中国大陆银行卡'},
+      ],
+      overseas: [
+        {id:'BANK',   icon:'🏦', name:'国际银行转账', sub:'SWIFT 汇款，3-5个工作日'},
+        {id:'PAYPAL', icon:'🅿️', name:'PayPal',      sub:'即时到账，邮箱收款'},
+      ],
+    };
+    var regionNames = {japan:'日本', china:'中国大陆', overseas:'其他地区'};
+    var methods = methodMap[region] || methodMap.overseas;
+
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">选择收款方式</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">收款地区：'+(regionNames[region]||region)+'</div>';
+
+    for(var j=0;j<methods.length;j++){
+      var m=methods[j];
+      h += '<div onclick="state.addType=\''+m.id+'\';state.addStep=\'form\';render()" style="display:flex;align-items:center;gap:16px;background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:12px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor=\'var(--primary)\'" onmouseout="this.style.borderColor=\'var(--border)\'">';
+      h += '<span style="font-size:28px;line-height:1;width:36px;text-align:center">'+m.icon+'</span>';
+      h += '<div style="flex:1"><div style="font-size:15px;font-weight:600;margin-bottom:2px">'+m.name+'</div><div style="font-size:12px;color:var(--muted)">'+m.sub+'</div></div>';
+      h += '<span style="color:var(--muted);font-size:18px">›</span>';
+      h += '</div>';
+    }
+  }
+
+  // ══ STEP 3: 填写收款信息 ══
+  else {
+    var formTitles = {BANK:'银行账户', ALIPAY:'支付宝', WECHAT:'微信支付', PAYPAL:'PayPal', CASH:'現金受取'};
+    var formIcons  = {BANK:'🏦', ALIPAY:'🔵', WECHAT:'🟢', PAYPAL:'🅿️', CASH:'💴'};
+    h += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">';
+    h += '<span style="font-size:28px">'+( formIcons[type]||'💳')+'</span>';
+    h += '<div style="font-size:20px;font-weight:700">'+(formTitles[type]||type)+'</div></div>';
+
+    function field(label, id, placeholder, required, type_){
+      return '<div class="ig"><label>'+label+(required?' <span style="color:#ef4444">*</span>':'')+'</label>'
+        +'<input id="'+id+'" type="'+(type_||'text')+'" placeholder="'+placeholder+'"></div>';
+    }
+
+    if(type === 'BANK' && region === 'japan'){
+      h += field('銀行名','m-bank','例：三菱UFJ銀行',true);
+      h += field('金融機関コード','m-jp-code','例：0001',true);
+      h += field('支店名','m-branch','例：新宿支店',false);
+      h += field('支店コード','m-branch-code','例：001',true);
+      h += '<div class="ig"><label>口座種別</label><select id="m-acct-type"><option value="普通">普通</option><option value="当座">当座</option><option value="貯蓄">貯蓄</option></select></div>';
+      h += field('口座番号','m-acct','例：1234567',true);
+      h += field('口座名義（カナ）','m-name','例：アリス ワン',true);
+    } else if(type === 'BANK'){
+      h += field('银行名称','m-bank','例：中国银行',true);
+      h += field('账户号码','m-acct','例：6222 0000 0000 0000',true);
+      h += field('账户名（英文）','m-name','例：ALICE WANG',true);
+      h += field('SWIFT / BIC','m-swift','例：BKCHCNBJ',true);
+    } else if(type === 'ALIPAY'){
+      h += field('支付宝账号','m-alipay-acct','手机号或邮箱',true,'email');
+    } else if(type === 'WECHAT'){
+      h += field('微信号 / 手机号','m-wechat-id','WeChat ID 或绑定手机号',true);
+    } else if(type === 'PAYPAL'){
+      h += field('PayPal 邮箱','m-email','you@example.com',true,'email');
+    } else if(type === 'CASH'){
+      h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:12px;padding:16px;margin-bottom:16px;font-size:13px;color:#15803d">当面は現金受取でのお支払いとなります。詳細は後日ご連絡します。</div>';
+    }
+
+    h += field('收款方式名称','method-label', type==='BANK'&&region==='japan'?'例：三菱UFJ銀行':'例：我的支付宝', true);
+    h += '<div class="ig"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="m-default"> 设为默认收款方式</label></div>';
+    h += '<button class="btn btn-primary" style="width:100%;padding:14px;font-size:15px;margin-top:8px" onclick="doAddMethod()">保存</button>';
+  }
+
+  h += '</div>';
   return h;
 }
 
 function doAddMethod(){
-  var ap=state.ambassadorProfile||{};
-  var residence=ap.residence||'overseas';
-  var sel=state.methodType||'BANK';
-  var label=document.getElementById('method-label').value.trim();
-  if(!label){alert('请填写标签');return;}
+  var region = state.addRegion || 'overseas';
+  var sel    = state.addType  || 'BANK';
+  var label  = (document.getElementById('method-label')||{}).value||'';
+  label = label.trim();
+  if(!label && sel!=='CASH'){alert('请填写收款方式名称');return;}
   var details={};
 
   if(sel==='CASH'){
-    details.method='現金';
-  } else if(sel==='BANK'&&residence==='japan'){
-    details.bank_code=(document.getElementById('m-jp-code')||{}).value||'';
-    details.bank_name=(document.getElementById('m-bank')||{}).value||'';
-    details.branch_code=(document.getElementById('m-branch-code')||{}).value||'';
-    details.branch=(document.getElementById('m-branch')||{}).value||'';
-    details.account_type=(document.getElementById('m-acct-type')||{}).value||'普通';
+    details.method='現金'; label=label||'現金受取';
+  } else if(sel==='BANK' && region==='japan'){
+    details.bank_code    =(document.getElementById('m-jp-code')||{}).value||'';
+    details.bank_name    =(document.getElementById('m-bank')||{}).value||'';
+    details.branch_code  =(document.getElementById('m-branch-code')||{}).value||'';
+    details.branch       =(document.getElementById('m-branch')||{}).value||'';
+    details.account_type =(document.getElementById('m-acct-type')||{}).value||'普通';
     details.account_number=(document.getElementById('m-acct')||{}).value||'';
-    details.account_name=(document.getElementById('m-name')||{}).value||'';
+    details.account_name =(document.getElementById('m-name')||{}).value||'';
   } else if(sel==='BANK'){
-    details.bank_name=(document.getElementById('m-bank')||{}).value||'';
+    details.bank_name    =(document.getElementById('m-bank')||{}).value||'';
     details.account_number=(document.getElementById('m-acct')||{}).value||'';
-    details.account_name=(document.getElementById('m-name')||{}).value||'';
-    details.swift_code=(document.getElementById('m-swift')||{}).value||'';
+    details.account_name =(document.getElementById('m-name')||{}).value||'';
+    details.swift_code   =(document.getElementById('m-swift')||{}).value||'';
   } else if(sel==='PAYPAL'){
     details.email=(document.getElementById('m-email')||{}).value||'';
   } else if(sel==='WECHAT'){
@@ -1445,77 +1735,187 @@ function doAddMethod(){
     details.account=(document.getElementById('m-alipay-acct')||{}).value||'';
   }
   var isDefault=(document.getElementById('m-default')||{}).checked||false;
-  var country=(document.getElementById('method-country')||{}).value.trim()||'';
+  var countryMap={japan:'JP',china:'CN',overseas:''};
+  var country=countryMap[region]||'';
 
   var x=new XMLHttpRequest();
   x.open('POST',API+'/wallet/methods',true);
   x.setRequestHeader('Content-Type','application/json');
   x.setRequestHeader('Authorization','Bearer '+state.token);
   x.onload=function(){
-    try{var d=JSON.parse(x.responseText);if(d.error){alert(d.error);return};loadWalletMethods();state.view='wallet';render()}catch(e){alert('添加失败')}
+    try{
+      var d=JSON.parse(x.responseText);
+      if(d.error){alert(d.error);return;}
+      loadWalletMethods();
+      state.view='wallet'; state.addStep='region'; state.addRegion=''; state.addType='';
+      render();
+    }catch(e){alert('添加失败');}
   };
   x.send(JSON.stringify({type:sel,country:country,label:label,account_details:details,is_default:isDefault}));
 }
 
 /* ── Withdraw ── */
 function withdrawHTML(){
-  var bal=state.walletBalance||{};
-  var methods=state.walletMethods||[];
-  var h=hdrHTML()+'<div class="dash">';
-  h+='<div style="padding:0 0 16px"><span style="cursor:pointer;font-size:14px;color:var(--primary)" onclick="state.view=\'wallet\';render()">← 返回钱包</span></div>';
-  h+='<div style="font-size:16px;font-weight:600;margin-bottom:20px">提现</div>';
-  h+='<div style="background:#fff;border-radius:12px;padding:16px;margin-bottom:20px">';
-  h+='<div style="font-size:11px;color:var(--muted);margin-bottom:4px">可用余额</div>';
-  h+='<div style="font-size:24px;font-weight:700">¥'+(bal.available||0).toLocaleString()+'</div></div>';
+  var bal     = state.walletBalance || {};
+  var methods = state.walletMethods || [];
+  var avail   = bal.available || 0;
 
-  if(methods.length===0){
-    h+='<div style="text-align:center;padding:24px;color:var(--muted)">请先添加收款方式<br><button class="btn btn-primary btn-sm" style="margin-top:12px" onclick="state.view=\'add-method\';render()">+ 添加</button></div>';
-  } else {
-    h+='<div class="ig"><label>收款方式</label><select id="w-method">';
-    for(var i=0;i<methods.length;i++){
-      h+='<option value="'+methods[i].id+'">'+escHtml(methods[i].label)+' ('+(methods[i].type)+')</option>';
-    }
-    h+='</select></div>';
-    h+='<div class="ig"><label>提现金额 (¥)</label><input id="w-amount" type="number" placeholder="最低 ¥100"></div>';
-    h+='<div style="font-size:11px;color:var(--muted);margin-bottom:16px">手续费 5% · 预计到账时间 1-3 工作日</div>';
-    h+='<button class="btn btn-primary" onclick="doWithdraw()">确认提现</button>';
+  // 默认选中第一个方式
+  if(!state.wMethodId && methods.length > 0) state.wMethodId = methods[0].id;
+  var selMethod = methods.find(function(m){ return m.id === state.wMethodId; }) || methods[0];
+
+  var METHOD_ICONS = {BANK:'🏦', ALIPAY:'🔵', WECHAT:'🟢', PAYPAL:'🅿️', CASH:'💴'};
+  var METHOD_ETA   = {BANK:'1–3 工作日', ALIPAY:'即时到账', WECHAT:'即时到账', PAYPAL:'即时到账', CASH:'当面结算'};
+  var isCNY = selMethod && (selMethod.type==='ALIPAY'||selMethod.type==='WECHAT');
+  var FX_RATE = 0.049; // 参考汇率 JPY→CNY，接入 Airwallex 后替换
+  var FEE_RATE = 0;    // 暂时免手续费
+
+  var h = hdrHTML() + '<div class="dash" style="max-width:480px;margin:0 auto">';
+  h += '<div style="margin-bottom:24px"><span style="cursor:pointer;font-size:14px;color:var(--primary)" onclick="state.view=\'wallet\';render()">← 返回钱包</span></div>';
+  h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">提现</div>';
+  h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">可提现余额 <strong style="color:var(--text)">¥'+Number(avail).toLocaleString()+'</strong></div>';
+
+  if(methods.length === 0){
+    h += '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center">';
+    h += '<div style="font-size:32px;margin-bottom:12px">💳</div>';
+    h += '<div style="font-size:15px;font-weight:600;margin-bottom:6px">还没有收款方式</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:20px">添加收款方式后即可提现</div>';
+    h += '<button class="btn btn-primary" onclick="state.view=\'add-method\';state.addStep=\'region\';state.addRegion=\'\';state.addType=\'\';render()">+ 添加收款方式</button>';
+    h += '</div>';
+    h += '</div>'; return h;
   }
-  h+='</div>';
+
+  // ── 收款方式卡片 ──
+  h += '<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:.5px">收款方式</div>';
+  h += '<div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:4px;margin-bottom:20px;scrollbar-width:none">';
+  for(var i=0;i<methods.length;i++){
+    var m=methods[i];
+    var active = m.id === (selMethod&&selMethod.id);
+    var details = m.account_details || {};
+    var sub = details.wechat_id || details.account || details.account_number || details.email || '';
+    if(sub.length>14) sub=sub.slice(0,14)+'…';
+    h += '<div onclick="state.wMethodId=\''+m.id+'\';updateWithdrawPreview()" style="flex-shrink:0;width:150px;background:var(--card-bg);border:2px solid '+(active?'var(--primary)':'var(--border)')+';border-radius:14px;padding:14px;cursor:pointer;transition:border-color .15s">';
+    h += '<div style="font-size:22px;margin-bottom:8px">'+(METHOD_ICONS[m.type]||'💳')+'</div>';
+    h += '<div style="font-size:13px;font-weight:600;margin-bottom:2px">'+escHtml(m.label)+'</div>';
+    if(sub) h += '<div style="font-size:11px;color:var(--muted)">'+escHtml(sub)+'</div>';
+    if(active) h += '<div style="font-size:10px;color:var(--primary);margin-top:6px;font-weight:600">✓ 已选择</div>';
+    h += '</div>';
+  }
+  h += '<div onclick="state.view=\'add-method\';state.addStep=\'region\';state.addRegion=\'\';state.addType=\'\';render()" style="flex-shrink:0;width:100px;background:var(--card-bg);border:2px dashed var(--border);border-radius:14px;padding:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted)">';
+  h += '<div style="font-size:22px;margin-bottom:6px">+</div><div style="font-size:11px">添加方式</div></div>';
+  h += '</div>';
+
+  // ── 金额输入 ──
+  h += '<div style="font-size:12px;color:var(--muted);font-weight:600;margin-bottom:10px;letter-spacing:.5px">提现金额</div>';
+  h += '<div style="background:var(--card-bg);border:2px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:6px;display:flex;align-items:center;gap:8px" id="w-amount-box">';
+  h += '<span style="font-size:20px;font-weight:700;color:var(--muted)">¥</span>';
+  h += '<input id="w-amount" type="number" min="100" max="'+avail+'" placeholder="0" oninput="updateWithdrawPreview()" onfocus="document.getElementById(\'w-amount-box\').style.borderColor=\'var(--primary)\'" onblur="document.getElementById(\'w-amount-box\').style.borderColor=\'var(--border)\'" style="flex:1;border:none;outline:none;font-size:24px;font-weight:700;background:transparent;color:var(--text);width:100%">';
+  h += '<span style="font-size:12px;color:var(--primary);cursor:pointer;white-space:nowrap;font-weight:600" onclick="document.getElementById(\'w-amount\').value='+avail+';updateWithdrawPreview()">全部提现</span>';
+  h += '</div>';
+  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:24px">最低 ¥100 · 单位：JPY</div>';
+
+  // ── 费用明细（实时更新区域）──
+  h += '<div id="w-preview"></div>';
+
+  // ── 确认按钮 ──
+  h += '<button class="btn btn-primary" id="w-submit-btn" style="width:100%;padding:16px;font-size:16px;border-radius:14px;margin-top:4px" onclick="doWithdraw()" disabled>输入提现金额</button>';
+  h += '</div>';
+
+  // 初始化预览（下一帧执行，等 DOM 就绪）
+  setTimeout(function(){ updateWithdrawPreview(); }, 0);
   return h;
 }
 
+function updateWithdrawPreview(){
+  var bal     = state.walletBalance || {};
+  var avail   = bal.available || 0;
+  var methods = state.walletMethods || [];
+  var selMethod = methods.find(function(m){ return m.id === state.wMethodId; }) || methods[0];
+  var METHOD_ETA= {BANK:'1–3 工作日', ALIPAY:'即时到账', WECHAT:'即时到账', PAYPAL:'即时到账', CASH:'当面结算'};
+  var isCNY = selMethod && (selMethod.type==='ALIPAY'||selMethod.type==='WECHAT');
+  var FX_RATE = 0.049;
+  var FEE_RATE = 0;
+
+  // 重新渲染卡片选中态
+  var ms = document.querySelectorAll('[onclick^="state.wMethodId"]');
+  for(var i=0;i<ms.length;i++){
+    var mid = ms[i].getAttribute('onclick').match(/state\.wMethodId='([^']+)'/);
+    if(mid) ms[i].style.borderColor = (mid[1]===state.wMethodId?'var(--primary)':'var(--border)');
+  }
+
+  var amtEl = document.getElementById('w-amount');
+  var previewEl = document.getElementById('w-preview');
+  var btnEl = document.getElementById('w-submit-btn');
+  if(!amtEl||!previewEl||!btnEl) return;
+
+  var amount = parseFloat(amtEl.value) || 0;
+  if(amount < 100 || amount > avail){
+    previewEl.innerHTML = '';
+    btnEl.disabled = true;
+    btnEl.textContent = amount > avail ? '超出可用余额' : '输入提现金额';
+    return;
+  }
+
+  var fee    = Math.round(amount * FEE_RATE);
+  var net    = amount - fee;
+  var cnyAmt = isCNY ? (net * FX_RATE).toFixed(2) : null;
+  var eta    = selMethod ? (METHOD_ETA[selMethod.type]||'1–3 工作日') : '1–3 工作日';
+
+  function row(label, val, color, bold){
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="font-size:13px;color:var(--muted)">'+label+'</span>'
+      +'<span style="font-size:13px;font-weight:'+(bold?'700':'500')+';color:'+(color||'var(--text)')+'">'+val+'</span></div>';
+  }
+
+  var html = '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:14px;padding:4px 18px;margin-bottom:20px">';
+  html += row('提现金额', '¥'+Number(amount).toLocaleString()+' JPY', null, false);
+  html += row('手续费', fee===0 ? '免费' : '−¥'+fee.toLocaleString(), fee===0?'#16a34a':'var(--text)', false);
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">'
+    +'<span style="font-size:13px;color:var(--muted)">到账金额</span>'
+    +'<div style="text-align:right">'
+    +'<div style="font-size:18px;font-weight:700;color:#16a34a">¥'+Number(net).toLocaleString()+' JPY</div>'
+    +(cnyAmt?'<div style="font-size:11px;color:var(--muted);margin-top:2px">≈ '+cnyAmt+' CNY（参考汇率，实际以到账为准）</div>':'')
+    +'</div></div>';
+  html += '</div>';
+  html += '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);margin-bottom:20px">⏱ 预计到账：<strong style="color:var(--text)">'+eta+'</strong></div>';
+
+  previewEl.innerHTML = html;
+  btnEl.disabled = false;
+  btnEl.textContent = '确认提现 ¥'+Number(net).toLocaleString();
+}
+
 function doWithdraw(){
-  var methodId=document.getElementById('w-method').value;
-  var amount=parseFloat(document.getElementById('w-amount').value);
-  if(!amount||amount<=0){alert('请输入有效金额');return;}
+  var methods = state.walletMethods || [];
+  var selMethod = methods.find(function(m){ return m.id===state.wMethodId; }) || methods[0];
+  if(!selMethod){ alert('请选择收款方式'); return; }
+  var amount = parseFloat((document.getElementById('w-amount')||{}).value||0);
+  if(!amount||amount<100){ alert('最低提现 ¥100'); return; }
+
+  var btn = document.getElementById('w-submit-btn');
+  if(btn){ btn.disabled=true; btn.textContent='提交中...'; }
+
   var x=new XMLHttpRequest();
   x.open('POST',API+'/wallet/withdraw',true);
   x.setRequestHeader('Content-Type','application/json');
   x.setRequestHeader('Authorization','Bearer '+state.token);
   x.onload=function(){
-    try{var d=JSON.parse(x.responseText);if(d.error){alert(d.error);return};alert('提现申请已提交！\n到账 ¥'+d.netAmount.toLocaleString()+'\n手续费 ¥'+d.fee.toLocaleString());loadWalletBalance();loadWalletTxns();state.view='wallet';render()}catch(e){alert('提现失败')}
+    try{
+      var d=JSON.parse(x.responseText);
+      if(d.error){ if(btn){btn.disabled=false;btn.textContent='确认提现';} alert(d.error); return; }
+      loadWalletBalance(); loadWalletTxns();
+      state.view='wallet'; render();
+    }catch(e){ alert('提现失败'); }
   };
-  x.send(JSON.stringify({method_id:methodId,amount:amount}));
+  x.send(JSON.stringify({method_id:selMethod.id, amount:amount}));
 }
 
 
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 
 function bindProfile(){
-  // 加载详细档案
-  if(state.user&&!state.ambassadorProfile&&state.user.role==='HERALD'){
-    var xhr=new XMLHttpRequest();
-    xhr.open('GET',API+'/auth/me',true);
-    xhr.setRequestHeader('Authorization','Bearer '+state.token);
-    xhr.onload=function(){try{state.ambassadorProfile=JSON.parse(xhr.responseText)}catch(e){}render()};
-    xhr.send();
-  }
-  if(state.user&&!state.brandProfile&&state.user.role==='BRAND'){
-    var xhr=new XMLHttpRequest();
-    xhr.open('GET',API+'/auth/me',true);
-    xhr.setRequestHeader('Authorization','Bearer '+state.token);
-    xhr.onload=function(){try{state.brandProfile=JSON.parse(xhr.responseText)}catch(e){}render()};
-    xhr.send();
+  if(state.user){
+    var _wasFresh = !!state.ambassadorProfile && Date.now()-_profileFetchedAt<30000;
+    loadProfile(function(){ if(!_wasFresh) render(); }); // 数据刚拿到才重渲染，防死循环
   }
   // 钱包余额（用于展示钱包卡片）
   if(state.user&&state.walletBalance===null){
@@ -1571,10 +1971,13 @@ function addRole(role){
       // 更新 token 和 roles
       state.token=d.token;
       state.user.roles=d.roles;
-      // 如果开通的是 BRAND 且没入驻，触发品牌入驻流程
+      // 品牌功能统一在 merchant.html 里，开通后直接跳转过去入驻，
+      // 不在本文件内触发过时的品牌入驻/管理流程
       if(role==='BRAND'){
-        state.activeRole='BRAND';
-        state.showOnboard=true;state.onboardStep=1;state.onboardData={};
+        sessionStorage.setItem('herix_switch_token', state.token || '');
+        sessionStorage.setItem('herix_switch_role', 'BRAND');
+        window.location.href = 'merchant.html';
+        return;
       }
       render();
     }catch(e){alert('开通失败，请重试')}
@@ -1601,14 +2004,14 @@ function adminHTML(){
   var s=adminState.stats;
   var h='<div style="min-height:100vh;background:var(--bg)">';
   h+='<div style="background:#111;color:#fff;padding:52px 20px 24px">';
-  h+='<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.5);margin-bottom:4px">HERIX ADMIN</div>';
+  h+='<div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.5);margin-bottom:4px">Herix Admin</div>';
   h+='<div style="font-size:22px;font-weight:700">平台管理后台</div>';
   h+='<div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px">'+escHtml(state.user.nickname)+'</div>';
   h+='</div>';
 
   // 数据概览
   h+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px">';
-  h+=statCard('赫使', s.heralds||0, '#0070CC');
+  h+=statCard('赫使', s.heralds||0, '#D43B27');
   h+=statCard('品牌', s.brands||0, '#34c759');
   h+=statCard('在线任务', s.openTasks||0, '#f5a623');
   h+=statCard('待处理', (s.pendingDeclarations||0)+(s.pendingSubmissions||0), '#ff3b30');
@@ -1690,7 +2093,7 @@ function adminUsersHTML(){
     var u=adminState.users[i];
     var kyc=u.kyc_status==='approved'?'✅':u.kyc_status==='pending'?'⏳':'❌';
     h+='<div style="background:#fff;border-radius:14px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px">';
-    h+='<div style="width:36px;height:36px;border-radius:50%;background:#0070CC;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">'+(u.nickname||'?')[0]+'</div>';
+    h+='<div style="width:36px;height:36px;border-radius:50%;background:#D43B27;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">'+(u.nickname||'?')[0]+'</div>';
     h+='<div style="flex:1;min-width:0"><div style="font-weight:600;font-size:13px">'+escHtml(u.nickname)+'</div>';
     h+='<div style="font-size:11px;color:var(--muted)">'+(u.residence==='japan'?'🇯🇵 日本':u.residence==='china'?'🇨🇳 中国':u.residence==='overseas'?'🌏 海外':'未设置')+' · KYC '+kyc+'</div></div>';
     h+='<div style="font-size:11px;color:'+(u.is_onboarded?'var(--success)':'var(--muted)')+'">'+( u.is_onboarded?'已入驻':'未入驻')+'</div>';
@@ -1756,9 +2159,97 @@ function doAuthSubmit(){
   if(state.loginTab==='login'){Auth.login('auth-form','email','password')}else{Auth.register('auth-form','email','password')}
 }
 
+function landingHTML(){
+  function _e(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+  var t=state.landingTask;
+  var tab=state.landingAuthTab||'login';
+  var taskBlock='';
+  if(t){
+    var payout=t.payout_per_herald?'¥'+Number(t.payout_per_herald).toLocaleString():'';
+    var brand=_e(t.creator_name||'');
+    var cat=catIcon(t.category)+' '+catLabel(t.category);
+    taskBlock='<div style="margin:0 20px 20px;background:#f9f9fb;border-radius:18px;padding:20px 18px">'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+cat+'</div>'
+      +'<div style="font-size:17px;font-weight:700;line-height:1.4;margin-bottom:6px">'+_e(t.title)+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-bottom:14px">来自 '+brand+'</div>'
+      +'<div style="display:flex;align-items:baseline;gap:6px">'
+      +'<span style="font-size:30px;font-weight:800;color:var(--primary)">'+payout+'</span>'
+      +'<span style="font-size:13px;color:var(--muted)">任务报酬</span>'
+      +'</div>'
+      +(t.description?'<div style="margin-top:12px;font-size:13px;color:#555;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden">'+_e(t.description)+'</div>':'')
+      +'</div>';
+  } else {
+    taskBlock='<div style="margin:0 20px 20px;background:#f9f9fb;border-radius:18px;padding:40px;text-align:center;color:var(--muted)">加载任务中…</div>';
+  }
+  var isReg=tab==='register';
+  return '<div style="min-height:100vh;display:flex;flex-direction:column;background:#fff;max-width:500px;margin:0 auto;padding-bottom:40px">'
+    +'<div style="padding:52px 24px 20px;text-align:center">'
+    +'<img src="/Logo/herix-icon-filled.png" style="width:44px;height:44px;border-radius:11px;margin-bottom:8px;display:block;margin:0 auto 8px">'
+    +'<div style="font-size:20px;font-weight:800;letter-spacing:1px">Herix</div>'
+    +'</div>'
+    +taskBlock
+    +'<div style="padding:0 20px">'
+    +'<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:16px">'+( t?'登录后立即报名':'加入 Herix')+'</div>'
+    +'<div style="display:flex;background:#f0f0f5;border-radius:10px;padding:3px;margin-bottom:16px">'
+    +'<div onclick="state.landingAuthTab=\'login\';render()" style="flex:1;text-align:center;padding:9px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;'+(tab==='login'?'background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)':'color:var(--muted)')+'">登录</div>'
+    +'<div onclick="state.landingAuthTab=\'register\';render()" style="flex:1;text-align:center;padding:9px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;'+(tab==='register'?'background:#fff;color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.1)':'color:var(--muted)')+'">注册</div>'
+    +'</div>'
+    +'<div id="landing-err" style="color:#ef4444;font-size:12px;min-height:18px;margin-bottom:4px"></div>'
+    +'<div style="margin-bottom:12px"><input id="l-email" type="email" placeholder="邮箱地址" style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff;-webkit-tap-highlight-color:transparent" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"></div>'
+    +(isReg?'<div style="margin-bottom:12px"><input id="l-nick" type="text" placeholder="昵称" style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"></div>':'')
+    +'<div style="margin-bottom:20px"><input id="l-pass" type="password" placeholder="密码（至少6位）" style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"></div>'
+    +'<button onclick="doLandingAuth()" style="width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px">'
+    +(tab==='login'?'登录并报名':'注册并报名')
+    +'</button>'
+    +'</div>'
+    +'</div>';
+}
+
+function bindLanding(){
+  ['l-email','l-nick','l-pass'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.addEventListener('keydown',function(e){if(e.key==='Enter')doLandingAuth();});
+  });
+}
+
+var _landingAuthPending=false;
+function doLandingAuth(){
+  if(_landingAuthPending) return;
+  var tab=state.landingAuthTab||'login';
+  var email=((document.getElementById('l-email')||{}).value||'').trim();
+  var pass=((document.getElementById('l-pass')||{}).value||'').trim();
+  var nick=((document.getElementById('l-nick')||{}).value||'').trim();
+  var errEl=document.getElementById('landing-err');
+  if(!errEl) return;
+  if(!email||!pass){errEl.textContent='请填写邮箱和密码';return;}
+  if(tab==='register'&&!nick){errEl.textContent='请填写昵称';return;}
+  errEl.textContent='';
+  _landingAuthPending=true;
+  var btn=document.querySelector('button[onclick="doLandingAuth()"]');
+  if(btn){btn.disabled=true;btn.textContent='处理中...';}
+  var path=tab==='login'?'/api/auth/login':'/api/auth/register';
+  var body=tab==='login'
+    ?{account:email,password:pass}
+    :{email:email,password:pass,nickname:nick,role:'HERALD'};
+  var xhr=new XMLHttpRequest();
+  xhr.open('POST',path);
+  xhr.setRequestHeader('Content-Type','application/json');
+  xhr.onload=function(){
+    _landingAuthPending=false;
+    var d;try{d=JSON.parse(xhr.responseText);}catch(e){if(errEl)errEl.textContent='服务器错误';return;}
+    if(d.error){if(errEl)errEl.textContent=d.error;if(btn){btn.disabled=false;btn.textContent=tab==='login'?'登录并报名':'注册并报名';}return;}
+    localStorage.setItem('herix_token',d.token);
+    state.view='list';
+    state.landingTask=null;
+    afterAuth(d);
+  };
+  xhr.onerror=function(){_landingAuthPending=false;if(errEl)errEl.textContent='网络错误，请重试';if(btn){btn.disabled=false;btn.textContent=tab==='login'?'登录并报名':'注册并报名';}};
+  xhr.send(JSON.stringify(body));
+}
+
 function loginHTML(){
   var l=state.loginTab==='login';
-  var h='<div style="text-align:center;margin-bottom:12px"><span style="font-size:18px;font-weight:800;letter-spacing:2px">HERIX<span style="color:var(--primary)">.</span></span></div>';
+  var h='<div style="text-align:center;margin-bottom:16px"><img src="/Logo/herix-icon-filled.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px"><span style="font-size:18px;font-weight:800;letter-spacing:2px">Herix</span></div>';
   var opts = {
     mode: l ? 'login' : 'both',
     emailId: 'email',
@@ -1803,6 +2294,42 @@ function closeLogin(){
   if(inner) inner.innerHTML = '';
 }
 
+function loadCategories(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',API+'/categories',true);
+  xhr.onload=function(){try{var d=JSON.parse(xhr.responseText);if(Array.isArray(d)&&d.length){state.categories=d;render();}}catch(e){}};
+  xhr.send();
+}
+
+function loadNotifications(){
+  if(!state.user||!state.token) return;
+  var xhr=new XMLHttpRequest();
+  xhr.open('GET',API+'/notifications',true);
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    try{
+      var d=JSON.parse(xhr.responseText);
+      state.notifications=d.notifications||[];
+      state.unread=d.unread||0;
+      state._notifsLoaded=true;
+    }catch(e){}
+    render();
+  };
+  xhr.send();
+}
+
+
+function markAllRead(){
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/notifications/read-all',true);
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){
+    state.notifications.forEach(function(n){n.is_read=true;});
+    state.unread=0;render();
+  };
+  xhr.send();
+}
+
 function loadTasks(){
   state.loading=true;render();
   var xhr=new XMLHttpRequest();
@@ -1822,7 +2349,8 @@ function loadMyTasks(){
   if(!state.user){switchView('list');return}
   var xhr=new XMLHttpRequest();
   xhr.open('GET',API+'/tasks?creator='+state.user.id,true);
-  xhr.onload=function(){try{var d=JSON.parse(xhr.responseText);log('loadMyTasks OK: '+(d.tasks||[]).length+' tasks');state.myTasks=d.tasks}catch(e){log('ERR loadMyTasks: '+e.message)}state.view='brand-dashboard';render()};
+  xhr.setRequestHeader('Authorization','Bearer '+(state.token||''));
+  xhr.onload=function(){try{var d=JSON.parse(xhr.responseText);log('loadMyTasks OK: '+(d.tasks||[]).length+' tasks');state.myTasks=d.tasks||[]}catch(e){log('ERR loadMyTasks: '+e.message)}state.view='brand-dashboard';render()};
   xhr.send();
 }
 
@@ -1845,22 +2373,21 @@ function loadMyCodes(){
 }
 
 function openDetail(id){
+  invalidateProfileCache(); // 每次打开任务详情都拿最新档案（粉丝数/资质预检需要）
+  var _taskDone=false, _profDone=!state.user, _taskData=null;
+  function _tryRender(){
+    if(!_taskDone||!_profDone) return;
+    if(_taskData) state.detailTask=_taskData;
+    state.view='detail'; render();
+  }
   var xhr=new XMLHttpRequest();
   xhr.open('GET',API+'/tasks/'+id,true);
   xhr.onload=function(){
-    try{state.detailTask=JSON.parse(xhr.responseText)}catch(e){}
-    // 确保赫使档案已加载（资质预检需要）
-    if(state.user&&!state.ambassadorProfile){
-      var p=new XMLHttpRequest();
-      p.open('GET',API+'/auth/me',true);
-      p.setRequestHeader('Authorization','Bearer '+state.token);
-      p.onload=function(){try{state.ambassadorProfile=JSON.parse(p.responseText)}catch(e){}state.view='detail';render();};
-      p.send();
-    } else {
-      state.view='detail';render();
-    }
+    try{_taskData=JSON.parse(xhr.responseText);}catch(e){}
+    _taskDone=true; _tryRender();
   };
   xhr.send();
+  if(state.user) loadProfile(function(){_profDone=true;_tryRender();});
 }
 
 function back(){state.view='list';state.detailTask=null;render();loadTasks()}
@@ -1901,6 +2428,18 @@ function afterAuth(d) {
   if (!d.user.is_onboarded) {
     state.showOnboard = true; state.onboardStep = 1; state.onboardData = {}; render(); return;
   }
+  // 登录后恢复定向任务跳转：优先从 URL 读（最可靠），其次 sessionStorage
+  var _urlTask = new URLSearchParams(window.location.search).get('task');
+  var pendingTask = _urlTask || sessionStorage.getItem('herix_pending_task');
+  log('afterAuth: is_onboarded='+d.user.is_onboarded+' pendingTask='+pendingTask+' urlTask='+_urlTask);
+  if (pendingTask) {
+    sessionStorage.removeItem('herix_pending_task');
+    state.tab = 'explore';
+    openDetail(pendingTask);
+    return;
+  }
+  // 登录后拉一次 unread count，让消息红点立即生效
+  loadNotifications();
   // 已入驻：根据 activeRole 决定初始视图
   applyActiveRole();
 }
@@ -1908,10 +2447,10 @@ function afterAuth(d) {
 function applyActiveRole() {
   var r = state.activeRole || (state.user && state.user.role);
   if (r === 'BRAND') {
+    state.tab = 'tasks';
     loadMyTasks();
   } else {
     state.tab = 'explore'; state.view = 'list'; render(); loadTasks();
-    if (r === 'HERALD') loadDisplayCurrency();
   }
 }
 
@@ -1947,22 +2486,29 @@ function loadExchangeRate(){
   xhr.send();
 }
 
-/** 任务报酬展示：若任务币种与赫使展示币种不同，附加换算金额 */
+/** 任务报酬展示：直接显示 payout_per_herald（已是赫使实收），附加币种换算 */
 function commissionLabel(amount, taskCurrency){
   var cur=taskCurrency||'JPY';
-  var label='¥'+Number(amount).toLocaleString();
+  var payout=Number(amount)||0;
+  var label='¥'+Number(payout).toLocaleString();
   var disp=state.displayCurrency;
   var er=state.exchangeRate;
   if(disp&&cur!==disp&&er&&er.rate){
     var converted=null;
-    if(er.from===cur&&er.to===disp) converted=Number(amount)*er.rate;
-    else if(er.to===cur&&er.from===disp) converted=Number(amount)/er.rate;
+    if(er.from===cur&&er.to===disp) converted=payout*er.rate;
+    else if(er.to===cur&&er.from===disp) converted=payout/er.rate;
     if(converted!=null) label+=' <span style="font-size:11px;color:var(--muted)">(≈¥'+Math.round(converted).toLocaleString()+' '+disp+')</span>';
   }
   return label;
 }
 
 function switchRole(role) {
+  if (role === 'BRAND') {
+    sessionStorage.setItem('herix_switch_token', state.token || '');
+    sessionStorage.setItem('herix_switch_role', 'BRAND');
+    window.location.href = 'merchant.html';
+    return;
+  }
   state.activeRole = role;
   state.myApps = []; state.myCodes = []; state.mySubs = []; state.myTasks = [];
   state.ambassadorProfile = null; state.brandProfile = null;
@@ -2050,7 +2596,9 @@ function switchAccount(){
 function tryResumeSwitchedSession(){
   var token=sessionStorage.getItem('herix_switch_token');
   if(!token) return false;
+  var targetRole=sessionStorage.getItem('herix_switch_role')||null;
   sessionStorage.removeItem('herix_switch_token');
+  sessionStorage.removeItem('herix_switch_role');
   state.token=token;
   var xhr=new XMLHttpRequest();
   xhr.open('GET',API+'/auth/me',true);
@@ -2060,13 +2608,13 @@ function tryResumeSwitchedSession(){
       var d=JSON.parse(xhr.responseText);
       if(d.error||!d.id){state.token=null;render();return}
       var roles=d.roles||[d.role];
-      if(d.role==='BRAND'&&!roles.includes('HERALD')){
+      if(d.role==='BRAND'&&!roles.includes('HERALD')&&targetRole!=='HERALD'){
         sessionStorage.setItem('herix_switch_token',token);
         window.location.href='merchant.html';
         return;
       }
       state.user={id:d.id,nickname:d.nickname,role:d.role,roles:roles,is_verified:!!d.is_verified,is_onboarded:!!(d.is_onboarded||d.brand_onboarded)};
-      state.activeRole=d.role;
+      state.activeRole=targetRole&&roles.includes(targetRole)?targetRole:d.role;
       if(!state.user.is_onboarded&&d.role==='HERALD'){state.showOnboard=true;state.onboardStep=1;state.onboardData={};render();return}
       applyActiveRole();
     }catch(e){state.token=null;render()}
@@ -2320,7 +2868,11 @@ function obSubmit(){
 
 function obFinish(){
   state.showOnboard=false;
-  state.tab='explore';state.view='list';
+  state.tab='explore';
+  var _urlTask=new URLSearchParams(window.location.search).get('task');
+  var pendingTask=_urlTask||sessionStorage.getItem('herix_pending_task');
+  if(pendingTask){sessionStorage.removeItem('herix_pending_task');openDetail(pendingTask);return;}
+  state.view='list';
   render();loadTasks();
 }
 
@@ -2481,7 +3033,7 @@ function showRequirementsModal(failures, canRetry, onSuccess){
       }
       inner+='</div>';
     }
-    inner+='<button class="btn btn-primary" style="margin-top:4px" onclick="submitRequirementsAdd('+JSON.stringify(missingIds)+')">保存并重新报名</button>';
+    inner+='<button class="btn btn-primary" style="margin-top:4px" onclick="submitRequirementsAdd('+JSON.stringify(missingIds).replace(/"/g,'&quot;')+')">保存并重新报名</button>';
   } else {
     // 全是粉丝不足 → 纯告知，无操作
     inner+='<div style="margin-top:4px;padding:10px;background:#f9fafb;border-radius:8px;font-size:12px;color:var(--muted);text-align:center">你目前不满足该任务的资质要求</div>';
@@ -2543,7 +3095,7 @@ function submitRequirementsAdd(missingIds){
     try{
       var d=JSON.parse(xhr.responseText);
       if(d.error){alert(d.error);return}
-      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      applyProfilePatch(d);
       var m=document.getElementById('req-modal');
       if(m) m.remove();
       if(window._reqModalCallback) window._reqModalCallback();
@@ -2650,7 +3202,7 @@ function submitPlatformCollect(platformId, isWechat){
     try{
       var d=JSON.parse(xhr.responseText);
       if(d.error){alert(d.error);return}
-      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      applyProfilePatch(d);
       var modal=document.getElementById('plat-collect-modal');
       if(modal) modal.remove();
       if(window._platformCollectCallback) window._platformCollectCallback();
@@ -2726,7 +3278,7 @@ function submitFollowersUpdate(platformId, required){
     try{
       var d=JSON.parse(xhr.responseText);
       if(d.error){alert(d.error);return}
-      state.ambassadorProfile=Object.assign(state.ambassadorProfile||{},{social_platforms:JSON.stringify(merged)});
+      applyProfilePatch(d);
       var modal=document.getElementById('followers-update-modal');
       if(modal) modal.remove();
       if(window._followersUpdateCallback) window._followersUpdateCallback();
@@ -2753,6 +3305,8 @@ function openSubmit(taskId){
   xhr.open('GET',API+'/tasks/'+taskId,true);
   xhr.onload=function(){
     try{state.detailTask=JSON.parse(xhr.responseText)}catch(e){}
+    // 找到被拒的提交，用于重新提交时预填
+    state.prevRejectedSub=state.mySubs.find(function(s){return s.task_id===taskId&&s.status==='REJECTED'})||null;
     state.view='submit';render();
   };
   xhr.send();
@@ -2767,6 +3321,7 @@ function doSubmit(){
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
     try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
+      state._subsLoaded=false;state.mySubs=[];
       alert('提交成功！等待品牌审核');switchView('herald-dashboard')
     }catch(e){alert('提交失败')}
   };
@@ -2832,7 +3387,7 @@ function doCreateTask(){
       xhr2.send();
     }catch(e){alert('创建失败')}
   };
-  xhr.send(JSON.stringify({title:title,description:desc,budget:Number(budget||comm*max),commission:Number(comm),maxHeralds:Number(max),mode:mode,category:cat}));
+  xhr.send(JSON.stringify({title:title,description:desc,payoutPerHerald:Number(comm),maxHeralds:Number(max),mode:mode,category:cat}));
 }
 
 function doCsvImport(){
@@ -2870,8 +3425,85 @@ document.addEventListener('click',function(e){
   }catch(e){log('ERR click: '+e.message)}
 });
 
+/* ── 消息中心帮助函数 ── */
+function formatNotifTime(ts){
+  if(!ts) return '';
+  var d=new Date(ts),now=new Date();
+  var diffH=(now-d)/(1000*60*60);
+  if(diffH<24&&d.getDate()===now.getDate())
+    return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');
+  if(d.getFullYear()===now.getFullYear())
+    return (d.getMonth()+1)+'月'+d.getDate()+'日';
+  return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate();
+}
+
+function notifCardHTML(n){
+  var isUnread=!n.is_read;
+  var accentMap={SUB_APPROVED:'#16a34a',SUB_REJECTED:'#dc2626',APP_APPROVED:'#16a34a',APP_REJECTED:'#dc2626',SETTLEMENT_BLOCKED:'#d97706'};
+  var iconMap={SUB_APPROVED:'✅',SUB_REJECTED:'❌',APP_APPROVED:'🎉',APP_REJECTED:'😔',SETTLEMENT_BLOCKED:'⚠️'};
+  var accent=accentMap[n.type]||'var(--primary)';
+  var icon=iconMap[n.type]||'💬';
+  var ts=formatNotifTime(n.created_at);
+  var meta={};try{meta=JSON.parse(n.metadata||'{}')}catch(e){}
+  var h='<div onclick="notifClick(\''+n.id+'\')" style="background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:8px;border-left:3px solid '+(isUnread?accent:'transparent')+';cursor:'+(isUnread?'pointer':'default')+'">';
+  h+='<div style="display:flex;gap:12px;align-items:flex-start">';
+  h+='<div style="flex-shrink:0;width:38px;height:38px;background:var(--bg);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px">'+icon+'</div>';
+  h+='<div style="flex:1;min-width:0">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">';
+  h+='<div style="font-size:13px;font-weight:'+(isUnread?'600':'400')+';overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(n.title)+'</div>';
+  h+='<div style="flex-shrink:0;font-size:11px;color:var(--muted)">'+ts+'</div>';
+  h+='</div>';
+  h+='<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6">'+escHtml(n.body)+'</div>';
+  if(meta.taskId){
+    h+='<div style="margin-top:8px"><span role="button" onclick="goToTask(\''+meta.taskId+'\');event.stopPropagation()" style="font-size:12px;color:var(--primary);font-weight:500;cursor:pointer">查看任务 →</span></div>';
+  }
+  h+='</div></div></div>';
+  return h;
+}
+
+function notifClick(id){
+  var n=state.notifications.find(function(x){return x.id===id});
+  if(!n||n.is_read) return;
+  var xhr=new XMLHttpRequest();
+  xhr.open('PATCH',API+'/notifications/'+id+'/read',true);
+  xhr.setRequestHeader('Authorization','Bearer '+state.token);
+  xhr.onload=function(){n.is_read=true;state.unread=Math.max(0,state.unread-1);render();};
+  xhr.send();
+}
+
+function goToTask(taskId){state.tab='explore';openDetail(taskId);}
+
 function messagesHTML(){
-  return hdrHTML()+'<div class="dash"><div style="text-align:center;padding:80px 20px;color:var(--muted)"><div style="font-size:40px;margin-bottom:16px">💬</div><div style="font-size:16px;font-weight:600;margin-bottom:8px">消息中心</div><div style="font-size:13px">功能开发中，敬请期待</div></div></div>';
+  var SLABEL='font-size:10px;font-weight:700;color:var(--muted);letter-spacing:0.8px;margin-bottom:8px';
+  var h=hdrHTML()+'<div class="dash">';
+  h+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h+='<div style="font-size:16px;font-weight:700">消息</div>';
+  if(state.unread>0) h+='<span role="button" style="font-size:12px;color:var(--primary);cursor:pointer" onclick="markAllRead()">全部已读</span>';
+  h+='</div>';
+
+  if(!state._notifsLoaded){
+    h+='<div style="text-align:center;padding:60px 20px;color:var(--muted);font-size:13px">加载中…</div>';
+  } else if(state.notifications.length===0){
+    h+='<div style="text-align:center;padding:60px 20px">';
+    h+='<div style="font-size:36px;margin-bottom:12px">📭</div>';
+    h+='<div style="font-size:14px;font-weight:600;margin-bottom:6px">暂无消息</div>';
+    h+='<div style="font-size:12px;color:var(--muted)">任务审核、报名结果等通知会出现在这里</div>';
+    h+='</div>';
+  } else {
+    var unreadList=state.notifications.filter(function(n){return !n.is_read;});
+    var readList=state.notifications.filter(function(n){return !!n.is_read;});
+    var hasBoth=unreadList.length>0&&readList.length>0;
+    if(unreadList.length>0){
+      if(hasBoth) h+='<div style="'+SLABEL+'">新消息</div>';
+      for(var i=0;i<unreadList.length;i++) h+=notifCardHTML(unreadList[i]);
+    }
+    if(readList.length>0){
+      h+='<div style="'+SLABEL+(hasBoth?';margin-top:16px':'')+'">历史消息</div>';
+      for(var i=0;i<readList.length;i++) h+=notifCardHTML(readList[i]);
+    }
+  }
+  h+='</div>';
+  return h;
 }
 
 // 全局错误处理
@@ -2879,7 +3511,45 @@ window.onerror = function(msg, src, line, col, err){
   log('GLOBAL ERROR: '+(msg||'')+' at '+src+':'+line+':'+col+' stack='+((err||{}).stack||''));
 };
 /* ── Init ── */
-if(!tryResumeSwitchedSession()) loadTasks();
+(function initInviteTask(){
+  var params=new URLSearchParams(window.location.search);
+  var taskId=params.get('task');
+  log('initInviteTask: taskId='+taskId+' user='+(state.user?state.user.id:'none'));
+  if(!taskId) return;
+  sessionStorage.setItem('herix_pending_task',taskId);
+  log('initInviteTask: after setItem, verify='+sessionStorage.getItem('herix_pending_task'));
+  if(!state.user){
+    state.view='landing';
+    log('initInviteTask: set view=landing, fetching task...');
+    var xhr=new XMLHttpRequest();
+    xhr.open('GET','/api/tasks/'+taskId);
+    xhr.onload=function(){
+      log('initInviteTask XHR: status='+xhr.status+' len='+xhr.responseText.length);
+      try{
+        var d=JSON.parse(xhr.responseText);
+        log('initInviteTask XHR: parsed ok, error='+d.error+' id='+d.id);
+        if(!d.error){state.landingTask=d;if(state.view==='landing')render();}
+      }catch(e){log('initInviteTask XHR parse ERR: '+e.message);}
+    };
+    xhr.onerror=function(){log('initInviteTask XHR network error');};
+    xhr.send();
+  }
+})();
+loadCategories();
+if(!tryResumeSwitchedSession()){
+  var _pendingTask=sessionStorage.getItem('herix_pending_task');
+  log('init block: _pendingTask='+_pendingTask+' user='+(state.user?state.user.id:'null'));
+  if(_pendingTask&&state.user){
+    sessionStorage.removeItem('herix_pending_task');
+    state.tab='explore';
+    openDetail(_pendingTask);
+  } else if(state.view==='landing'){
+    log('init: view=landing, calling render() for skeleton');
+    render(); // show skeleton immediately; XHR callback re-renders when task data arrives
+  } else {
+    loadTasks();
+  }
+}
 </script>
 <div id="db-panel" class="db-panel"></div>
 <button class="db-btn" onclick="toggleDb()" id="db-btn">DBG</button><button class="db-btn" style="right:44px;border-color:#f44;color:#f44" onclick="freezeDb()" id="db-freeze-btn">FRZ</button>

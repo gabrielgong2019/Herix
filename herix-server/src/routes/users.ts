@@ -121,16 +121,19 @@ usersRouter.post('/add-role', requireAuth, async (req: Request, res: Response) =
   res.json({ success: true, roles: newRoles, token });
 });
 
+const AGREEMENT_VERSION = '2026-07-09-v1';
+
 /** POST /api/users/brand/onboard — 品牌入驻 */
 usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {
-  const { companyName, industry, companyDesc, website, contactName, contactPhone, currency, billingEmail } = req.body;
+  const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail, agreedToTerms } = req.body;
   if (!companyName || !contactName) {
     return res.status(400).json({ error: '公司名称和联系人姓名为必填项' });
   }
+  if (!agreedToTerms) {
+    return res.status(400).json({ error: '请阅读并同意服务协议后继续' });
+  }
 
-  const existing = await findOne<{ is_onboarded: number; currency: string }>(
-    'SELECT is_onboarded, currency FROM brand_profiles WHERE user_id = ?', [req.user!.userId]
-  );
+  const clientIp = (req.headers['x-forwarded-for'] as string || req.socket.remoteAddress || '').split(',')[0].trim();
 
   const data: Record<string, any> = {
     company_name: companyName,
@@ -141,18 +144,13 @@ usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Respon
     contact_phone: contactPhone || null,
     billing_email: billingEmail || null,
     is_onboarded: 1,
+    agreed_at: new Date().toISOString(),
+    agreed_ip: clientIp,
+    agreed_version: AGREEMENT_VERSION,
   };
 
-  // 业务市场币种：仅在首次入驻时可选定，之后不可变
-  if (!existing?.is_onboarded && currency) {
-    if (!['JPY', 'CNY'].includes(currency)) {
-      return res.status(400).json({ error: '不支持的币种' });
-    }
-    data.currency = currency;
-  }
-
   await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
-  res.json({ success: true, currency: data.currency || existing?.currency || 'JPY' });
+  res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION });
 });
 
 /** GET /api/users/heralds — 赫使列表 (公开) */

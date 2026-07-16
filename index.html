@@ -1,0 +1,515 @@
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #F5F4F1;
+  --surface: #FFFFFF;
+  --ink: #1C1C24;
+  --ink-2: #6B6B78;
+  --accent: #C13B3B;
+  --border: #E3E0DB;
+  --serif: 'New York', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Noto Sans SC', 'Noto Sans JP', 'Segoe UI', sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* ── NAV ── */
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 48px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  text-decoration: none;
+}
+
+.logo-char {
+  font-family: var(--serif);
+  font-size: 26px;
+  font-weight: 400;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.logo-name {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--ink);
+  text-transform: uppercase;
+}
+
+.lang-switcher {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.lang-btn {
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.12s, color 0.12s;
+}
+
+.lang-btn + .lang-btn { border-left: 1px solid var(--border); }
+
+.lang-btn.active {
+  background: var(--ink);
+  color: #fff;
+}
+
+/* ── HERO ── */
+.hero {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 88px 48px 72px;
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 0 56px;
+  align-items: center;
+}
+
+.hero-watermark {
+  font-family: var(--serif);
+  font-size: 200px;
+  font-weight: 300;
+  color: var(--accent);
+  opacity: 0.10;
+  line-height: 0.9;
+  text-align: center;
+  user-select: none;
+  pointer-events: none;
+  letter-spacing: -0.04em;
+}
+
+.hero-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 18px;
+}
+
+.hero-headline {
+  font-family: var(--serif);
+  font-size: clamp(30px, 3.6vw, 46px);
+  font-weight: 400;
+  line-height: 1.22;
+  color: var(--ink);
+  text-wrap: balance;
+  margin-bottom: 22px;
+}
+
+.hero-sub {
+  font-size: 16px;
+  color: var(--ink-2);
+  line-height: 1.7;
+  margin-bottom: 36px;
+  max-width: 500px;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── BUTTONS ── */
+.btn-primary {
+  display: inline-block;
+  padding: 12px 26px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 3px;
+  transition: opacity 0.15s;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-outline {
+  display: inline-block;
+  padding: 12px 26px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s, background 0.15s;
+  cursor: pointer;
+}
+
+.btn-outline:hover {
+  border-color: var(--ink-2);
+  background: var(--surface);
+}
+
+/* ── FEATURES ── */
+.features-wrap {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 68px 48px;
+}
+
+.section-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-bottom: 44px;
+}
+
+.features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 48px;
+}
+
+.feature-bar {
+  width: 32px;
+  height: 2px;
+  background: var(--accent);
+  margin-bottom: 18px;
+}
+
+.feature-title {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--ink);
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.feature-desc {
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.7;
+}
+
+/* ── CTA SPLIT ── */
+.cta-section {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 72px 48px 80px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+
+.cta-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  border-top: 3px solid var(--accent);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+}
+
+.cta-card-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.cta-card-title {
+  font-family: var(--serif);
+  font-size: 24px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.3;
+  margin-bottom: 14px;
+  text-wrap: balance;
+}
+
+.cta-card-desc {
+  font-size: 14px;
+  color: var(--ink-2);
+  line-height: 1.7;
+  margin-bottom: 28px;
+  flex: 1;
+}
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.footer-copy {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 720px) {
+  nav { padding: 14px 20px; }
+
+  .hero {
+    grid-template-columns: 1fr;
+    padding: 52px 20px 44px;
+    gap: 0;
+  }
+
+  .hero-watermark { display: none; }
+
+  .features-wrap { padding: 52px 20px; }
+  .features { grid-template-columns: 1fr; gap: 32px; }
+
+  .cta-section {
+    grid-template-columns: 1fr;
+    padding: 48px 20px 56px;
+  }
+
+  .cta-card.agency-card {
+    border-top-color: #5B6BA8;
+  }
+
+  footer {
+    flex-direction: column;
+    gap: 8px;
+    padding: 20px;
+    text-align: center;
+  }
+}
+</style>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#">
+    <span class="logo-char">赫</span>
+    <span class="logo-name">Herix</span>
+  </a>
+  <div class="lang-switcher" role="group" aria-label="Language">
+    <button class="lang-btn active" onclick="setLang('zh')">中</button>
+    <button class="lang-btn" onclick="setLang('ja')">日</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-watermark" aria-hidden="true">赫</div>
+  <div class="hero-content">
+    <div class="hero-eyebrow" data-key="eyebrow"></div>
+    <h1 class="hero-headline" data-key="headline"></h1>
+    <p class="hero-sub" data-key="sub"></p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="/merchant.html" data-key="ctaAgency"></a>
+      <a class="btn-outline" href="/herix.html" data-key="ctaHerald"></a>
+    </div>
+    <div style="margin-top:14px">
+      <a href="/merchant.html" style="font-size:13px;color:var(--ink-2);text-decoration:none;border-bottom:1px solid var(--border)" data-key="ctaBrandLink"></a>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-wrap">
+  <div class="section-inner">
+    <div class="section-label" data-key="featuresLabel"></div>
+    <div class="features">
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <div class="feature-title" data-key="f1Title"></div>
+        <div class="feature-desc" data-key="f1Desc"></div>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <div class="feature-title" data-key="f2Title"></div>
+        <div class="feature-desc" data-key="f2Desc"></div>
+      </div>
+      <div class="feature">
+        <div class="feature-bar"></div>
+        <div class="feature-title" data-key="f3Title"></div>
+        <div class="feature-desc" data-key="f3Desc"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA SPLIT: agency → herald → brand -->
+<div class="cta-section">
+  <div class="cta-card agency-card" style="border-top-color:#5B6BA8">
+    <div class="cta-card-eyebrow" style="color:#5B6BA8" data-key="agencyEyebrow"></div>
+    <div class="cta-card-title" data-key="agencyTitle"></div>
+    <p class="cta-card-desc" data-key="agencyDesc"></p>
+    <a class="btn-primary" href="/merchant.html" data-key="ctaAgency"></a>
+  </div>
+  <div class="cta-card">
+    <div class="cta-card-eyebrow" data-key="heraldEyebrow"></div>
+    <div class="cta-card-title" data-key="heraldTitle"></div>
+    <p class="cta-card-desc" data-key="heraldDesc"></p>
+    <a class="btn-outline" href="/herix.html" data-key="ctaHerald"></a>
+  </div>
+  <div class="cta-card" style="border-top-color:var(--border)">
+    <div class="cta-card-eyebrow" data-key="brandEyebrow"></div>
+    <div class="cta-card-title" data-key="brandTitle"></div>
+    <p class="cta-card-desc" data-key="brandDesc"></p>
+    <a class="btn-outline" href="/merchant.html" data-key="ctaBrand"></a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="logo">
+    <span class="logo-char" style="font-size:20px">赫</span>
+    <span class="logo-name" style="font-size:12px">Herix</span>
+  </div>
+  <span class="footer-copy" data-key="footerCopy"></span>
+</footer>
+
+<script>
+var CONTENT = {
+  zh: {
+    eyebrow: '海外华人营销平台',
+    headline: '让真实的声音，\n触达更远的地方',
+    sub: '赫使平台连接品牌与海外华人社群，通过经过验证的 KOL/KOC 赫使传递品牌价值。任务发布、资金托管、效果追踪，全程在线完成。',
+    ctaBrand: '品牌入驻',
+    ctaBrandLink: '品牌方入驻 →',
+    ctaHerald: '成为赫使',
+    featuresLabel: '平台优势',
+    f1Title: '真实社群触达',
+    f1Desc: '赫使是真实生活在海外的华人，他们的推荐来自真实使用体验，不是广告话术。',
+    f2Title: '结算透明，管理省心',
+    f2Desc: '任务完成后平台统一处理结算，每笔支出清晰记录，告别手动转账和追款烦恼。',
+    f3Title: '透明效果追踪',
+    f3Desc: '推广码转化数据实时回传，内容审核留存完整记录，每一笔支出清晰可查。',
+    brandEyebrow: '我是品牌方',
+    brandTitle: '找到真正能打动社群的声音',
+    brandDesc: '在赫使平台发布任务，触达分布在日本及全球的海外华人社群。设定预算、审核赫使、确认效果，全流程线上完成。',
+    agencyEyebrow: '我是广告代理 / 赫府',
+    agencyTitle: '把执行力带上平台',
+    agencyDesc: '你手上有赫使资源，赫使平台帮你把合作数字化。发定向任务、管理执行进度、透明结算——替代 Excel 和微信群。',
+    ctaAgency: '代理入驻',
+    heraldEyebrow: '我是赫使',
+    heraldTitle: '将影响力转化为稳定收入',
+    heraldDesc: '接受品牌合作任务，发挥你在社群中的真实影响力，完成内容创作后安全收款。平台保障结算，无需担心追款。',
+    footerCopy: '© 2026 Herix · 连接品牌与海外华人社群',
+  },
+  ja: {
+    eyebrow: '海外移住者コミュニティ マーケティング',
+    headline: '本物の声を、\nもっと遠くへ。',
+    sub: 'Herixは、ブランドと海外在住の移住者コミュニティを、信頼できるアンバサダー（赫使）を通じてつなぎます。タスク管理・結算・効果追跡がすべてオンラインで完結します。',
+    ctaBrand: 'ブランド登録',
+    ctaBrandLink: 'ブランドとして登録 →',
+    ctaHerald: 'アンバサダーになる',
+    featuresLabel: 'プラットフォームの特徴',
+    f1Title: '真のコミュニティリーチ',
+    f1Desc: '赫使は海外で実際に生活する移住者インフルエンサー。リアルな体験に基づく推薦が、広告より深く届きます。',
+    f2Title: '透明な精算、楽な管理',
+    f2Desc: 'タスク完了後はプラットフォームが一括で精算処理。すべての支出が明確に記録され、手動振込の手間から解放されます。',
+    f3Title: '明確な効果測定',
+    f3Desc: 'プロモコードの転換データをリアルタイムで取得。コンテンツ審査の記録も保持され、支出の根拠が明確です。',
+    brandEyebrow: 'ブランドの方へ',
+    brandTitle: 'コミュニティに届く本物の声を',
+    brandDesc: 'タスクを発行し、日本をはじめ世界の移住者コミュニティにリーチ。予算設定・アンバサダー選考・効果確認まですべてオンライン。',
+    agencyEyebrow: '広告代理店 / エージェンシーの方へ',
+    agencyTitle: '実行力をプラットフォームへ',
+    agencyDesc: 'すでにアンバサダーネットワークをお持ちなら、Herixで業務をデジタル化。指定タスクの発行・進捗管理・透明な精算がExcelとチャットを置き換えます。',
+    ctaAgency: '代理店として登録',
+    heraldEyebrow: 'アンバサダーの方へ',
+    heraldTitle: '影響力を安定した収入に変える',
+    heraldDesc: 'ブランドのタスクを受け取り、コミュニティでの影響力を活かして報酬を獲得。精算はプラットフォームが保証します。',
+    footerCopy: '© 2026 Herix · ブランドと移住者コミュニティをつなぐ',
+  },
+  en: {
+    eyebrow: 'Diaspora Community Marketing',
+    headline: 'Authentic voices,\nglobal reach.',
+    sub: 'Herix connects brands with diaspora communities worldwide through trusted ambassadors. Publish tasks, manage workflows, and track results — all in one platform.',
+    ctaBrand: 'For Brands',
+    ctaBrandLink: 'Register as a brand →',
+    ctaHerald: 'Become an Ambassador',
+    featuresLabel: 'Why Herix',
+    f1Title: 'Genuine Community Reach',
+    f1Desc: 'Heralds are real people embedded in diaspora communities abroad. Their recommendations carry the weight of lived experience — not ad copy.',
+    f2Title: 'Simple Settlement',
+    f2Desc: 'The platform handles all payments once tasks are complete. Every transaction is logged clearly — no manual transfers, no chasing.',
+    f3Title: 'Clear Performance Tracking',
+    f3Desc: 'Referral conversions are reported in real time. Every content submission is reviewed and archived. Every spend accounted for.',
+    brandEyebrow: 'For Brands',
+    brandTitle: 'Find voices that truly resonate',
+    brandDesc: 'Reach diaspora audiences across Japan and beyond. Set budgets, review ambassadors, and confirm results — entirely online.',
+    agencyEyebrow: 'For Agencies',
+    agencyTitle: 'Bring your network onto the platform',
+    agencyDesc: 'Already managing a roster of ambassadors? Herix digitizes your operation — send directed tasks, track execution, settle transparently. Replace spreadsheets and group chats.',
+    ctaAgency: 'Register as Agency',
+    heraldEyebrow: 'For Ambassadors',
+    heraldTitle: 'Turn your influence into income',
+    heraldDesc: "Accept brand partnerships, create authentic content, and get paid securely. The platform handles all settlement — no chasing payments.",
+    footerCopy: '© 2026 Herix · Connecting brands with diaspora communities',
+  }
+};
+
+function setLang(lang) {
+  document.querySelectorAll('.lang-btn').forEach(function(b) {
+    b.classList.remove('active');
+  });
+  document.querySelector('.lang-btn[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+
+  var c = CONTENT[lang];
+  document.querySelectorAll('[data-key]').forEach(function(el) {
+    var key = el.dataset.key;
+    if (c[key] !== undefined) {
+      if (key === 'headline') {
+        el.innerHTML = c[key].replace(/\n/g, '<br>');
+      } else {
+        el.textContent = c[key];
+      }
+    }
+  });
+}
+
+var lang = navigator.language || 'zh';
+if (lang.startsWith('zh')) setLang('zh');
+else if (lang.startsWith('ja')) setLang('ja');
+else setLang('en');
+</script>

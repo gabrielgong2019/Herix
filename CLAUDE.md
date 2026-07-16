@@ -22,7 +22,7 @@ npm run build        # 输出到 dist/
 ```
 
 前端是静态 HTML，Express 服务器同时托管 `/`（静态文件目录为项目根目录），无需单独启动。
-访问 `http://localhost:3005/preview.html` 即可。
+访问 `http://localhost:3005/herix.html` 即可。
 
 ---
 
@@ -32,7 +32,7 @@ npm run build        # 输出到 dist/
 
 | 文件 | 用途 | 角色 |
 |------|------|------|
-| `preview.html` | 赫使（KOL/大使）端 | 浏览任务、报名、提交内容、钱包 |
+| `herix.html` | 赫使（KOL/大使）端 | 浏览任务、报名、提交内容、钱包 |
 | `merchant.html` | 品牌商家端 | 发布任务、审核报名、审核内容、数据上传 |
 | `admin.html` | 运营后台 | 用户管理、任务管理、结算、KYC 审核 |
 | `herix-server/` | Express + TypeScript API | 统一后端，端口 3005 |

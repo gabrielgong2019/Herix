@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
   }
 
   // 静态文件
-  let filePath = url === '/' ? '/preview.html' : url;
+  let filePath = url === '/' ? '/herix.html' : url;
   filePath = path.join(__dirname, filePath);
   fs.readFile(filePath, (err, data) => {
     if (err) {
@@ -53,7 +53,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`\n📡 分享服务器已启动`);
   console.log(`   http://localhost:${PORT}`);
-  console.log(`   http://localhost:${PORT}/preview.html`);
+  console.log(`   http://localhost:${PORT}/herix.html`);
   console.log(`   http://localhost:${PORT}/merchant.html`);
   console.log(`   http://localhost:${PORT}/admin.html`);
   console.log(`\n🔗 用 ngrok 分享出去:`);

@@ -12,4 +12,13 @@ export function saveBrandAsset(userId: string, type: 'logo' | 'promo', buffer: B
   return `/uploads/brands/${userId}/${type}.${ext}`;
 }
 
+/** 保存任务封面图，文件名带时间戳避免冲突 */
+export function saveTaskCover(taskId: string, buffer: Buffer): string {
+  const dir = path.join(UPLOADS_ROOT, 'tasks');
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${taskId}.webp`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return `/uploads/tasks/${filename}`;
+}
+
 export const UPLOADS_DIR = UPLOADS_ROOT;

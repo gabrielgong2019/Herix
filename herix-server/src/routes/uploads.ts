@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { imageUpload } from '../middleware/upload';
-import { processLogo, processPromo } from '../utils/image';
-import { saveBrandAsset } from '../utils/uploads';
+import { processLogo, processPromo, processCover } from '../utils/image';
+import { saveBrandAsset, saveTaskCover } from '../utils/uploads';
 import { update } from '../utils/db';
 
 export const uploadsRouter = Router();
@@ -31,6 +31,21 @@ uploadsRouter.post('/brand/promo', requireAuth, requireRole('BRAND'), imageUploa
     res.json({ success: true, url });
   } catch (err) {
     console.error('Promo upload error:', err);
+    res.status(500).json({ error: '图片处理失败' });
+  }
+});
+
+/** POST /api/uploads/task/:taskId/cover — 任务封面图上传 */
+uploadsRouter.post('/task/:taskId/cover', requireAuth, requireRole('BRAND', 'ADMIN'), imageUpload.single('file'), async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: '未提供文件' });
+  try {
+    const taskId = String(req.params.taskId);
+    const processed = await processCover(req.file.buffer);
+    const url = saveTaskCover(taskId, processed);
+    await update('tasks', { cover_image: url }, 'id = ? AND creator_id = ?', [taskId, req.user!.userId]);
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('Cover upload error:', err);
     res.status(500).json({ error: '图片处理失败' });
   }
 });

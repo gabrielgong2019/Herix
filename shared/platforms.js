@@ -1,6 +1,6 @@
 /**
  * Herix 社交平台注册表 — 三端共用
- * preview.html / merchant.html / admin.html 均通过 <script src="/shared/platforms.js"> 引入
+ * herix.html / merchant.html / admin.html 均通过 <script src="/shared/platforms.js"> 引入
  *
  * inputType: 'id'  → 收账号 ID（微信、LINE、Zalo、WhatsApp）
  * inputType: 'url' → 收主页链接（Instagram、小红书、TikTok 等）

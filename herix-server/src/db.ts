@@ -29,7 +29,6 @@ export async function initDatabase() {
       is_verified INTEGER NOT NULL DEFAULT 0,
       wechat_open_id TEXT UNIQUE,
       roles TEXT,
-      linked_account_id TEXT REFERENCES users(id),  -- 中日账号一键切换（临时方案，待合规要求时拆分）
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
@@ -44,8 +43,7 @@ export async function initDatabase() {
       contact_name TEXT NOT NULL DEFAULT '',
       contact_phone TEXT,
       is_enterprise_verified INTEGER NOT NULL DEFAULT 0,
-      is_onboarded INTEGER NOT NULL DEFAULT 0,
-      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))  -- 业务市场：CNY=中国业务 JPY=日本业务，入驻时选定后不可变
+      is_onboarded INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS herald_profiles (
@@ -66,8 +64,7 @@ export async function initDatabase() {
       visa_type TEXT,
       bank_account TEXT,
       tier_snapshot TEXT,
-      social_platforms_updated_at TEXT,
-      display_currency TEXT CHECK(display_currency IN ('JPY','CNY'))  -- 赫使设置的默认展示币种，用于换算和钱包汇总
+      social_platforms_updated_at TEXT
     );
 
     CREATE TABLE IF NOT EXISTS tasks (
@@ -79,7 +76,7 @@ export async function initDatabase() {
       requirements TEXT,
       budget DOUBLE PRECISION NOT NULL DEFAULT 0,
       commission DOUBLE PRECISION NOT NULL DEFAULT 0,
-      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY')),  -- 创建时快照自 brand_profiles.currency
+      currency TEXT NOT NULL DEFAULT 'JPY',
       max_heralds INTEGER NOT NULL DEFAULT 1,
       deadline TEXT,
       promo_code TEXT,
@@ -241,7 +238,7 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       brand_id TEXT NOT NULL REFERENCES users(id),
       amount DOUBLE PRECISION NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY')),
+      currency TEXT NOT NULL DEFAULT 'JPY',
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','confirmed','rejected')),
       note TEXT,
       confirmed_by TEXT REFERENCES users(id),
@@ -253,7 +250,7 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       herald_id TEXT NOT NULL REFERENCES users(id),
       amount DOUBLE PRECISION NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY')),  -- 从哪个币种钱包提现
+      currency TEXT NOT NULL DEFAULT 'JPY',
       method TEXT NOT NULL,
       account_details TEXT NOT NULL DEFAULT '{}',
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','processing','paid','failed')),
@@ -262,16 +259,6 @@ export async function initDatabase() {
       processed_at TEXT,
       note TEXT,
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
-    );
-
-    -- exchange_rates: 仅用于赫使端"换算展示"，不参与实际结算（结算永远是原币种）
-    CREATE TABLE IF NOT EXISTS exchange_rates (
-      id TEXT PRIMARY KEY,
-      base_currency TEXT NOT NULL,
-      quote_currency TEXT NOT NULL,
-      rate DOUBLE PRECISION NOT NULL,  -- 1 base_currency = rate quote_currency
-      updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
-      UNIQUE(base_currency, quote_currency)
     );
 
     CREATE TABLE IF NOT EXISTS withdrawal_methods (
@@ -284,6 +271,15 @@ export async function initDatabase() {
       is_default INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    );
+
+    CREATE TABLE IF NOT EXISTS categories (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      icon TEXT NOT NULL DEFAULT '',
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
     );
   `;
 
@@ -306,6 +302,7 @@ export async function initDatabase() {
     'CREATE INDEX IF NOT EXISTS idx_task_ratings_herald ON task_ratings(herald_id)',
     'CREATE INDEX IF NOT EXISTS idx_submissions_status ON task_submissions(status)',
     'CREATE INDEX IF NOT EXISTS idx_declarations_user ON declarations(user_id)',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_task_submissions_unique ON task_submissions(task_id, herald_id)',
   ];
 
   for (const idx of indexes) {
@@ -323,15 +320,17 @@ export async function initDatabase() {
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0`,
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS paid_conversions INTEGER DEFAULT 0`,
     `DROP TABLE IF EXISTS payouts`,
-    // 多币种支持（2026-06-12）
-    `ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_account_id TEXT REFERENCES users(id)`,
-    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
-    `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS display_currency TEXT CHECK(display_currency IN ('JPY','CNY'))`,
-    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
-    `ALTER TABLE topup_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
-    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY' CHECK(currency IN ('JPY','CNY'))`,
-    // 初始汇率占位（updated_at 设为很早，首次读取时会触发 API 刷新）
-    `INSERT INTO exchange_rates (id, base_currency, quote_currency, rate, updated_at) VALUES ('CNY_JPY','CNY','JPY',20.5,'1970-01-01 00:00:00') ON CONFLICT (id) DO NOTHING`,
+    // 移除多币种设计（2026-07-08）
+    `ALTER TABLE users DROP COLUMN IF EXISTS linked_account_id`,
+    `ALTER TABLE herald_profiles DROP COLUMN IF EXISTS display_currency`,
+    `DROP TABLE IF EXISTS exchange_rates`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY'`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY'`,
+    `ALTER TABLE topup_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY'`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY'`,
+    // source_entity + tax_withheld：追踪付款法人实体和代扣税（2026-07-08）
+    `ALTER TABLE wallet_entries ADD COLUMN IF NOT EXISTS source_entity TEXT NOT NULL DEFAULT 'JP'`,
+    `ALTER TABLE wallet_entries ADD COLUMN IF NOT EXISTS tax_withheld DOUBLE PRECISION NOT NULL DEFAULT 0`,
     // wallet_entries 索引
     `CREATE INDEX IF NOT EXISTS idx_wallet_entries_wallet ON wallet_entries(wallet_id)`,
     `CREATE INDEX IF NOT EXISTS idx_wallet_entries_type ON wallet_entries(type)`,
@@ -347,6 +346,99 @@ export async function initDatabase() {
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS logo_url TEXT`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS promo_image_url TEXT`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS billing_email TEXT`,
+    // 服务协议签署记录（2026-07-09）
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS agreed_at TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS agreed_ip TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS agreed_version TEXT`,
+    // 定向发布（2026-07-09）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'PUBLIC'`,
+    // 品牌专属上传链接 token（2026-07-09）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS upload_token TEXT`,
+    // 定价模块（2026-07-09）
+    `CREATE TABLE IF NOT EXISTS platform_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      note TEXT,
+      updated_by TEXT,
+      updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    )`,
+    // platform_settings 初始默认值（ON CONFLICT DO NOTHING 保证幂等）
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('commission_rate',          '0.15',         '平台抽佣比例'),
+      ('withdrawal_fee_type',      'FLAT',          '提现手续费类型'),
+      ('withdrawal_fee_flat',      '500',           '每笔提现固定手续费（JPY）'),
+      ('withdrawal_schedule_mode', 'FIXED_DATES',   '打款模式：FIXED_DATES=月中/月末，ON_DEMAND=即时'),
+      ('withdrawal_monthly_limit', '2',             '每月提现次数上限（ON_DEMAND 模式生效）'),
+      ('withdrawal_min_amount',    '1000',          '最低提现申请金额（JPY）'),
+      ('topup_cc_rate',            '0.03',          '信用卡充值手续费率（pass-through）')
+     ON CONFLICT (key) DO NOTHING`,
+    // withdrawal_requests 新增字段：手续费快照 + 预计打款日
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fee DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS net_amount DOUBLE PRECISION`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS payout_date TEXT`,
+    // task_transactions 费率快照
+    `ALTER TABLE task_transactions ADD COLUMN IF NOT EXISTS platform_fee_rate DOUBLE PRECISION`,
+    // brand_profiles 账户协议费率
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override DOUBLE PRECISION`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override_note TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override_by TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override_at TEXT`,
+    // 商户信用额度 + 充值状态（2026-07-10）
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS has_topped_up BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS first_publish_reminder_sent BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS credit_limit_override DOUBLE PRECISION`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS is_agency BOOLEAN NOT NULL DEFAULT FALSE`,
+    // 任务极速打款标签 + 信用托管标记
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS fast_payout BOOLEAN NOT NULL DEFAULT FALSE`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS credit_funded BOOLEAN NOT NULL DEFAULT FALSE`,
+    // 站内信通知表
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL,
+      is_read INTEGER NOT NULL DEFAULT 0,
+      metadata TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC)`,
+    // platform_settings：信用系统参数
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('merchant_initial_credit', '5000', '商户信用额度默认值（JPY，可被 credit_limit_override 覆盖）'),
+      ('fast_payout_threshold',   '100000', '极速打款余额门槛（JPY，发布时余额达到此值则标记极速打款）')
+     ON CONFLICT (key) DO NOTHING`,
+    `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS review_note TEXT`,
+    `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_role TEXT`,
+    // 任务报酬字段语义重构（commission 废弃，拆分为三个明确字段）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS payout_per_herald DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS cost_per_herald   DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS commission_rate   DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    // 数据迁移：旧 commission = cost_per_herald，payout 按各商家实际费率反推
+    `UPDATE tasks t SET
+       cost_per_herald   = t.commission,
+       commission_rate   = COALESCE(
+         (SELECT bp.commission_rate_override FROM brand_profiles bp WHERE bp.user_id = t.creator_id),
+         0.15
+       ),
+       payout_per_herald = ROUND(
+         t.commission * (1 - COALESCE(
+           (SELECT bp.commission_rate_override FROM brand_profiles bp WHERE bp.user_id = t.creator_id),
+           0.15
+         ))
+       )
+     WHERE t.commission > 0 AND t.cost_per_herald = 0`,
+    // 分类种子数据（ON CONFLICT DO NOTHING 保证幂等）
+    `INSERT INTO categories (id, label, icon, sort_order) VALUES
+      ('experience', '体验', '🎪', 1),
+      ('beauty',     '美妆', '💄', 2),
+      ('travel',     '旅行', '✈️',  3),
+      ('fashion',    '穿搭', '👗', 4),
+      ('food',       '美食', '🍱', 5),
+      ('lifestyle',  '生活', '🌿', 6),
+      ('referral',   '推荐', '🔗', 7),
+      ('baby',       '母婴', '🍼', 8)
+     ON CONFLICT (id) DO NOTHING`,
   ];
   for (const m of migrations) {
     await pool.query(m);

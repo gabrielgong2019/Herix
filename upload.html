@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据上传 · Herix</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif; background:#f5f5f7; color:#111; font-size:14px; min-height:100vh; display:flex; flex-direction:column; }
+.topbar { background:#fff; border-bottom:1px solid #e5e7eb; padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; }
+.logo { font-weight:800; font-size:18px; letter-spacing:.5px; color:#111; }
+.logo span { color:#0070CC; }
+.container { max-width:680px; margin:40px auto; padding:0 20px; width:100%; }
+.card { background:#fff; border-radius:16px; padding:28px; box-shadow:0 1px 4px rgba(0,0,0,.06); margin-bottom:20px; }
+.task-header { display:flex; align-items:flex-start; gap:16px; margin-bottom:20px; }
+.task-icon { width:48px; height:48px; border-radius:12px; background:#eff6ff; display:flex; align-items:center; justify-content:center; font-size:24px; flex-shrink:0; }
+.task-title { font-size:18px; font-weight:700; margin-bottom:4px; }
+.task-meta { font-size:12px; color:#6b7280; }
+.sec-title { font-size:13px; font-weight:700; color:#374151; margin-bottom:10px; }
+.step { display:flex; gap:14px; margin-bottom:16px; }
+.step-num { width:24px; height:24px; border-radius:50%; background:#0070CC; color:#fff; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step-body { font-size:13px; color:#374151; line-height:1.6; }
+.step-body b { color:#111; }
+textarea { width:100%; padding:12px; border:1.5px solid #e5e7eb; border-radius:10px; font-family:monospace; font-size:13px; resize:vertical; min-height:140px; line-height:1.6; color:#374151; outline:none; transition:border-color .15s; }
+textarea:focus { border-color:#0070CC; }
+.file-row { display:flex; align-items:center; gap:10px; margin-top:10px; }
+.file-label { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; background:#f9fafb; border:1.5px solid #e5e7eb; border-radius:8px; cursor:pointer; font-size:13px; color:#374151; }
+.file-label:hover { border-color:#0070CC; color:#0070CC; }
+#file-name { font-size:12px; color:#6b7280; }
+.btn { display:inline-flex; align-items:center; justify-content:center; padding:11px 24px; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; border:none; transition:all .15s; }
+.btn-primary { background:#0070CC; color:#fff; width:100%; margin-top:16px; }
+.btn-primary:hover { background:#005fad; }
+.btn-primary:disabled { background:#93c5fd; cursor:not-allowed; }
+.btn-outline { background:#fff; color:#374151; border:1.5px solid #e5e7eb; }
+.btn-outline:hover { border-color:#0070CC; color:#0070CC; }
+.alert { padding:12px 16px; border-radius:10px; font-size:13px; margin-top:14px; line-height:1.6; }
+.alert-success { background:#f0fdf4; border:1px solid #86efac; color:#166534; }
+.alert-error { background:#fef2f2; border:1px solid #fca5a5; color:#991b1b; }
+.alert-info { background:#eff6ff; border:1px solid #bfdbfe; color:#1e40af; }
+.result-row { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f3f4f6; font-size:13px; }
+.result-row:last-child { border-bottom:none; }
+.badge { display:inline-block; padding:1px 8px; border-radius:20px; font-size:11px; font-weight:600; }
+.badge-green { background:#dcfce7; color:#166534; }
+.badge-yellow { background:#fef9c3; color:#854d0e; }
+.badge-gray { background:#f3f4f6; color:#6b7280; }
+.tmpl-row { display:flex; align-items:center; justify-content:space-between; background:#f9fafb; border-radius:8px; padding:10px 14px; margin-top:6px; }
+.tmpl-code { font-family:monospace; font-size:12px; color:#374151; }
+.footer { text-align:center; color:#9ca3af; font-size:12px; margin-top:40px; padding-bottom:40px; }
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="logo">HERIX<span>.</span></div>
+  <div style="font-size:12px;color:#6b7280">品牌数据上传</div>
+</div>
+<div class="container" id="app">
+  <div class="card" style="text-align:center;padding:48px">
+    <div style="font-size:32px;margin-bottom:12px">⏳</div>
+    <div style="color:#6b7280">加载中…</div>
+  </div>
+</div>
+<div class="footer">Powered by HERIX · 赫使平台</div>
+
+<script>
+var API = '/api';
+var params = new URLSearchParams(window.location.search);
+var TASK_ID = params.get('task') || '';
+var TOKEN   = params.get('token') || '';
+var taskInfo = null;
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function render(html) {
+  document.getElementById('app').innerHTML = html;
+}
+
+function init() {
+  if (!TASK_ID || !TOKEN) {
+    render('<div class="card"><div class="alert alert-error">❌ 链接无效，请联系运营获取正确的上传链接。</div></div>');
+    return;
+  }
+  var xhr = new XMLHttpRequest();
+  xhr.open('GET', API + '/tasks/' + TASK_ID + '/upload-info?token=' + encodeURIComponent(TOKEN), true);
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d.error) { render('<div class="card"><div class="alert alert-error">❌ ' + esc(d.error) + '</div></div>'); return; }
+      taskInfo = d;
+      renderUploadPage();
+    } catch(e) {
+      render('<div class="card"><div class="alert alert-error">❌ 加载失败，请稍后重试</div></div>');
+    }
+  };
+  xhr.onerror = function() { render('<div class="card"><div class="alert alert-error">❌ 网络错误</div></div>'); };
+  xhr.send();
+}
+
+function renderUploadPage() {
+  var t = taskInfo;
+  var codes = t.codes || [];
+
+  var html = '<div class="card">'
+    + '<div class="task-header">'
+    + '<div class="task-icon">📋</div>'
+    + '<div><div class="task-title">' + esc(t.title) + '</div>'
+    + '<div class="task-meta">任务 ID：' + esc(t.id.slice(0,8)) + '… · 招募 ' + t.maxHeralds + ' 位赫使</div>'
+    + '</div></div>'
+    + '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:13px;color:#166534">'
+    + '✅ 链接有效，您可以直接上传转化数据，无需登录账号。'
+    + '</div></div>';
+
+  html += '<div class="card">'
+    + '<div class="sec-title">📥 上传说明</div>'
+    + '<div class="step"><div class="step-num">1</div><div class="step-body">下载推广码列表，确认各赫使对应的推广码</div></div>'
+    + '<div class="step"><div class="step-num">2</div><div class="step-body">从您的系统中导出各推广码的转化数据（注册数、使用数）</div></div>'
+    + '<div class="step"><div class="step-num">3</div><div class="step-body">按下方格式粘贴或上传 CSV，点击提交</div></div>'
+    + '</div>';
+
+  // 推广码列表 + 模板下载
+  html += '<div class="card">'
+    + '<div class="sec-title">📋 推广码列表</div>';
+  if (codes.length === 0) {
+    html += '<div style="color:#6b7280;font-size:13px">暂无赫使持有推广码</div>';
+  } else {
+    html += '<div style="font-size:12px;color:#6b7280;margin-bottom:8px">共 ' + codes.length + ' 个推广码</div>';
+    codes.forEach(function(c) {
+      html += '<div class="tmpl-row"><span class="tmpl-code">' + esc(c.code) + '</span>'
+        + '<span style="font-size:12px;color:#6b7280">' + esc(c.herald_name || '赫使') + '</span>'
+        + '<span class="badge badge-green">注册 ' + (c.registered_count||0) + ' · 使用 ' + (c.used_count||0) + '</span>'
+        + '</div>';
+    });
+    html += '<div style="margin-top:12px">'
+      + '<button class="btn btn-outline" onclick="downloadTemplate()">⬇ 下载模板 CSV</button>'
+      + '</div>';
+  }
+  html += '</div>';
+
+  // 上传区域
+  html += '<div class="card">'
+    + '<div class="sec-title">📤 上传转化数据</div>'
+    + '<div style="font-size:12px;color:#6b7280;margin-bottom:10px">CSV 格式：<code style="background:#f3f4f6;padding:1px 6px;border-radius:4px">推广码, 注册数, 使用数</code>（第一行为表头，忽略）</div>'
+    + '<textarea id="csv-input" placeholder="code,registered_count,used_count&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3"></textarea>'
+    + '<div class="file-row">'
+    + '<label class="file-label" for="csv-file">📁 选择文件</label>'
+    + '<input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="loadFile(event)">'
+    + '<span id="file-name">或直接粘贴数据到上方</span>'
+    + '</div>'
+    + '<div id="upload-result"></div>'
+    + '<button class="btn btn-primary" onclick="doUpload()">提交数据</button>'
+    + '</div>';
+
+  render(html);
+}
+
+function loadFile(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  document.getElementById('file-name').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(ev) { document.getElementById('csv-input').value = ev.target.result; };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function downloadTemplate() {
+  var codes = taskInfo.codes || [];
+  var rows = ['code,registered_count,used_count'];
+  codes.forEach(function(c) { rows.push(c.code + ',0,0'); });
+  var blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'herix_upload_template.csv';
+  a.click();
+}
+
+function parseCsv(raw) {
+  var lines = raw.trim().split('\n').filter(function(l){ return l.trim(); });
+  var records = [];
+  var start = 0;
+  // 跳过表头
+  if (lines.length > 0 && /code|推广码|promo/i.test(lines[0])) start = 1;
+  for (var i = start; i < lines.length; i++) {
+    var cols = lines[i].split(',');
+    if (cols.length < 3) continue;
+    var code = cols[0].trim();
+    var reg  = parseInt(cols[1].trim(), 10) || 0;
+    var used = parseInt(cols[2].trim(), 10) || 0;
+    if (!code) continue;
+    records.push({ code: code, registered_count: reg, used_count: used });
+  }
+  return records;
+}
+
+function doUpload() {
+  var raw = (document.getElementById('csv-input') || {}).value || '';
+  var resultEl = document.getElementById('upload-result');
+  if (!raw.trim()) { resultEl.innerHTML = '<div class="alert alert-error">请粘贴数据或选择 CSV 文件</div>'; return; }
+
+  var records = parseCsv(raw);
+  if (records.length === 0) { resultEl.innerHTML = '<div class="alert alert-error">未解析到有效数据，请检查格式</div>'; return; }
+
+  resultEl.innerHTML = '<div class="alert alert-info">⏳ 上传中（' + records.length + ' 条记录）…</div>';
+
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API + '/tasks/' + TASK_ID + '/csv?token=' + encodeURIComponent(TOKEN), true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">❌ ' + esc(d.error) + '</div>'; return; }
+      var html = '<div class="alert alert-success">'
+        + '<div style="font-weight:700;margin-bottom:8px">✅ 上传成功</div>'
+        + '<div class="result-row"><span>处理记录</span><span class="badge badge-green">' + (d.processed||0) + ' 条</span></div>'
+        + '<div class="result-row"><span>新增转化</span><span class="badge badge-green">' + (d.newConversions||0) + ' 次</span></div>'
+        + '<div class="result-row"><span>跳过（码不存在）</span><span class="badge badge-gray">' + (d.skipped||0) + ' 条</span></div>'
+        + (d.totalPaid > 0 ? '<div class="result-row"><span>已触发结算</span><span class="badge badge-green">¥' + Number(d.totalPaid).toLocaleString() + '</span></div>' : '')
+        + '</div>';
+      resultEl.innerHTML = html;
+      // 刷新任务信息
+      setTimeout(init, 1500);
+    } catch(e) { resultEl.innerHTML = '<div class="alert alert-error">❌ 服务器响应异常</div>'; }
+  };
+  xhr.onerror = function() { resultEl.innerHTML = '<div class="alert alert-error">❌ 网络错误，请重试</div>'; };
+  xhr.send(JSON.stringify({ records: records }));
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+# Herix PRD 实现进度
+
+> 更新日期：2026-07-08  
+> 对照版本：PRD v1.3（含 §24 定向任务）
+
+图例：✅ 已实现 · ⚠️ 部分实现 · ❌ 未实现
+
+---
+
+## 一期 P0（上线前必须）
+
+| 功能 | PRD 章节 | 状态 | 备注 |
+|------|---------|------|------|
+| 定向任务（Private Task） | §24 | ❌ | `task_invitations` 表未建，`tasks.visibility` 字段未加，API 全缺，前端两端均无 UI |
+| 资金链：品牌充值 | §21.6 | ✅ | 4步向导已实现（merchant.html），topup_requests 完整 |
+| 资金链：任务锁定 / 结算 / 退款 | §21 | ✅ | task_transactions + wallet_entries 双账本已实现 |
+| 资金链：赫使提现申请 | §11 | ✅ | withdraw-request API + admin 审批已实现 |
+| 提现收款方式管理 | §10 | ✅ | withdrawal_methods CRUD 已实现 |
+
+---
+
+## 一期 P1（上线后尽快）
+
+| 功能 | PRD 章节 | 状态 | 备注 |
+|------|---------|------|------|
+| KYC / 在留资格审核（admin 端） | §9、§10 | ⚠️ | declarations 表已建，admin.html 有审批入口；但身份证件上传、银行账户收集步骤未完整实现 |
+| 品牌入驻方案选择（Launch/Scale/Alliance） | §22.1 | ❌ | brand_profiles 无 plan 字段，无 credit_limit，入驻向导只有通用2步，未区分方案 |
+| 报名档案展示（品牌审核时查赫使完整档案） | §17.4 | ⚠️ | 有基础档案显示，但作品集、成长路径、全平台段位展示未实现 |
+| 评级 + 段位体系 | §17.2 / §17.3 | ⚠️ | tier_snapshot 字段已建，calcTier() 已实现，task_ratings 表已建，ratings 路由已实现；但 admin 端打分 UI、herald 端评级展示卡片未完整 |
+
+---
+
+## 一期 P2
+
+| 功能 | PRD 章节 | 状态 | 备注 |
+|------|---------|------|------|
+| 作品集自动沉淀 | §17.5 | ❌ | 审核通过时无自动写档案逻辑，herald_profiles 无作品集字段 |
+| 成长路径可视化 | §17.6 | ❌ | preview.html 无段位进度展示 |
+
+---
+
+## 一期 P3
+
+| 功能 | PRD 章节 | 状态 | 备注 |
+|------|---------|------|------|
+| 品牌复购机制 | §17.7 | ❌ | 可用定向任务代替，等定向任务实现后一并完成 |
+| 定价矩阵引导 | §18 | ❌ | 创建任务时无建议报酬范围提示 |
+
+---
+
+## 其他功能模块
+
+| 功能 | PRD 章节 | 状态 | 备注 |
+|------|---------|------|------|
+| 推广码任务全流程（类型A） | §3 | ✅ | 码池、CSV上传、转化记录、分配逻辑均已实现 |
+| 体验分享任务全流程（类型B） | §6、§7、§8 | ✅ | 提交、审核、拒绝重提交均已实现 |
+| 存续时间二次截图核查 | §8 | ❌ | check_due_date 未实现，30天到期提醒 + 逾期扣款逻辑全缺 |
+| 大使进度看板（今日/本月统计） | §5 | ⚠️ | preview.html 有基础统计，但推介明细列表（英文Token、三步骤状态）未完整实现 |
+| 审核 Checklist 界面 | §8 | ⚠️ | admin 有审核操作，但无 ContentRequirements 自动生成的逐项 checklist |
+| 居住地收集 + 税务分支 | §9 | ✅ | 入驻向导已收集 residence，japan/overseas 分支已实现 |
+| 在职资格声明（在日大使） | §9 | ✅ | declarations 表完整，ambassador.ts 处理声明流程 |
+| 防重复提交（URL去重+hash） | §11 | ⚠️ | ambassador/task 唯一约束已实现，但截图 MD5 hash 去重未实现 |
+| 任务容量控制（max_ambassadors） | §3.1 | ✅ | 已实现 |
+| 多角色账号体系 | §15.2 | ✅ | roles 数组、add-role API、JWT 兼容均已实现 |
+| 社交平台注册表 | §15 | ✅ | shared/platforms.js，PLATFORM_REGISTRY 完整 |
+| 报名时平台验证 | §15.0.5 | ⚠️ | 硬性门槛检查已实现，软性提示 UI 不完整 |
+| 邮件通知 | §15.5 | ⚠️ | nodemailer 已配置，部分节点已触发；打款完成通知未实现 |
+| 品牌 LOGO / 宣传图上传 | §22.4 | ✅ | uploads.ts + sharp 处理均已实现 |
+| 请求书 / 领收书 PDF 自动生成 | §22.2 | ❌ | 充值确认时无 PDF 生成，月结请求书也未实现 |
+| Scale / Alliance 信用额度 + 月结 | §22.3 | ❌ | credit_limit 字段未建，余额负值逻辑未实现，月结批处理未实现 |
+| 自动种子数据 | §16.3 | ✅ | seedIfEmpty() 已实现 |
+| Render 部署 | §16.7 | ✅ | render.yaml 配置完整 |
+
+---
+
+## 当前最高优先级 TODO
+
+按影响力排序：
+
+1. **❌ 定向任务 §24**（P0）
+   - 加 `tasks.visibility` 字段
+   - 建 `task_invitations` 表
+   - 实现 3 个 API（创建邀请 / 查询 / 响应）
+   - merchant.html 任务创建加「定向」开关 + 赫使搜索
+   - preview.html 加「专属邀请」tab
+
+2. **❌ 品牌方案分层 §22.1**（P1）
+   - `brand_profiles` 加 `plan` + `credit_limit` 字段
+   - 入驻向导第一步改为方案选择（Launch/Scale/Alliance）
+   - Scale/Alliance 入驻路径跳转到联系销售页面
+
+3. **❌ 作品集自动沉淀 §17.5**（P2）
+   - 提交审核通过时写入 herald_profiles
+
+4. **❌ 存续核查 §8**（P1）
+   - task_submissions 加 `check_due_date` 字段
+   - 定时任务：到期前3天通知 + 逾期扣款
+
+5. **❌ 请求书PDF §22.2**（P1，规模化前需完成）

@@ -14,6 +14,9 @@ import { referralsRouter } from './routes/referrals';
 import { adminRouter } from './routes/admin';
 import { walletRouter } from './routes/wallet';
 import { uploadsRouter } from './routes/uploads';
+import { qrRouter } from './routes/qr';
+import { notificationsRouter } from './routes/notifications';
+import { categoriesRouter } from './routes/categories';
 import { UPLOADS_DIR } from './utils/uploads';
 
 (async () => {
@@ -26,7 +29,7 @@ const PORT = process.env.PORT || 3005;
 
 app.use(cors());
 // 优先：小程序的 H5 版
-app.use('/', express.static(path.join(__dirname, '../../herix-miniapp/dist')));
+app.use('/', express.static(path.join(__dirname, '../../herix-miniapp/dist/h5')));
 // 后备：项目根目录的静态文件
 app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
@@ -48,6 +51,9 @@ app.use('/api/referrals', referralsRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/wallet', walletRouter);
 app.use('/api/uploads', uploadsRouter);
+app.use('/api/qr', qrRouter);
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/categories', categoriesRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);

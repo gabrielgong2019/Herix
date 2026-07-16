@@ -21,7 +21,7 @@ app.use(express.static(__dirname, {
 }));
 
 // 默认页面
-app.get('/', (_req, res) => res.redirect('/preview.html'));
+app.get('/', (_req, res) => res.redirect('/herix.html'));
 
 // 启动 API 服务（内嵌）
 const { initDatabase } = require('./herix-server/dist/db');
@@ -57,7 +57,7 @@ app.use((err, _req, res, _next) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Herix running on http://0.0.0.0:${PORT}`);
-  console.log(`  Preview: /preview.html`);
+  console.log(`  Preview: /herix.html`);
   console.log(`  Merchant: /merchant.html`);
   console.log(`  Admin: /admin.html`);
 });

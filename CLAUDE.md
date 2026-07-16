@@ -30,14 +30,15 @@ npm run build        # 输出到 dist/
 
 ### 三端前端 + 一个后端
 
-| 文件 | 用途 | 角色 |
+| 文件/目录 | 用途 | 角色 |
 |------|------|------|
-| `herix.html` | 赫使（KOL/大使）端 | 浏览任务、报名、提交内容、钱包 |
-| `merchant.html` | 品牌商家端 | 发布任务、审核报名、审核内容、数据上传 |
-| `admin.html` | 运营后台 | 用户管理、任务管理、结算、KYC 审核 |
+| `herix-miniapp/` | 赫使（KOL/大使）端 | **Taro(React) 双端**：微信小程序 + H5。浏览任务、报名、提交、钱包、消息、入驻引导；中日英三语 |
+| `merchant.html` | 品牌商家端 | 发布任务、审核报名、审核内容、数据上传（纯 HTML 无构建） |
+| `admin.html` | 运营后台 | 用户管理、任务管理、结算、KYC 审核、本地化词条矩阵（纯 HTML 无构建） |
 | `herix-server/` | Express + TypeScript API | 统一后端，端口 3005 |
 
-**前端没有构建步骤**：三个 HTML 文件是独立的单页应用，纯 `var`/DOM 操作，无框架。所有 API 调用用 `XMLHttpRequest`，路径为相对路径 `/api/...`（同源，端口 3005）。
+**赫使端有构建步骤**：`cd herix-miniapp && npm run build:h5 / build:weapp`（输出分别到 `dist/h5` `dist/weapp`，勿共用）。
+品牌/管理端仍是纯 `var`/DOM 单页 HTML，`XMLHttpRequest` 调 `/api/...`。`herix.html` 是赫使端旧版，待退役勿再开发。
 
 `shared/auth.js` 和 `shared/sidebar.js` 是三端共用的 UI 组件，用 `<script src>` 引入。
 
@@ -60,8 +61,10 @@ herix-server/src/
     ├── users.ts       # 资料更新 / 多角色 add-role / 品牌入驻
     ├── ambassador.ts  # 赫使入驻 onboard / 档案更新 / 在留声明
     ├── admin.ts       # 管理员接口（requireRole('ADMIN') 全局守卫）
-    ├── wallet.ts      # 钱包余额 / 提现方式 / 交易记录
-    └── referrals.ts   # 推荐码关联
+    ├── wallet.ts      # 钱包余额 / 提现方式 / 提现申请（单事务） / 交易记录
+    ├── referrals.ts   # 推荐码关联
+    ├── notifications.ts / categories.ts / ratings.ts / qr.ts
+    └── i18n.ts        # 三语词典（公开 GET /api/i18n/:locale + admin 矩阵，seed: scripts/seed-i18n.ts）
 ```
 
 ---
@@ -127,3 +130,24 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **一期**：评级+段位体系、资金链（充值/托管/打款）、作品集沉淀、品牌复购
 - **二期**：AI 内容辅助工具、培训内容库
 - **三期**：赫使付费订阅、品牌主动发现模式、MSO 汇款服务
+
+---
+
+## 工作准则
+
+### 文档联动（2026-07-16 立）
+
+**产品决策**（金额/规则/口径，如"最低提现 ¥1000"）和**架构变更**（载体切换/技术栈迁移/表结构语义变化）落码时，
+**同一个 commit 顺手更新** `docs/Herix_Ambassador_PRD.md` 对应章节（重大项追加变更记录节）与 `docs/PRD_PROGRESS.md` 状态行。
+纯实现细节不需要。背景：2026-07-08~16 文档与代码脱节 8 天，PRD 里留着已删除的载体和已作废的 seed 说明，对账成本很高。
+
+### 本项目踩过的坑（新代码必须遵守）
+
+- **Taro H5 页面样式全局生效**（小程序才按页隔离）：页面级类名必须带页面前缀（如 `hd-card`），裸 `.task-card`/`.card`/`.btn-primary` 曾造成跨页污染
+- **模块级常量不存 `t()` 结果**（会冻结在启动时语言），存 `labelKey` 渲染时取值
+- **局部变量不要叫 `t`**（遮蔽 i18n 的 `t()`，已炸过两次：messages timeAgo、apply loadContext）
+- **i18n 词条 key 由代码 seed 创建**，运营只改译文；seed 只覆盖 `updated_by='seed'` 的行
+- **钱包代码**：余额读写必须走 `utils/wallet.ts` 的 `applyWalletEntry`（行锁+幂等+事务）；多步业务+钱包操作用 extClient 合并进单事务
+- **金额展示**统一用 `utils/format.ts` 的 `fmt`，不要 `toLocaleString`（小程序引擎差异）
+- **配置类数值**（提现最低额等）走 `platform_settings` 单一事实源，前端由接口下发，禁止写死
+

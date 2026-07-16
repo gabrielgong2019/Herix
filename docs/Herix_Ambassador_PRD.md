@@ -940,7 +940,7 @@ GET /:id/codes   → 推广码池（requireAuth + BRAND）
 项目从 SQLite（`better-sqlite3`）完全迁移到 PostgreSQL（`pg`）。
 
 **改动范围：**
-- `src/db.ts` — 删除模块级 `initDatabase()` 自动调用，避免与 `index.ts` 中的调用冲突导致 Render 部署时报 `duplicate key violates unique constraint "pg_class_relname_nsp_index"`
+- `src/db.ts` — 删除模块级 `initDatabase()` 自动调用，避免与 `index.ts` 中的调用冲突导致（时为 Render）部署时报 `duplicate key violates unique constraint "pg_class_relname_nsp_index"`
 - 所有 SQL 通过 `src/utils/db.ts` 中的 `toPgSql()` 将 `?` 占位符自动转换为 `$N` 格式
 - `initDatabase()` 仅在 `index.ts` 中通过 `await` 调用一次
 
@@ -965,11 +965,11 @@ GET /:id/codes   → 推广码池（requireAuth + BRAND）
 **启动时自动检测：**
 - `src/seed.ts` — `seedIfEmpty()` 函数检测 `users` 表是否为空
 - 空库时自动创建 4 个用户、11 个任务、7 条申请记录、2 条推广码、4 条资金记录
-- Render 首次部署时完全自动化，无需手动操作
+- ~~Render 首次部署时完全自动化~~（Render 已于 2026-07-16 弃用；seedIfEmpty 亦已删除）
 
 **手动重灌脚本：**
 - `seed-db.ts` — 独立种子脚本，先清空所有表再重新填充
-- Render Shell 执行：`cd herix-server && npx tsx seed-db.ts`
+- ~~Render Shell 执行~~（Render 已弃用；该脚本亦已随旧 schema 作废）
 - 不需要删除 PostgreSQL 实例
 
 ### 16.4 成果报酬任务流程修正
@@ -1008,20 +1008,19 @@ GET /:id/codes   → 推广码池（requireAuth + BRAND）
 
 **小程序 H5 构建：**
 - `config/index.js` 中 `publicPath` 和 API 代理端口更新为 3005
-- `src/utils/api.ts` 中 `BASE_URL` 改为相对路径 `/api`（适配 Render 部署）
+- `src/utils/api.ts` 中 `BASE_URL` 改为相对路径 `/api`（适配任意同源部署）
 - 首页从占位符重写为带"我的待办"标签页的任务列表
 
-### 16.7 Render 部署配置
+### 16.7 部署（2026-07-16 更新：Render 已弃用）
 
-**render.yaml 更新：**
-```yaml
-buildCommand: cd herix-server && npm install && npx tsc && cd ../herix-miniapp && npm install && npx taro build --type h5
-startCommand: cd herix-server && node dist/index.js
-```
+原 Render 方案（render.yaml、onrender.com 域名、render-* npm scripts）已全部删除。
 
-**部署后自动种子：**
-- `index.ts` 中 `await initDatabase()`（seedIfEmpty 已于 2026-07-16 删除：其写入的旧表 `transactions` 在 PG schema 中不存在，空库启动会崩；需要 demo 数据须另写对齐新 schema 的脚本）
-- 首次部署时数据库为空，自动灌入完整测试数据
+当前状态：
+- **开发**：Mac 本地 herix-server（:3005）+ ECS PostgreSQL（SSH 隧道）
+- **生产**：部署方案待定，定稿后更新本节
+
+任何新环境部署 checklist：设置 `DATABASE_URL` → 启动即自动建表/迁移（幂等）→ 跑 `scripts/seed-i18n.ts` 灌三语词条 → 验证 `/api/i18n/zh` 有数据。
+
 
 ### 16.8 测试账号（更新）
 
@@ -1032,13 +1031,7 @@ startCommand: cd herix-server && node dist/index.js
 | `alice@d.com` | 123456 | 赫使 | 已报名4个任务（2个APPROVED，1个已完成，1个PENDING） |
 | `gabrielgong2019@outlook.com` | 123456 | 赫使+品牌 | 双角色，3个赫使申请 + 4个品牌任务 |
 
-**测试地址：**
-| 端 | URL |
-|------|-----|
-| 赫使用户端 | `https://herix.onrender.com/preview.html` |
-| 品牌商家端 | `https://herix.onrender.com/merchant.html` |
-| 管理后台 | `https://herix.onrender.com/admin.html` |
-| 小程序 H5 | `https://herix.onrender.com/` |
+**测试地址：** ~~onrender.com 各端地址~~（Render 已弃用；本地开发统一 `http://localhost:3005`，生产地址待部署方案定稿）
 
 ---
 

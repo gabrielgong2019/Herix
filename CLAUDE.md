@@ -113,16 +113,16 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 ---
 
-### 部署（Render）
+### 部署（2026-07-16 更新）
 
-`render.yaml` 配置单服务 + PostgreSQL 数据库，新加坡区域。
-构建命令：`cd herix-server && npm install && npx tsc`
-启动命令：`cd herix-server && node dist/index.js`
-环境变量：`JWT_SECRET`（自动生成）、`DATABASE_URL`（来自 Render 数据库）。
+**Render 已弃用**（render.yaml 与 package.json 的 render-* scripts 已删除，PRD 中 onrender.com 地址全部作废）。
 
-本地开发环境变量写在 `herix-server/.env`（不提交）。
+当前环境：
+- 开发：Mac 本地 launchd 跑 `herix-server`（端口 3005，`launchctl kickstart -k gui/$(id -u)/com.herix.server` 重启），
+  数据库为 ECS 上的 PostgreSQL（经 SSH 隧道 `localhost:15432`，凭据在 launchd plist 环境变量，不在 .env）
+- 生产：部署方案待定稿后补充本节（定稿时遵守"文档联动"准则）
 
----
+部署到任何新环境的必做步骤：`initDatabase()` 启动自动建表（幂等）→ 手动跑一次 `npx tsx scripts/seed-i18n.ts` 灌词条。
 
 ### 产品路线图（v1.3）
 

@@ -414,5 +414,13 @@
   "notif.SUB_APPROVED.title": "Content approved: {taskTitle}",
   "notif.SUB_APPROVED.body": "Your content for \"{taskTitle}\" was approved. The reward will be settled to your wallet.",
   "notif.SUB_REJECTED.title": "Content declined: {taskTitle}",
-  "notif.SUB_REJECTED.body": "Your content for \"{taskTitle}\" wasn't approved. Check the feedback and resubmit."
+  "notif.SUB_REJECTED.body": "Your content for \"{taskTitle}\" wasn't approved. Check the feedback and resubmit.",
+  "category.experience": "Experience",
+  "category.beauty": "Beauty",
+  "category.travel": "Travel",
+  "category.fashion": "Fashion",
+  "category.food": "Food",
+  "category.lifestyle": "Lifestyle",
+  "category.referral": "Referral",
+  "category.baby": "Baby & Mom"
 }

@@ -51,6 +51,13 @@ export function getLocale(): Locale {
   return currentLocale;
 }
 
+/** 取词条,词典没有该 key 时用 fallback(用于动态数据的可选翻译,如分类 label:
+ *  运营新建的分类没有词条时优雅降级显示后端原文) */
+export function tf(key: string, fallback: string, params?: Record<string, any>): string {
+  const v = t(key, params);
+  return v === key ? fallback : v;
+}
+
 function loadCachedDict(locale: Locale) {
   try {
     const cached = Taro.getStorageSync(DICT_KEY(locale));

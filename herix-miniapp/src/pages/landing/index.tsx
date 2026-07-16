@@ -3,7 +3,7 @@ import { View, Text, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { auth, tasks as taskApi, categories as categoriesApi, setToken } from '../../utils/api';
 import './index.scss';
-import { t } from '../../utils/i18n';
+import { t, tf } from '../../utils/i18n';
 import { fmt } from '../../utils/format';
 
 
@@ -104,7 +104,7 @@ export default class Landing extends Component<{}, State> {
     const { task, taskLoading, categories, authTab, email, nick, pass, err, submitting } = this.state;
     const isReg = authTab === 'register';
     const cat = task ? categories.find(c => c.id === task.category) : null;
-    const catText = task ? [cat?.icon, cat?.label || task.category].filter(Boolean).join(' ') : '';
+    const catText = task ? [cat?.icon, cat ? tf(`category.${cat.id}`, cat.label) : task.category].filter(Boolean).join(' ') : '';
     const payout = task?.payout_per_herald ? `¥${fmt(task.payout_per_herald)}` : '';
 
     return (

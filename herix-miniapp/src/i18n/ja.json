@@ -414,5 +414,13 @@
   "notif.SUB_APPROVED.title": "コンテンツが承認されました：{taskTitle}",
   "notif.SUB_APPROVED.body": "タスク「{taskTitle}」のコンテンツが承認されました。報酬は自動的にウォレットへ精算されます。",
   "notif.SUB_REJECTED.title": "コンテンツが承認されませんでした：{taskTitle}",
-  "notif.SUB_REJECTED.body": "タスク「{taskTitle}」のコンテンツが承認されませんでした。フィードバックを確認して再提出してください。"
+  "notif.SUB_REJECTED.body": "タスク「{taskTitle}」のコンテンツが承認されませんでした。フィードバックを確認して再提出してください。",
+  "category.experience": "体験",
+  "category.beauty": "美容",
+  "category.travel": "旅行",
+  "category.fashion": "ファッション",
+  "category.food": "グルメ",
+  "category.lifestyle": "ライフスタイル",
+  "category.referral": "紹介",
+  "category.baby": "ベビー・ママ"
 }

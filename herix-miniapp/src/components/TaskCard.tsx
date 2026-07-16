@@ -1,6 +1,6 @@
 import { View, Text, Navigator } from '@tarojs/components';
 import './TaskCard.scss';
-import { t } from '../utils/i18n';
+import { t, tf } from '../utils/i18n';
 
 // 从 herix.html 的 cardHTML() 移植，保持同样的字段/展示逻辑
 // 存 labelKey，渲染时 t() 取值（存 t() 结果会冻结在启动时语言）
@@ -52,7 +52,7 @@ export default function TaskCard({ task, categories }: Props) {
   const isPerformance = task.mode === 'PERFORMANCE';
   const diff = DIFF[task.difficulty || 'easy'] || DIFF.easy;
   const cat = categories.find(c => c.id === task.category);
-  const catText = [cat?.icon, cat?.label || task.category].filter(Boolean).join(' ');
+  const catText = [cat?.icon, cat ? tf(`category.${cat.id}`, cat.label) : task.category].filter(Boolean).join(' ');
   const price = task.payout_per_herald ?? task.commission;
 
   return (

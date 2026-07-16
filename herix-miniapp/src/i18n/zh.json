@@ -414,5 +414,13 @@
   "notif.SUB_APPROVED.title": "内容审核通过：{taskTitle}",
   "notif.SUB_APPROVED.body": "你提交的任务「{taskTitle}」内容已审核通过，报酬将自动结算至你的钱包。",
   "notif.SUB_REJECTED.title": "内容审核未通过：{taskTitle}",
-  "notif.SUB_REJECTED.body": "你提交的任务「{taskTitle}」内容未通过审核，请查看反馈后重新提交。"
+  "notif.SUB_REJECTED.body": "你提交的任务「{taskTitle}」内容未通过审核，请查看反馈后重新提交。",
+  "category.experience": "体验",
+  "category.beauty": "美妆",
+  "category.travel": "旅行",
+  "category.fashion": "穿搭",
+  "category.food": "美食",
+  "category.lifestyle": "生活",
+  "category.referral": "推荐",
+  "category.baby": "母婴"
 }

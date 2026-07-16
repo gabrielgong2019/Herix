@@ -414,5 +414,13 @@
   "notif.SUB_APPROVED.title": "站内通知标题:作品过审,{taskTitle}=任务名",
   "notif.SUB_APPROVED.body": "通知正文:作品过审+报酬自动结算说明",
   "notif.SUB_REJECTED.title": "站内通知标题:作品被拒,{taskTitle}=任务名",
-  "notif.SUB_REJECTED.body": "通知正文:作品被拒+引导重新提交"
+  "notif.SUB_REJECTED.body": "通知正文:作品被拒+引导重新提交",
+  "category.experience": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.beauty": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.travel": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.fashion": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.food": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.lifestyle": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.referral": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "category.baby": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label"
 }

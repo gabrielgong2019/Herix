@@ -126,6 +126,8 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 小程序分享入口（URL Link + 小程序码，`utils/wechat.ts`）需要环境变量 `WECHAT_MINI_APPID` / `WECHAT_MINI_SECRET`（可选 `WECHAT_MINI_ENV=trial` 测体验版）。未配置时端点返回 `available:false` 优雅降级，商家端显示"小程序发布后可用"——**前提是小程序已发布**，发布后在 launchd plist（生产环境同理）配上凭据即自动生效，无需改代码。
 
+邮件（`utils/mailer.ts`，nodemailer SMTP 465）需要 `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`（发件地址，SendGrid/Resend 的 SMTP 用户名是字面量不是邮箱，所以单独配）。未配置时只打日志不真发。SendGrid：host=smtp.sendgrid.net、user=apikey、pass=API Key、from=已验证发件邮箱。
+
 ### 产品路线图（v1.3）
 
 见 `docs/Herix_Ambassador_PRD.md` 第19节，分三期：

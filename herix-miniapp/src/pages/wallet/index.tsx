@@ -2,29 +2,30 @@ import { Component } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { wallet as walletApi, getToken } from '../../utils/api';
+import { t } from '../../utils/i18n';
 import './index.scss';
 
-// ── 常量（对齐 herix.html walletHTML） ──
-const PERIODS: { id: string; label: string }[] = [
-  { id: 'month', label: '本月' },
-  { id: 'last_month', label: '上月' },
-  { id: '7d', label: '最近7天' },
-  { id: '30d', label: '最近30天' },
-  { id: 'all', label: '全部' },
+// ── 常量存 labelKey，渲染时 t() 取值——存 t() 结果会冻结在启动时语言 ──
+const PERIODS: { id: string; labelKey: string }[] = [
+  { id: 'month', labelKey: 'wallet.period.month' },
+  { id: 'last_month', labelKey: 'wallet.period.lastMonth' },
+  { id: '7d', labelKey: 'wallet.period.7d' },
+  { id: '30d', labelKey: 'wallet.period.30d' },
+  { id: 'all', labelKey: 'common.all' },
 ];
-const TXN_FILTERS: { id: string; label: string }[] = [
-  { id: 'all', label: '全部' },
-  { id: 'TASK_CREDIT', label: '任务收入' },
-  { id: 'WITHDRAWAL_DEBIT', label: '提现到账' },
-  { id: 'WITHDRAWAL_FREEZE', label: '提现申请' },
-  { id: 'ADJUSTMENT', label: '调整' },
+const TXN_FILTERS: { id: string; labelKey: string }[] = [
+  { id: 'all', labelKey: 'common.all' },
+  { id: 'TASK_CREDIT', labelKey: 'wallet.txnFilter.taskCredit' },
+  { id: 'WITHDRAWAL_DEBIT', labelKey: 'wallet.txnFilter.withdrawalDebit' },
+  { id: 'WITHDRAWAL_FREEZE', labelKey: 'wallet.txnFilter.withdrawalFreeze' },
+  { id: 'ADJUSTMENT', labelKey: 'wallet.txnFilter.adjustment' },
 ];
-const METHOD_TYPE_LABELS: Record<string, string> = {
-  BANK: '银行账户',
-  PAYPAL: 'PayPal',
-  WECHAT: '微信支付',
-  ALIPAY: '支付宝',
-  CASH: '現金',
+const METHOD_TYPE_KEYS: Record<string, string> = {
+  BANK: 'wallet.methodType.BANK',
+  PAYPAL: 'wallet.methodType.PAYPAL',
+  WECHAT: 'wallet.methodType.WECHAT',
+  ALIPAY: 'wallet.methodType.ALIPAY',
+  CASH: 'wallet.methodType.CASH',
 };
 
 // 千分位（不依赖 toLocaleString，规避小程序引擎差异）
@@ -65,7 +66,7 @@ function parseDetail(m: any) {
 }
 function methodSub(m: any): string {
   const d = parseDetail(m);
-  if (m.type === 'CASH') return '現金受取';
+  if (m.type === 'CASH') return t('wallet.cashReceive');
   if (m.type === 'BANK') return d.bank_name || '';
   if (m.type === 'PAYPAL') return d.email || '';
   if (m.type === 'WECHAT') return (d.wechat_id || '') + (d.region && d.region !== 'CN' ? ` (${d.region})` : '');
@@ -159,14 +160,14 @@ export default class Wallet extends Component<{}, State> {
   };
 
   deleteMethod = async (id: string) => {
-    const res = await Taro.showModal({ title: '删除收款方式', content: '确认删除此收款方式？' });
+    const res = await Taro.showModal({ title: t('wallet.deleteTitle'), content: t('wallet.deleteConfirm') });
     if (!res.confirm) return;
     try {
       await walletApi.deleteMethod(id);
       this.loadMethods();
       this.loadBalance();
     } catch (err) {
-      Taro.showToast({ title: '删除失败', icon: 'none' });
+      Taro.showToast({ title: t('wallet.deleteFailed'), icon: 'none' });
     }
   };
 
@@ -180,7 +181,7 @@ export default class Wallet extends Component<{}, State> {
       return (
         <View className='wallet-page'>
           <View className='empty-box'>
-            <Text className='empty-text'>请先登录后查看钱包</Text>
+            <Text className='empty-text'>{t('wallet.needLogin')}</Text>
           </View>
         </View>
       );
@@ -190,87 +191,81 @@ export default class Wallet extends Component<{}, State> {
       return (
         <View className='wallet-page'>
           <View className='empty-box'>
-            <Text className='empty-text'>加载中...</Text>
+            <Text className='empty-text'>{t('common.loading')}</Text>
           </View>
         </View>
       );
     }
 
-    const periodLabel = PERIODS.find(p => p.id === period)?.label || '本月';
+    const periodLabel = t(PERIODS.find(p => p.id === period)?.labelKey || 'wallet.period.month');
     const balances: any[] = bal.balances || [];
 
     return (
       <View className='wallet-page'>
         {/* 余额卡 */}
         <View className='balance-card'>
-          <Text className='bc-label'>可提现余额</Text>
+          <Text className='bc-label'>{t('wallet.balance.available')}</Text>
           <Text className='bc-amount'>¥{fmt(bal.available)}</Text>
           <View className='bc-stats'>
             <View className='bc-stat'>
-              <Text className='bc-stat-label'>冻结中</Text>
+              <Text className='bc-stat-label'>{t('wallet.balance.frozen')}</Text>
               <Text className='bc-stat-val'>¥{fmt(bal.frozen)}</Text>
             </View>
             <View className='bc-stat'>
-              <Text className='bc-stat-label'>{periodLabel}流入</Text>
+              <Text className='bc-stat-label'>{t('wallet.balance.inflow', { period: periodLabel })}</Text>
               <Text className='bc-stat-val inflow'>+¥{fmt(bal.periodInflow)}</Text>
             </View>
             <View className='bc-stat last'>
-              <Text className='bc-stat-label'>{periodLabel}流出</Text>
+              <Text className='bc-stat-label'>{t('wallet.balance.outflow', { period: periodLabel })}</Text>
               <Text className='bc-stat-val outflow'>-¥{fmt(bal.periodOutflow)}</Text>
             </View>
           </View>
-          <Text className='bc-currency'>汇总币种：{bal.displayCurrency || 'JPY'}</Text>
+          <Text className='bc-currency'>{t('wallet.balance.currency', { cur: bal.displayCurrency || 'JPY' })}</Text>
         </View>
 
         {/* 多币种明细 */}
         {balances.length > 1 && (
           <View className='card multi-currency'>
-            <Text className='mc-title'>各币种余额</Text>
+            <Text className='mc-title'>{t('wallet.multiCurrency')}</Text>
             {balances.map((b, i) => (
               <View key={b.currency} className={`mc-row ${i < balances.length - 1 ? 'divider' : ''}`}>
                 <Text className='mc-cur'>{b.currency}</Text>
-                <Text className='mc-detail'>
-                  可用 ¥{fmt(b.available)} · 冻结 ¥{fmt(b.frozen)}
-                </Text>
+                <Text className='mc-detail'>{t('wallet.multiCurrencyDetail', { a: fmt(b.available), f: fmt(b.frozen) })}</Text>
               </View>
             ))}
           </View>
         )}
 
         {/* 冻结说明 */}
-        {bal.frozen > 0 && (
-          <View className='frozen-note'>
-            ⏳ 冻结中 ¥{fmt(bal.frozen)} 为提现处理中的金额，处理完成后将从余额扣除
-          </View>
-        )}
+        {bal.frozen > 0 && <View className='frozen-note'>{t('wallet.frozenNote', { n: fmt(bal.frozen) })}</View>}
 
         {/* 主操作：提现 */}
         <View className='btn-primary' onClick={this.goWithdraw}>
-          申请提现
+          {t('wallet.withdraw')}
         </View>
 
         {/* 收款方式 */}
         <View className='section-head'>
-          <Text className='section-title'>收款方式</Text>
+          <Text className='section-title'>{t('wallet.methods')}</Text>
           <Text className='section-action' onClick={this.goAddMethod}>
-            + 添加
+            {t('wallet.methodsAdd')}
           </Text>
         </View>
         {methods.length === 0 ? (
-          <View className='method-empty'>还没有添加收款方式</View>
+          <View className='method-empty'>{t('wallet.methodsEmpty')}</View>
         ) : (
           methods.map(m => (
             <View key={m.id} className='method-row'>
               <View className='method-info'>
                 <Text className='method-label'>{m.label}</Text>
                 <Text className='method-meta'>
-                  {METHOD_TYPE_LABELS[m.type] || m.type}
+                  {t(METHOD_TYPE_KEYS[m.type] || 'wallet.methodType.BANK')}
                   {methodSub(m) ? ` · ${methodSub(m)}` : ''}
-                  {m.is_default ? ' · 默认' : ''}
+                  {m.is_default ? ` · ${t('wallet.methodsDefault')}` : ''}
                 </Text>
               </View>
               <Text className='method-del' onClick={() => this.deleteMethod(m.id)}>
-                删除
+                {t('wallet.methodsDelete')}
               </Text>
             </View>
           ))
@@ -278,7 +273,7 @@ export default class Wallet extends Component<{}, State> {
 
         {/* 钱包流水 */}
         <View className='section-head txn-head'>
-          <Text className='section-title'>钱包流水</Text>
+          <Text className='section-title'>{t('wallet.txns')}</Text>
           <View className='period-tabs'>
             {PERIODS.map(p => (
               <Text
@@ -286,7 +281,7 @@ export default class Wallet extends Component<{}, State> {
                 className={`period-tab ${period === p.id ? 'active' : ''}`}
                 onClick={() => this.setPeriod(p.id)}
               >
-                {p.label}
+                {t(p.labelKey)}
               </Text>
             ))}
           </View>
@@ -294,11 +289,11 @@ export default class Wallet extends Component<{}, State> {
 
         <View className='flow-stats'>
           <View className='flow-stat'>
-            <Text className='flow-label'>期间流入</Text>
+            <Text className='flow-label'>{t('wallet.txnsInflow')}</Text>
             <Text className='flow-val inflow'>+¥{fmt(flow.inflow)}</Text>
           </View>
           <View className='flow-stat'>
-            <Text className='flow-label'>期间流出</Text>
+            <Text className='flow-label'>{t('wallet.txnsOutflow')}</Text>
             <Text className='flow-val outflow'>-¥{fmt(flow.outflow)}</Text>
           </View>
         </View>
@@ -310,13 +305,13 @@ export default class Wallet extends Component<{}, State> {
               className={`txn-filter ${txnFilter === tf.id ? 'active' : ''}`}
               onClick={() => this.setTxnFilter(tf.id)}
             >
-              {tf.label}
+              {t(tf.labelKey)}
             </Text>
           ))}
         </View>
 
         {txns.length === 0 ? (
-          <View className='txn-empty'>该期间暂无流水记录</View>
+          <View className='txn-empty'>{t('wallet.txnsEmpty')}</View>
         ) : (
           txns.map((tx, i) => {
             const out = tx.direction === 'out';

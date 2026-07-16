@@ -2,72 +2,79 @@ import { Component } from 'react';
 import { View, Text, Input, Picker } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { wallet as walletApi } from '../../utils/api';
+import { t } from '../../utils/i18n';
 import './index.scss';
 
-// ── 常量（对齐 herix.html addMethodHTML） ──
+// ── 常量存 key，渲染时 t() 取值（对齐 herix.html addMethodHTML）──
 const REGIONS = [
-  { id: 'japan', flag: '🇯🇵', name: '日本', sub: '银行振込' },
-  { id: 'china', flag: '🇨🇳', name: '中国大陆', sub: '支付宝 · 微信支付' },
-  { id: 'overseas', flag: '🌐', name: '其他地区', sub: '国际银行 · PayPal' },
+  { id: 'japan', flag: '🇯🇵', nameKey: 'addMethod.region.japan', subKey: 'addMethod.region.japanSub' },
+  { id: 'china', flag: '🇨🇳', nameKey: 'addMethod.region.china', subKey: 'addMethod.region.chinaSub' },
+  { id: 'overseas', flag: '🌐', nameKey: 'addMethod.region.overseas', subKey: 'addMethod.region.overseasSub' },
 ];
-const METHOD_MAP: Record<string, { id: string; icon: string; name: string; sub: string }[]> = {
+const METHOD_MAP: Record<string, { id: string; icon: string; nameKey: string; subKey: string }[]> = {
   japan: [
-    { id: 'BANK', icon: '🏦', name: '日本銀行振込', sub: '到账1-3个工作日，支持全国银行' },
-    { id: 'CASH', icon: '💴', name: '現金受取', sub: '由工作人员当面支付' },
+    { id: 'BANK', icon: '🏦', nameKey: 'addMethod.m.jpBank', subKey: 'addMethod.m.jpBankSub' },
+    { id: 'CASH', icon: '💴', nameKey: 'addMethod.m.cash', subKey: 'addMethod.m.cashSub' },
   ],
   china: [
-    { id: 'ALIPAY', icon: '🔵', name: '支付宝', sub: '即时到账，手机号或账号收款' },
-    { id: 'WECHAT', icon: '🟢', name: '微信支付', sub: '即时到账，微信号收款' },
-    { id: 'BANK', icon: '🏦', name: '银行卡', sub: '1-3个工作日，中国大陆银行卡' },
+    { id: 'ALIPAY', icon: '🔵', nameKey: 'addMethod.m.alipay', subKey: 'addMethod.m.alipaySub' },
+    { id: 'WECHAT', icon: '🟢', nameKey: 'addMethod.m.wechat', subKey: 'addMethod.m.wechatSub' },
+    { id: 'BANK', icon: '🏦', nameKey: 'addMethod.m.cnBank', subKey: 'addMethod.m.cnBankSub' },
   ],
   overseas: [
-    { id: 'BANK', icon: '🏦', name: '国际银行转账', sub: 'SWIFT 汇款，3-5个工作日' },
-    { id: 'PAYPAL', icon: '🅿️', name: 'PayPal', sub: '即时到账，邮箱收款' },
+    { id: 'BANK', icon: '🏦', nameKey: 'addMethod.m.intlBank', subKey: 'addMethod.m.intlBankSub' },
+    { id: 'PAYPAL', icon: '🅿️', nameKey: 'addMethod.m.paypal', subKey: 'addMethod.m.paypalSub' },
   ],
 };
-const REGION_NAMES: Record<string, string> = { japan: '日本', china: '中国大陆', overseas: '其他地区' };
-const FORM_TITLES: Record<string, string> = { BANK: '银行账户', ALIPAY: '支付宝', WECHAT: '微信支付', PAYPAL: 'PayPal', CASH: '現金受取' };
+// 表单标题复用 wallet.methodType.* 词条
+const FORM_TITLE_KEYS: Record<string, string> = {
+  BANK: 'wallet.methodType.BANK',
+  ALIPAY: 'wallet.methodType.ALIPAY',
+  WECHAT: 'wallet.methodType.WECHAT',
+  PAYPAL: 'wallet.methodType.PAYPAL',
+  CASH: 'wallet.cashReceive',
+};
 const FORM_ICONS: Record<string, string> = { BANK: '🏦', ALIPAY: '🔵', WECHAT: '🟢', PAYPAL: '🅿️', CASH: '💴' };
+// 口座種別是银行域术语且直接落库（account_details.account_type），不做翻译
 const ACCT_TYPES = ['普通', '当座', '貯蓄'];
 
 interface Field {
   kind: 'input' | 'picker' | 'note';
-  label?: string;
+  labelKey?: string;
   key?: string;
-  ph?: string;
+  phKey?: string;
   req?: boolean;
-  inputType?: 'text' | 'number';
   options?: string[];
-  text?: string;
+  noteKey?: string;
 }
 
-// 按 收款类型 + 地区 返回字段配置（对齐 herix STEP3）
+// 按 收款类型 + 地区 返回字段配置（label/placeholder 均为词条 key）
 function getFields(type: string, region: string): Field[] {
   if (type === 'CASH') {
-    return [{ kind: 'note', text: '当面は現金受取でのお支払いとなります。詳細は後日ご連絡します。' }];
+    return [{ kind: 'note', noteKey: 'addMethod.cashNote' }];
   }
   if (type === 'BANK' && region === 'japan') {
     return [
-      { kind: 'input', label: '銀行名', key: 'm-bank', ph: '例：三菱UFJ銀行', req: true },
-      { kind: 'input', label: '金融機関コード', key: 'm-jp-code', ph: '例：0001', req: true },
-      { kind: 'input', label: '支店名', key: 'm-branch', ph: '例：新宿支店', req: false },
-      { kind: 'input', label: '支店コード', key: 'm-branch-code', ph: '例：001', req: true },
-      { kind: 'picker', label: '口座種別', key: 'm-acct-type', options: ACCT_TYPES },
-      { kind: 'input', label: '口座番号', key: 'm-acct', ph: '例：1234567', req: true },
-      { kind: 'input', label: '口座名義（カナ）', key: 'm-name', ph: '例：アリス ワン', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.jpBankName', key: 'm-bank', phKey: 'addMethod.ph.jpBank', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.jpBankCode', key: 'm-jp-code', phKey: 'addMethod.ph.jpCode', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.branch', key: 'm-branch', phKey: 'addMethod.ph.branch', req: false },
+      { kind: 'input', labelKey: 'addMethod.f.branchCode', key: 'm-branch-code', phKey: 'addMethod.ph.branchCode', req: true },
+      { kind: 'picker', labelKey: 'addMethod.f.acctType', key: 'm-acct-type', options: ACCT_TYPES },
+      { kind: 'input', labelKey: 'addMethod.f.acctNo', key: 'm-acct', phKey: 'addMethod.ph.jpAcctNo', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.acctName', key: 'm-name', phKey: 'addMethod.ph.jpAcctName', req: true },
     ];
   }
   if (type === 'BANK') {
     return [
-      { kind: 'input', label: '银行名称', key: 'm-bank', ph: '例：中国银行', req: true },
-      { kind: 'input', label: '账户号码', key: 'm-acct', ph: '例：6222 0000 0000 0000', req: true },
-      { kind: 'input', label: '账户名（英文）', key: 'm-name', ph: '例：ALICE WANG', req: true },
-      { kind: 'input', label: 'SWIFT / BIC', key: 'm-swift', ph: '例：BKCHCNBJ', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.cnBankName', key: 'm-bank', phKey: 'addMethod.ph.cnBank', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.cnAcctNo', key: 'm-acct', phKey: 'addMethod.ph.cnAcctNo', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.cnAcctName', key: 'm-name', phKey: 'addMethod.ph.cnAcctName', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.swift', key: 'm-swift', phKey: 'addMethod.ph.swift', req: true },
     ];
   }
-  if (type === 'ALIPAY') return [{ kind: 'input', label: '支付宝账号', key: 'm-alipay-acct', ph: '手机号或邮箱', req: true }];
-  if (type === 'WECHAT') return [{ kind: 'input', label: '微信号 / 手机号', key: 'm-wechat-id', ph: 'WeChat ID 或绑定手机号', req: true }];
-  if (type === 'PAYPAL') return [{ kind: 'input', label: 'PayPal 邮箱', key: 'm-email', ph: 'you@example.com', req: true }];
+  if (type === 'ALIPAY') return [{ kind: 'input', labelKey: 'addMethod.f.alipay', key: 'm-alipay-acct', phKey: 'addMethod.ph.alipay', req: true }];
+  if (type === 'WECHAT') return [{ kind: 'input', labelKey: 'addMethod.f.wechat', key: 'm-wechat-id', phKey: 'addMethod.ph.wechat', req: true }];
+  if (type === 'PAYPAL') return [{ kind: 'input', labelKey: 'addMethod.f.paypal', key: 'm-email', phKey: 'addMethod.ph.paypal', req: true }];
   return [];
 }
 
@@ -113,7 +120,7 @@ export default class AddMethod extends Component<{}, State> {
     const g = (k: string) => (form[k] || '').trim();
     let label = g('method-label');
     if (!label && type !== 'CASH') {
-      Taro.showToast({ title: '请填写收款方式名称', icon: 'none' });
+      Taro.showToast({ title: t('addMethod.errLabel'), icon: 'none' });
       return;
     }
 
@@ -147,20 +154,20 @@ export default class AddMethod extends Component<{}, State> {
     this.setState({ saving: true });
     try {
       await walletApi.addMethod({ type, country, label, account_details: details, is_default: isDefault });
-      Taro.showToast({ title: '已添加', icon: 'success' });
+      Taro.showToast({ title: t('addMethod.added'), icon: 'success' });
       setTimeout(() => Taro.navigateBack(), 700);
     } catch (err: any) {
-      Taro.showToast({ title: err?.message || '添加失败', icon: 'none' });
+      Taro.showToast({ title: err?.message || t('addMethod.addFailed'), icon: 'none' });
       this.setState({ saving: false });
     }
   };
 
   renderBack() {
     const { step } = this.state;
-    const label = step === 'region' ? '← 返回钱包' : step === 'type' ? '← 选择其他地区' : '← 选择其他方式';
+    const key = step === 'region' ? 'addMethod.backWallet' : step === 'type' ? 'addMethod.backRegion' : 'addMethod.backType';
     return (
       <Text className='back-link' onClick={this.goBack}>
-        {label}
+        {t(key)}
       </Text>
     );
   }
@@ -175,14 +182,14 @@ export default class AddMethod extends Component<{}, State> {
         {/* STEP 1: 选择地区 */}
         {step === 'region' && (
           <View>
-            <Text className='step-title'>选择收款地区</Text>
-            <Text className='step-sub'>我们根据地区为你匹配合适的收款方式</Text>
+            <Text className='step-title'>{t('addMethod.step1Title')}</Text>
+            <Text className='step-sub'>{t('addMethod.step1Sub')}</Text>
             {REGIONS.map(r => (
               <View key={r.id} className='choice-card' onClick={() => this.pickRegion(r.id)}>
                 <Text className='choice-flag'>{r.flag}</Text>
                 <View className='choice-info'>
-                  <Text className='choice-name'>{r.name}</Text>
-                  <Text className='choice-sub'>{r.sub}</Text>
+                  <Text className='choice-name'>{t(r.nameKey)}</Text>
+                  <Text className='choice-sub'>{t(r.subKey)}</Text>
                 </View>
                 <Text className='choice-arrow'>›</Text>
               </View>
@@ -193,14 +200,16 @@ export default class AddMethod extends Component<{}, State> {
         {/* STEP 2: 选择方式 */}
         {step === 'type' && (
           <View>
-            <Text className='step-title'>选择收款方式</Text>
-            <Text className='step-sub'>收款地区：{REGION_NAMES[region] || region}</Text>
+            <Text className='step-title'>{t('addMethod.step2Title')}</Text>
+            <Text className='step-sub'>
+              {t('addMethod.step2Sub', { region: t(REGIONS.find(r => r.id === region)?.nameKey || 'addMethod.region.overseas') })}
+            </Text>
             {(METHOD_MAP[region] || METHOD_MAP.overseas).map(m => (
               <View key={m.id} className='choice-card' onClick={() => this.pickType(m.id)}>
                 <Text className='choice-icon'>{m.icon}</Text>
                 <View className='choice-info'>
-                  <Text className='choice-name'>{m.name}</Text>
-                  <Text className='choice-sub'>{m.sub}</Text>
+                  <Text className='choice-name'>{t(m.nameKey)}</Text>
+                  <Text className='choice-sub'>{t(m.subKey)}</Text>
                 </View>
                 <Text className='choice-arrow'>›</Text>
               </View>
@@ -213,14 +222,14 @@ export default class AddMethod extends Component<{}, State> {
           <View>
             <View className='form-head'>
               <Text className='form-head-icon'>{FORM_ICONS[type] || '💳'}</Text>
-              <Text className='form-head-title'>{FORM_TITLES[type] || type}</Text>
+              <Text className='form-head-title'>{t(FORM_TITLE_KEYS[type] || 'wallet.methodType.BANK')}</Text>
             </View>
 
             {getFields(type, region).map((f, i) => {
               if (f.kind === 'note') {
                 return (
                   <View key={i} className='cash-note'>
-                    {f.text}
+                    {t(f.noteKey!)}
                   </View>
                 );
               }
@@ -228,7 +237,7 @@ export default class AddMethod extends Component<{}, State> {
                 const idx = Math.max(0, f.options!.indexOf(form[f.key!] || f.options![0]));
                 return (
                   <View key={f.key} className='ig'>
-                    <Text className='ig-label'>{f.label}</Text>
+                    <Text className='ig-label'>{t(f.labelKey!)}</Text>
                     <Picker
                       mode='selector'
                       range={f.options!}
@@ -243,13 +252,13 @@ export default class AddMethod extends Component<{}, State> {
               return (
                 <View key={f.key} className='ig'>
                   <Text className='ig-label'>
-                    {f.label}
+                    {t(f.labelKey!)}
                     {f.req && <Text className='req-star'> *</Text>}
                   </Text>
                   <Input
                     className='ig-input'
-                    type={f.inputType === 'number' ? 'number' : 'text'}
-                    placeholder={f.ph}
+                    type='text'
+                    placeholder={t(f.phKey!)}
                     value={form[f.key!] || ''}
                     onInput={e => this.setField(f.key!, e.detail.value)}
                   />
@@ -260,11 +269,11 @@ export default class AddMethod extends Component<{}, State> {
             {/* 收款方式名称 */}
             <View className='ig'>
               <Text className='ig-label'>
-                收款方式名称<Text className='req-star'> *</Text>
+                {t('addMethod.labelField')}<Text className='req-star'> *</Text>
               </Text>
               <Input
                 className='ig-input'
-                placeholder={type === 'BANK' && region === 'japan' ? '例：三菱UFJ銀行' : '例：我的支付宝'}
+                placeholder={t(type === 'BANK' && region === 'japan' ? 'addMethod.ph.labelJp' : 'addMethod.ph.labelDefault')}
                 value={form['method-label'] || ''}
                 onInput={e => this.setField('method-label', e.detail.value)}
               />
@@ -273,11 +282,11 @@ export default class AddMethod extends Component<{}, State> {
             {/* 默认 */}
             <View className='default-row' onClick={() => this.setState({ isDefault: !isDefault })}>
               <View className={`checkbox ${isDefault ? 'checked' : ''}`}>{isDefault ? '✓' : ''}</View>
-              <Text className='default-label'>设为默认收款方式</Text>
+              <Text className='default-label'>{t('addMethod.setDefault')}</Text>
             </View>
 
             <View className={`btn-primary ${saving ? 'disabled' : ''}`} onClick={saving ? undefined : this.save}>
-              {saving ? '保存中...' : '保存'}
+              {saving ? t('common.saving') : t('common.save')}
             </View>
           </View>
         )}

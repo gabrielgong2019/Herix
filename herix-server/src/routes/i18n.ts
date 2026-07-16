@@ -53,13 +53,14 @@ export const i18nAdminRouter = Router();
 /** GET /api/admin/i18n — 词条×语言矩阵 */
 i18nAdminRouter.get('/', async (_req: Request, res: Response) => {
   const r = await pool.query(
-    'SELECT key, locale, value, updated_at, updated_by FROM i18n_entries ORDER BY key, locale'
+    'SELECT key, locale, value, context, updated_at, updated_by FROM i18n_entries ORDER BY key, locale'
   );
   const byKey = new Map<string, any>();
   for (const row of r.rows) {
-    if (!byKey.has(row.key)) byKey.set(row.key, { key: row.key, zh: '', ja: '', en: '', updated_at: '' });
+    if (!byKey.has(row.key)) byKey.set(row.key, { key: row.key, zh: '', ja: '', en: '', context: '', updated_at: '' });
     const item = byKey.get(row.key);
     item[row.locale] = row.value;
+    if (row.context && !item.context) item.context = row.context;
     if (row.updated_at > item.updated_at) item.updated_at = row.updated_at;
   }
   res.json({ rows: [...byKey.values()] });

@@ -1,11 +1,13 @@
 import { View, Text, Navigator } from '@tarojs/components';
 import './TaskCard.scss';
+import { t } from '../utils/i18n';
 
 // 从 herix.html 的 cardHTML() 移植，保持同样的字段/展示逻辑
-const DIFF: Record<string, { label: string }> = {
-  easy: { label: '轻松' },
-  medium: { label: '刚好' },
-  hard: { label: '挑战' },
+// 存 labelKey，渲染时 t() 取值（存 t() 结果会冻结在启动时语言）
+const DIFF: Record<string, { labelKey: string }> = {
+  easy: { labelKey: 'taskCard.diffEasy' },
+  medium: { labelKey: 'taskCard.diffMedium' },
+  hard: { labelKey: 'taskCard.diffHard' },
 };
 
 export interface CategoryItem {
@@ -58,13 +60,13 @@ export default function TaskCard({ task, categories }: Props) {
       <View className='card-top'>
         {catText && <Text className='tag'>{catText}</Text>}
         <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
-          {isPerformance ? '成果报酬' : '任务体验'}
+          {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
         </Text>
         <View className='diff-tag'>
           <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
-          <Text>{diff.label}</Text>
+          <Text>{t(diff.labelKey)}</Text>
         </View>
-        {task.fast_payout && <Text className='fp-tag'>⚡ 极速打款</Text>}
+        {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
       </View>
 
       <View className='card-body'>
@@ -87,7 +89,7 @@ export default function TaskCard({ task, categories }: Props) {
                 {s <= filledStars ? '★' : '☆'}
               </Text>
             ))}
-            <Text className='rating-num'>{rating > 0 ? rating : '新'}</Text>
+            <Text className='rating-num'>{rating > 0 ? rating : t('taskCard.new')}</Text>
           </View>
         </View>
         <View className='thumb' style={img ? { backgroundImage: `url(${img})` } : undefined} />

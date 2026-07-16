@@ -1,6 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import './WechatOrPhoneInput.scss';
+import { t } from '../utils/i18n';
 
 /**
  * 微信号 / 手机号 二选一输入框，从 herix.html 里 5 份几乎逐字重复的实现
@@ -22,12 +23,12 @@ export function validateWechatOrPhone(raw: string): WechatValidation {
   if (!val) return { ok: true, saved: null };
   if (/^\d+$/.test(val)) {
     if (!/^1[3-9]\d{9}$/.test(val)) {
-      return { ok: false, msg: '手机号格式有误（需11位，以1开头）', saved: null };
+      return { ok: false, msg: t('wx.phoneInvalidFull'), saved: null };
     }
     return { ok: true, saved: '+86' + val };
   }
   if (val.length < 6 || val.length > 20) {
-    return { ok: false, msg: '微信号需6-20位', saved: null };
+    return { ok: false, msg: t('wx.wechatLen'), saved: null };
   }
   return { ok: true, saved: val };
 }
@@ -52,13 +53,13 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
   renderHint() {
     const val = (this.props.value || '').trim();
     if (this.state.isPhone) {
-      if (val.length < 11) return { color: '#999', text: '继续输入（11位）' };
+      if (val.length < 11) return { color: '#999', text: t('wx.continuePhone') };
       const ok = /^1[3-9]\d{9}$/.test(val);
-      return ok ? { color: '#10b981', text: '✓ +86 ' + val } : { color: '#ef4444', text: '手机号格式有误' };
+      return ok ? { color: '#10b981', text: '✓ +86 ' + val } : { color: '#ef4444', text: t('wx.phoneInvalid') };
     }
-    if (val.length >= 6) return { color: '#10b981', text: '✓ 微信 ID' };
-    if (val.length > 0) return { color: '#ef4444', text: '微信号至少6位' };
-    return { color: '#999', text: '纯数字自动识别手机号' };
+    if (val.length >= 6) return { color: '#10b981', text: t('wx.wechatOk') };
+    if (val.length > 0) return { color: '#ef4444', text: t('wx.wechatMin') };
+    return { color: '#999', text: t('wx.autoDetect') };
   }
 
   render() {
@@ -85,7 +86,7 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
           <Input
             className='ob-input'
             style={{ flex: 1, margin: 0 }}
-            placeholder='微信号 或 手机号'
+            placeholder={t('wx.placeholder')}
             value={value}
             onInput={e => this.handleInput(e.detail.value)}
           />

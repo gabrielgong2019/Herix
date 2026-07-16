@@ -1,6 +1,7 @@
 import { View, Text } from '@tarojs/components';
 import { checkRequirements, PlatformRequirement, SocialPlatformEntry } from '../utils/requirements';
 import { platformById } from '../utils/platforms';
+import { t } from '../utils/i18n';
 
 /**
  * 任务详情页的资质预检面板 —— 从 herix.html 的 detailHTML() 里对应区块移植。
@@ -39,23 +40,23 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
 
   return (
     <View className='requirements-checklist'>
-      <Text className='requirements-title'>任务资质要求</Text>
+      <Text className='requirements-title'>{t('req.title')}</Text>
 
       {requiredItems.map(req => {
         const platform = platformById(req.platformId);
         const failure = check.failures.find(f => f.platformId === req.platformId);
         let icon = '✓';
         let color = '#10b981';
-        let desc = req.minFollowers ? `${req.minFollowers.toLocaleString()}+ 粉 ✓` : '已添加';
+        let desc = req.minFollowers ? t('req.followersOk', { n: req.minFollowers.toLocaleString() }) : t('req.added');
         if (failure) {
           if (failure.type === 'INSUFFICIENT') {
             icon = '✗';
             color = '#ef4444';
-            desc = `当前 ${failure.current.toLocaleString()} 粉，需 ${failure.required.toLocaleString()}+`;
+            desc = t('req.insufficient', { c: failure.current.toLocaleString(), r: failure.required.toLocaleString() });
           } else {
             icon = '○';
             color = '#f59e0b';
-            desc = '未添加';
+            desc = t('req.notAdded');
           }
         }
         return (
@@ -77,9 +78,9 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
             <Text className='requirement-icon'>{platform.icon}</Text>
             <Text className='requirement-name muted'>{platform.name}</Text>
             {has ? (
-              <Text style={{ fontSize: '12px', color: '#10b981' }}>✓ 已添加</Text>
+              <Text style={{ fontSize: '12px', color: '#10b981' }}>{t('req.addedCheck')}</Text>
             ) : (
-              <Text className='optional-badge'>可选</Text>
+              <Text className='optional-badge'>{t('req.optional')}</Text>
             )}
           </View>
         );
@@ -87,7 +88,7 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
 
       {missingOptionalCount > 0 && (
         <View className='requirements-hint'>
-          <Text>💡 补充可选账号可提升报名通过率</Text>
+          <Text>{t('req.hint')}</Text>
         </View>
       )}
     </View>

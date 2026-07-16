@@ -383,6 +383,8 @@ export async function initDatabase() {
       ('withdrawal_min_amount',    '1000',          '最低提现申请金额（JPY）'),
       ('topup_cc_rate',            '0.03',          '信用卡充值手续费率（pass-through）')
      ON CONFLICT (key) DO NOTHING`,
+    // i18n_entries 语义背景（key级元数据，seed 维护，给运营/机翻提供语境）
+    `ALTER TABLE i18n_entries ADD COLUMN IF NOT EXISTS context TEXT`,
     // withdrawal_requests 新增字段：手续费快照 + 预计打款日
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fee DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS net_amount DOUBLE PRECISION`,

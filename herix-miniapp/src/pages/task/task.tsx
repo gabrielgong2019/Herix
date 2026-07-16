@@ -8,6 +8,7 @@ import { platformById } from '../../utils/platforms';
 import RequirementsChecklist from '../../components/RequirementsChecklist';
 import PlatformAccountInput, { PlatformAccountValue } from '../../components/PlatformAccountInput';
 import './task.scss';
+import { t } from '../../utils/i18n';
 
 interface TaskDetailData {
   id: string;
@@ -113,7 +114,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         }
       } catch {}
     } catch (err: any) {
-      Taro.showToast({ title: err.message || '加载失败', icon: 'none' });
+      Taro.showToast({ title: err.message || t('task.loadFailed'), icon: 'none' });
       this.setState({ loading: false });
     }
   };
@@ -138,14 +139,14 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     this.setState({ applying: true });
     try {
       await applications.apply(this.state.task.id, '');
-      Taro.showToast({ title: '报名成功', icon: 'success' });
+      Taro.showToast({ title: t('task.applySuccess'), icon: 'success' });
       this.setState({ showReqModal: false });
       this.loadTask();
     } catch (err: any) {
       if (err instanceof ApiError && err.data?.code === 'REQUIREMENTS_NOT_MET') {
         this.openReqModal(err.data.failures || [], !!err.data.canRetry);
       } else {
-        Taro.showToast({ title: err.message || '报名失败', icon: 'none' });
+        Taro.showToast({ title: err.message || t('task.applyFailed'), icon: 'none' });
       }
     } finally {
       this.setState({ applying: false });
@@ -185,7 +186,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       const val = reqFormValues[pid];
       const filled = val && (val.accountId || val.url);
       if (!filled) {
-        Taro.showToast({ title: `请填写 ${platformById(pid).name} 账号`, icon: 'none' });
+        Taro.showToast({ title: t('task.fillAccount', { name: platformById(pid).name }), icon: 'none' });
         return;
       }
     }
@@ -204,7 +205,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       this.setState({ ambassadorProfile: updated });
       await this.doApply();
     } catch (err: any) {
-      Taro.showToast({ title: err.message || '保存失败', icon: 'none' });
+      Taro.showToast({ title: err.message || t('common.saveFailed'), icon: 'none' });
     } finally {
       this.setState({ reqSubmitting: false });
     }
@@ -225,8 +226,8 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     return (
       <View className='req-modal-overlay'>
         <View className='req-modal-card'>
-          <Text className='req-modal-title'>不满足报名条件</Text>
-          <Text className='req-modal-sub'>请查看以下问题</Text>
+          <Text className='req-modal-title'>{t('task.reqModalTitle')}</Text>
+          <Text className='req-modal-sub'>{t('task.reqModalSub')}</Text>
 
           {reqFailures.map(f => {
             const p = platformById(f.platformId);
@@ -235,9 +236,9 @@ export default class TaskDetail extends Component<{ id: string }, State> {
                 <View key={f.platformId} className='req-fail-row req-fail-hard'>
                   <Text className='req-fail-icon'>{p.icon}</Text>
                   <View>
-                    <Text className='req-fail-name req-fail-name-hard'>{p.name} 粉丝数不足</Text>
+                    <Text className='req-fail-name req-fail-name-hard'>{t('task.reqInsufficientName', { name: p.name })}</Text>
                     <Text className='req-fail-desc req-fail-desc-hard'>
-                      当前 {f.current.toLocaleString()} · 要求 {f.required.toLocaleString()}+ 粉
+                      {t('task.reqInsufficientDesc', { c: f.current.toLocaleString(), r: f.required.toLocaleString() })}
                     </Text>
                   </View>
                 </View>
@@ -256,11 +257,11 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
           {reqCanRetry && hasMissing ? (
             <Button className='btn-primary' loading={reqSubmitting} onClick={this.submitReqModal}>
-              保存并报名
+              {t('task.saveAndApply')}
             </Button>
           ) : null}
           <Button className='btn-outline' onClick={this.closeReqModal}>
-            取消
+            {t('common.cancel')}
           </Button>
         </View>
       </View>
@@ -278,7 +279,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       return (
         <View className='actions'>
           <Button className='btn-primary' onClick={this.handleApplyClick}>
-            登录后报名
+            {t('task.loginToApply')}
           </Button>
         </View>
       );
@@ -288,15 +289,15 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       if (myApplication.status === 'PENDING') {
         return (
           <View className='actions'>
-            <View className='status-banner banner-pending'>⏳ 已报名，等待品牌审核</View>
+            <View className='status-banner banner-pending'>{t('task.pendingReview')}</View>
           </View>
         );
       }
       if (myApplication.status === 'REJECTED') {
         return (
           <View className='actions'>
-            <View className='status-banner banner-rejected'>❌ 报名未通过</View>
-            {myApplication.review_note && <Text className='banner-note'>原因：{myApplication.review_note}</Text>}
+            <View className='status-banner banner-rejected'>{t('task.applyRejected')}</View>
+            {myApplication.review_note && <Text className='banner-note'>{t('task.reason', { note: myApplication.review_note })}</Text>}
           </View>
         );
       }
@@ -304,38 +305,38 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         if (task.mode === 'PERFORMANCE') {
           return (
             <View className='actions'>
-              <View className='status-banner banner-success'>✅ 已加入任务，推广中</View>
+              <View className='status-banner banner-success'>{t('task.joinedPromoting')}</View>
             </View>
           );
         }
         if (!mySubmission) {
           return (
             <View className='actions'>
-              <Button className='btn-primary' onClick={this.handleSubmit}>提交作品</Button>
-              <Text className='banner-hint'>报名已通过，请提交内容链接</Text>
+              <Button className='btn-primary' onClick={this.handleSubmit}>{t('task.submitWork')}</Button>
+              <Text className='banner-hint'>{t('task.approvedHint')}</Text>
             </View>
           );
         }
         if (mySubmission.status === 'PENDING_REVIEW') {
           return (
             <View className='actions'>
-              <View className='status-banner banner-pending'>⏳ 作品已提交，等待品牌审核</View>
+              <View className='status-banner banner-pending'>{t('task.workPending')}</View>
             </View>
           );
         }
         if (mySubmission.status === 'APPROVED') {
           return (
             <View className='actions'>
-              <View className='status-banner banner-success'>✅ 任务完成，报酬已结算</View>
+              <View className='status-banner banner-success'>{t('task.done')}</View>
             </View>
           );
         }
         if (mySubmission.status === 'REJECTED') {
           return (
             <View className='actions'>
-              <View className='status-banner banner-rejected'>❌ 内容审核未通过</View>
-              {mySubmission.review_note && <Text className='banner-note'>原因：{mySubmission.review_note}</Text>}
-              <Button className='btn-primary' onClick={this.handleSubmit}>重新提交</Button>
+              <View className='status-banner banner-rejected'>{t('task.workRejected')}</View>
+              {mySubmission.review_note && <Text className='banner-note'>{t('task.reason', { note: mySubmission.review_note })}</Text>}
+              <Button className='btn-primary' onClick={this.handleSubmit}>{t('task.resubmit')}</Button>
             </View>
           );
         }
@@ -350,7 +351,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         return (
           <View className='actions'>
             <Button className='btn-primary' loading={applying} onClick={this.handleApplyClick}>
-              立即报名
+              {t('task.applyNow')}
             </Button>
           </View>
         );
@@ -358,15 +359,15 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       if (check.status === 'missing') {
         return (
           <View className='actions'>
-            <Button className='btn-primary' onClick={this.handleMissingClick}>补充账号后报名</Button>
-            <Text className='banner-hint'>添加以上账号即可报名</Text>
+            <Button className='btn-primary' onClick={this.handleMissingClick}>{t('task.addAndApply')}</Button>
+            <Text className='banner-hint'>{t('task.addHint')}</Text>
           </View>
         );
       }
       return (
         <View className='actions'>
-          <Button className='btn-disabled' disabled>不满足粉丝要求</Button>
-          <Text className='banner-hint banner-hint-error'>粉丝数不足，暂时无法报名此任务</Text>
+          <Button className='btn-disabled' disabled>{t('task.notEligible')}</Button>
+          <Text className='banner-hint banner-hint-error'>{t('task.notEligibleHint')}</Text>
         </View>
       );
     }
@@ -378,11 +379,11 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     const { task, loading, myAmbassadorTask, ambassadorProfile } = this.state;
 
     if (loading) {
-      return <View className='loading'><Text>加载中...</Text></View>;
+      return <View className='loading'><Text>{t('common.loading')}</Text></View>;
     }
 
     if (!task) {
-      return <View className='loading'><Text>任务不存在</Text></View>;
+      return <View className='loading'><Text>{t('task.notExist')}</Text></View>;
     }
 
     const isPerformance = task.mode === 'PERFORMANCE';
@@ -392,25 +393,25 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         <View className='section'>
           <Text className='title'>{task.title}</Text>
           <View className='tags'>
-            <Text className='tag'>{isPerformance ? '成果报酬' : '普通任务'}</Text>
+            <Text className='tag'>{isPerformance ? t('taskCard.perf') : t('task.modeStd')}</Text>
             <Text className={`tag status-${task.status.toLowerCase()}`}>
-              {task.status === 'OPEN' ? '招募中' : task.status}
+              {task.status === 'OPEN' ? t('task.recruiting') : task.status}
             </Text>
           </View>
           <Text className='price'>
-            {isPerformance ? `¥${task.commission}/成功转化` : `¥${task.commission}/人`}
+            {isPerformance ? t('task.perConversion', { n: task.commission }) : t('task.perPerson', { n: task.commission })}
           </Text>
-          <Text className='meta'>预算：¥{task.budget} · 招募 {task.max_heralds} 人</Text>
+          <Text className='meta'>{t('task.budgetMeta', { b: task.budget, n: task.max_heralds })}</Text>
         </View>
 
         <View className='section'>
-          <Text className='section-title'>任务描述</Text>
+          <Text className='section-title'>{t('task.descTitle')}</Text>
           <Text className='content'>{task.description}</Text>
         </View>
 
         {task.requirements && (
           <View className='section'>
-            <Text className='section-title'>要求</Text>
+            <Text className='section-title'>{t('task.reqSectionTitle')}</Text>
             <Text className='content'>{task.requirements}</Text>
           </View>
         )}
@@ -422,25 +423,25 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         )}
 
         <View className='section'>
-          <Text className='section-title'>报名情况 ({task.applications.length})</Text>
+          <Text className='section-title'>{t('task.applicantsTitle', { n: task.applications.length })}</Text>
           {task.applications.map((app: any) => (
             <View key={app.id} className='applicant'>
               <Text className='name'>{app.nickname}</Text>
               <Text className={`app-status ${app.status.toLowerCase()}`}>
-                {app.status === 'PENDING' ? '待审核' : app.status === 'APPROVED' ? '已通过' : '已拒绝'}
+                {app.status === 'PENDING' ? t('task.stPending') : app.status === 'APPROVED' ? t('task.stApproved') : t('task.stRejected')}
               </Text>
             </View>
           ))}
-          {task.applications.length === 0 && <Text className='muted'>暂无报名</Text>}
+          {task.applications.length === 0 && <Text className='muted'>{t('task.noApplicants')}</Text>}
         </View>
 
         {myAmbassadorTask && (
           <View className='section code-section'>
-            <Text className='section-title'>我的推广码</Text>
+            <Text className='section-title'>{t('task.myCode')}</Text>
             <View className='code-box'>
               <Text className='code-text'>{myAmbassadorTask.unique_code}</Text>
             </View>
-            <Text className='code-hint'>分享此推广码给好友，好友注册后即可获得奖励</Text>
+            <Text className='code-hint'>{t('task.codeHint')}</Text>
           </View>
         )}
 

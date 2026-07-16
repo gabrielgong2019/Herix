@@ -4,6 +4,7 @@ import logoIcon from '../../assets/herix-icon.png';
 import { tasks as taskApi, categories as categoriesApi } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
+import { t } from '../../utils/i18n';
 
 // 对齐 herix.html 原版：首页 = 纯浏览列表（探索）。
 // "我的待办"住在底部「任务」tab（herald-dashboard），首页不再内嵌待办切换。
@@ -62,7 +63,7 @@ export default class Index extends Component<{}, State> {
               <Text className='logo-accent'>赫</Text>使 HERIX
             </Text>
           </View>
-          <Text className='slogan'>不止于赫</Text>
+          <Text className='slogan'>{t('index.slogan')}</Text>
         </View>
 
         <ScrollView className='filters' scrollX>
@@ -70,7 +71,7 @@ export default class Index extends Component<{}, State> {
             className={`filter ${activeCategory === '' ? 'active' : ''}`}
             onClick={() => this.setState({ activeCategory: '' })}
           >
-            全部
+            {t('common.all')}
           </Text>
           {visibleCategories.map(c => (
             <Text
@@ -84,7 +85,7 @@ export default class Index extends Component<{}, State> {
         </ScrollView>
 
         {loading ? (
-          <View className='loading'><Text>加载中...</Text></View>
+          <View className='loading'><Text>{t('common.loading')}</Text></View>
         ) : (
           <ScrollView className='list' scrollY>
             <View className='grid'>
@@ -92,7 +93,7 @@ export default class Index extends Component<{}, State> {
                 visibleTasks.map(task => <TaskCard key={task.id} task={task} categories={categories} />)
               ) : (
                 <View className='empty'>
-                  <Text className='empty-text'>暂无任务</Text>
+                  <Text className='empty-text'>{t('index.empty')}</Text>
                 </View>
               )}
             </View>

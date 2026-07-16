@@ -3,6 +3,7 @@ import { View, Text, Input } from '@tarojs/components';
 import WechatOrPhoneInput, { validateWechatOrPhone } from './WechatOrPhoneInput';
 import { platformById } from '../utils/platforms';
 import './PlatformAccountInput.scss';
+import { t } from '../utils/i18n';
 
 /**
  * "添加/编辑一个社交平台账号" 表单，从 herix.html 里 4 处近似重复实现
@@ -77,7 +78,7 @@ export default class PlatformAccountInput extends Component<Props, State> {
     return (
       <View className='platform-account-input'>
         <Text style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
-          {platform.icon} {platform.name} {platform.inputType === 'id' ? '— 账号 ID' : '— 主页链接'}
+          {platform.icon} {platform.name} {platform.inputType === 'id' ? t('pai.accountId') : t('pai.homeLink')}
         </Text>
         {platformId === 'wechat' ? (
           <WechatOrPhoneInput value={rawValue} onChange={this.handleRawChange} />
@@ -95,7 +96,7 @@ export default class PlatformAccountInput extends Component<Props, State> {
                 className='ob-input'
                 style={{ margin: '6px 0 0', fontSize: '13px' }}
                 type='number'
-                placeholder='粉丝数（选填）'
+                placeholder={t('pai.followers')}
                 value={followersText}
                 onInput={e => this.handleFollowersChange(e.detail.value)}
               />

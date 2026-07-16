@@ -18,6 +18,12 @@ async function main() {
   let inserted = 0;
   let skipped = 0;
 
+  // 语义背景（key 级，代码维护，永远以代码为准覆盖）——给运营/机翻提供语境
+  const ctxFile = path.join(DICT_DIR, 'context.json');
+  const contexts: Record<string, string> = fs.existsSync(ctxFile)
+    ? JSON.parse(fs.readFileSync(ctxFile, 'utf-8'))
+    : {};
+
   for (const locale of LOCALES) {
     const file = path.join(DICT_DIR, `${locale}.json`);
     if (!fs.existsSync(file)) {
@@ -36,7 +42,14 @@ async function main() {
       else skipped++;
     }
   }
-  console.log(`SEED_DONE 新增 ${inserted} 条，已存在跳过 ${skipped} 条`);
+  // context 是代码所有的元数据：无条件刷新到所有语言行
+  let ctxUpdated = 0;
+  for (const [key, ctx] of Object.entries(contexts)) {
+    const r = await pool.query('UPDATE i18n_entries SET context = $1 WHERE key = $2', [ctx, key]);
+    ctxUpdated += r.rowCount || 0;
+  }
+
+  console.log(`SEED_DONE 新增 ${inserted} 条，已存在跳过 ${skipped} 条，context 刷新 ${ctxUpdated} 行`);
   await pool.end();
 }
 

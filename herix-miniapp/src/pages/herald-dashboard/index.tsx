@@ -3,16 +3,18 @@ import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { wallet as walletApi, applications, submissions, referrals, getToken } from '../../utils/api';
 import './index.scss';
+import { t } from '../../utils/i18n';
 
 const fmt = (n: any) => {
   const v = Math.round(Math.abs(Number(n) || 0));
   return String(v).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 
+// 存 labelKey，渲染时 t() 取值
 const HISTORY_FILTERS = [
-  { id: 'all', label: '全部' },
-  { id: 'pending', label: '待审核' },
-  { id: 'done', label: '已完成' },
+  { id: 'all', labelKey: 'common.all' },
+  { id: 'pending', labelKey: 'task.stPending' },
+  { id: 'done', labelKey: 'hd.done' },
 ];
 
 interface RightPill {
@@ -124,7 +126,7 @@ export default class HeraldDashboard extends Component<{}, State> {
       return (
         <View className='herald-dashboard-page'>
           <View className='empty-state'>
-            <Text className='empty-text'>请先登录后查看任务中心</Text>
+            <Text className='empty-text'>{t('hd.needLogin')}</Text>
           </View>
         </View>
       );
@@ -133,7 +135,7 @@ export default class HeraldDashboard extends Component<{}, State> {
       return (
         <View className='herald-dashboard-page'>
           <View className='empty-state'>
-            <Text className='empty-text'>加载中...</Text>
+            <Text className='empty-text'>{t('common.loading')}</Text>
           </View>
         </View>
       );
@@ -171,16 +173,16 @@ export default class HeraldDashboard extends Component<{}, State> {
 
     const statusChip = (ra: any): [string, string] => {
       const stMap: Record<string, [string, string]> = {
-        PENDING: ['待审核', '#d97706'],
-        APPROVED: ['已通过', '#16a34a'],
-        REJECTED: ['未通过', '#dc2626'],
-        WITHDRAWN: ['已撤回', '#6b7280'],
+        PENDING: [t('task.stPending'), '#d97706'],
+        APPROVED: [t('task.stApproved'), '#16a34a'],
+        REJECTED: [t('hd.stRejected'), '#dc2626'],
+        WITHDRAWN: [t('hd.stWithdrawn'), '#6b7280'],
       };
       if (ra.status === 'APPROVED' && ra.mode === 'STANDARD') {
         const raSub = mySubs.find(s => s.task_id === ra.task_id);
-        if (raSub && raSub.status === 'APPROVED') stMap.APPROVED = ['已完成', '#6366f1'];
-        else if (raSub && raSub.status === 'PENDING_REVIEW') stMap.APPROVED = ['内容审核中', '#0369a1'];
-        else if (raSub && raSub.status === 'REJECTED') stMap.APPROVED = ['需重新提交', '#dc2626'];
+        if (raSub && raSub.status === 'APPROVED') stMap.APPROVED = [t('hd.done'), '#6366f1'];
+        else if (raSub && raSub.status === 'PENDING_REVIEW') stMap.APPROVED = [t('hd.stContentReview'), '#0369a1'];
+        else if (raSub && raSub.status === 'REJECTED') stMap.APPROVED = [t('hd.stResubmit'), '#dc2626'];
       }
       return stMap[ra.status] || ['', '#666'];
     };
@@ -190,13 +192,13 @@ export default class HeraldDashboard extends Component<{}, State> {
         {/* 收支摘要 */}
         <View className='summary' onClick={this.goWallet}>
           <View className='sum-cell'>
-            <Text className='sum-label'>可用余额</Text>
+            <Text className='sum-label'>{t('wallet.balance.available')}</Text>
             <Text className='sum-val'>
               {balApprox ? '≈' : ''}¥{fmt(bal.available)} <Text className='sum-cur'>{balCur}</Text>
             </Text>
           </View>
           <View className='sum-cell'>
-            <Text className='sum-label'>本月收入</Text>
+            <Text className='sum-label'>{t('profile.monthIncome')}</Text>
             <Text className='sum-val income'>
               +¥{fmt(bal.periodInflow)} <Text className='sum-cur'>{balCur}</Text>
             </Text>
@@ -206,29 +208,29 @@ export default class HeraldDashboard extends Component<{}, State> {
         {/* 待办任务 */}
         {(hasAction || hasInProgress) && (
           <View className='block'>
-            <Text className='block-title'>待办任务</Text>
+            <Text className='block-title'>{t('hd.todo')}</Text>
 
             {hasAction && (
               <View>
-                {hasInProgress && <Text className='sub-label'>待操作</Text>}
+                {hasInProgress && <Text className='sub-label'>{t('hd.actionNeeded')}</Text>}
                 {rejectedA.map(ra => {
                   const rsub = rejectedSubForTask(ra.task_id);
                   return this.renderTaskCard(`rej-${ra.task_id}`, {
                     title: ra.task_title,
                     accent: '#dc2626',
-                    meta: '内容审核未通过，请修改后重新提交',
+                    meta: t('hd.rejectedMeta'),
                     metaColor: '#dc2626',
-                    note: rsub && rsub.review_note ? `原因：${rsub.review_note}` : '',
-                    right: { type: 'button', text: '重新提交', color: '#fff', bg: '#dc2626', onClick: () => this.openSubmit(ra.task_id) },
+                    note: rsub && rsub.review_note ? t('task.reason', { note: rsub.review_note }) : '',
+                    right: { type: 'button', text: t('task.resubmit'), color: '#fff', bg: '#dc2626', onClick: () => this.openSubmit(ra.task_id) },
                   });
                 })}
                 {freshA.map(aa =>
                   this.renderTaskCard(`fresh-${aa.task_id}`, {
                     title: aa.task_title,
                     accent: 'var(--primary)',
-                    meta: `内容任务 · ¥${aa.payout_per_herald || aa.commission || 0}`,
+                    meta: t('hd.contentTaskMeta', { n: aa.payout_per_herald || aa.commission || 0 }),
                     metaColor: 'var(--text-muted)',
-                    right: { type: 'button', text: '提交作品', color: '#fff', bg: 'var(--primary)', onClick: () => this.openSubmit(aa.task_id) },
+                    right: { type: 'button', text: t('task.submitWork'), color: '#fff', bg: 'var(--primary)', onClick: () => this.openSubmit(aa.task_id) },
                   }),
                 )}
               </View>
@@ -236,14 +238,14 @@ export default class HeraldDashboard extends Component<{}, State> {
 
             {hasInProgress && (
               <View>
-                {hasAction && <Text className='sub-label gap'>进行中</Text>}
+                {hasAction && <Text className='sub-label gap'>{t('hd.inProgress')}</Text>}
                 {pendingReviewA.map(pra =>
                   this.renderTaskCard(`pend-${pra.task_id}`, {
                     title: pra.task_title,
                     accent: '#0369a1',
-                    meta: '内容已提交，等待品牌审核',
+                    meta: t('hd.submittedMeta'),
                     metaColor: 'var(--text-muted)',
-                    right: { type: 'badge', text: '审核中', color: '#0369a1', bg: '#eff6ff' },
+                    right: { type: 'badge', text: t('hd.reviewing'), color: '#0369a1', bg: '#eff6ff' },
                   }),
                 )}
                 {actionableB.map(ab => {
@@ -253,22 +255,22 @@ export default class HeraldDashboard extends Component<{}, State> {
                       <View className='code-line'>
                         <Text className='code-text'>{code.unique_code || ''}</Text>
                         <Text className='code-copy' onClick={() => this.copyCode(code.unique_code || '')}>
-                          复制
+                          {t('hd.copy')}
                         </Text>
                       </View>
                       <Text className='code-stat'>
-                        收益 ¥{fmt(code.earned_amount)} · {code.registered_count || 0}注册 {code.used_count || 0}使用
+                        {t('hd.codeStats', { e: fmt(code.earned_amount), r: code.registered_count || 0, u: code.used_count || 0 })}
                       </Text>
                     </View>
                   ) : (
-                    <Text className='code-pending'>⏳ 推广码正在生成</Text>
+                    <Text className='code-pending'>{t('hd.codeGenerating')}</Text>
                   );
                   return this.renderTaskCard(`promo-${ab.task_id}`, {
                     title: ab.task_title,
                     accent: 'var(--gold)',
-                    meta: '推广任务',
+                    meta: t('hd.promoTask'),
                     metaColor: 'var(--text-muted)',
-                    right: { type: 'badge', text: '推广中', color: '#92400e', bg: '#fffbeb' },
+                    right: { type: 'badge', text: t('hd.promoting'), color: '#92400e', bg: '#fffbeb' },
                     body,
                   });
                 })}
@@ -279,7 +281,7 @@ export default class HeraldDashboard extends Component<{}, State> {
 
         {/* 报名历史 */}
         <View className='block'>
-          <Text className='block-title'>报名历史</Text>
+          <Text className='block-title'>{t('hd.history')}</Text>
           <View className='hist-filters'>
             {HISTORY_FILTERS.map(f => (
               <Text
@@ -287,14 +289,14 @@ export default class HeraldDashboard extends Component<{}, State> {
                 className={`hist-filter ${filter === f.id ? 'active' : ''}`}
                 onClick={() => this.setState({ filter: f.id })}
               >
-                {f.label}
+                {t(f.labelKey)}
               </Text>
             ))}
           </View>
 
           {filteredApps.length === 0 ? (
             <View className='hist-empty'>
-              <Text className='hist-empty-text'>{filter === 'all' ? '还没有报名记录' : '暂无此状态的记录'}</Text>
+              <Text className='hist-empty-text'>{filter === 'all' ? t('hd.emptyAll') : t('hd.emptyFiltered')}</Text>
             </View>
           ) : (
             filteredApps.map(ra => {
@@ -309,16 +311,16 @@ export default class HeraldDashboard extends Component<{}, State> {
                     </Text>
                   </View>
                   <Text className='hist-meta'>
-                    ¥{ra.payout_per_herald || ra.commission || 0} · {ra.mode === 'PERFORMANCE' ? '推广任务' : '内容任务'}
+                    {t('hd.histMeta', { n: ra.payout_per_herald || ra.commission || 0, mode: ra.mode === 'PERFORMANCE' ? t('hd.promoTask') : t('hd.modeContent') })}
                   </Text>
                   {ra.status === 'REJECTED' && ra.review_note && (
-                    <View className='reject-note'>报名拒绝原因：{ra.review_note}</View>
+                    <View className='reject-note'>{t('hd.applyRejectReason', { note: ra.review_note })}</View>
                   )}
                   {ra.status === 'APPROVED' &&
                     ra.mode === 'STANDARD' &&
                     raSubD &&
                     raSubD.status === 'REJECTED' &&
-                    raSubD.review_note && <View className='reject-note'>内容拒绝原因：{raSubD.review_note}</View>}
+                    raSubD.review_note && <View className='reject-note'>{t('hd.contentRejectReason', { note: raSubD.review_note })}</View>}
                 </View>
               );
             })

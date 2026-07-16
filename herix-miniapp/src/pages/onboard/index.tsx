@@ -4,15 +4,16 @@ import Taro from '@tarojs/taro';
 import { ambassador, getToken } from '../../utils/api';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
 import './index.scss';
+import { t } from '../../utils/i18n';
 
 // 微信/手机号校验（等价 herix obValidateWechat）
 function validateWechat(val: string): { ok: boolean; saved?: string | null; msg?: string } {
   if (!val) return { ok: true, saved: null }; // 选填
   if (/^\d+$/.test(val)) {
-    if (!/^1[3-9]\d{9}$/.test(val)) return { ok: false, msg: '手机号格式有误（需11位，以1开头）' };
+    if (!/^1[3-9]\d{9}$/.test(val)) return { ok: false, msg: t('wx.phoneInvalidFull') };
     return { ok: true, saved: '+86' + val };
   }
-  if (val.length < 6 || val.length > 20) return { ok: false, msg: '微信号需6-20位' };
+  if (val.length < 6 || val.length > 20) return { ok: false, msg: t('wx.wechatLen') };
   return { ok: true, saved: val };
 }
 
@@ -20,25 +21,26 @@ function validateWechat(val: string): { ok: boolean; saved?: string | null; msg?
 function wechatHint(val: string): { text: string; color: string; showPrefix: boolean } {
   const v = (val || '').trim();
   if (/^\d+$/.test(v) && v.length > 0) {
-    if (v.length < 11) return { text: '继续输入手机号（11位）', color: 'var(--text-muted)', showPrefix: true };
-    if (/^1[3-9]\d{9}$/.test(v)) return { text: `✓ 有效手机号，将以 +86 ${v} 保存`, color: 'var(--success)', showPrefix: true };
-    return { text: '手机号格式有误，请检查', color: '#ef4444', showPrefix: true };
+    if (v.length < 11) return { text: t('ob.hintContinue'), color: 'var(--text-muted)', showPrefix: true };
+    if (/^1[3-9]\d{9}$/.test(v)) return { text: t('ob.hintValid', { v }), color: 'var(--success)', showPrefix: true };
+    return { text: t('ob.hintBad'), color: '#ef4444', showPrefix: true };
   }
-  if (v.length === 0) return { text: '微信号：字母+数字，6-20位 · 手机号：输入数字自动识别', color: 'var(--text-muted)', showPrefix: false };
-  if (v.length < 6) return { text: '微信号至少6位', color: 'var(--text-muted)', showPrefix: false };
-  return { text: '✓ 微信 ID', color: 'var(--success)', showPrefix: false };
+  if (v.length === 0) return { text: t('ob.hintDefault'), color: 'var(--text-muted)', showPrefix: false };
+  if (v.length < 6) return { text: t('wx.wechatMin'), color: 'var(--text-muted)', showPrefix: false };
+  return { text: t('wx.wechatOk'), color: 'var(--success)', showPrefix: false };
 }
 
+// v 是落库值不翻译；labelKey 渲染时 t() 取值
 const VISAS = [
-  { v: '永住者', l: '永住者 / 定住者 / 日本人配偶' },
-  { v: '就労', l: '就労・人文知識・国際業務等' },
-  { v: '留学', l: '留学生（资格外活动许可）' },
-  { v: '其他', l: '其他（请说明）' },
+  { v: '永住者', labelKey: 'ob.visa1' },
+  { v: '就労', labelKey: 'ob.visa2' },
+  { v: '留学', labelKey: 'ob.visa3' },
+  { v: '其他', labelKey: 'ob.visa4' },
 ];
 const BANK_METHODS = [
-  { v: 'wise', l: 'Wise', sub: '推荐，手续费最低' },
-  { v: 'paypal', l: 'PayPal', sub: '快速到账' },
-  { v: 'swift', l: '国际电汇 (SWIFT)', sub: '适合大额' },
+  { v: 'wise', l: 'Wise', subKey: 'ob.wiseSub' },
+  { v: 'paypal', l: 'PayPal', subKey: 'ob.paypalSub' },
+  { v: 'swift', labelKey: 'ob.swiftName', subKey: 'ob.swiftSub' },
 ];
 
 interface OnboardData {
@@ -85,7 +87,7 @@ export default class Onboard extends Component<{}, State> {
   componentDidMount() {
     const params = Taro.getCurrentInstance().router?.params || {};
     if (params.taskId) this.setState({ taskId: params.taskId as string });
-    if (!getToken()) Taro.showToast({ title: '请先登录', icon: 'none' });
+    if (!getToken()) Taro.showToast({ title: t('ob.needLogin'), icon: 'none' });
   }
 
   set = <K extends keyof OnboardData>(key: K, val: OnboardData[K]) =>
@@ -111,7 +113,7 @@ export default class Onboard extends Component<{}, State> {
 
   nextJapan = () => {
     if (!this.state.data.agreed) {
-      Taro.showToast({ title: '请先同意声明', icon: 'none' });
+      Taro.showToast({ title: t('ob.agreeFirst'), icon: 'none' });
       return;
     }
     this.submit();
@@ -120,7 +122,7 @@ export default class Onboard extends Component<{}, State> {
   nextBank = () => {
     const { bankType, bankEmail } = this.state.data;
     if ((bankType === 'wise' || bankType === 'paypal') && !bankEmail) {
-      Taro.showToast({ title: '请填写账户邮箱', icon: 'none' });
+      Taro.showToast({ title: t('ob.fillEmail'), icon: 'none' });
       return;
     }
     this.submit();
@@ -152,7 +154,7 @@ export default class Onboard extends Component<{}, State> {
       await ambassador.onboard(body);
       this.setState({ step: 4, submitting: false });
     } catch (err: any) {
-      Taro.showToast({ title: err?.message || '提交失败', icon: 'none' });
+      Taro.showToast({ title: err?.message || t('common.submitFailed'), icon: 'none' });
       this.setState({ submitting: false });
     }
   };
@@ -166,16 +168,16 @@ export default class Onboard extends Component<{}, State> {
   render() {
     const { step, data: d, submitting } = this.state;
     const titles: Record<number, string> = {
-      1: '你的社交账号',
-      2: '你在哪里生活？',
-      3: d.residence === 'japan' ? '在留资格声明' : '打款账户信息',
-      4: '设置完成！',
+      1: t('ob.title1'),
+      2: t('ob.title2'),
+      3: d.residence === 'japan' ? t('ob.title3jp') : t('ob.title3bank'),
+      4: t('ob.title4'),
     };
     const subs: Record<number, string> = {
-      1: '帮助品牌方了解你的影响力，入驻后可随时补充',
-      2: '居住地决定你的税务规则和打款方式',
-      3: d.residence === 'japan' ? '请确认你的在留资格，这是日本法规要求' : '选择你的收款方式',
-      4: '欢迎加入赫使！你已可以浏览和接取任务',
+      1: t('ob.sub1'),
+      2: t('ob.sub2'),
+      3: d.residence === 'japan' ? t('ob.sub3jp') : t('ob.sub3bank'),
+      4: t('ob.sub4'),
     };
     const sns = PLATFORM_REGISTRY.filter(p => p.id !== 'wechat');
     const hint = wechatHint(d.wechatId);
@@ -200,15 +202,15 @@ export default class Onboard extends Component<{}, State> {
               <View className='wx-head'>
                 <Text className='wx-emoji'>💬</Text>
                 <View>
-                  <Text className='wx-title'>微信 ID / 手机号 <Text className='wx-opt'>建议填写</Text></Text>
-                  <Text className='wx-desc'>用于品牌方与你直接沟通</Text>
+                  <Text className='wx-title'>{t('ob.wechatTitle')} <Text className='wx-opt'>{t('ob.recommended')}</Text></Text>
+                  <Text className='wx-desc'>{t('ob.wechatWhy')}</Text>
                 </View>
               </View>
               <View className='wx-input-row'>
                 {hint.showPrefix && <Text className='wx-prefix'>+86</Text>}
                 <Input
                   className='ob-input flex'
-                  placeholder='微信号 或 手机号'
+                  placeholder={t('wx.placeholder')}
                   value={d.wechatId}
                   onInput={e => this.set('wechatId', e.detail.value)}
                 />
@@ -217,7 +219,7 @@ export default class Onboard extends Component<{}, State> {
             </View>
 
             <View className='card'>
-              <Text className='card-title'>添加一个社交账号（选填）</Text>
+              <Text className='card-title'>{t('ob.addSns')}</Text>
               <View className='chips'>
                 {sns.map(p => (
                   <Text
@@ -231,7 +233,7 @@ export default class Onboard extends Component<{}, State> {
               </View>
               {selP && (
                 <View>
-                  <Text className='field-label'>{selP.inputType === 'id' ? '账号 ID' : '主页链接'}</Text>
+                  <Text className='field-label'>{selP.inputType === 'id' ? t('ob.accountId') : t('ob.homeLink')}</Text>
                   <Input
                     className='ob-input'
                     placeholder={selP.placeholder}
@@ -240,11 +242,11 @@ export default class Onboard extends Component<{}, State> {
                   />
                   {selP.hasFollowers && (
                     <View>
-                      <Text className='field-label'>粉丝数（选填）</Text>
+                      <Text className='field-label'>{t('pai.followers')}</Text>
                       <Input
                         className='ob-input'
                         type='number'
-                        placeholder='例：5000'
+                        placeholder={t('ob.followersPh')}
                         value={d.snsFollowers}
                         onInput={e => this.set('snsFollowers', e.detail.value)}
                       />
@@ -254,8 +256,8 @@ export default class Onboard extends Component<{}, State> {
               )}
             </View>
 
-            <View className='btn-primary' onClick={this.nextPlatforms}>下一步</View>
-            <Text className='skip' onClick={() => this.setState({ step: 2 })}>跳过，稍后再填</Text>
+            <View className='btn-primary' onClick={this.nextPlatforms}>{t('ob.next')}</View>
+            <Text className='skip' onClick={() => this.setState({ step: 2 })}>{t('ob.skip')}</Text>
           </View>
         )}
 
@@ -264,17 +266,17 @@ export default class Onboard extends Component<{}, State> {
           <View>
             <View className={`choice ${d.residence === 'japan' ? 'sel' : ''}`} onClick={() => this.set('residence', 'japan')}>
               <Text className='choice-emoji'>🇯🇵</Text>
-              <Text className='choice-name'>在日本居住</Text>
-              <Text className='choice-sub'>日本银行振込，需提交在留资格声明</Text>
+              <Text className='choice-name'>{t('ob.resJapan')}</Text>
+              <Text className='choice-sub'>{t('ob.resJapanSub')}</Text>
             </View>
             <View className={`choice ${d.residence === 'overseas' ? 'sel' : ''}`} onClick={() => this.set('residence', 'overseas')}>
               <Text className='choice-emoji'>🌏</Text>
-              <Text className='choice-name'>海外其他地区</Text>
-              <Text className='choice-sub'>Wise / PayPal / 国际电汇</Text>
+              <Text className='choice-name'>{t('ob.resOverseas')}</Text>
+              <Text className='choice-sub'>{t('ob.resOverseasSub')}</Text>
             </View>
-            {d.residence && <View className='btn-primary' onClick={this.nextResidence}>下一步</View>}
-            <Text className='skip' onClick={this.submit}>跳过，稍后再填</Text>
-            <Text className='skip-note'>收款时必须完善</Text>
+            {d.residence && <View className='btn-primary' onClick={this.nextResidence}>{t('ob.next')}</View>}
+            <Text className='skip' onClick={this.submit}>{t('ob.skip')}</Text>
+            <Text className='skip-note'>{t('ob.mustComplete')}</Text>
           </View>
         )}
 
@@ -283,24 +285,22 @@ export default class Onboard extends Component<{}, State> {
           <View>
             {VISAS.map(v => (
               <View key={v.v} className={`choice compact ${d.visaType === v.v ? 'sel' : ''}`} onClick={() => this.set('visaType', v.v)}>
-                <Text className='choice-name sm'>{v.l}</Text>
+                <Text className='choice-name sm'>{t(v.labelKey)}</Text>
               </View>
             ))}
             {d.visaType && (
               <View>
-                <View className='declaration'>
-                  本人は上記の在職資格を保持しており、副業活動を得ることが法的に認められています。虚偽申告の場合、報酬は没収されます。
-                </View>
+                <View className='declaration'>{t('ob.declaration')}</View>
                 <View className='agree-row' onClick={() => this.set('agreed', !d.agreed)}>
                   <View className={`checkbox ${d.agreed ? 'checked' : ''}`}>{d.agreed ? '✓' : ''}</View>
-                  <Text className='agree-label'>上記声明内容に同意します</Text>
+                  <Text className='agree-label'>{t('ob.agree')}</Text>
                 </View>
                 <View className={`btn-primary ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.nextJapan}>
-                  {submitting ? '提交中...' : '确认声明，继续'}
+                  {submitting ? t('withdraw.submitting') : t('ob.confirmDecl')}
                 </View>
               </View>
             )}
-            <Text className='skip' onClick={this.submit}>跳过，稍后再填</Text>
+            <Text className='skip' onClick={this.submit}>{t('ob.skip')}</Text>
           </View>
         )}
 
@@ -309,31 +309,31 @@ export default class Onboard extends Component<{}, State> {
           <View>
             {BANK_METHODS.map(m => (
               <View key={m.v} className={`choice ${d.bankType === m.v ? 'sel' : ''}`} onClick={() => this.set('bankType', m.v)}>
-                <Text className='choice-name'>{m.l}</Text>
-                <Text className='choice-sub'>{m.sub}</Text>
+                <Text className='choice-name'>{(m as any).labelKey ? t((m as any).labelKey) : (m as any).l}</Text>
+                <Text className='choice-sub'>{t((m as any).subKey)}</Text>
               </View>
             ))}
             {d.bankType && (
               <View>
                 {d.bankType === 'wise' || d.bankType === 'paypal' ? (
                   <View>
-                    <Text className='field-label'>账户邮箱</Text>
+                    <Text className='field-label'>{t('ob.bankEmail')}</Text>
                     <Input className='ob-input' placeholder='your@email.com' value={d.bankEmail} onInput={e => this.set('bankEmail', e.detail.value)} />
                   </View>
                 ) : (
                   <View>
                     <Text className='field-label'>SWIFT Code</Text>
                     <Input className='ob-input' placeholder='XXXXXXXX' value={d.swiftCode} onInput={e => this.set('swiftCode', e.detail.value)} />
-                    <Text className='field-label'>IBAN / 账户号</Text>
-                    <Input className='ob-input' placeholder='账户号码' value={d.iban} onInput={e => this.set('iban', e.detail.value)} />
+                    <Text className='field-label'>{t('ob.iban')}</Text>
+                    <Input className='ob-input' placeholder={t('addMethod.ph.cnAcctNo')} value={d.iban} onInput={e => this.set('iban', e.detail.value)} />
                   </View>
                 )}
                 <View className={`btn-primary ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.nextBank}>
-                  {submitting ? '提交中...' : '提交'}
+                  {submitting ? t('withdraw.submitting') : t('common.submit')}
                 </View>
               </View>
             )}
-            <Text className='skip' onClick={this.submit}>跳过，稍后再填</Text>
+            <Text className='skip' onClick={this.submit}>{t('ob.skip')}</Text>
           </View>
         )}
 
@@ -341,9 +341,9 @@ export default class Onboard extends Component<{}, State> {
         {step === 4 && (
           <View className='done'>
             <Text className='done-emoji'>🎉</Text>
-            <Text className='done-title'>入驻完成</Text>
-            <Text className='done-sub'>现在可以浏览任务，开始你的赫使之旅</Text>
-            <View className='btn-primary' onClick={this.finish}>开始探索</View>
+            <Text className='done-title'>{t('ob.doneTitle')}</Text>
+            <Text className='done-sub'>{t('ob.doneSub')}</Text>
+            <View className='btn-primary' onClick={this.finish}>{t('ob.explore')}</View>
           </View>
         )}
       </View>

@@ -3,6 +3,7 @@ import { View, Text, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { auth, tasks as taskApi, categories as categoriesApi, setToken } from '../../utils/api';
 import './index.scss';
+import { t } from '../../utils/i18n';
 
 const fmt = (n: any) => {
   const v = Math.round(Math.abs(Number(n) || 0));
@@ -72,11 +73,11 @@ export default class Landing extends Component<{}, State> {
     const pw = pass.trim();
     const nk = nick.trim();
     if (!em || !pw) {
-      this.setState({ err: '请填写邮箱和密码' });
+      this.setState({ err: t('profile.errEmailPass') });
       return;
     }
     if (authTab === 'register' && !nk) {
-      this.setState({ err: '请填写昵称' });
+      this.setState({ err: t('landing.fillNickname') });
       return;
     }
     this.setState({ err: '', submitting: true });
@@ -98,7 +99,7 @@ export default class Landing extends Component<{}, State> {
         Taro.switchTab({ url: '/pages/index/index' });
       }
     } catch (err: any) {
-      this.setState({ err: err?.message || '登录失败，请重试', submitting: false });
+      this.setState({ err: err?.message || t('landing.loginFailed'), submitting: false });
     }
   };
 
@@ -122,35 +123,35 @@ export default class Landing extends Component<{}, State> {
           <View className='lp-task'>
             {!!catText && <Text className='lp-task-cat'>{catText}</Text>}
             <Text className='lp-task-title'>{task.title}</Text>
-            {!!task.creator_name && <Text className='lp-task-brand'>来自 {task.creator_name}</Text>}
+            {!!task.creator_name && <Text className='lp-task-brand'>{t('landing.from', { name: task.creator_name })}</Text>}
             <View className='lp-task-payout'>
               <Text className='lp-payout-num'>{payout}</Text>
-              <Text className='lp-payout-label'>任务报酬</Text>
+              <Text className='lp-payout-label'>{t('landing.reward')}</Text>
             </View>
             {!!task.description && <Text className='lp-task-desc'>{task.description}</Text>}
           </View>
         ) : (
           <View className='lp-task placeholder'>
-            <Text className='lp-task-loading'>{taskLoading ? '加载任务中…' : ''}</Text>
+            <Text className='lp-task-loading'>{taskLoading ? t('landing.loadingTask') : ''}</Text>
           </View>
         )}
 
         {/* 登录 / 注册 */}
         <View className='lp-auth'>
-          <Text className='lp-auth-title'>{task ? '登录后立即报名' : '加入 Herix'}</Text>
+          <Text className='lp-auth-title'>{task ? t('landing.loginToApply') : t('landing.join')}</Text>
 
           <View className='lp-tabs'>
             <Text
               className={`lp-tab ${authTab === 'login' ? 'active' : ''}`}
               onClick={() => this.setState({ authTab: 'login', err: '' })}
             >
-              登录
+              {t('profile.login')}
             </Text>
             <Text
               className={`lp-tab ${authTab === 'register' ? 'active' : ''}`}
               onClick={() => this.setState({ authTab: 'register', err: '' })}
             >
-              注册
+              {t('profile.register')}
             </Text>
           </View>
 
@@ -159,7 +160,7 @@ export default class Landing extends Component<{}, State> {
           <Input
             className='lp-input'
             type='text'
-            placeholder='邮箱地址'
+            placeholder={t('profile.emailAddr')}
             value={email}
             onInput={e => this.setState({ email: e.detail.value })}
           />
@@ -167,7 +168,7 @@ export default class Landing extends Component<{}, State> {
             <Input
               className='lp-input'
               type='text'
-              placeholder='昵称'
+              placeholder={t('profile.nickname')}
               value={nick}
               onInput={e => this.setState({ nick: e.detail.value })}
             />
@@ -175,13 +176,13 @@ export default class Landing extends Component<{}, State> {
           <Input
             className='lp-input'
             password
-            placeholder='密码（至少6位）'
+            placeholder={t('profile.passwordMin')}
             value={pass}
             onInput={e => this.setState({ pass: e.detail.value })}
           />
 
           <View className={`lp-submit ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.doAuth}>
-            {submitting ? '处理中...' : authTab === 'login' ? '登录并报名' : '注册并报名'}
+            {submitting ? t('landing.processing') : authTab === 'login' ? t('landing.loginAndApply') : t('landing.registerAndApply')}
           </View>
         </View>
       </View>

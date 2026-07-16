@@ -810,7 +810,8 @@ function i18nPage(){
   h+=shown.map(function(r){
     var kid=r.key.replace(/[^a-zA-Z0-9]/g,'_');
     function cell(loc){var v=r[loc]||'';return '<td><input id="i18n-'+loc+'-'+kid+'" value="'+esc(v)+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid '+(v?'var(--border)':'var(--danger)')+';border-radius:6px;font-size:12px"></td>'}
-    return '<tr><td style="font-family:monospace;font-size:11px;color:var(--muted);word-break:break-all">'+esc(r.key)+'</td>'+cell('zh')+cell('ja')+cell('en')
+    var ctx=r.context?'<div style="font-size:10px;color:var(--muted);opacity:.75;margin-top:3px;font-family:inherit;word-break:normal">'+esc(r.context)+'</div>':'';
+    return '<tr><td style="font-family:monospace;font-size:11px;color:var(--muted);word-break:break-all">'+esc(r.key)+ctx+'</td>'+cell('zh')+cell('ja')+cell('en')
       +'<td><button class="btn btn-primary btn-sm" onclick="saveI18n(\''+esc(r.key)+'\',\''+kid+'\')">保存</button></td></tr>';
   }).join('');
   return h+'</tbody></table></div>';

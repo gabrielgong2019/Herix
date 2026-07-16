@@ -28,19 +28,35 @@ export async function createNotification(opts: {
   });
 }
 
-/** GET /api/notifications — 拉取当前用户站内信（最近50条，按角色过滤） */
+/** 解析用户拥有的角色集合（JWT roles 可能是数组或 JSON 串） */
+function userRoles(req: Request): string[] {
+  let roles: any = req.user!.roles || [req.user!.role];
+  if (typeof roles === 'string') {
+    try { roles = JSON.parse(roles); } catch { roles = [req.user!.role]; }
+  }
+  return roles;
+}
+
+/** GET /api/notifications?role=HERALD|BRAND — 拉取当前用户站内信（最近50条）
+ *
+ *  隔离维度是「当前所在的端」而非「拥有的角色集合」：双角色账号(HERALD+BRAND)
+ *  按角色集合过滤等于不过滤——商家端会看到赫使侧通知（2026-07-16 实测 bug）。
+ *  端（miniapp/herix=HERALD, merchant=BRAND）通过 ?role= 声明；服务端校验声明
+ *  必须是用户拥有的角色（不能读自己没有的角色的通知）。不传 role 时兜底旧行为。 */
 notificationsRouter.get('/', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  let roles: string[] = req.user!.roles || [req.user!.role];
-  if (typeof (roles as any) === 'string') {
-    try { roles = JSON.parse(roles as any); } catch { roles = [req.user!.role]; }
+  const roles = userRoles(req);
+  const surfaceRole = req.query.role ? String(req.query.role) : null;
+  if (surfaceRole && !roles.includes(surfaceRole)) {
+    return res.status(403).json({ error: '无权读取该角色的通知', code: 'ROLE_NOT_OWNED' });
   }
+  const roleFilter = surfaceRole ? [surfaceRole] : roles;
   const rows = await pool.query<any>(
     `SELECT id, type, title, body, is_read, target_role, metadata, created_at
      FROM notifications
      WHERE user_id = $1 AND (target_role IS NULL OR target_role = ANY($2::text[]))
      ORDER BY created_at DESC LIMIT 50`,
-    [userId, roles],
+    [userId, roleFilter],
   );
   const unread = rows.rows.filter((r: any) => !r.is_read).length;
   res.json({ unread, notifications: rows.rows });
@@ -56,12 +72,22 @@ notificationsRouter.patch('/:id/read', async (req: Request, res: Response) => {
   res.json({ success: true });
 });
 
-/** PATCH /api/notifications/read-all — 全部已读 */
+/** PATCH /api/notifications/read-all?role= — 全部已读（按端隔离：
+ *  商家端点"全部已读"不应清掉赫使侧的未读，反之亦然） */
 notificationsRouter.patch('/read-all', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  await pool.query(
-    `UPDATE notifications SET is_read = 1 WHERE user_id = $1`,
-    [userId],
-  );
+  const roles = userRoles(req);
+  const surfaceRole = req.query.role ? String(req.query.role) : null;
+  if (surfaceRole && !roles.includes(surfaceRole)) {
+    return res.status(403).json({ error: '无权操作该角色的通知', code: 'ROLE_NOT_OWNED' });
+  }
+  if (surfaceRole) {
+    await pool.query(
+      `UPDATE notifications SET is_read = 1 WHERE user_id = $1 AND (target_role IS NULL OR target_role = $2)`,
+      [userId, surfaceRole],
+    );
+  } else {
+    await pool.query(`UPDATE notifications SET is_read = 1 WHERE user_id = $1`, [userId]);
+  }
   res.json({ success: true });
 });

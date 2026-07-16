@@ -222,7 +222,8 @@ export const i18n = {
 
 // ── Notifications ──
 export const notifications = {
-  list: () => request<{ unread: number; notifications: any[] }>('GET', '/notifications'),
+  // 本端=赫使端, 声明 role 做通知隔离(双角色账号的商家侧通知不在这里出现)
+  list: () => request<{ unread: number; notifications: any[] }>('GET', '/notifications?role=HERALD'),
   markRead: (id: string) => request<any>('PATCH', `/notifications/${id}/read`),
-  markAllRead: () => request<any>('PATCH', '/notifications/read-all'),
+  markAllRead: () => request<any>('PATCH', '/notifications/read-all?role=HERALD'),
 };

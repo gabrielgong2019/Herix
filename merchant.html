@@ -1077,7 +1077,7 @@ var notifData = null;   // { unread, notifications[] }
 var notifOpen = false;
 
 function loadNotifications() {
-  get('/notifications', function(d) {
+  get('/notifications?role=BRAND', function(d) {
     notifData = d;
     // 只更新铃铛，不 render 全页（避免重渲打断用户）
     var bell = document.getElementById('notif-bell');
@@ -1148,7 +1148,7 @@ function readNotif(id) {
 }
 
 function markAllRead() {
-  api('PATCH', '/notifications/read-all', {}, function(){
+  api('PATCH', '/notifications/read-all?role=BRAND', {}, function(){
     if (notifData) { notifData.notifications.forEach(function(n){n.is_read=1;}); notifData.unread=0; }
     var bell = document.getElementById('notif-bell');
     if (bell) bell.outerHTML = notifBellHTML();

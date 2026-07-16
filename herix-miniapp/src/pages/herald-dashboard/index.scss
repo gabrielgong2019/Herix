@@ -74,7 +74,8 @@
 }
 
 // ── 待办卡（taskCardHTML 等价）──
-.task-card {
+// hd- 前缀必须保留：H5 端页面样式全局生效，裸 .task-card 会污染首页卡片（曾出真 bug）
+.hd-card {
   background: var(--card-bg);
   border-radius: 24px;
   padding: 28px 32px;

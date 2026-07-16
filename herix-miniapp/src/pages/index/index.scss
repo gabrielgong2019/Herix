@@ -16,10 +16,27 @@
   background: var(--bg);
 }
 
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+}
+
 .logo {
   font-size: 44px;
   font-weight: 800;
   letter-spacing: 1px;
+}
+
+.slogan {
+  font-size: 24px;
+  color: var(--text-muted);
 }
 
 .logo-accent {

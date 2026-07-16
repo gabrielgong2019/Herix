@@ -90,7 +90,8 @@ export default class HeraldDashboard extends Component<{}, State> {
     body?: any;
   }) {
     return (
-      <View key={key} className='task-card' style={{ borderLeftColor: opts.accent }}>
+      // 类名带 hd- 前缀：Taro H5 所有页面样式全局生效，裸 .task-card 会污染首页 TaskCard 组件
+      <View key={key} className='hd-card' style={{ borderLeftColor: opts.accent }}>
         <View className='tc-row'>
           <View className='tc-main'>
             <Text className='tc-title'>{opts.title}</Text>

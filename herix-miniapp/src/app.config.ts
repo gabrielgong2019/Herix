@@ -38,13 +38,13 @@ export default {
     list: [
       {
         pagePath: 'pages/index/index',
-        text: '发现',
+        text: '探索', // 文案对齐 herix.html 原版
         iconPath: 'assets/explore.png',
         selectedIconPath: 'assets/explore-active.png',
       },
       {
         pagePath: 'pages/herald-dashboard/index',
-        text: '我的任务',
+        text: '任务', // 文案对齐 herix.html 原版
         iconPath: 'assets/task.png',
         selectedIconPath: 'assets/task-active.png',
       },

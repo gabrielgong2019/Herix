@@ -1,5 +1,6 @@
 import { Component } from 'react';
-import { View, Text, ScrollView, Navigator } from '@tarojs/components';
+import { View, Text, Image, ScrollView, Navigator } from '@tarojs/components';
+import logoIcon from '../../assets/herix-icon.png';
 import { tasks as taskApi, applications, categories as categoriesApi, auth, getToken } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
@@ -93,13 +94,19 @@ export default class Index extends Component<{}, State> {
   render() {
     const { taskList, categories, activeCategory, myApps, loading, loggedIn, userRole, activeTab } = this.state;
     const visibleTasks = activeCategory ? taskList.filter(t => t.category === activeCategory) : taskList;
+    // 对齐 herix.html：分类胶囊只显示当前任务列表中实际有任务的分类（从全量列表算，别用过滤后的）
+    const visibleCategories = categories.filter(c => taskList.some(t => t.category === c.id));
 
     return (
       <View className='index-page'>
         <View className='header'>
-          <Text className='logo'>
-            <Text className='logo-accent'>赫</Text>使 HERIX
-          </Text>
+          <View className='logo-row'>
+            <Image className='logo-icon' src={logoIcon} mode='aspectFit' />
+            <Text className='logo'>
+              <Text className='logo-accent'>赫</Text>使 HERIX
+            </Text>
+          </View>
+          <Text className='slogan'>不止于赫</Text>
         </View>
 
         <ScrollView className='filters' scrollX>
@@ -109,7 +116,7 @@ export default class Index extends Component<{}, State> {
           >
             全部
           </Text>
-          {categories.map(c => (
+          {visibleCategories.map(c => (
             <Text
               key={c.id}
               className={`filter ${activeCategory === c.id ? 'active' : ''}`}

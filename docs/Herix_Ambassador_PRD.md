@@ -1,5 +1,5 @@
 # Herix 赫使 — 大使任务系统 PRD
-**版本：** v1.3 · 2026-06-09  
+**版本：** v1.4 · 2026-07-16  
 **状态：** Draft  
 **用途：** AI工程师开发参考文档
 
@@ -359,6 +359,16 @@ Step 5：マイナンバー（任意，仅在日大使）
   → 打款完成：Payout.status = "paid"，推送通知给大使
 ```
 
+### 提现金额规格（2026-07-16 定稿）
+
+| 项 | 值 | 事实源 |
+|---|---|---|
+| 最低提现金额 | **¥1,000（JPY）** | `platform_settings.withdrawal_min_amount`（唯一事实源） |
+| 前端展示/校验 | 动态 | `GET /wallet/balance` 下发 `withdrawalMin`，提示文案与校验均用该值，不写死 |
+| 服务端拦截 | `calcWithdrawalFee` | 低于最低额返回 `code: MIN_AMOUNT` |
+
+> 改额度只需改 platform_settings 配置，三语提示/客户端校验/服务端拦截全部自动跟随，无需发版。
+
 ### 防重复与防刷单规则
 
 | 规则 | 实现方式 |
@@ -628,7 +638,7 @@ Platform {
 DiasporaGroup {
   id:            string      // "chinese" | "vietnamese" | "indian" | "korean" | ...
   label:         string      // 显示名称
-  language:      string      // 默认语言（UI 国际化预留）
+  language:      string      // 默认语言（UI 已全量三语，见 15.9 多语言体系）
   currency:      string      // 主要结算货币
   tax_regime:    string      // 税务规则分支
   platforms:     string[]    // 推荐平台列表（按优先级排序）
@@ -721,6 +731,20 @@ TaskPlatformRequirement {
 
 ---
 
+### 15.9 多语言体系（2026-07-16 已上线）
+
+赫使端全量支持 **中文 / 日本語 / English** 三语：
+
+- **词条体系**：416 词条 × 3 语存 `i18n_entries(key, locale, value, context)`，key 与语义背景（context）由代码 seed 管理，
+  运营在 admin「🌐 本地化」矩阵只改译文，不建 key；运营改动永不被 seed 覆盖（`updated_by` 保护）
+- **前端 runtime**：四级兜底（远端词条→打包当前语言→打包中文→key），版本化缓存 + ETag/304；
+  语言自动检测（系统语言）+ profile 页手动切换；tabBar 文字运行时更新
+- **后端错误**：19 处赫使可见错误带 `code`，前端 `error.<code>` 词条按用户语言渲染，无词条退回后端中文
+- **通知**：审核通知 metadata 带 `taskTitle/note`，前端按 `notif.<type>.*` 词条 + 参数渲染三语；
+  落库中文 title/body 仅作旧客户端兜底
+- **内容策略**：任务标题/描述等 UGC 保持原文不机翻；分类 label 多语言列为后续项
+- **待办**：ja/en 译文为机翻初稿需人工审（尤其日语敬语与法律声明）；流水标签（ENTRY_TYPE_LABELS）仍为后端中文，待前端化
+
 ## 16. 系统实现记录（2026-05-30）
 
 > 本节记录实际开发过程中的架构决策与实现细节，供后续开发参考。
@@ -729,14 +753,15 @@ TaskPlatformRequirement {
 
 ### 15.1 多端架构
 
-| 文件 | 角色 | 说明 |
+| 文件/目录 | 角色 | 说明 |
 |------|------|------|
-| `preview.html` | 赫使端（C端） | 移动端优先，底部 tab 导航，任务浏览/报名/提交 |
-| `merchant.html` | 品牌商家端（B端） | PC 优先，侧边栏导航，任务管理/审核/数据 |
-| `admin.html` | 平台运营端 | PC，侧边栏导航，审核/结算/用户管理 |
-| `herix-server/` | 后端 API | Express + SQLite，三端共用同一套 REST API |
+| `herix-miniapp/` | 赫使端（C端） | **Taro(React) 一套代码双端编译**：微信小程序(weapp) + 网页(H5)。底部4tab（探索/任务/消息/我的），11个页面，桌面浏览器有响应式布局（≥768px 两列/侧栏） |
+| `merchant.html` | 品牌商家端（B端） | PC 优先，侧边栏导航，任务管理/审核/数据（纯 HTML 无构建） |
+| `admin.html` | 平台运营端 | PC，侧边栏导航，审核/结算/用户管理/**本地化词条矩阵**（纯 HTML 无构建） |
+| `herix-server/` | 后端 API | Express + **PostgreSQL**，三端共用同一套 REST API |
 
-所有前端均为纯 HTML/CSS/JS，无构建依赖，可直接用任意静态服务器托管。
+> 2026-07 变更：赫使端旧载体 `preview.html`（已删除）与 `herix.html`（保留待退役）已由 `herix-miniapp` 全量取代；
+> 文中历史章节提及 preview.html 处均指现赫使端小程序对应页面。品牌端/管理端仍为纯 HTML。
 
 ---
 
@@ -995,7 +1020,7 @@ startCommand: cd herix-server && node dist/index.js
 ```
 
 **部署后自动种子：**
-- `index.ts` 中 `await initDatabase()` 然后 `await seedIfEmpty()`
+- `index.ts` 中 `await initDatabase()`（seedIfEmpty 已于 2026-07-16 删除：其写入的旧表 `transactions` 在 PG schema 中不存在，空库启动会崩；需要 demo 数据须另写对齐新 schema 的脚本）
 - 首次部署时数据库为空，自动灌入完整测试数据
 
 ### 16.8 测试账号（更新）
@@ -1670,3 +1695,21 @@ task_invitations
 | P0 | preview.html：专属邀请 tab + 接受/拒绝操作 |
 | P1 | 邀请通知（邮件/站内消息）|
 
+---
+
+## 26. 2026-07-16 变更记录
+
+> 本节由架构评审后补记，对应代码已全部入库（commit 4cefe43 ～ 80b249c）。
+
+1. **赫使端全量迁移 Taro**：11 页面 + 4 共享组件，一套代码编译 weapp + H5；旧 preview.html 删除、herix.html 待退役。
+   桌面响应式（≥768px：列表两列 / 详情页侧栏 / 表单限宽）。
+2. **三语体系上线**：见 §15.9。admin.html 新增「本地化」词条矩阵入口（key×zh/ja/en×语境）。
+3. **钱包并发安全**：`wallets` 行锁（FOR UPDATE）修复并发丢更新；提现申请三步（查重→落库→冻结）合并为单事务，
+   消除并发双冻结与僵尸 pending。
+4. **最低提现金额定稿 ¥1,000**，单一事实源 platform_settings，见 §11。
+5. **错误 code 化**：赫使侧 19 处错误带 code（BAD_CREDENTIALS / INSUFFICIENT_BALANCE / ALREADY_APPLIED 等）。
+6. **死代码清理**：seedIfEmpty（写不存在的旧表，空库会崩）、前端 calcTier 副本、8 个未引用 API wrapper；
+   fmt/微信校验重复实现收敛为单份。
+7. **已知遗留**（按优先级）：金额字段 DOUBLE PRECISION 浮点（待定取整口径）；流水标签后端中文；
+   `.card/.btn-primary` 跨页类名重名（H5 全局样式）；`withdrawal_methods` 物理删除改软删；
+   `wallet_entries(wallet_id, created_at)` 索引待补。

@@ -297,6 +297,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
   const blockedCodes: string[] = [];
   const skippedCodes: string[] = [];
+  const skippedHints: Array<{ code: string; belongsTo: string }> = [];
 
   for (const row of records) {
     // 码归一化：CSV 里常见首尾空白/小写，落库码是大写
@@ -305,7 +306,19 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
       'SELECT id, herald_id, paid_conversions, registered_count, used_count FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?',
       [code, task.id]
     );
-    if (!at) { skipped++; skippedCodes.push(code || String(row.code)); continue; }
+    if (!at) {
+      skipped++;
+      skippedCodes.push(code || String(row.code));
+      // 码全局唯一：若属于同商家的另一个任务，直接告诉商家该用哪个任务的上传入口（实际踩过的坑）
+      const elsewhere = await findOne<any>(
+        'SELECT t.title, t.creator_id FROM ambassador_tasks at2 JOIN tasks t ON t.id = at2.task_id WHERE at2.unique_code = ?',
+        [code]
+      );
+      if (elsewhere && elsewhere.creator_id === task.creator_id) {
+        skippedHints.push({ code, belongsTo: elsewhere.title });
+      }
+      continue;
+    }
 
     const newUsedCount = Math.max(0, parseInt(String(row.used_count || '0'), 10));
     const newRegCount  = Math.max(0, parseInt(String(row.registered_count || '0'), 10));
@@ -415,7 +428,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   }
 
   // 诊断日志：转化上传是资金入口，每次调用留痕（此前无请求日志，"上传没生效"无法回溯）
-  console.log(`[csv-upload] task=${task.id}(${task.title}) auth=${isTokenAuth ? 'token' : 'bearer'} records=${records.length} processed=${processed} skipped=${skipped} newConv=${totalNewConversions} paid=${totalPaid}${skippedCodes.length ? ' skippedCodes=' + skippedCodes.join(',') : ''}${blockedCodes.length ? ' blockedCodes=' + blockedCodes.join(',') : ''}`);
+  console.log(`[csv-upload] task=${task.id}(${task.title}) auth=${isTokenAuth ? 'token' : 'bearer'} records=${records.length} processed=${processed} skipped=${skipped} newConv=${totalNewConversions} paid=${totalPaid}${skippedCodes.length ? ' skippedCodes=' + skippedCodes.join(',') : ''}${skippedHints.length ? ' hints=' + skippedHints.map(h => `${h.code}→《${h.belongsTo}》`).join(',') : ''}${blockedCodes.length ? ' blockedCodes=' + blockedCodes.join(',') : ''}`);
 
   res.json({
     processed,
@@ -425,6 +438,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     totalPaid,
     commissionPerConversion: task.commission,
     ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
+    ...(skippedHints.length > 0 ? { skippedHints } : {}),
     ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),
   });
 });

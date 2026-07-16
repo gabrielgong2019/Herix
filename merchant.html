@@ -2592,7 +2592,14 @@ function doCsvUpload() {
       html += '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次，结算 ¥'+Number(d.totalPaid||0).toLocaleString()+'（单价 ¥'+Number(d.commissionPerConversion||0).toLocaleString()+'/次）</div>';
     }
     if (d.skippedCodes && d.skippedCodes.length) {
-      html += '<div class="alert alert-error">⚠️ '+d.skippedCodes.length+' 条未生效——推广码在该任务下不存在，请确认选对了任务、码拼写无误：<br><span style="font-family:monospace">'+esc(d.skippedCodes.join(', '))+'</span></div>';
+      var hints = {};
+      (d.skippedHints || []).forEach(function(h) { hints[h.code] = h.belongsTo; });
+      html += '<div class="alert alert-error">⚠️ '+d.skippedCodes.length+' 条未生效：<br>'
+        + d.skippedCodes.map(function(c) {
+            return '<span style="font-family:monospace">'+esc(c)+'</span>'
+              + (hints[c] ? ' — 该码属于任务《'+esc(hints[c])+'》，请在上方选择该任务后重新上传' : ' — 该码在所选任务下不存在，请检查拼写');
+          }).join('<br>')
+        + '</div>';
     }
     if (d.blockedCodes && d.blockedCodes.length) {
       html += '<div class="alert alert-error">💰 '+esc(d.message||'部分推广码因余额不足未结算')+'：<span style="font-family:monospace">'+esc(d.blockedCodes.join(', '))+'</span></div>';

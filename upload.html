@@ -209,13 +209,31 @@ function doUpload() {
     try {
       var d = JSON.parse(xhr.responseText);
       if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">❌ ' + esc(d.error) + '</div>'; return; }
-      var html = '<div class="alert alert-success">'
-        + '<div style="font-weight:700;margin-bottom:8px">✅ 上传成功</div>'
-        + '<div class="result-row"><span>处理记录</span><span class="badge badge-green">' + (d.processed||0) + ' 条</span></div>'
-        + '<div class="result-row"><span>新增转化</span><span class="badge badge-green">' + (d.newConversions||0) + ' 次</span></div>'
-        + '<div class="result-row"><span>跳过（码不存在）</span><span class="badge badge-gray">' + (d.skipped||0) + ' 条</span></div>'
-        + (d.totalPaid > 0 ? '<div class="result-row"><span>已触发结算</span><span class="badge badge-green">¥' + Number(d.totalPaid).toLocaleString() + '</span></div>' : '')
-        + '</div>';
+      var html = '';
+      if ((d.processed||0) > 0) {
+        html += '<div class="alert alert-success">'
+          + '<div style="font-weight:700;margin-bottom:8px">✅ 上传成功</div>'
+          + '<div class="result-row"><span>生效记录</span><span class="badge badge-green">' + d.processed + ' 条</span></div>'
+          + '<div class="result-row"><span>新增转化</span><span class="badge badge-green">' + (d.newConversions||0) + ' 次</span></div>'
+          + (d.totalPaid > 0 ? '<div class="result-row"><span>已触发结算</span><span class="badge badge-green">¥' + Number(d.totalPaid).toLocaleString() + '</span></div>' : '')
+          + '</div>';
+      }
+      if (d.skippedCodes && d.skippedCodes.length) {
+        var hints = {};
+        (d.skippedHints || []).forEach(function(h) { hints[h.code] = h.belongsTo; });
+        html += '<div class="alert alert-error"><div style="font-weight:700;margin-bottom:8px">⚠️ ' + d.skippedCodes.length + ' 条未生效</div>'
+          + d.skippedCodes.map(function(c) {
+              return '<div style="font-family:monospace;margin-bottom:4px">' + esc(c)
+                + (hints[c] ? ' <span style="font-family:inherit">— 该码属于任务《' + esc(hints[c]) + '》，请使用该任务的上传链接</span>'
+                            : ' <span style="font-family:inherit">— 该码在本任务下不存在，请检查拼写</span>')
+                + '</div>';
+            }).join('')
+          + '</div>';
+      }
+      if (d.blockedCodes && d.blockedCodes.length) {
+        html += '<div class="alert alert-error">💰 ' + esc(d.message || '部分推广码因余额不足未结算') + '</div>';
+      }
+      if (!html) html = '<div class="alert alert-error">没有任何记录被处理，请检查数据格式</div>';
       resultEl.innerHTML = html;
       // 刷新任务信息
       setTimeout(init, 1500);

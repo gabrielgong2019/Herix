@@ -5,6 +5,7 @@ import { wallet as walletApi, getToken } from '../../utils/api';
 import { t } from '../../utils/i18n';
 import './index.scss';
 import { fmt } from '../../utils/format';
+import BackBar from '../../components/BackBar';
 
 // ── 常量存 labelKey，渲染时 t() 取值——存 t() 结果会冻结在启动时语言 ──
 const PERIODS: { id: string; labelKey: string }[] = [
@@ -198,6 +199,7 @@ export default class Wallet extends Component<{}, State> {
 
     return (
       <View className='wallet-page'>
+        <BackBar />
         {/* 余额卡 */}
         <View className='balance-card'>
           <Text className='bc-label'>{t('wallet.balance.available')}</Text>

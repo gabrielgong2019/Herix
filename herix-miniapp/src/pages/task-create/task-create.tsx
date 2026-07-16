@@ -67,7 +67,7 @@ export default class TaskCreate extends Component<{}, State> {
           <Text className='label'>任务标题 *</Text>
           <Input
             className='input'
-            placeholder='例如：新品推广内容创作'
+            placeholder='例如：Herix 大使计划'
             value={title}
             onInput={e => this.setState({ title: e.detail.value })}
           />

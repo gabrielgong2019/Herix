@@ -9,6 +9,7 @@ import RequirementsChecklist from '../../components/RequirementsChecklist';
 import PlatformAccountInput, { PlatformAccountValue } from '../../components/PlatformAccountInput';
 import './task.scss';
 import { t } from '../../utils/i18n';
+import BackBar from '../../components/BackBar';
 
 interface TaskDetailData {
   id: string;
@@ -215,6 +216,14 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     Taro.navigateTo({ url: `/pages/apply/apply?taskId=${this.state.task!.id}` });
   };
 
+  copyCode = () => {
+    Taro.setClipboardData({
+      data: this.state.myAmbassadorTask?.unique_code || '',
+      // weapp 端 setClipboardData 自带"内容已复制"提示,只在 H5 补 toast,避免双提示
+      success: () => { if (process.env.TARO_ENV === 'h5') Taro.showToast({ title: t('common.copied'), icon: 'success' }); },
+    });
+  };
+
   // ── 渲染 ──
 
   renderReqModal() {
@@ -390,6 +399,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
     return (
       <View className='task-detail'>
+        <BackBar />
         <View className='section'>
           <Text className='title'>{task.title}</Text>
           <View className='tags'>
@@ -440,6 +450,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             <Text className='section-title'>{t('task.myCode')}</Text>
             <View className='code-box'>
               <Text className='code-text'>{myAmbassadorTask.unique_code}</Text>
+              <Text className='code-copy' onClick={this.copyCode}>{t('hd.copy')}</Text>
             </View>
             <Text className='code-hint'>{t('task.codeHint')}</Text>
           </View>

@@ -263,6 +263,21 @@
   background: #f2f3f7;
   border-radius: 16px;
   margin: 16px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.code-copy {
+  flex-shrink: 0;
+  padding: 12px 32px;
+  border-radius: 36px;
+  font-size: 22px;
+  font-weight: 600;
+  background: var(--gold);
+  color: #fff;
+  white-space: nowrap;
 }
 
 .code-text {
@@ -369,6 +384,11 @@
     column-gap: 24PX;
     align-items: start;
     padding: 24PX 24PX 40PX; // 底部不再需要给 fixed 栏留 140px
+  }
+
+  .back-bar {
+    grid-column: 1 / -1; // 返回条横跨主内容+侧栏
+    padding: 0;
   }
 
   .section {

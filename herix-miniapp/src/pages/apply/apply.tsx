@@ -4,6 +4,7 @@ import Taro from '@tarojs/taro';
 import { submissions, tasks as taskApi } from '../../utils/api';
 import './apply.scss';
 import { t } from '../../utils/i18n';
+import BackBar from '../../components/BackBar';
 
 // 各平台"如何复制链接"提示（对齐 herix submitHTML）
 // 存词条 key，渲染时 t() 取值
@@ -88,9 +89,9 @@ export default class Apply extends Component<{}, State> {
       await submissions.submit(this.taskId, { contentUrl, description });
       Taro.showToast({ title: t('apply.success'), icon: 'success' });
       setTimeout(() => Taro.navigateBack(), 1500);
+      // 成功后刻意不复位 submitting——返回前的1.5s窗口内按钮保持禁用,防双击双提交
     } catch (err: any) {
       Taro.showToast({ title: err.message || t('apply.failed'), icon: 'none' });
-    } finally {
       this.setState({ submitting: false });
     }
   };
@@ -100,6 +101,7 @@ export default class Apply extends Component<{}, State> {
 
     return (
       <View className='apply-page'>
+        <BackBar />
         <Text className='page-title'>{isResubmit ? t('apply.resubmitTitle') : t('apply.title')}</Text>
 
         {isResubmit && !!rejectNote && <View className='reject-banner'>{t('apply.rejectBanner', { note: rejectNote })}</View>}

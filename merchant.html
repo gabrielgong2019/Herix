@@ -324,7 +324,7 @@ function activateBrandPage() {
     h += '<div class="field"><label>业务市场 *</label><div style="display:flex;gap:10px;margin-top:6px">';
     h += '<div class="btn btn-outline btn-sm" style="flex:1;border-color:var(--primary);color:var(--primary)">🇯🇵 日本市场（JPY）</div>';
     h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
-    h += '<div class="field" style="margin-top:12px"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Remitly Japan" value="'+esc(state.activateData?.companyName||'')+'"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Herix" value="'+esc(state.activateData?.companyName||'')+'"></div>';
     h += '<div class="field" style="margin-top:12px"><label>所属行业</label><select id="act-industry">';
     ['金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他'].forEach(function(i){h+='<option>'+i+'</option>'});
     h += '</select></div>';
@@ -839,7 +839,7 @@ function taskFormPage(t) {
     +'<div id="task-capacity-banner">'+taskCapacityBannerContent()+'</div>'
     +'<div id="task-cost-meter" style="margin-bottom:4px"></div>'
     +'<div class="form-grid">'
-    + field('任务标题 *', 'title', 'text', t&&t.title||'', '例：Remitly Japan 大使计划')
+    + field('任务标题 *', 'title', 'text', t&&t.title||'', '例：Herix 大使计划')
     + '<div class="field"><label>任务模式 *</label><select id="mode" onchange="toggleCodeModeSection();onTaskCostInput()">'
     + '<option value="STANDARD"'+(t&&t.mode==='STANDARD'?' selected':'')+'>类型B — 任务体验（提交内容审核）</option>'
     + '<option value="PERFORMANCE"'+(t&&t.mode==='PERFORMANCE'?' selected':'')+'>类型A — 成果报酬（推广码转化）</option>'

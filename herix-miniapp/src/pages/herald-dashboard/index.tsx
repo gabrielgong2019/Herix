@@ -75,7 +75,11 @@ export default class HeraldDashboard extends Component<{}, State> {
   openSubmit = (taskId: string) => Taro.navigateTo({ url: `/pages/apply/apply?taskId=${taskId}` });
 
   copyCode = (code: string) => {
-    Taro.setClipboardData({ data: code });
+    Taro.setClipboardData({
+      data: code,
+      // weapp 自带复制提示,只在 H5 补 toast
+      success: () => { if (process.env.TARO_ENV === 'h5') Taro.showToast({ title: t('common.copied'), icon: 'success' }); },
+    });
   };
 
   // 通用待办卡（等价 herix taskCardHTML）

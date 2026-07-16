@@ -422,5 +422,7 @@
   "category.food": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
   "category.lifestyle": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
   "category.referral": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
-  "category.baby": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label"
+  "category.baby": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
+  "common.back": "次级页顶部返回条(仅H5显示,小程序有原生返回),短词",
+  "common.copied": "复制成功toast(仅H5,weapp有自带提示)"
 }

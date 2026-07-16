@@ -1,0 +1,14 @@
+.back-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 32px 0;
+  color: var(--primary);
+}
+.back-bar-arrow {
+  font-size: 40px;
+  line-height: 1;
+}
+.back-bar-text {
+  font-size: 26px;
+}

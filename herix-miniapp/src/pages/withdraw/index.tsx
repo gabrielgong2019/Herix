@@ -5,6 +5,7 @@ import { wallet as walletApi, getToken } from '../../utils/api';
 import { t } from '../../utils/i18n';
 import './index.scss';
 import { fmt } from '../../utils/format';
+import BackBar from '../../components/BackBar';
 
 const METHOD_ICONS: Record<string, string> = {
   BANK: '🏦',
@@ -140,6 +141,7 @@ export default class Withdraw extends Component<{}, State> {
     if (methods.length === 0) {
       return (
         <View className='withdraw-page'>
+          <BackBar />
           <Text className='avail-line'>
             {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
           </Text>
@@ -170,6 +172,7 @@ export default class Withdraw extends Component<{}, State> {
 
     return (
       <View className='withdraw-page'>
+        <BackBar />
         <Text className='avail-line'>
           {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
         </Text>

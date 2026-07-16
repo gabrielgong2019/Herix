@@ -63,7 +63,14 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
   const { residence, residenceCountry, kycStatus, visaType, bankAccount, socialPlatforms } = req.body;
 
   const data: Record<string, any> = {};
-  if (residence) data.residence = residence;
+  if (residence) {
+    // 枚举校验：曾出现前端把显示串("🇨🇳 中国")整个写进来的脏数据，这里挡死。
+    // 取值域为 onboard(japan/overseas) 与收款地区(china) 的并集
+    if (!['japan', 'china', 'overseas'].includes(residence)) {
+      return res.status(400).json({ error: 'residence 取值无效，允许: japan / china / overseas' });
+    }
+    data.residence = residence;
+  }
   if (residenceCountry) data.residence_country = residenceCountry;
   if (kycStatus) data.kyc_status = kycStatus;
   if (visaType) data.visa_type = visaType;

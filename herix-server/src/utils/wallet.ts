@@ -88,8 +88,10 @@ async function getOrCreateWallet(
   userId: string,
   walletType: WalletType,
 ): Promise<{ id: string; available_balance: number; frozen_balance: number }> {
+  // FOR UPDATE 行锁：并发操作同一钱包时串行化，防止"无锁读→JS加减→覆盖写"丢更新
+  //（每个事务只锁一个钱包行，无死锁面；行不存在时走下方 INSERT，由 UNIQUE 约束兜底）
   const existing = await client.query(
-    'SELECT id, available_balance, frozen_balance FROM wallets WHERE user_id = $1 AND wallet_type = $2 AND currency = $3',
+    'SELECT id, available_balance, frozen_balance FROM wallets WHERE user_id = $1 AND wallet_type = $2 AND currency = $3 FOR UPDATE',
     [userId, walletType, CURRENCY]
   );
   if (existing.rows[0]) return existing.rows[0];
@@ -106,19 +108,23 @@ async function getOrCreateWallet(
 async function applyWalletEntry(
   params: WalletOpParams,
   deltaAvailable: number,
-  deltaFrozen: number
+  deltaFrozen: number,
+  extClient?: any
 ): Promise<{ entryId: string; balance: WalletBalance }> {
-  const client = await pool.connect();
+  // 传入 extClient 时加入调用方的事务（BEGIN/COMMIT/ROLLBACK/release 归调用方管），
+  // 用于"业务行 + 钱包操作"需要同生共死的场景（如提现申请）
+  const client = extClient ?? await pool.connect();
+  const ownTxn = !extClient;
 
   try {
-    await client.query('BEGIN');
+    if (ownTxn) await client.query('BEGIN');
 
     const existing = await client.query(
       'SELECT id, available_after, frozen_after FROM wallet_entries WHERE idempotency_key = $1',
       [params.idempotencyKey]
     );
     if (existing.rows[0]) {
-      await client.query('ROLLBACK');
+      if (ownTxn) await client.query('ROLLBACK');
       const r = existing.rows[0];
       return {
         entryId: r.id,
@@ -157,13 +163,13 @@ async function applyWalletEntry(
       ]
     );
 
-    await client.query('COMMIT');
+    if (ownTxn) await client.query('COMMIT');
     return { entryId, balance: { available: newAvailable, frozen: newFrozen, total: newAvailable + newFrozen } };
   } catch (e) {
-    await client.query('ROLLBACK');
+    if (ownTxn) await client.query('ROLLBACK');
     throw e;
   } finally {
-    client.release();
+    if (ownTxn) client.release();
   }
 }
 
@@ -171,17 +177,18 @@ async function applyWalletEntry(
 
 type CallerParams = Omit<WalletOpParams, 'type' | 'walletType'>;
 
-export const topupBrand        = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TOPUP'               },  p.amount,  0         );
-export const freezeForTask     = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_FREEZE'         }, -p.amount,  p.amount  );
-export const unfreezeTask      = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_UNFREEZE'       },  p.amount, -p.amount  );
-export const settleTask        = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_SETTLE'         },  0,        -p.amount  );
+// 第二参数 client 可选：传入时加入调用方事务（见 applyWalletEntry 注释）
+export const topupBrand        = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TOPUP'               },  p.amount,  0        , client);
+export const freezeForTask     = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_FREEZE'         }, -p.amount,  p.amount , client);
+export const unfreezeTask      = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_UNFREEZE'       },  p.amount, -p.amount , client);
+export const settleTask        = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_SETTLE'         },  0,        -p.amount , client);
 // 信用托管任务结算：无预冻结，直接从可用余额扣除（商家充值后才能触达此路径）
-export const settleCreditTask  = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_SETTLE'         }, -p.amount,  0         );
-export const creditHerald      = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'TASK_CREDIT'         },  p.amount,  0         );
-export const creditPlatformFee = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'platform', type: 'PLATFORM_FEE'        },  p.amount,  0         );
-export const freezeWithdrawal  = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_FREEZE'   }, -p.amount,  p.amount  );
-export const debitWithdrawal   = (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_DEBIT'    },  0,        -p.amount  );
-export const unfreezeWithdrawal= (p: CallerParams) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_UNFREEZE' },  p.amount, -p.amount  );
+export const settleCreditTask  = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_SETTLE'         }, -p.amount,  0        , client);
+export const creditHerald      = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'TASK_CREDIT'         },  p.amount,  0        , client);
+export const creditPlatformFee = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'platform', type: 'PLATFORM_FEE'        },  p.amount,  0        , client);
+export const freezeWithdrawal  = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_FREEZE'   }, -p.amount,  p.amount , client);
+export const debitWithdrawal   = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_DEBIT'    },  0,        -p.amount , client);
+export const unfreezeWithdrawal= (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_UNFREEZE' },  p.amount, -p.amount , client);
 
 /** 查询余额 */
 export async function getBalance(userId: string, walletType: WalletType): Promise<WalletBalance> {

@@ -283,52 +283,85 @@ walletRouter.get('/withdrawal-info', async (req: Request, res: Response) => {
   }
 });
 
-/** POST /api/wallet/withdraw-request — 赫使提交提现申请 */
+/** POST /api/wallet/withdraw-request — 赫使提交提现申请
+ *
+ * 原子性设计：pending 查重 + 申请落库 + 余额冻结包在同一事务里——
+ * 1) 先对钱包行 FOR UPDATE，同一用户的提现请求串行化（堵死并发穿过查重的窗口）；
+ * 2) 冻结失败（如余额竞态不足）时 ROLLBACK 连申请行一起回滚，
+ *    不会留下卡死后续提现的僵尸 pending（旧实现三步无事务，两个都会发生）。
+ */
 walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { amount, method, accountDetails } = req.body;
 
+  const amt = Number(amount);
+  if (!Number.isFinite(amt) || amt <= 0) {
+    return res.status(400).json({ error: '提现金额无效' });
+  }
   if (!method || !accountDetails) {
     return res.status(400).json({ error: '请填写收款方式和账号信息' });
   }
 
   let feeInfo: { fee: number; netAmount: number; payoutDate: string };
   try {
-    feeInfo = await calcWithdrawalFee(Number(amount));
+    feeInfo = await calcWithdrawalFee(amt);
   } catch (err: any) {
     return res.status(400).json({ error: err.message, code: err.code });
   }
 
+  // 预检仅为友好报错；最终裁决在事务内的 freezeWithdrawal（余额守卫）
   const bal = await getBalance(userId, 'herald');
-  if (Number(amount) > bal.available) {
+  if (amt > bal.available) {
     return res.status(400).json({ error: `可提现余额不足，当前可提 ¥${bal.available.toFixed(0)}` });
   }
 
-  const pending = await findOne(
-    `SELECT id FROM withdrawal_requests WHERE herald_id = ? AND status IN ('pending','processing')`,
-    [userId]
-  );
-  if (pending) return res.status(409).json({ error: '已有待处理的提现申请' });
+  const client = await db.connect();
+  const id = genId();
+  try {
+    await client.query('BEGIN');
 
-  const id = await insert('withdrawal_requests', {
-    herald_id:      userId,
-    amount:         Number(amount),
-    currency:       'JPY',
-    method,
-    account_details: JSON.stringify(accountDetails),
-    status:         'pending',
-    fee:            feeInfo.fee,
-    net_amount:     feeInfo.netAmount,
-    payout_date:    feeInfo.payoutDate === 'immediate' ? null : feeInfo.payoutDate,
-  });
+    // 锁定该用户 herald 钱包行：串行化同一用户的并发提现（钱包不存在时锁空集，
+    // 此时余额必为 0，后面冻结必然失败回滚，无害）
+    await client.query(
+      `SELECT id FROM wallets WHERE user_id = $1 AND wallet_type = 'herald' AND currency = 'JPY' FOR UPDATE`,
+      [userId]
+    );
 
-  await freezeWithdrawal({
-    userId,
-    amount: Number(amount),
-    idempotencyKey: `WITHDRAWAL_FREEZE:${id}`,
-    referenceType:  'withdrawal_request',
-    referenceId:    id,
-  });
+    const pending = await client.query(
+      `SELECT id FROM withdrawal_requests WHERE herald_id = $1 AND status IN ('pending','processing')`,
+      [userId]
+    );
+    if (pending.rows[0]) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: '已有待处理的提现申请' });
+    }
+
+    await client.query(
+      `INSERT INTO withdrawal_requests
+         (id, herald_id, amount, currency, method, account_details, status, fee, net_amount, payout_date)
+       VALUES ($1, $2, $3, 'JPY', $4, $5, 'pending', $6, $7, $8)`,
+      [
+        id, userId, amt, method, JSON.stringify(accountDetails),
+        feeInfo.fee, feeInfo.netAmount,
+        feeInfo.payoutDate === 'immediate' ? null : feeInfo.payoutDate,
+      ]
+    );
+
+    await freezeWithdrawal({
+      userId,
+      amount: amt,
+      idempotencyKey: `WITHDRAWAL_FREEZE:${id}`,
+      referenceType:  'withdrawal_request',
+      referenceId:    id,
+    }, client);
+
+    await client.query('COMMIT');
+  } catch (err: any) {
+    await client.query('ROLLBACK');
+    return res.status(400).json({ error: err.message, code: err.code });
+  } finally {
+    client.release();
+  }
 
   const message = feeInfo.payoutDate === 'immediate'
     ? `提现申请已提交，手续费 ¥${feeInfo.fee}，到账 ¥${feeInfo.netAmount}`

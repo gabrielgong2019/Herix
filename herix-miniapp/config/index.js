@@ -1,3 +1,7 @@
+// weapp 和 h5 分开输出目录，避免两个构建互相覆盖对方产物
+// （app.json 属于 weapp 构建，index.html/js/css 属于 h5 构建，共用一个 dist/ 会互相冲掉）
+const isH5 = process.env.TARO_ENV === 'h5';
+
 export default {
   projectName: 'herix-miniapp',
   date: '2026-05-27',
@@ -9,7 +13,7 @@ export default {
     375: 2 / 1,
   },
   sourceRoot: 'src',
-  outputRoot: 'dist',
+  outputRoot: isH5 ? 'dist/h5' : 'dist/weapp',
   plugins: ['@tarojs/plugin-platform-weapp', '@tarojs/plugin-platform-h5'],
   framework: 'react',
   compiler: {

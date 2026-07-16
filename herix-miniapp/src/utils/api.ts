@@ -4,13 +4,25 @@ import Taro from '@tarojs/taro';
 declare const wx: any;
 
 // ── 云托管配置（小程序端专用，需要在微信云托管控制台创建服务后填入）──
-const CLOUD_ENV_ID = 'REPLACE_WITH_CLOUD_ENV_ID'; // 云开发环境ID
+const CLOUD_ENV_ID = 'prod-herix-d5gh5h4nv767053ae'; // 云开发环境ID
 const CLOUD_SERVICE_NAME = 'herix-proxy'; // 云托管服务名称，需与部署时一致
 
-// H5 / 开发调试走的直连地址（真实 HTTPS 域名，不能用相对路径）
-const H5_BASE_URL = 'https://herix.huaxuex.com/api';
+// H5 端用相对路径，自动打"当前页面所在的服务器"——本地测试（localhost:3005）
+// 打本地后端，以后部署到哪个域名就自动打那个域名自己，不用写死成线上地址
+const H5_BASE_URL = '/api';
 
 const isWeapp = process.env.TARO_ENV === 'weapp';
+
+// 请求失败时，除了错误信息，把后端返回的完整 body（code/failures 等结构化字段）
+// 一并挂在异常上，调用方需要时可以取，比如 applications.apply() 的 REQUIREMENTS_NOT_MET 场景
+export class ApiError extends Error {
+  data: any;
+  constructor(message: string, data?: any) {
+    super(message);
+    this.name = 'ApiError';
+    this.data = data;
+  }
+}
 
 // 存储 token 的 key
 const TOKEN_KEY = 'herix_token';
@@ -61,7 +73,7 @@ async function request<T = any>(
       });
 
       if (res.statusCode >= 400) {
-        throw new Error(res.data?.error || '请求失败');
+        throw new ApiError(res.data?.error || '请求失败', res.data);
       }
 
       return res.data as T;
@@ -70,14 +82,14 @@ async function request<T = any>(
     // H5 端：直连真实后端域名
     const res = await Taro.request({
       url: `${H5_BASE_URL}${path}`,
-      method,
+      method: method as any,
       header,
       data,
       dataType: 'json',
     });
 
     if (res.statusCode >= 400) {
-      throw new Error(res.data?.error || '请求失败');
+      throw new ApiError(res.data?.error || '请求失败', res.data);
     }
 
     return res.data as T;
@@ -96,6 +108,7 @@ export const auth = {
   login: (data: { account: string; password: string }) =>
     request<{ token: string; user: any }>('POST', '/auth/login', data, false),
   me: () => request<any>('GET', '/auth/me'),
+  switchAccount: () => request<{ token: string; user: any }>('POST', '/auth/switch-account'),
 };
 
 // ── Tasks ──
@@ -135,4 +148,68 @@ export const users = {
   getHeralds: () => request<any[]>('GET', '/users/heralds', undefined, false),
   getPublic: (id: string) => request<any>('GET', `/users/${id}`, undefined, false),
   myTransactions: () => request<any[]>('GET', '/users/me/transactions'),
+  addRole: (role: 'HERALD' | 'BRAND') =>
+    request<{ token: string; roles: string[] }>('POST', '/users/add-role', { role }),
+  updateMe: (data: { nickname?: string }) => request<any>('PATCH', '/users/me', data),
+};
+
+// ── Ambassador（赫使身份/入驻）──
+export const ambassador = {
+  status: () => request<any>('GET', '/ambassador/status'),
+  updateProfile: (data: {
+    residence?: string;
+    residenceCountry?: string;
+    kycStatus?: string;
+    visaType?: string;
+    bankAccount?: any;
+    socialPlatforms?: any[];
+  }) => request<any>('PATCH', '/ambassador/profile', data),
+  submitDeclaration: (data: { visaType: string; hasWorkPermit?: boolean; workPermitHours?: number }) =>
+    request<any>('POST', '/ambassador/declaration', data),
+  onboard: (data: {
+    residence?: string;
+    residenceCountry?: string;
+    visaType?: string;
+    hasWorkPermit?: boolean;
+    workPermitHours?: number;
+    bankAccountType?: string;
+    bankDetails?: any;
+    socialPlatforms?: any[];
+  }) => request<{ success: boolean; profile: any }>('POST', '/ambassador/onboard', data),
+};
+
+// ── Wallet ──
+export const wallet = {
+  balance: (params?: { from?: string; to?: string }) => request<any>('GET', '/wallet/balance', params),
+  transactions: (params?: { type?: string; page?: number; limit?: number; walletType?: string; from?: string; to?: string }) =>
+    request<{ transactions: any[]; total: number; page: number; limit: number }>('GET', '/wallet/transactions', params),
+  methods: () => request<any[]>('GET', '/wallet/methods'),
+  addMethod: (data: { type: string; country?: string; label: string; account_details: any; is_default?: boolean }) =>
+    request<{ id: string }>('POST', '/wallet/methods', data),
+  updateMethod: (id: string, data: any) => request<any>('PUT', `/wallet/methods/${id}`, data),
+  deleteMethod: (id: string) => request<any>('DELETE', `/wallet/methods/${id}`),
+  withdrawalInfo: (amount: number) =>
+    request<{ requestAmount: number; fee: number; netAmount: number; scheduleMode: string; nextPayoutDate?: string; note?: string }>(
+      'GET', '/wallet/withdrawal-info', { amount },
+    ),
+  withdrawRequest: (data: { amount: number; method: string; accountDetails: any }) =>
+    request<any>('POST', '/wallet/withdraw-request', data),
+  // withdraw: 对应新设计的提现执行接口，后端还没有（见迁移计划第7节），Phase 3 补上后端后再加这个方法
+};
+
+// ── Referrals ──
+export const referrals = {
+  myCodes: () => request<any[]>('GET', '/referrals/my-codes'),
+};
+
+// ── Categories ──
+export const categories = {
+  list: () => request<any[]>('GET', '/categories', undefined, false),
+};
+
+// ── Notifications ──
+export const notifications = {
+  list: () => request<any[]>('GET', '/notifications'),
+  markRead: (id: string) => request<any>('PATCH', `/notifications/${id}/read`),
+  markAllRead: () => request<any>('PATCH', '/notifications/read-all'),
 };

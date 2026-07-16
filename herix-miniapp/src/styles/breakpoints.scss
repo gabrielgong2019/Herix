@@ -1,0 +1,22 @@
+// 全项目唯一的断点定义处。页面/组件一律：
+//   @use '../../styles/breakpoints' as bp;   （路径按层级调整）
+//   @include bp.desktop { ... }
+// 禁止在业务样式里散写 @media —— 断点数值变更只改这里。
+//
+// 断点是真实像素（@media 里的 px 不被 pxtransform 转换）。
+// 桌面块内写尺寸记得用大写 PX（真实像素）；组件内部尺寸继续用设计稿 px。
+
+// ≥768：桌面浏览器（此时 index.html 的 rem 脚本把根字号锁在 20px，
+// 设计稿值÷2=真实像素）。PC 微信小程序拖宽窗口时也会命中，视为赚到。
+@mixin desktop {
+  @media (min-width: 768px) {
+    @content;
+  }
+}
+
+// ≥1200：宽屏。预留给将来三列列表/更宽容器，目前无人使用。
+@mixin wide {
+  @media (min-width: 1200px) {
+    @content;
+  }
+}

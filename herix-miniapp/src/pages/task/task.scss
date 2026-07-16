@@ -1,5 +1,7 @@
+@use '../../styles/breakpoints' as bp;
+
 .task-detail {
-  padding-bottom: 140px;
+  padding-bottom: 140px; // 给手机端 fixed 底部操作栏留位
 }
 
 .loading {
@@ -121,7 +123,7 @@
   width: 100%;
   height: 88px;
   line-height: 88px;
-  background: linear-gradient(135deg, var(--accent), #c73652);
+  background: var(--primary);
   color: #fff;
   font-size: 30px;
   font-weight: 600;
@@ -132,4 +134,260 @@
 
 .btn-primary:active {
   opacity: 0.9;
+}
+
+.btn-outline {
+  width: 100%;
+  height: 88px;
+  line-height: 88px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 30px;
+  border-radius: 44px;
+  border: 1px solid var(--border);
+  text-align: center;
+  margin-top: 16px;
+}
+
+.btn-disabled {
+  width: 100%;
+  height: 88px;
+  line-height: 88px;
+  background: #e5e5ea;
+  color: #8a8a8e;
+  font-size: 30px;
+  font-weight: 600;
+  border-radius: 44px;
+  text-align: center;
+  border: none;
+}
+
+// ── 资质预检面板 ──
+
+.requirements-checklist {
+  display: block;
+}
+
+.requirements-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  display: block;
+}
+
+.requirement-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.requirement-row:last-child {
+  border-bottom: none;
+}
+
+.requirement-icon {
+  font-size: 32px;
+}
+
+.requirement-name {
+  font-size: 26px;
+  flex: 1;
+}
+
+.requirement-name.muted {
+  color: var(--text-secondary);
+}
+
+.optional-badge {
+  font-size: 22px;
+  color: var(--text-muted);
+  background: #e5e5ea;
+  padding: 4px 16px;
+  border-radius: 16px;
+}
+
+.requirements-hint {
+  margin-top: 20px;
+  padding: 16px 20px;
+  background: #fffbeb;
+  border-radius: 16px;
+  font-size: 24px;
+  color: #92400e;
+}
+
+// ── 状态提示条 ──
+
+.status-banner {
+  text-align: center;
+  padding: 24px;
+  border-radius: 24px;
+  font-size: 28px;
+  font-weight: 500;
+}
+
+.banner-pending { background: #fefce8; color: #92400e; }
+.banner-rejected { background: #fef2f2; color: #dc2626; }
+.banner-success { background: #f0fdf4; color: var(--success); }
+
+.banner-note {
+  font-size: 24px;
+  color: #dc2626;
+  text-align: center;
+  margin-top: 12px;
+  display: block;
+}
+
+.banner-hint {
+  font-size: 22px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 16px;
+  display: block;
+}
+
+.banner-hint-error {
+  color: #ef4444;
+}
+
+// ── 推广码 ──
+
+.code-section {
+  text-align: center;
+}
+
+.code-box {
+  padding: 24px;
+  background: #f2f3f7;
+  border-radius: 16px;
+  margin: 16px 0;
+}
+
+.code-text {
+  font-size: 36px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.code-hint {
+  font-size: 22px;
+  color: var(--text-muted);
+}
+
+// ── 资质不足弹窗 ──
+
+.req-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.req-modal-card {
+  width: 640px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  box-sizing: border-box;
+}
+
+.req-modal-title {
+  font-size: 32px;
+  font-weight: 700;
+  text-align: center;
+  display: block;
+}
+
+.req-modal-sub {
+  font-size: 22px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 12px 0 32px;
+  display: block;
+}
+
+.req-fail-row {
+  padding: 20px 24px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.req-fail-hard {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.req-fail-soft {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  display: block;
+}
+
+.req-fail-icon {
+  font-size: 36px;
+}
+
+.req-fail-name {
+  font-size: 26px;
+  font-weight: 600;
+  display: block;
+}
+
+.req-fail-name-hard { color: #dc2626; }
+
+.req-fail-desc {
+  font-size: 22px;
+  margin-top: 4px;
+  display: block;
+}
+
+.req-fail-desc-hard { color: #ef4444; }
+
+// ============================================================
+// 桌面：详情页切「主内容 + 右侧操作卡」两栏（电商 PC 详情页的购买卡形态）。
+// 纯 CSS 实现：.actions 从手机的 fixed 底栏变为 sticky 侧卡，组件树不动。
+// ⚠️ 此块必须在文件末尾——媒体查询不增加优先级，靠源码顺序覆盖上面的手机端规则
+// ============================================================
+@include bp.desktop {
+  .task-detail {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320PX;
+    column-gap: 24PX;
+    align-items: start;
+    padding: 24PX 24PX 40PX; // 底部不再需要给 fixed 栏留 140px
+  }
+
+  .section {
+    grid-column: 1;
+    margin: 0 0 16PX; // 左右间距由 grid 的 padding/gap 承担
+  }
+
+  .actions {
+    grid-column: 2;
+    grid-row: 1 / span 20; // 跨足够多的隐式行，sticky 才有滚动行程
+    position: sticky;
+    top: 24PX;
+    align-self: start;
+    // 复位手机端 fixed 底栏的定位
+    left: auto;
+    right: auto;
+    bottom: auto;
+    padding: 24PX;
+    border-radius: 12PX;
+    box-shadow: var(--shadow);
+  }
 }

@@ -1,13 +1,57 @@
+@use '../../styles/breakpoints' as bp;
+
+// 数值按 herix.html 真实设计 ×2 换算（Taro 750 设计宽度规则）
+
 .index-page {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: var(--bg);
   padding-bottom: 100px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 40px 40px 16px;
+  background: var(--bg);
+}
+
+.logo {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.logo-accent {
+  color: var(--primary);
+}
+
+.filters {
+  white-space: nowrap;
+  padding: 4px 40px 24px;
+  background: var(--bg);
+}
+
+.filter {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 10px 28px;
+  margin-right: 12px;
+  border-radius: 32px;
+  font-size: 24px;
+  background: #e5e5ea;
+  color: var(--text-secondary);
+}
+
+.filter.active {
+  background: #111;
+  color: #fff;
 }
 
 .tab-bar {
   display: flex;
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 10;
@@ -16,15 +60,14 @@
 .tab {
   flex: 1;
   text-align: center;
-  padding: 14px 0;
-  font-size: 15px;
-  color: #666;
+  padding: 28px 0;
+  font-size: 26px;
+  color: var(--text-secondary);
   position: relative;
-  cursor: pointer;
 }
 
 .tab.active {
-  color: #1a1a2e;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -34,81 +77,105 @@
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 40px;
-  height: 3px;
-  background: #1a1a2e;
-  border-radius: 2px;
+  width: 80px;
+  height: 6px;
+  background: var(--primary);
+  border-radius: 4px;
+}
+
+.grid {
+  padding: 8px 32px 32px;
+}
+
+// 桌面宽度：任务列表切两列网格，别浪费放宽出来的空间。
+// gap 用大写 PX（真实像素）——小写 24px 会被 pxtransform 转成 0.48rem ≈ 13px
+@include bp.desktop {
+  .grid {
+    display: grid;
+    // minmax(0,1fr) 而不是裸 1fr：1fr 的隐含最小宽度是内容 min-content，
+    // 卡片里出现无空格长串（邮箱/URL 标题）会把列撑爆、右列被推出屏幕
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24PX;
+    // 不写 align-items: start——用 grid 默认的 stretch 让同行卡片等高，
+    // 配合 TaskCard 标题固定两行占位，卡片高度天然一致
+  }
+
+  // TaskCard 组件自带 margin-bottom 是给单列用的，网格布局改用 gap 控制间距，避免叠加
+  .grid .task-card {
+    margin-bottom: 0;
+  }
+
+  // 空态/加载态横跨两列，不然只占左边一格
+  .grid .empty,
+  .grid .loading {
+    grid-column: 1 / -1;
+  }
 }
 
 .list {
-  padding: 12px;
+  // 保留给"我的待办"tab用（mini-card 系列自带间距）
 }
 
-.task-card {
+.mini-card {
   display: block;
-  background: #fff;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 32px;
+  margin: 0 24px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.task-card.mine {
-  border-left: 3px solid #4caf50;
+.mini-card.mine {
+  border-left: 6px solid var(--success);
 }
 
-.task-header {
+.mini-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
 }
 
-.task-title {
-  font-size: 16px;
+.mini-card-title {
+  font-size: 30px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--text-primary);
   flex: 1;
-  margin-right: 12px;
+  margin-right: 24px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.task-price {
-  font-size: 16px;
+.mini-card-price {
+  font-size: 32px;
   font-weight: 700;
-  color: #e74c3c;
+  color: var(--primary);
   white-space: nowrap;
 }
 
-.task-meta {
+.mini-card-meta {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
 }
 
-.task-creator {
-  font-size: 12px;
-  color: #999;
-}
-
-.task-tag {
-  font-size: 11px;
-  color: #666;
-  background: #f0f0f0;
-  padding: 2px 8px;
-  border-radius: 4px;
+.mini-card-tag {
+  font-size: 22px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  padding: 4px 16px;
+  border-radius: 8px;
 }
 
 .app-badge {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 4px;
+  font-size: 22px;
+  padding: 4px 16px;
+  border-radius: 8px;
 }
 
 .app-badge.approved {
-  color: #2e7d32;
+  color: var(--success);
   background: #e8f5e9;
 }
 
@@ -116,27 +183,26 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 200px;
-  color: #999;
-  font-size: 14px;
+  min-height: 400px;
+  color: var(--text-muted);
+  font-size: 28px;
 }
 
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60px 20px;
+  padding: 120px 40px;
 }
 
 .empty-text {
-  font-size: 14px;
-  color: #999;
-  margin-bottom: 12px;
+  font-size: 28px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
 }
 
 .empty-action {
-  font-size: 14px;
-  color: #1a1a2e;
+  font-size: 28px;
+  color: var(--primary);
   text-decoration: underline;
-  cursor: pointer;
 }

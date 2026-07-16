@@ -1,21 +1,73 @@
-page {
-  --primary: #1a1a2e;
-  --accent: #e94560;
+@use './styles/breakpoints' as bp;
+
+// 设计变量对齐 herix.html 的真实品牌色。
+// weapp 的根元素是 page；H5 产物里根本没有 <page> 标签（页面容器是 div.taro_page），
+// 所以变量必须同时挂到 :root 才能在 H5 生效。两个 selector 分开写规则——
+// WXSS 不认 :root，跟 page 合写一条会连累整条规则在小程序端被丢弃
+@mixin herix-vars {
+  --primary: #d43b27;
+  --accent: #d43b27;
   --gold: #f5a623;
-  --bg: #f5f5f5;
+  --bg: #f5f5f7;
   --card-bg: #ffffff;
-  --text-primary: #1a1a2e;
-  --text-secondary: #666;
-  --text-muted: #999;
-  --border: #e8e8e8;
-  --success: #22c55e;
-  --warning: #f59e0b;
+  --text-primary: #111111;
+  --text-secondary: #444444;
+  --text-muted: #8a8a8e;
+  --border: #e5e5ea;
+  --success: #34c759;
+  --warning: #f5a623;
   --radius: 12px;
   --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
 
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+@mixin herix-base {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', sans-serif;
   background-color: var(--bg);
   color: var(--text-primary);
   font-size: 28px;
   box-sizing: border-box;
+}
+
+// 小程序端。不要在 page 上放 max-width/margin：
+// 会被编译成 rpx（500px→500rpx ≈ iPhone 上 250 真实像素），把小程序页面压窄到 2/3 屏
+page {
+  @include herix-vars;
+  @include herix-base;
+}
+
+// H5 端：变量挂 :root 全局继承
+:root {
+  @include herix-vars;
+}
+
+// H5 页面容器（weapp 没有这个 class，天然隔离）
+.taro_page {
+  @include herix-base;
+}
+
+// Taro 运行时会注入 .taro_router > .taro_page { background:#fff }（specificity 0,2,0），
+// 会盖掉上面那条的背景色，这里用更高优先级（0,2,1）压回品牌灰
+body .taro_router > .taro_page {
+  background-color: var(--bg);
+}
+
+// H5 桌面宽屏时容器两侧露出的 body 底色，跟页面背景保持一致
+body {
+  background-color: var(--bg);
+}
+
+// 配置 tabBar 后，H5 真正撑满宽度的最外层是 .taro-tabbar__container，约束这层即可
+// （tabbar 本体 position:relative 在容器内，跟着一起被约束，不用单独处理）。
+// 大写 PX = 真实像素：pxtransform 不转换大写单位，浏览器对单位大小写不敏感。
+// index.html 的 rem 适配脚本在视口≥500 时锁死根字号，
+// 所以这里的真实像素宽度/断点和组件的 rem 尺寸不会打架
+.taro-tabbar__container {
+  max-width: 500PX;
+  margin: 0 auto;
+}
+
+@include bp.desktop {
+  .taro-tabbar__container {
+    max-width: 960PX;
+  }
 }

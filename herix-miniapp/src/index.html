@@ -4,6 +4,25 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Herix 赫使</title>
+  <script>
+    // Taro pxtransform 把样式里的 px 按 designWidth=750 编译成 rem（rootValue=40），
+    // 根字号必须由这段脚本按视口动态设置，否则恒为浏览器默认 16px，整个布局缩水到 ~40%。
+    // 视口超过 500 后锁死：桌面端组件保持手机观感，容器宽度另由真实像素（大写PX）控制
+    (function () {
+      var docEl = document.documentElement;
+      function setRem() {
+        var vw = docEl.clientWidth;
+        // <768：手机/窄窗，按视口等比缩放（上限500），跟随 app 观感；
+        // ≥768：桌面，锁定 375 等效密度（root=20px）——此时设计稿值÷2=真实像素，
+        // 字号/间距/图片尺寸与 herix.html 完全一致，避免"放大的手机页"观感
+        var w = vw >= 768 ? 375 : Math.min(vw, 500);
+        docEl.style.fontSize = (w / 750) * 40 + 'px';
+      }
+      setRem();
+      window.addEventListener('resize', setRem);
+      window.addEventListener('pageshow', function (e) { if (e.persisted) setRem(); });
+    })();
+  </script>
 </head>
 <body>
   <div id="app"></div>

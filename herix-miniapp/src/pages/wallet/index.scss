@@ -1,0 +1,297 @@
+@use '../../styles/breakpoints' as bp;
+
+.wallet-page {
+  padding: 24px 32px 48px;
+}
+
+// 桌面：钱包是内容型页面，限宽居中
+@include bp.desktop {
+  .wallet-page {
+    max-width: 640PX;
+    margin: 0 auto;
+  }
+}
+
+.empty-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+.empty-text {
+  font-size: 28px;
+  color: var(--text-muted);
+}
+
+// ── 余额卡（深色渐变，钱包卡的设计意图，不用品牌主色）──
+.balance-card {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 32px;
+  padding: 48px 40px;
+  margin-bottom: 32px;
+  color: #fff;
+}
+.bc-label {
+  display: block;
+  font-size: 22px;
+  opacity: 0.6;
+  margin-bottom: 8px;
+}
+.bc-amount {
+  display: block;
+  font-size: 72px;
+  font-weight: 700;
+  margin-bottom: 40px;
+}
+.bc-stats {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.bc-stat {
+  flex: 1;
+  padding: 20px 28px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  &.last {
+    border-right: none;
+  }
+}
+.bc-stat-label {
+  display: block;
+  font-size: 20px;
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+.bc-stat-val {
+  display: block;
+  font-size: 30px;
+  font-weight: 600;
+  &.inflow {
+    color: #4ade80;
+  }
+  &.outflow {
+    color: #f87171;
+  }
+}
+.bc-currency {
+  display: block;
+  font-size: 22px;
+  opacity: 0.5;
+  margin-top: 20px;
+}
+
+// ── 多币种明细 ──
+.card {
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 28px 32px;
+  margin-bottom: 32px;
+  box-shadow: var(--shadow);
+}
+.mc-title {
+  display: block;
+  font-size: 24px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+.mc-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 26px;
+  padding: 12px 0;
+  &.divider {
+    border-bottom: 1px solid var(--border);
+  }
+}
+.mc-cur {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.mc-detail {
+  color: var(--text-muted);
+}
+
+// ── 冻结说明 ──
+.frozen-note {
+  background: #fff8e1;
+  border-radius: 20px;
+  padding: 20px 28px;
+  margin-bottom: 32px;
+  font-size: 24px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+// ── 主按钮 ──
+.btn-primary {
+  height: 88px;
+  line-height: 88px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 600;
+  border-radius: 44px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+// ── 区块标题 ──
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  &.txn-head {
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+  }
+}
+.section-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.section-action {
+  font-size: 26px;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+// ── 收款方式 ──
+.method-empty {
+  background: var(--card-bg);
+  border-radius: 24px;
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 26px;
+  margin-bottom: 40px;
+}
+.method-row {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 24px 28px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.method-info {
+  flex: 1;
+  min-width: 0;
+}
+.method-label {
+  display: block;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.method-meta {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.method-del {
+  font-size: 22px;
+  color: #dc2626;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+// ── 流水 ──
+.period-tabs,
+.txn-filters {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.txn-filters {
+  margin-bottom: 24px;
+}
+.period-tab,
+.txn-filter {
+  padding: 8px 20px;
+  border-radius: 28px;
+  font-size: 22px;
+  background: #e5e5ea;
+  color: var(--text-secondary);
+  &.active {
+    background: #111;
+    color: #fff;
+  }
+}
+
+.flow-stats {
+  display: flex;
+  gap: 24px;
+  margin: 24px 0;
+}
+.flow-stat {
+  flex: 1;
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 20px 28px;
+}
+.flow-label {
+  display: block;
+  font-size: 20px;
+  color: var(--text-muted);
+}
+.flow-val {
+  display: block;
+  font-size: 30px;
+  font-weight: 700;
+  &.inflow {
+    color: #16a34a;
+  }
+  &.outflow {
+    color: #dc2626;
+  }
+}
+
+.txn-empty {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-muted);
+  font-size: 26px;
+}
+.txn-row {
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 24px 28px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.txn-info {
+  flex: 1;
+  min-width: 0;
+}
+.txn-label {
+  display: block;
+  font-size: 26px;
+  color: var(--text-primary);
+}
+.txn-time {
+  display: block;
+  font-size: 20px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.txn-amount {
+  font-size: 28px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 16px;
+  &.out {
+    color: #dc2626;
+  }
+  &.in {
+    color: #16a34a;
+  }
+}

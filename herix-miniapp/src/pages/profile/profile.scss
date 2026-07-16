@@ -1,11 +1,25 @@
+@use '../../styles/breakpoints' as bp;
+
 .profile-page {
   min-height: 100vh;
+  &.logged {
+    padding: 24px 24px 60px;
+    background: var(--bg);
+  }
 }
 
+// 桌面：内容型页面限宽居中
+@include bp.desktop {
+  .profile-page.logged {
+    max-width: 640PX;
+    margin: 0 auto;
+  }
+}
+
+// ── 登录/注册 ──
 .auth-card {
   padding: 60px 32px;
 }
-
 .auth-title {
   font-size: 44px;
   font-weight: 700;
@@ -13,7 +27,6 @@
   text-align: center;
   margin-bottom: 8px;
 }
-
 .auth-subtitle {
   font-size: 28px;
   color: var(--text-muted);
@@ -21,7 +34,6 @@
   text-align: center;
   margin-bottom: 40px;
 }
-
 .input {
   width: 100%;
   background: var(--card-bg);
@@ -31,15 +43,23 @@
   margin-bottom: 20px;
   box-sizing: border-box;
   border: 1px solid var(--border);
+  &.flex {
+    flex: 1;
+    margin-bottom: 0;
+  }
+  &.fol {
+    width: 160px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+  }
 }
-
 .role-select {
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
 }
-
-.role, .role-active {
+.role,
+.role-active {
   flex: 1;
   text-align: center;
   padding: 20px;
@@ -47,31 +67,11 @@
   font-size: 26px;
   border: 1px solid var(--border);
 }
-
 .role-active {
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
 }
-
-.btn-primary {
-  width: 100%;
-  height: 88px;
-  line-height: 88px;
-  background: linear-gradient(135deg, var(--accent), #c73652);
-  color: #fff;
-  font-size: 30px;
-  font-weight: 600;
-  border-radius: 44px;
-  text-align: center;
-  border: none;
-  margin-bottom: 16px;
-}
-
-.btn-primary:active {
-  opacity: 0.9;
-}
-
 .switch-auth {
   display: block;
   text-align: center;
@@ -80,77 +80,259 @@
   margin-top: 16px;
 }
 
-.user-card {
+// ── 通用按钮 ──
+.btn-primary {
+  width: 100%;
+  box-sizing: border-box;
+  height: 88px;
+  line-height: 88px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 30px;
+  font-weight: 600;
+  border-radius: 44px;
   text-align: center;
-  padding: 60px 32px;
-  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: none;
+  margin-bottom: 16px;
+  &.sm {
+    width: auto;
+    height: 64px;
+    line-height: 64px;
+    padding: 0 40px;
+    font-size: 26px;
+    margin-bottom: 0;
+  }
+}
+.btn-outline {
+  &.sm {
+    display: inline-block;
+    height: 64px;
+    line-height: 64px;
+    padding: 0 40px;
+    font-size: 26px;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 32px;
+    text-align: center;
+  }
 }
 
+// ── 顶部卡 ──
+.top-card {
+  background: var(--card-bg);
+  border-radius: 28px;
+  padding: 56px 32px 40px;
+  text-align: center;
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .avatar {
-  width: 120px;
-  height: 120px;
-  border-radius: 60px;
-  background: var(--accent);
+  width: 128px;
+  height: 128px;
+  border-radius: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
-}
-
-.avatar Text {
-  font-size: 48px;
+  margin-bottom: 24px;
+  font-size: 56px;
   font-weight: 700;
   color: #fff;
 }
+.top-name {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.top-role {
+  font-size: 24px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+.name-edit {
+  width: 100%;
+}
+.name-edit-btns {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+}
 
-.user-name {
-  font-size: 34px;
-  font-weight: 600;
+// ── 钱包卡 ──
+.wallet-card {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border-radius: 28px;
+  padding: 36px;
   color: #fff;
+  margin-bottom: 24px;
+}
+.wc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 28px;
+}
+.wc-label {
   display: block;
+  font-size: 22px;
+  opacity: 0.6;
   margin-bottom: 8px;
 }
-
-.user-role {
-  font-size: 24px;
-  color: rgba(255,255,255,0.7);
+.wc-amount {
   display: block;
+  font-size: 52px;
+  font-weight: 700;
+}
+.wc-arrow {
+  font-size: 26px;
+  opacity: 0.7;
+}
+.wc-stats {
+  display: flex;
+  gap: 48px;
+}
+.wc-stat-label {
+  display: block;
+  font-size: 20px;
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+.wc-stat-val {
+  display: block;
+  font-size: 28px;
+  font-weight: 600;
+  &.income {
+    color: #4ade80;
+  }
 }
 
-.menu-list {
-  margin: 24px;
+// ── 卡片通用 ──
+.card {
   background: var(--card-bg);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: 28px;
+  padding: 8px 0;
+  margin-bottom: 24px;
+  overflow: hidden;
 }
-
-.menu-item {
+.card-head {
+  display: block;
+  padding: 24px 32px 16px;
+  font-size: 24px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+.card-head-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 28px 24px;
-  border-bottom: 1px solid var(--border);
-  font-size: 28px;
+  padding-right: 32px;
+}
+.card-action {
+  font-size: 24px;
+  color: var(--primary);
+}
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 32px;
+  border-top: 1px solid var(--border);
+}
+.info-label {
+  font-size: 26px;
+  color: var(--text-muted);
+}
+.info-val {
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text-primary);
+  &.link {
+    color: var(--primary);
+  }
+}
+.link {
+  color: var(--primary);
+}
+
+// ── 评级 ──
+.rating-row {
+  display: flex;
+  gap: 40px;
+  padding: 16px 32px 24px;
+}
+.rating-cell-label {
+  display: block;
+  font-size: 20px;
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+.rating-cell-val {
+  display: block;
+  font-size: 30px;
+  font-weight: 700;
   color: var(--text-primary);
 }
-
-.menu-item:last-child {
-  border-bottom: none;
-}
-
-.arrow {
+.rating-next {
+  display: block;
+  margin: 0 32px 24px;
+  padding: 16px 20px;
+  background: #f9fafb;
+  border-radius: 12px;
+  font-size: 22px;
   color: var(--text-muted);
-  font-size: 32px;
 }
 
-.btn-logout {
-  margin: 40px 24px;
-  height: 80px;
-  line-height: 80px;
-  background: var(--card-bg);
-  color: var(--accent);
+// ── 社交编辑 ──
+.social-empty {
+  font-size: 26px;
+  color: var(--text-muted);
+}
+.social-edit {
+  padding: 16px 32px 32px;
+}
+.se-field {
+  margin-top: 16px;
+}
+.se-label {
+  display: block;
+  font-size: 24px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.se-opt {
+  color: var(--text-muted);
+}
+.se-hint {
+  display: block;
+  font-size: 20px;
+  color: var(--text-muted);
+  margin-top: -8px;
+  margin-bottom: 8px;
+}
+.se-row {
+  display: flex;
+  gap: 12px;
+}
+
+// ── 操作 ──
+.actions {
+  padding: 0;
+}
+.action-item {
+  display: block;
+  padding: 28px 32px;
   font-size: 28px;
-  border-radius: var(--radius);
-  text-align: center;
-  border: 1px solid var(--accent);
+  color: var(--text-primary);
+  border-top: 1px solid var(--border);
+  &:first-child {
+    border-top: none;
+  }
+  &.primary {
+    color: var(--primary);
+  }
+  &.danger {
+    color: #ff3b30;
+  }
 }

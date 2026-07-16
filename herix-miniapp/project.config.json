@@ -1,8 +1,8 @@
 {
-  "miniprogramRoot": "./dist",
+  "miniprogramRoot": "./dist/weapp",
   "projectname": "herix-miniapp",
   "description": "Herix 赫使 - 连接品牌与海外侨民KOL的平台",
-  "appid": "touristappid",
+  "appid": "wxb8133d237df33027",
   "setting": {
     "urlCheck": true,
     "es6": true,

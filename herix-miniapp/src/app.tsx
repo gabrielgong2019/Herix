@@ -3,7 +3,7 @@ import './app.scss';
 
 declare const wx: any;
 
-const CLOUD_ENV_ID = 'REPLACE_WITH_CLOUD_ENV_ID'; // 与 utils/api.ts 中保持一致
+const CLOUD_ENV_ID = 'prod-herix-d5gh5h4nv767053ae'; // 与 utils/api.ts 中保持一致
 
 class App extends Component<PropsWithChildren> {
   componentDidMount() {

@@ -1,17 +1,8 @@
 import { Component } from 'react';
 import { View, Text, ScrollView, Navigator } from '@tarojs/components';
-import Taro from '@tarojs/taro';
-import { tasks as taskApi, applications, getToken } from '../../utils/api';
+import { tasks as taskApi, applications, categories as categoriesApi, auth, getToken } from '../../utils/api';
+import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
-
-interface TaskItem {
-  id: string;
-  title: string;
-  commission: number;
-  status: string;
-  mode: string;
-  creator_name?: string;
-}
 
 interface AppItem {
   id: string;
@@ -24,7 +15,9 @@ interface AppItem {
 }
 
 interface State {
-  taskList: TaskItem[];
+  taskList: TaskCardTask[];
+  categories: CategoryItem[];
+  activeCategory: string;
   myApps: AppItem[];
   loading: boolean;
   loggedIn: boolean;
@@ -35,6 +28,8 @@ interface State {
 export default class Index extends Component<{}, State> {
   state: State = {
     taskList: [],
+    categories: [],
+    activeCategory: '',
     myApps: [],
     loading: true,
     loggedIn: false,
@@ -49,26 +44,31 @@ export default class Index extends Component<{}, State> {
   loadData = async () => {
     this.setState({ loading: true });
     try {
-      const [taskRes] = await Promise.all([
-        taskApi.list(),
-      ]);
+      // 分类接口是次要数据（仅用于筛选胶囊+卡片图标展示），拿不到不该连累任务列表整体不可用，
+      // 所以跟任务列表分开 catch，不放进同一个 Promise.all
+      const taskRes = await taskApi.list();
       this.setState({ taskList: taskRes.tasks || [] });
 
-      // 检查登录状态
-      if (getToken()) {
-        const userData = Taro.getStorageSync('herix_user');
-        if (userData) {
-          this.setState({ loggedIn: true, userRole: userData.role });
+      try {
+        const categoryRes = await categoriesApi.list();
+        this.setState({ categories: categoryRes || [] });
+      } catch (err: any) {
+        console.error('Load categories error:', err);
+      }
 
-          if (userData.role === 'HERALD') {
-            const apps = await applications.my();
-            this.setState({
-              myApps: apps.filter((a: AppItem) => a.status === 'APPROVED'),
-              activeTab: 'mine',
-            });
-          } else if (userData.role === 'BRAND') {
-            this.setState({ activeTab: 'browse' });
-          }
+      if (getToken()) {
+        // 角色信息以后端为准，不信任本地缓存（跟 task.tsx 同样的坑，见那边的注释）
+        const userData = await auth.me();
+        this.setState({ loggedIn: true, userRole: userData.role });
+
+        if (userData.role === 'HERALD') {
+          const apps = await applications.my();
+          this.setState({
+            myApps: apps.filter((a: AppItem) => a.status === 'APPROVED'),
+            activeTab: 'mine',
+          });
+        } else if (userData.role === 'BRAND') {
+          this.setState({ activeTab: 'browse' });
         }
       }
     } catch (err: any) {
@@ -77,38 +77,49 @@ export default class Index extends Component<{}, State> {
     this.setState({ loading: false });
   };
 
-  renderTask = (task: TaskItem) => (
-    <Navigator key={task.id} className='task-card' url={`/pages/task/task?id=${task.id}`}>
-      <View className='task-header'>
-        <Text className='task-title'>{task.title}</Text>
-        <Text className='task-price'>¥{task.commission}</Text>
-      </View>
-      <View className='task-meta'>
-        {task.creator_name && <Text className='task-creator'>{task.creator_name}</Text>}
-        <Text className='task-tag'>{task.mode === 'PERFORMANCE' ? '成果报酬' : '普通任务'}</Text>
-      </View>
-    </Navigator>
-  );
-
   renderApp = (app: AppItem) => (
-    <Navigator key={app.id} className='task-card mine' url={`/pages/task/task?id=${app.task_id}`}>
-      <View className='task-header'>
-        <Text className='task-title'>{app.task_title}</Text>
-        <Text className='task-price'>¥{app.commission}</Text>
+    <Navigator key={app.id} className='mini-card mine' url={`/pages/task/task?id=${app.task_id}`}>
+      <View className='mini-card-header'>
+        <Text className='mini-card-title'>{app.task_title}</Text>
+        <Text className='mini-card-price'>¥{app.commission}</Text>
       </View>
-      <View className='task-meta'>
+      <View className='mini-card-meta'>
         <Text className='app-badge approved'>报名已通过</Text>
-        <Text className='task-tag'>{app.mode === 'PERFORMANCE' ? '成果报酬' : '普通任务'}</Text>
+        <Text className='mini-card-tag'>{app.mode === 'PERFORMANCE' ? '成果报酬' : '普通任务'}</Text>
       </View>
     </Navigator>
   );
 
   render() {
-    const { taskList, myApps, loading, loggedIn, userRole, activeTab } = this.state;
+    const { taskList, categories, activeCategory, myApps, loading, loggedIn, userRole, activeTab } = this.state;
+    const visibleTasks = activeCategory ? taskList.filter(t => t.category === activeCategory) : taskList;
 
     return (
       <View className='index-page'>
-        {/* Tab 切换 */}
+        <View className='header'>
+          <Text className='logo'>
+            <Text className='logo-accent'>赫</Text>使 HERIX
+          </Text>
+        </View>
+
+        <ScrollView className='filters' scrollX>
+          <Text
+            className={`filter ${activeCategory === '' ? 'active' : ''}`}
+            onClick={() => this.setState({ activeCategory: '' })}
+          >
+            全部
+          </Text>
+          {categories.map(c => (
+            <Text
+              key={c.id}
+              className={`filter ${activeCategory === c.id ? 'active' : ''}`}
+              onClick={() => this.setState({ activeCategory: c.id })}
+            >
+              {c.label}
+            </Text>
+          ))}
+        </ScrollView>
+
         {loggedIn && userRole === 'HERALD' && (
           <View className='tab-bar'>
             <Text
@@ -130,7 +141,6 @@ export default class Index extends Component<{}, State> {
           <View className='loading'><Text>加载中...</Text></View>
         ) : (
           <ScrollView className='list' scrollY>
-            {/* 我的待办 */}
             {activeTab === 'mine' && loggedIn && userRole === 'HERALD' && (
               <View>
                 {myApps.length > 0 ? (
@@ -138,10 +148,7 @@ export default class Index extends Component<{}, State> {
                 ) : (
                   <View className='empty'>
                     <Text className='empty-text'>暂无待办任务</Text>
-                    <Text
-                      className='empty-action'
-                      onClick={() => this.setState({ activeTab: 'browse' })}
-                    >
+                    <Text className='empty-action' onClick={() => this.setState({ activeTab: 'browse' })}>
                       去浏览任务
                     </Text>
                   </View>
@@ -149,11 +156,10 @@ export default class Index extends Component<{}, State> {
               </View>
             )}
 
-            {/* 浏览任务 */}
             {activeTab === 'browse' && (
-              <View>
-                {taskList.length > 0 ? (
-                  taskList.map(task => this.renderTask(task))
+              <View className='grid'>
+                {visibleTasks.length > 0 ? (
+                  visibleTasks.map(task => <TaskCard key={task.id} task={task} categories={categories} />)
                 ) : (
                   <View className='empty'>
                     <Text className='empty-text'>暂无任务</Text>

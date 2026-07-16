@@ -1,5 +1,45 @@
+@use '../../styles/breakpoints' as bp;
+
 .apply-page {
   padding: 32px;
+}
+
+// 桌面：表单页限宽居中，不分栏（表单配方，见适配架构约定）
+@include bp.desktop {
+  .apply-page {
+    max-width: 640PX;
+    margin: 0 auto;
+  }
+}
+
+.page-title {
+  display: block;
+  font-size: 34px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+
+.reject-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 20px;
+  padding: 20px 28px;
+  margin-bottom: 28px;
+  font-size: 24px;
+  color: #dc2626;
+  line-height: 1.5;
+}
+
+.hints {
+  margin-top: 12px;
+}
+.hint {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-top: 6px;
+  line-height: 1.5;
 }
 
 .form-group {
@@ -33,7 +73,7 @@
   width: 100%;
   height: 88px;
   line-height: 88px;
-  background: linear-gradient(135deg, var(--accent), #c73652);
+  background: var(--primary);
   color: #fff;
   font-size: 30px;
   font-weight: 600;

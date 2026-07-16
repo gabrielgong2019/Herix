@@ -1,0 +1,244 @@
+@use '../../styles/breakpoints' as bp;
+
+.withdraw-page {
+  padding: 40px 32px 48px;
+}
+
+@include bp.desktop {
+  .withdraw-page {
+    max-width: 640PX;
+    margin: 0 auto;
+  }
+}
+
+.empty-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+.empty-text {
+  font-size: 28px;
+  color: var(--text-muted);
+}
+
+.avail-line {
+  display: block;
+  font-size: 26px;
+  color: var(--text-muted);
+  margin-bottom: 32px;
+}
+.avail-strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.field-label {
+  display: block;
+  font-size: 24px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+
+// ── 收款方式横向选择 ──
+.method-scroll {
+  white-space: nowrap;
+  margin-bottom: 40px;
+}
+.method-track {
+  display: flex;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+.method-card {
+  flex-shrink: 0;
+  width: 300px;
+  background: var(--card-bg);
+  border: 4px solid var(--border);
+  border-radius: 28px;
+  padding: 28px;
+  &.active {
+    border-color: var(--primary);
+  }
+  &.add {
+    width: 200px;
+    border-style: dashed;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+  }
+}
+.mc-icon {
+  display: block;
+  font-size: 44px;
+  margin-bottom: 16px;
+}
+.mc-label {
+  display: block;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.mc-sub {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.mc-check {
+  display: block;
+  font-size: 20px;
+  color: var(--primary);
+  font-weight: 600;
+  margin-top: 12px;
+}
+.mc-add-plus {
+  font-size: 44px;
+  margin-bottom: 12px;
+}
+.mc-add-text {
+  font-size: 22px;
+}
+
+// ── 金额输入 ──
+.amount-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--card-bg);
+  border: 4px solid var(--border);
+  border-radius: 28px;
+  padding: 32px 36px;
+  margin-bottom: 12px;
+  &.error {
+    border-color: #dc2626;
+  }
+}
+.amount-yen {
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.amount-input {
+  flex: 1;
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.amount-all {
+  font-size: 24px;
+  color: var(--primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.amount-hint {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+}
+
+// ── 费用预览 ──
+.preview-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 8px 36px;
+  margin-bottom: 32px;
+}
+.pv-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  &.net {
+    border-bottom: none;
+  }
+}
+.pv-label {
+  font-size: 26px;
+  color: var(--text-muted);
+}
+.pv-val {
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text-primary);
+  &.free {
+    color: #16a34a;
+  }
+}
+.pv-net-box {
+  text-align: right;
+}
+.pv-net {
+  display: block;
+  font-size: 36px;
+  font-weight: 700;
+  color: #16a34a;
+}
+.pv-cny {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+.eta-line {
+  display: block;
+  font-size: 24px;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+}
+
+// ── 提交按钮 / 空态按钮 ──
+.btn-primary {
+  height: 96px;
+  line-height: 96px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 600;
+  border-radius: 48px;
+  text-align: center;
+  &.submit {
+    margin-top: 8px;
+  }
+  &.disabled {
+    background: #e5e5ea;
+    color: #8a8a8e;
+  }
+}
+
+// ── 无收款方式空态 ──
+.no-method {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 64px 40px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.nm-icon {
+  font-size: 64px;
+  margin-bottom: 24px;
+}
+.nm-title {
+  font-size: 30px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.nm-sub {
+  font-size: 26px;
+  color: var(--text-muted);
+  margin-bottom: 40px;
+}
+.no-method .btn-primary {
+  padding: 0 48px;
+}

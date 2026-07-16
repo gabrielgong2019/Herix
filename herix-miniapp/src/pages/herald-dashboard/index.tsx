@@ -229,7 +229,7 @@ export default class HeraldDashboard extends Component<{}, State> {
                   this.renderTaskCard(`fresh-${aa.task_id}`, {
                     title: aa.task_title,
                     accent: 'var(--primary)',
-                    meta: t('hd.contentTaskMeta', { n: aa.payout_per_herald || aa.commission || 0 }),
+                    meta: t('hd.contentTaskMeta', { n: fmt(aa.payout_per_herald || aa.commission || 0) }),
                     metaColor: 'var(--text-muted)',
                     right: { type: 'button', text: t('task.submitWork'), color: '#fff', bg: 'var(--primary)', onClick: () => this.openSubmit(aa.task_id) },
                   }),
@@ -251,6 +251,8 @@ export default class HeraldDashboard extends Component<{}, State> {
                 )}
                 {actionableB.map(ab => {
                   const code = myCodes.find(c => c.task_id === ab.task_id);
+                  const payout = Number(code?.payout_per_herald || ab.payout_per_herald || 0);
+                  const allZero = code && !Number(code.earned_amount) && !Number(code.registered_count) && !Number(code.used_count);
                   const body = code ? (
                     <View className='code-box'>
                       <View className='code-line'>
@@ -259,9 +261,21 @@ export default class HeraldDashboard extends Component<{}, State> {
                           {t('hd.copy')}
                         </Text>
                       </View>
-                      <Text className='code-stat'>
-                        {t('hd.codeStats', { e: fmt(code.earned_amount), r: code.registered_count || 0, u: code.used_count || 0 })}
-                      </Text>
+                      <View className='code-stats'>
+                        <View className='cs-item'>
+                          <Text className='cs-val'>¥{fmt(code.earned_amount)}</Text>
+                          <Text className='cs-label'>{t('hd.statEarned')}</Text>
+                        </View>
+                        <View className='cs-item'>
+                          <Text className='cs-val'>{code.registered_count || 0}</Text>
+                          <Text className='cs-label'>{t('hd.statReg')}</Text>
+                        </View>
+                        <View className='cs-item'>
+                          <Text className='cs-val'>{code.used_count || 0}</Text>
+                          <Text className='cs-label'>{t('hd.statUsed')}</Text>
+                        </View>
+                      </View>
+                      {allZero && payout > 0 && <Text className='code-hint'>{t('hd.zeroHint', { n: fmt(payout) })}</Text>}
                     </View>
                   ) : (
                     <Text className='code-pending'>{t('hd.codeGenerating')}</Text>
@@ -271,7 +285,10 @@ export default class HeraldDashboard extends Component<{}, State> {
                     accent: 'var(--gold)',
                     meta: t('hd.promoTask'),
                     metaColor: 'var(--text-muted)',
-                    right: { type: 'badge', text: t('hd.promoting'), color: '#92400e', bg: '#fffbeb' },
+                    // 徽章展示单价（比"推广中"更有信息量；分区已表明状态）；没拿到单价时回退原徽章
+                    right: payout > 0
+                      ? { type: 'badge', text: t('hd.perConvBadge', { n: fmt(payout) }), color: '#92400e', bg: '#fffbeb' }
+                      : { type: 'badge', text: t('hd.promoting'), color: '#92400e', bg: '#fffbeb' },
                     body,
                   });
                 })}
@@ -312,7 +329,7 @@ export default class HeraldDashboard extends Component<{}, State> {
                     </Text>
                   </View>
                   <Text className='hist-meta'>
-                    {t('hd.histMeta', { n: ra.payout_per_herald || ra.commission || 0, mode: ra.mode === 'PERFORMANCE' ? t('hd.promoTask') : t('hd.modeContent') })}
+                    {t('hd.histMeta', { n: fmt(ra.payout_per_herald || ra.commission || 0), mode: ra.mode === 'PERFORMANCE' ? t('hd.promoTask') : t('hd.modeContent') })}
                   </Text>
                   {ra.status === 'REJECTED' && ra.review_note && (
                     <View className='reject-note'>{t('hd.applyRejectReason', { note: ra.review_note })}</View>

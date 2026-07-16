@@ -736,6 +736,8 @@ function submissionsPanel(subs) {
       +(screenshots.length?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+screenshots.length+' 张截图</div>':'')
       +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交于 '+s.submitted_at.slice(0,16).replace('T',' ')+'</div>'
       +(s.status==='PENDING_REVIEW'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\')">✗ 拒绝</button></div>':'')
+      +(s.status==='APPROVED'&&s.rating_score?'<div style="font-size:12px;color:var(--muted);margin-top:6px">已评价 '+'★'.repeat(s.rating_score)+'☆'.repeat(5-s.rating_score)+(s.rating_comment?' · '+esc(s.rating_comment):'')+'</div>':'')
+      +(s.status==='APPROVED'&&!s.rating_score?'<button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="showRatingModal(\''+s.id+'\')">★ 评价赫使</button>':'')
       +(s.status==='REJECTED'&&s.review_note?'<div style="font-size:11px;color:var(--danger);margin-top:8px">拒绝原因：'+esc(s.review_note)+'</div>':'')
       +'</div>';
   }).join('');
@@ -2536,7 +2538,18 @@ function doCsvUpload() {
 
   post('/tasks/' + taskId + '/csv', { records: records }, function(d) {
     if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>'; return; }
-    resultEl.innerHTML = '<div class="alert alert-success">处理完成：成功 '+d.processed+' 条，跳过 '+d.skipped+' 条，单价 ¥'+d.commissionPerUser+'/人</div>';
+    var html = '';
+    if (d.processed > 0) {
+      html += '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次，结算 ¥'+Number(d.totalPaid||0).toLocaleString()+'（单价 ¥'+Number(d.commissionPerConversion||0).toLocaleString()+'/次）</div>';
+    }
+    if (d.skippedCodes && d.skippedCodes.length) {
+      html += '<div class="alert alert-error">⚠️ '+d.skippedCodes.length+' 条未生效——推广码在该任务下不存在，请确认选对了任务、码拼写无误：<br><span style="font-family:monospace">'+esc(d.skippedCodes.join(', '))+'</span></div>';
+    }
+    if (d.blockedCodes && d.blockedCodes.length) {
+      html += '<div class="alert alert-error">💰 '+esc(d.message||'部分推广码因余额不足未结算')+'：<span style="font-family:monospace">'+esc(d.blockedCodes.join(', '))+'</span></div>';
+    }
+    if (!html) html = '<div class="alert alert-error">没有任何记录被处理，请检查数据格式</div>';
+    resultEl.innerHTML = html;
   });
 }
 

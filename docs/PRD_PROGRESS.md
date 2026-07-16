@@ -88,6 +88,7 @@
 | 定价模块（分商家费率+促销） | ✅ | 2026-07-16：默认抽佣定稿20%；pricing_promotions 表+决策链 min(协议价??默认, 促销)；admin「定价」页；行为学测试6/6（详见 pricing_module_prd.md §九） |
 | 未登录语言切换入口 | ✅ | 2026-07-16：landing + profile 登录页均可切换三语 |
 | 通知角色隔离 | ✅ | 2026-07-16 修复：隔离维度从"拥有的角色集合"改为"当前端声明角色"（?role= + 服务端校验），双角色账号商家端不再看到赫使侧通知，read-all 也按端隔离 |
+| 转化数据上传生效 + 赫使通知 | ✅ | 2026-07-16：修3处根因——①历史 PERFORMANCE 任务 upload_token 为 NULL（迁移回填）②码匹配不归一化+全跳过仍显示绿色成功（归一化+skippedCodes 如实警示）③HERIX_PLATFORM 用户缺失致首次结算 FK 崩服务器（迁移种子+unhandledRejection 兜底）。新增 CONVERSION_SETTLED/CONVERSION_UPDATED 赫使通知（三语），行为测试 11/11（详见 PRD §4） |
 
 ---
 

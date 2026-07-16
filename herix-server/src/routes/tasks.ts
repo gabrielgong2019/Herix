@@ -6,6 +6,7 @@ import { ZodError } from 'zod';
 import crypto from 'crypto';
 import { settleCreditTask, creditHerald, creditPlatformFee, getBalance, PLATFORM_USER_ID } from '../utils/wallet';
 import { createNotification } from './notifications';
+import { notify } from '../utils/notify';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
 import pool from '../db';
 
@@ -235,18 +236,23 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   const PLATFORM_FEE_RATE = 0.15;
   let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
   const blockedCodes: string[] = [];
+  const skippedCodes: string[] = [];
 
   for (const row of records) {
+    // 码归一化：CSV 里常见首尾空白/小写，落库码是大写
+    const code = String(row.code || '').trim().toUpperCase();
     const at = await findOne<any>(
-      'SELECT id, herald_id, paid_conversions FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?',
-      [row.code, task.id]
+      'SELECT id, herald_id, paid_conversions, registered_count, used_count FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?',
+      [code, task.id]
     );
-    if (!at) { skipped++; continue; }
+    if (!at) { skipped++; skippedCodes.push(code || String(row.code)); continue; }
 
     const newUsedCount = Math.max(0, parseInt(String(row.used_count || '0'), 10));
     const newRegCount  = Math.max(0, parseInt(String(row.registered_count || '0'), 10));
     const alreadyPaid  = Number(at.paid_conversions || 0);
     const delta        = newUsedCount - alreadyPaid;  // 新增转化数
+    const countsChanged = newRegCount !== Number(at.registered_count || 0)
+                       || newUsedCount !== Number(at.used_count || 0);
 
     // 更新原始数据（用于报表，无论是否有新转化）
     await update('ambassador_tasks', {
@@ -254,7 +260,21 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
       used_count: newUsedCount,
     }, 'id = ?', [at.id]);
 
-    if (delta <= 0) { processed++; continue; }  // 无新增转化，跳过打款
+    if (delta <= 0) {
+      // 无新增付费转化：数据有变化也要让赫使知道（用户要求：数据生效即通知）
+      if (countsChanged) {
+        await notify({
+          userId: at.herald_id,
+          targetRole: 'HERALD',
+          type: 'CONVERSION_UPDATED',
+          title: `推广数据更新：${task.title}`,
+          body: `你的推广码 ${code} 数据已更新：注册 ${newRegCount}、使用 ${newUsedCount}。`,
+          metadata: { taskId: task.id, taskTitle: task.title, code, reg: newRegCount, used: newUsedCount },
+        }).catch((e) => console.error('[notify] CONVERSION_UPDATED failed:', e));
+      }
+      processed++;
+      continue;
+    }
 
     const commissionPerConv = task.commission;
     const totalNeeded       = commissionPerConv * delta;
@@ -264,13 +284,14 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     // PERFORMANCE 任务按转化实时扣余额，余额不足则拦截并通知商户
     const brandBal = await getBalance(task.creator_id, 'brand');
     if (brandBal.available < totalNeeded) {
-      blockedCodes.push(row.code);
+      blockedCodes.push(code);
       await createNotification({
         userId: task.creator_id,
+        targetRole: 'BRAND',
         type:   'SETTLEMENT_BLOCKED',
         title:  '邀请码任务结算失败 — 请充值',
-        body:   `推广码 ${row.code} 新增 ${delta} 次转化，需支付 ¥${totalNeeded}，当前余额 ¥${brandBal.available} 不足，请充值后重新上传数据。`,
-        metadata: { taskId: task.id, code: row.code, needed: totalNeeded, available: brandBal.available },
+        body:   `推广码 ${code} 新增 ${delta} 次转化，需支付 ¥${totalNeeded}，当前余额 ¥${brandBal.available} 不足，请充值后重新上传数据。`,
+        metadata: { taskId: task.id, taskTitle: task.title, code, needed: totalNeeded, available: brandBal.available },
       });
       skipped++;
       continue;
@@ -287,7 +308,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
       to_user_id:    at.herald_id,
       parent_txn_id: task.lock_txn_id || null,
       status:        'completed',
-      note:          `推广码 ${row.code} 新增 ${delta} 次转化`,
+      note:          `推广码 ${code} 新增 ${delta} 次转化`,
     });
 
     // 品牌扣可用余额，赫使+收入，平台+手续费
@@ -296,7 +317,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
         userId: task.creator_id, amount: commissionPerConv * delta,
         idempotencyKey: `SETTLE:${releaseTxnId}`,
         referenceType: 'task_transaction', referenceId: releaseTxnId,
-        note: `推广码 ${row.code} 结算 ${delta} 次`,
+        note: `推广码 ${code} 结算 ${delta} 次`,
       }),
       creditHerald({
         userId: at.herald_id, amount: payoutPerConv * delta,
@@ -315,8 +336,21 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     // 更新已付转化数，防止重复计费
     await update('ambassador_tasks', { paid_conversions: newUsedCount }, 'id = ?', [at.id]);
 
+    // 结算成功 → 通知赫使（站内信 + 邮件）
+    const heraldUser = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [at.herald_id]);
+    const paidAmount = payoutPerConv * delta;
+    await notify({
+      userId: at.herald_id,
+      email: heraldUser?.email || null,
+      targetRole: 'HERALD',
+      type: 'CONVERSION_SETTLED',
+      title: `推广收入到账：${task.title}`,
+      body: `你的推广码 ${code} 新增 ${delta} 次转化，收入 ¥${paidAmount} 已入账钱包。`,
+      metadata: { taskId: task.id, taskTitle: task.title, code, conversions: delta, amount: paidAmount, reg: newRegCount, used: newUsedCount },
+    }).catch((e) => console.error('[notify] CONVERSION_SETTLED failed:', e));
+
     totalNewConversions += delta;
-    totalPaid           += payoutPerConv * delta;
+    totalPaid           += paidAmount;
     processed++;
   }
 
@@ -327,6 +361,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     newConversions: totalNewConversions,
     totalPaid,
     commissionPerConversion: task.commission,
+    ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
     ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),
   });
 });

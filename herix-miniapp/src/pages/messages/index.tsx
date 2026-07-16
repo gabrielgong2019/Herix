@@ -11,6 +11,8 @@ const ACCENT_MAP: Record<string, string> = {
   APP_APPROVED: '#16a34a',
   APP_REJECTED: '#dc2626',
   SETTLEMENT_BLOCKED: '#d97706',
+  CONVERSION_SETTLED: '#16a34a',
+  CONVERSION_UPDATED: '#1d4ed8',
 };
 const ICON_MAP: Record<string, string> = {
   SUB_APPROVED: '✅',
@@ -18,6 +20,8 @@ const ICON_MAP: Record<string, string> = {
   APP_APPROVED: '🎉',
   APP_REJECTED: '😔',
   SETTLEMENT_BLOCKED: '⚠️',
+  CONVERSION_SETTLED: '💰',
+  CONVERSION_UPDATED: '📈',
 };
 
 // 相对时间（等价 herix formatNotifTime）
@@ -112,8 +116,17 @@ export default class Messages extends Component<{}, State> {
     try { meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata || '{}') : n.metadata || {}; } catch { meta = {}; }
     const titleKey = `notif.${n.type}.title`;
     const canTranslate = !!meta.taskTitle && t(titleKey) !== titleKey;
-    const title = canTranslate ? t(titleKey, { taskTitle: meta.taskTitle }) : n.title;
-    let body = canTranslate ? t(`notif.${n.type}.body`, { taskTitle: meta.taskTitle }) : n.body;
+    // 词条占位符按 type 不同：taskTitle 通用；code/n/amount/reg/used 是转化类通知的参数
+    const params = {
+      taskTitle: meta.taskTitle,
+      code: meta.code,
+      n: meta.conversions,
+      amount: meta.amount,
+      reg: meta.reg,
+      used: meta.used,
+    };
+    const title = canTranslate ? t(titleKey, params) : n.title;
+    let body = canTranslate ? t(`notif.${n.type}.body`, params) : n.body;
     if (canTranslate && meta.note) body += ' ' + t('task.reason', { note: meta.note });
     return (
       <View

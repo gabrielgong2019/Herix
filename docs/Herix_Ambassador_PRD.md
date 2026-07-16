@@ -102,34 +102,32 @@
 
 > ⚠️ 推广码任务的核心依赖是商家将转化数据回传赫使平台。初期用CSV方案，中长期升级Webhook。
 
-### 初期方案（CSV定时上传）
+### 初期方案（CSV定时上传）✅ 已实现（累计计数格式）
 
-**商家上传CSV字段定义：**
+**商家上传CSV字段定义（实际实现，与最初设想的事件流格式不同——按累计口径）：**
 
 ```csv
-promo_code,event_type,event_at,transfer_amount
+code,注册数,使用数
+HERIX-A3K9Z2,10,5
 ```
 
-**event_type 枚举值：**
-- `registered` → 用户注册
-- `kyc_completed` → KYC完成
-- `first_transfer` → 首次汇款完成
+- `注册数` / `使用数` 填**累计值**（非增量）；系统按 `使用数 − 已结算次数` 计算新增转化
+- 入口：商家后台「数据上传」页（Bearer 鉴权）或任务详情的品牌专属上传链接 `upload.html?task=&token=`（upload_token 鉴权，任务发布时生成）
 
-**示例：**
-```csv
-HERIX-A3K9Z2,registered,2026-06-01T10:23:00Z,
-HERIX-A3K9Z2,kyc_completed,2026-06-02T14:05:00Z,
-HERIX-A3K9Z2,first_transfer,2026-06-03T09:11:00Z,15000
+**上传处理流程（`POST /api/tasks/:id/csv`，2026-07-16 定稿）：**
+```
+解析 records，推广码归一化（去空白+转大写）后匹配 ambassador_tasks.unique_code
+  → 码在该任务下不存在 → 跳过，响应 skippedCodes 如实列出（商家端红色警示，不再伪装成功）
+  → 更新 registered_count / used_count（无论有无新增转化）
+  → delta = 使用数 − paid_conversions > 0 时：
+      · 商家余额不足 → 拦截 + 通知商家 SETTLEMENT_BLOCKED（充值后重新上传）
+      · 余额充足 → task_transactions 记账 + 三方钱包结算（商家扣款/赫使入账/平台15%手续费）
+      · 通知赫使 CONVERSION_SETTLED（站内信+邮件，metadata 带 code/次数/金额，三语渲染）
+  → delta ≤ 0 但计数有变化 → 通知赫使 CONVERSION_UPDATED（数据已更新）
+  → 重复上传同样数据幂等：不重复打款、不重复通知
 ```
 
-**上传流程：**
-```
-商家在赫使平台后台上传CSV（建议每天一次，上传昨日数据）
-  → 系统解析CSV，以promo_code匹配AmbassadorTask
-  → 推广码不存在或格式错误 → 跳过，记录错误日志
-  → 三个事件均满足 → Referral.qualified = true，计入大使成功件数
-  → 推送通知给大使
-```
+> 平台手续费钱包挂在内部用户 `HERIX_PLATFORM`（role=PLATFORM，不可登录）下，由 db.ts 迁移自动种子。
 
 ### 中期方案（Webhook，升级后取代CSV）
 

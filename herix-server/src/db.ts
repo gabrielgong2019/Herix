@@ -25,7 +25,7 @@ export async function initDatabase() {
       password_hash TEXT NOT NULL,
       nickname TEXT,
       avatar_url TEXT,
-      role TEXT NOT NULL DEFAULT 'HERALD' CHECK(role IN ('BRAND','HERALD','ADMIN')),
+      role TEXT NOT NULL DEFAULT 'HERALD' CHECK(role IN ('BRAND','HERALD','ADMIN','PLATFORM')),
       is_verified INTEGER NOT NULL DEFAULT 0,
       wechat_open_id TEXT UNIQUE,
       roles TEXT,
@@ -382,6 +382,16 @@ export async function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'PUBLIC'`,
     // 品牌专属上传链接 token（2026-07-09）
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS upload_token TEXT`,
+    // 回填：早于 token 功能发布的 PERFORMANCE 任务补 token，否则任务详情不展示上传链接、upload.html 鉴权失败（2026-07-16，幂等）
+    `UPDATE tasks SET upload_token = md5(random()::text || clock_timestamp()::text)
+      WHERE mode = 'PERFORMANCE' AND status <> 'DRAFT' AND upload_token IS NULL`,
+    // role 检查约束扩到 PLATFORM（DROP+ADD 成对幂等；老库约束不含 PLATFORM）（2026-07-16）
+    `ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`,
+    `ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('BRAND','HERALD','ADMIN','PLATFORM'))`,
+    // 平台内部用户：creditPlatformFee 的手续费钱包挂在该用户下，缺行会触发 wallets FK 崩溃（2026-07-16，幂等；password_hash='!' 不可登录）
+    `INSERT INTO users (id, password_hash, nickname, role, created_at, updated_at)
+      VALUES ('HERIX_PLATFORM', '!', 'Herix Platform', 'PLATFORM', now()::text, now()::text)
+      ON CONFLICT (id) DO NOTHING`,
     // 定价模块（2026-07-09）
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,

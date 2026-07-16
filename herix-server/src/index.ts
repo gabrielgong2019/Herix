@@ -62,6 +62,12 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: '服务器内部错误' });
 });
 
+// Express 4 不会把 async handler 的 rejection 交给上面的错误中间件，
+// 缺了这层任何一个路由抛异常都会打崩整个进程（2026-07-16 实测：结算路径 FK 错误导致全站宕机）
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+
 app.listen(PORT, () => {
   console.log(`Herix server running on http://localhost:${PORT}`);
 });

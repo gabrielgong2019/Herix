@@ -579,13 +579,15 @@ function taskDetailPage() {
     + infoRow('已报名', apps.length+' 人（'+apps.filter(function(a){return a.status==='APPROVED'}).length+' 通过）')
     + infoRow('发布时间', t.published_at ? t.published_at.slice(0,10) : '未发布')
     + infoRow('发布范围', t.visibility==='INVITE' ? '🔒 定向' : '🌐 公开')
-    + '<div style="margin:8px 12px 4px;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe">'
+    + (t.status === 'DRAFT'
+      ? '<div style="margin:8px 12px 4px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted)">🔗 任务发布后可获取分享链接与海报</div>'
+      : '<div style="margin:8px 12px 4px;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe">'
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">'+(t.visibility==='INVITE'?'🔒 赫使邀请链接':'🔗 任务分享链接')+'</div>'
-    + '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:8px" id="invite-link-text">'+(window.location.origin+'/herix.html?task='+t.id)+'</div>'
+    + '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:8px" id="invite-link-text">'+taskShareUrl(t.id)+'</div>'
     + '<div style="display:flex;gap:8px">'
     + '<button class="btn btn-outline btn-sm" onclick="copyInviteLink(\''+t.id+'\')">复制链接</button>'
     + '<button class="btn btn-primary btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成分享海报</button>'
-    + '</div></div>'
+    + '</div></div>')
     +'</div>';
 
   if (t.status === 'DRAFT') {
@@ -2600,8 +2602,13 @@ function copyUploadLink(taskId, token) {
   }
 }
 
+function taskShareUrl(taskId) {
+  // Taro H5 版邀请落地页(hash路由); 旧 /herix.html?task= 已弃用
+  return window.location.origin + '/#/pages/landing/index?task=' + taskId;
+}
+
 function copyInviteLink(taskId) {
-  var url = window.location.origin + '/herix.html?task=' + taskId;
+  var url = taskShareUrl(taskId);
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(url).then(function() { showMsg('链接已复制', 'success'); });
   } else {
@@ -2679,7 +2686,7 @@ function openSharePoster(taskId) {
   var t = state.currentTask;
   if (!t) return;
 
-  var inviteUrl = window.location.origin + '/herix.html?task=' + taskId;
+  var inviteUrl = taskShareUrl(taskId);
 
   var ov = document.createElement('div');
   ov.id = 'poster-overlay';

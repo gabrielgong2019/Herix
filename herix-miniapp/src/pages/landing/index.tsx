@@ -3,7 +3,7 @@ import { View, Text, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { auth, tasks as taskApi, categories as categoriesApi, setToken } from '../../utils/api';
 import './index.scss';
-import { t, tf } from '../../utils/i18n';
+import { t, tf, LOCALES, getLocale, setLocale } from '../../utils/i18n';
 import { fmt } from '../../utils/format';
 
 
@@ -61,6 +61,17 @@ export default class Landing extends Component<{}, State> {
       console.error('load landing task error:', err);
       this.setState({ taskLoading: false });
     }
+  };
+
+  switchLanguage = async () => {
+    try {
+      const res = await Taro.showActionSheet({ itemList: LOCALES.map(l => l.label) });
+      const picked = LOCALES[res.tapIndex];
+      if (picked && picked.id !== getLocale()) {
+        await setLocale(picked.id);
+        this.forceUpdate();
+      }
+    } catch { /* 用户取消 */ }
   };
 
   doAuth = async () => {
@@ -181,6 +192,10 @@ export default class Landing extends Component<{}, State> {
           <View className={`lp-submit ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.doAuth}>
             {submitting ? t('landing.processing') : authTab === 'login' ? t('landing.loginAndApply') : t('landing.registerAndApply')}
           </View>
+
+          <Text className='lp-lang' onClick={this.switchLanguage}>
+            🌐 {LOCALES.find(l => l.id === getLocale())?.label}
+          </Text>
         </View>
       </View>
     );

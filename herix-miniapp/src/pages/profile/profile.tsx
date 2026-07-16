@@ -304,6 +304,10 @@ export default class Profile extends Component<{}, State> {
                 <Text className='switch-auth' onClick={() => this.setState({ showRegister: true })}>{t('profile.toRegister')}</Text>
               </>
             )}
+            {/* 未登录也能切语言(此前入口只在登录后的操作区) */}
+            <Text className='switch-auth' onClick={this.switchLanguage}>
+              🌐 {LOCALES.find(l => l.id === getLocale())?.label}
+            </Text>
           </View>
         </View>
       );

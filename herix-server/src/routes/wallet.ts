@@ -39,10 +39,14 @@ walletRouter.get('/balance', async (req: Request, res: Response) => {
     else periodOutflow += Math.abs(amt);
   }
 
+  // 最低提现金额下发给前端(单一事实源: platform_settings.withdrawal_min_amount)
+  const withdrawalMin = Number(await getSetting('withdrawal_min_amount')) || 1000;
+
   res.json({
     available: bal.available,
     frozen: bal.frozen,
     pendingAmount: bal.frozen,
+    withdrawalMin,
     periodFrom: from,
     periodTo: to,
     periodInflow,

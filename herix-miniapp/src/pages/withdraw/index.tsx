@@ -36,6 +36,7 @@ interface State {
   selMethodId: string;
   amount: string;
   submitting: boolean;
+  minAmount: number; // 后端下发的最低提现额(platform_settings), 兜底1000
 }
 
 export default class Withdraw extends Component<{}, State> {
@@ -47,6 +48,7 @@ export default class Withdraw extends Component<{}, State> {
     selMethodId: '',
     amount: '',
     submitting: false,
+    minAmount: 1000,
   };
 
   componentDidShow() {
@@ -66,6 +68,7 @@ export default class Withdraw extends Component<{}, State> {
         balance: bal || {},
         methods: list,
         selMethodId: this.state.selMethodId || (list[0]?.id ?? ''),
+        minAmount: Number(bal?.withdrawalMin) || 1000,
         loading: false,
       });
     } catch (err) {
@@ -89,8 +92,8 @@ export default class Withdraw extends Component<{}, State> {
       return;
     }
     const amt = parseFloat(amount) || 0;
-    if (amt < 100) {
-      Taro.showToast({ title: t('withdraw.errMin'), icon: 'none' });
+    if (amt < this.state.minAmount) {
+      Taro.showToast({ title: t('withdraw.errMin', { min: fmt(this.state.minAmount) }), icon: 'none' });
       return;
     }
     this.setState({ submitting: true });
@@ -113,7 +116,7 @@ export default class Withdraw extends Component<{}, State> {
   };
 
   render() {
-    const { loading, loggedIn, balance: bal, methods, selMethodId, amount, submitting } = this.state;
+    const { loading, loggedIn, balance: bal, methods, selMethodId, amount, submitting, minAmount } = this.state;
 
     if (!loggedIn) {
       return (
@@ -158,7 +161,7 @@ export default class Withdraw extends Component<{}, State> {
     const sel = methods.find(m => m.id === selMethodId) || methods[0];
     const isCNY = sel && (sel.type === 'ALIPAY' || sel.type === 'WECHAT');
     const amt = parseFloat(amount) || 0;
-    const valid = amt >= 100 && amt <= avail;
+    const valid = amt >= minAmount && amt <= avail;
     const fee = Math.round(amt * FEE_RATE);
     const net = amt - fee;
     const cny = isCNY ? (net * FX_RATE).toFixed(2) : null;
@@ -218,7 +221,7 @@ export default class Withdraw extends Component<{}, State> {
             {t('withdraw.all')}
           </Text>
         </View>
-        <Text className='amount-hint'>{t('withdraw.minHint')}</Text>
+        <Text className='amount-hint'>{t('withdraw.minHint', { min: fmt(minAmount) })}</Text>
 
         {/* 费用预览 */}
         {valid && (

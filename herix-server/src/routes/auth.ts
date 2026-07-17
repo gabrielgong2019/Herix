@@ -43,13 +43,13 @@ authRouter.post('/send-code', async (req: Request, res: Response) => {
   const code = String(crypto.randomInt(100000, 1000000));
   await insert('verification_codes', {
     email, purpose, code,
-    expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+    expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
     created_at: new Date().toISOString(),
   });
   await sendMail(
     email,
     '【Herix】注册验证码',
-    `你的 Herix 注册验证码是：${code}\n5 分钟内有效。如非本人操作，请忽略此邮件。\n\nYour Herix verification code is ${code} (valid for 5 minutes).`
+    `你的 Herix 注册验证码是：${code}\n30 分钟内有效。如非本人操作，请忽略此邮件。\n\nYour Herix verification code is ${code} (valid for 30 minutes).`
   );
   res.json({ sent: true });
 });

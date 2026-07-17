@@ -127,17 +127,7 @@ export async function initDatabase() {
       UNIQUE(task_id, herald_id)
     );
 
-    CREATE TABLE IF NOT EXISTS referrals (
-      id TEXT PRIMARY KEY,
-      ambassador_task_id TEXT NOT NULL REFERENCES ambassador_tasks(id),
-      referred_token TEXT NOT NULL,
-      registered_at TEXT DEFAULT NULL,
-      kyc_completed_at TEXT DEFAULT NULL,
-      first_transfer_at TEXT DEFAULT NULL,
-      first_transfer_amount DOUBLE PRECISION DEFAULT NULL,
-      qualified INTEGER NOT NULL DEFAULT 0,
-      UNIQUE(ambassador_task_id, referred_token)
-    );
+    -- referrals 旧表已删除（2026-07-17，明细模式改用 referral_records；迁移区有 DROP 兜底老库）
 
     -- payouts 表已废弃（2026-06-11），结算统一走 transactions + withdrawal_requests
 
@@ -427,7 +417,7 @@ export async function initDatabase() {
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_refrec_task_code_user ON referral_records(task_id, code, user_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_task_code ON referral_records(task_id, code)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_herald ON referral_records(herald_id)`,
-    // 邮箱验证码（2026-07-17）：注册验证等用途。6位码/5分钟有效/5次尝试上限/60秒限频+小时配额（逻辑在 auth.ts）
+    // 邮箱验证码（2026-07-17）：注册验证等用途。6位码/30分钟有效/5次尝试上限/60秒限频+小时配额（逻辑在 auth.ts）
     `CREATE TABLE IF NOT EXISTS verification_codes (
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL,

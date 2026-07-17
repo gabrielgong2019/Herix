@@ -88,7 +88,8 @@ tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) =>
   const uid = req.user!.userId;
 
   const tasks = await findMany<any>(`
-    SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at, t.data_mode, t.brand_party_id,
+    SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at, t.data_mode,
+      (SELECT COUNT(*)::int FROM task_brand_parties tbp WHERE tbp.task_id = t.id) AS brand_party_count,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id) as app_total,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='APPROVED') as app_approved,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='PENDING') as app_pending,
@@ -279,49 +280,86 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
 /** 品牌上传页数据条款版本（改条款文案时同步升版本）。v2：明细模式一人多码分别计费 */
 const UPLOAD_TERMS_VERSION = '2026-07-17-v2';
 
+/** 任务关闭后的数据缓冲期：COMPLETED 后 30 天内仍可上传/查看，此后惰性失效（无定时任务） */
+const GRACE_DAYS = 30;
+
+function graceDeadline(task: { status?: string; completed_at?: string | null }): Date | null {
+  if (task.status !== 'COMPLETED' || !task.completed_at) return null;
+  return new Date(new Date(task.completed_at).getTime() + GRACE_DAYS * 24 * 3600_000);
+}
+
+/** 数据通道是否开放：进行中，或已完成且在 30 天缓冲期内。CANCELLED/DRAFT 一律关闭 */
+function uploadWindowOpen(task: { status?: string; completed_at?: string | null }): boolean {
+  if (['OPEN', 'IN_PROGRESS'].includes(String(task.status))) return true;
+  const d = graceDeadline(task);
+  return !!d && d.getTime() > Date.now();
+}
+
+/** SQL 片段：任务对品牌方仍"活跃"（进行中或缓冲期内），参数为 30 天前的 ISO 时间 */
+const BINDING_ACTIVE_SQL = `(t.status IN ('OPEN','IN_PROGRESS') OR (t.status = 'COMPLETED' AND t.completed_at > ?))`;
+const graceCutoffIso = () => new Date(Date.now() - GRACE_DAYS * 24 * 3600_000).toISOString();
+
+async function isBrandPartyOf(taskId: string, userId?: string): Promise<boolean> {
+  if (!userId) return false;
+  const r = await findOne<{ id: string }>('SELECT id FROM task_brand_parties WHERE task_id = ? AND user_id = ?', [taskId, userId]);
+  return !!r;
+}
+
 /** POST /api/tasks/:id/brand-bind — 品牌方凭数据上传链接的 token 自助绑定（2026-07-17 合并设计：
  *  不再有单独的邀请链接/审批。先到先得，只能绑一次；代理任务详情可见绑定者并可解绑。
  *  风险评估：上传链接持有者本就能看到码表统计，绑定的边际权限极小，代理可解绑兜底 */
 tasksRouter.post('/:id/brand-bind', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
   const { token } = req.body as { token?: string };
-  const task = await findOne<any>('SELECT id, title, creator_id, brand_party_id, upload_token FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, title, creator_id, status, completed_at, upload_token FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
-  if (task.brand_party_id) return res.status(409).json({ error: '该任务已绑定品牌方，如有误请联系代理解绑', code: 'ALREADY_BOUND' });
   if (!token || !task.upload_token || token !== task.upload_token) {
     return res.status(403).json({ error: '链接无效或已过期', code: 'INVALID_TOKEN' });
   }
   if (task.creator_id === req.user!.userId) {
     return res.status(400).json({ error: '不能绑定自己创建的任务', code: 'CANNOT_BIND_OWN' });
   }
-  await update('tasks', { brand_party_id: req.user!.userId }, 'id = ?', [task.id]);
-  console.log(`[brand-bind] task=${task.id} brand_party=${req.user!.userId}`);
-  res.json({ taskId: task.id, title: task.title, bound: true });
+  if (!uploadWindowOpen(task)) {
+    return res.status(400).json({ error: '任务已关闭且超过数据缓冲期，无法绑定', code: 'TASK_CLOSED' });
+  }
+  // 多账号绑定（品牌可能多个员工账号），同账号重复绑定幂等
+  const existing = await isBrandPartyOf(task.id, req.user!.userId);
+  if (!existing) {
+    await insert('task_brand_parties', { task_id: task.id, user_id: req.user!.userId, bound_at: new Date().toISOString() });
+    console.log(`[brand-bind] task=${task.id} brand_party=${req.user!.userId}`);
+  }
+  res.json({ taskId: task.id, title: task.title, bound: true, already: existing });
 });
 
-/** POST /api/tasks/:id/brand-unbind — 代理解绑品牌方（绑错人的兜底；解绑后可重新绑定） */
+/** POST /api/tasks/:id/brand-unbind — 代理解绑指定品牌账号（绑错人的兜底；解绑后可重新绑定） */
 tasksRouter.post('/:id/brand-unbind', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, brand_party_id FROM tasks WHERE id = ?', [req.params.id]);
+  const { userId } = req.body as { userId?: string };
+  const task = await findOne<any>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '只有任务创建者可以解绑', code: 'FORBIDDEN' });
   }
-  if (!task.brand_party_id) return res.status(400).json({ error: '该任务未绑定品牌方', code: 'NOT_BOUND' });
-  await update('tasks', { brand_party_id: null }, 'id = ?', [task.id]);
-  console.log(`[brand-unbind] task=${task.id} by=${req.user!.userId} removed=${task.brand_party_id}`);
+  if (!userId) return res.status(400).json({ error: '缺少要解绑的账号', code: 'USER_REQUIRED' });
+  const r = await pool.query('DELETE FROM task_brand_parties WHERE task_id = $1 AND user_id = $2', [task.id, userId]);
+  if (!r.rowCount) return res.status(400).json({ error: '该账号未绑定本任务', code: 'NOT_BOUND' });
+  console.log(`[brand-unbind] task=${task.id} by=${req.user!.userId} removed=${userId}`);
   res.json({ taskId: task.id, unbound: true });
 });
 
 /** GET /api/tasks/partner/mine — 我作为品牌方被绑定的任务（进展数量，无金额） */
 tasksRouter.get('/partner/mine', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  // 绑定关系随任务生命周期：关闭超过 30 天缓冲期的任务不再出现（惰性失效）
   const rows = await findMany<any>(
-    `SELECT t.id, t.title, t.status, t.mode, t.data_mode, t.max_heralds, t.created_at,
+    `SELECT t.id, t.title, t.status, t.mode, t.data_mode, t.max_heralds, t.created_at, t.completed_at,
             u.nickname AS agency_name,
             (SELECT COUNT(*)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS code_holders,
             (SELECT COALESCE(SUM(at.registered_count),0)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS total_registered,
             (SELECT COALESCE(SUM(at.used_count),0)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS total_converted
-     FROM tasks t JOIN users u ON u.id = t.creator_id
-     WHERE t.brand_party_id = ? ORDER BY t.created_at DESC`,
-    [req.user!.userId]
+     FROM tasks t
+     JOIN task_brand_parties tbp ON tbp.task_id = t.id
+     JOIN users u ON u.id = t.creator_id
+     WHERE tbp.user_id = ? AND ${BINDING_ACTIVE_SQL}
+     ORDER BY t.created_at DESC`,
+    [req.user!.userId, graceCutoffIso()]
   );
   res.json(rows);
 });
@@ -345,11 +383,15 @@ tasksRouter.post('/:id/upload-consent', async (req: Request, res: Response) => {
 
 /** GET /api/tasks/:id/referrals — 明细模式跟踪列表（商家）。只回脱敏标识，不存在原文 */
 tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, brand_party_id, data_mode FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id, status, completed_at, data_mode FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
-  // 代理（创建者）/管理员/绑定的品牌方均可看跟踪明细（行内只有状态无金额）
-  if (task.creator_id !== req.user!.userId && task.brand_party_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
-    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+  // 代理（创建者）/管理员随时可看；品牌方仅在任务活跃或 30 天缓冲期内可看
+  const isCreatorOrAdmin = task.creator_id === req.user!.userId || req.user!.role === 'ADMIN';
+  if (!isCreatorOrAdmin) {
+    const bound = await isBrandPartyOf(task.id, req.user!.userId);
+    if (!bound || !uploadWindowOpen(task)) {
+      return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+    }
   }
   const rows = await findMany<any>(
     `SELECT r.id, r.code, r.user_masked, r.registered_at, r.converted_at,
@@ -367,7 +409,7 @@ tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), as
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, brand_party_id, mode, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, data_mode FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, mode, status, completed_at, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, data_mode FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -375,11 +417,16 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   // 鉴权：Bearer token（代理商家/绑定品牌方/管理员）或 upload_token（品牌专属链接）
   const uploadToken = String(req.query.token || '');
   const isTokenAuth = uploadToken && task.upload_token && uploadToken === task.upload_token;
-  const isBrandParty = !!(req.user && task.brand_party_id && req.user.userId === task.brand_party_id);
+  const isBrandParty = !!(req.user && await isBrandPartyOf(task.id, req.user.userId));
   const isBearerAuth = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN' || isBrandParty);
   if (!isTokenAuth && !isBearerAuth) return res.status(403).json({ error: '无权限' });
 
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
+
+  // 生命周期闸门：进行中或关闭后 30 天缓冲期内可收数；此前无此检查——已关闭任务凭 token 仍能触发结算（口子，2026-07-17 堵）
+  if (!uploadWindowOpen(task)) {
+    return res.status(400).json({ error: '任务已关闭且超过 30 天数据缓冲期，不再接收数据', code: 'TASK_CLOSED' });
+  }
 
   // token 通道（品牌方，非平台用户）须先同意数据条款；Bearer 通道（商家/管理员）入驻时已签服务协议
   if (isTokenAuth && !isBearerAuth) {
@@ -750,12 +797,10 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
     `SELECT t.*, u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
-            bp2.nickname as brand_party_name,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
             (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
-     LEFT JOIN users bp2 ON bp2.id = t.brand_party_id
      WHERE t.id = ?`, [req.params.id]
   );
 
@@ -766,6 +811,14 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const isOwner = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
   if (!isOwner) {
     delete task.upload_token;
+  } else {
+    // 品牌方绑定列表（多账号），供代理面板展示 + 逐个解绑
+    task.brand_parties = await findMany<any>(
+      `SELECT tbp.user_id, tbp.bound_at, u.nickname, u.email
+       FROM task_brand_parties tbp JOIN users u ON u.id = tbp.user_id
+       WHERE tbp.task_id = ? ORDER BY tbp.bound_at`,
+      [task.id]
+    );
   }
 
   const applications = await findMany<any>(
@@ -962,11 +1015,34 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
 
 /** PATCH /api/tasks/:id/complete — 完成/关闭任务 */
 tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id, title, mode FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId) return res.status(403).json({ error: '无权限' });
 
-  await update('tasks', { status: 'COMPLETED', completed_at: new Date().toISOString() }, 'id = ?', [req.params.id]);
+  const completedAt = new Date().toISOString();
+  await update('tasks', { status: 'COMPLETED', completed_at: completedAt }, 'id = ?', [req.params.id]);
+
+  // 推广任务关闭 → 通知全部持码赫使：还有 30 天数据缓冲期，抓紧催邀请用户转化（站内信三语 + 邮件）
+  if (task.mode === 'PERFORMANCE') {
+    const deadline = new Date(new Date(completedAt).getTime() + GRACE_DAYS * 24 * 3600_000).toISOString().slice(0, 10);
+    const holders = await findMany<any>(
+      `SELECT at.herald_id, at.unique_code, u.email FROM ambassador_tasks at JOIN users u ON u.id = at.herald_id WHERE at.task_id = ?`,
+      [task.id]
+    );
+    for (const h of holders) {
+      await notify({
+        userId: h.herald_id,
+        email: h.email || null,
+        targetRole: 'HERALD',
+        type: 'TASK_CLOSING',
+        title: `任务已关闭，缓冲期至 ${deadline}：${task.title}`,
+        body: `任务「${task.title}」已关闭。数据仍可收录至 ${deadline}（30 天缓冲期）——请提醒你邀请的用户尽快完成转化，逾期将不再结算。`,
+        metadata: { taskId: task.id, taskTitle: task.title, code: h.unique_code, date: deadline },
+      }).catch((e) => console.error('[notify] TASK_CLOSING failed:', e));
+    }
+    console.log(`[task-complete] task=${task.id} notified=${holders.length} graceUntil=${deadline}`);
+  }
+
   const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 });

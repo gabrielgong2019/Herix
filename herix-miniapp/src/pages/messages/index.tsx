@@ -13,6 +13,7 @@ const ACCENT_MAP: Record<string, string> = {
   SETTLEMENT_BLOCKED: '#d97706',
   CONVERSION_SETTLED: '#16a34a',
   CONVERSION_UPDATED: '#1d4ed8',
+  TASK_CLOSING: '#d97706',
 };
 const ICON_MAP: Record<string, string> = {
   SUB_APPROVED: '✅',
@@ -22,6 +23,7 @@ const ICON_MAP: Record<string, string> = {
   SETTLEMENT_BLOCKED: '⚠️',
   CONVERSION_SETTLED: '💰',
   CONVERSION_UPDATED: '📈',
+  TASK_CLOSING: '⏳',
 };
 
 // 相对时间（等价 herix formatNotifTime）
@@ -124,6 +126,7 @@ export default class Messages extends Component<{}, State> {
       amount: meta.amount,
       reg: meta.reg,
       used: meta.used,
+      date: meta.date,
     };
     const title = canTranslate ? t(titleKey, params) : n.title;
     let body = canTranslate ? t(`notif.${n.type}.body`, params) : n.body;

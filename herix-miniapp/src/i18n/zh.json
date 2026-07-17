@@ -451,6 +451,8 @@
   "notif.CONVERSION_SETTLED.body": "你的推广码 {code} 新增 {n} 次转化，收入 ¥{amount} 已入账钱包。",
   "notif.CONVERSION_UPDATED.title": "推广数据更新：{taskTitle}",
   "notif.CONVERSION_UPDATED.body": "你的推广码 {code} 数据已更新：注册 {reg}、使用 {used}。",
+  "notif.TASK_CLOSING.title": "任务已关闭，缓冲期至 {date}：{taskTitle}",
+  "notif.TASK_CLOSING.body": "任务「{taskTitle}」已关闭。数据仍可收录至 {date}（30 天缓冲期）——请提醒你邀请的用户尽快完成转化，逾期将不再结算。",
   "category.experience": "体验",
   "category.beauty": "美妆",
   "category.travel": "旅行",

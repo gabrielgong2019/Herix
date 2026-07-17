@@ -451,6 +451,8 @@
   "notif.CONVERSION_SETTLED.body": "あなたの紹介コード {code} に新たに {n} 件のコンバージョンが発生し、報酬 ¥{amount} がウォレットに入金されました。",
   "notif.CONVERSION_UPDATED.title": "プロモーションデータ更新：{taskTitle}",
   "notif.CONVERSION_UPDATED.body": "紹介コード {code} のデータが更新されました：登録 {reg} 件、利用 {used} 件。",
+  "notif.TASK_CLOSING.title": "タスク終了、猶予期間は {date} まで：{taskTitle}",
+  "notif.TASK_CLOSING.body": "タスク「{taskTitle}」は終了しました。データは {date} まで（30日間の猶予期間）受け付けます。招待したユーザーに早めのコンバージョンを促してください。期限後は精算されません。",
   "category.experience": "体験",
   "category.beauty": "美容",
   "category.travel": "旅行",

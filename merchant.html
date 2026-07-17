@@ -584,10 +584,10 @@ function tasksPage() {
   return html;
 }
 
-/* ── 品牌方绑定：品牌凭上传链接 token 自助绑定；代理可解绑 ── */
-function unbindBrand(taskId) {
-  if (!confirm('确认解绑该品牌方？解绑后对方将无法查看任务进展，可重新绑定')) return;
-  post('/tasks/'+taskId+'/brand-unbind', {}, function(d) {
+/* ── 品牌方绑定：品牌凭上传链接 token 自助绑定（多账号）；代理逐个解绑 ── */
+function unbindBrand(taskId, userId, name) {
+  if (!confirm('确认解绑品牌账号「'+(name||'')+'」？解绑后该账号将无法查看任务进展，可重新绑定')) return;
+  post('/tasks/'+taskId+'/brand-unbind', { userId: userId }, function(d) {
     if (d.error) { alert(d.error); return; }
     showMsg('已解绑', 'success');
     openTask(taskId);
@@ -751,15 +751,20 @@ function taskDetailPage() {
       +'</div></div>';
   }
 
-  // 品牌方绑定（2026-07-17 合并设计：品牌凭数据上传链接注册后自助绑定，代理可解绑）
+  // 品牌方绑定（2026-07-17 定稿：多账号，凭上传链接注册/登录自助绑定，代理逐个解绑；关闭+30天缓冲后失效）
   if (t.status !== 'DRAFT') {
+    var parties = t.brand_parties || [];
     left += '<div class="panel" style="border:1px solid #d1fae5;background:#f0fdf4">'
-      +'<div class="panel-title" style="color:#047857">🤝 品牌方</div>'
-      + (t.brand_party_id
-        ? '<div style="font-size:13px">已绑定：<b>'+esc(t.brand_party_name||'品牌方账号')+'</b>'
-          +'<div style="font-size:11px;color:#6b7280;margin:4px 0 10px">品牌方可在线查看推广进展与跟踪明细（不含结算金额），并可直接上传转化数据</div>'
-          +'<button class="btn btn-outline btn-sm" onclick="unbindBrand(\''+t.id+'\')">解绑</button></div>'
-        : '<div style="font-size:12px;color:#6b7280">尚未绑定。把上方「品牌数据上传链接」发给品牌方，对方注册账号后可自助绑定本任务（在线看进展、直接上传数据，看不到结算金额）。绑错了可在此解绑</div>')
+      +'<div class="panel-title" style="color:#047857">🤝 品牌方账号（'+parties.length+'）</div>'
+      + (parties.length
+        ? parties.map(function(bp) {
+            return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px">'
+              +'<div style="flex:1;min-width:0"><b>'+esc(bp.nickname||'品牌方账号')+'</b> <span style="font-size:11px;color:#6b7280">'+esc(bp.email||'')+'</span></div>'
+              +'<button class="btn btn-outline btn-sm" onclick="unbindBrand(\''+t.id+'\',\''+esc(bp.user_id)+'\',\''+esc(bp.nickname||'')+'\')">解绑</button>'
+              +'</div>';
+          }).join('')
+          +'<div style="font-size:11px;color:#6b7280;margin-top:4px">品牌方可在线查看推广进展与跟踪明细（不含结算金额）并直接上传数据；任务关闭 30 天后自动失效</div>'
+        : '<div style="font-size:12px;color:#6b7280">尚未绑定。把上方「品牌数据上传链接」发给品牌方，对方注册/登录后自动绑定本任务（支持多个账号；在线看进展、直接上传数据，看不到结算金额）。绑错了可在此解绑</div>')
       +'</div>';
   }
 
@@ -1220,11 +1225,13 @@ function csvModeBlockHTML(t) {
     '每次上传<b>全量名单</b>（所有邀请用户），同一推广码下同一用户自动去重，重传不重复计费',
     '<b>同一用户使用多个推广码将分别计费</b>（每位赫使的推广都有回报）；如不希望重复付费，请在你的系统侧限制一人一码',
     '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
+    '任务关闭后仍有 <b>30 天数据缓冲期</b>，逾期不再收录——请在缓冲期内传完尾部转化',
   ] : [
     '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
     '系统只对新增部分结算；重复上传同样数据<b>不会重复打款</b>',
     '已结算部分不可回收；填小于历史的数不会退款',
     '推广码必须属于所选任务，传错任务会被明确提示',
+    '任务关闭后仍有 <b>30 天数据缓冲期</b>，逾期不再收录——请在缓冲期内传完尾部转化',
   ];
   return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
     +'<div style="font-weight:600">上传转化数据（CSV）<span style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:8px;background:'+(isDetail?'#ede9fe':'#dbeafe')+';color:'+(isDetail?'#6d28d9':'#1d4ed8')+'">'+(isDetail?'明细模式':'汇总模式')+'</span></div>'

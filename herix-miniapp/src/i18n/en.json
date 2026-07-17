@@ -451,6 +451,8 @@
   "notif.CONVERSION_SETTLED.body": "Your promo code {code} generated {n} new conversion(s). ¥{amount} has been credited to your wallet.",
   "notif.CONVERSION_UPDATED.title": "Referral data updated: {taskTitle}",
   "notif.CONVERSION_UPDATED.body": "Data for your promo code {code} has been updated: {reg} registrations, {used} uses.",
+  "notif.TASK_CLOSING.title": "Task closed — grace period until {date}: {taskTitle}",
+  "notif.TASK_CLOSING.body": "\"{taskTitle}\" has closed. Data is still accepted until {date} (30-day grace period) — remind your invitees to convert soon; conversions after the deadline will not be settled.",
   "category.experience": "Experience",
   "category.beauty": "Beauty",
   "category.travel": "Travel",

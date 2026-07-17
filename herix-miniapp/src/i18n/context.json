@@ -451,6 +451,8 @@
   "notif.CONVERSION_SETTLED.body": "通知正文。code=赫使推广码, n=新增转化次数, amount=入账金额(日元整数)",
   "notif.CONVERSION_UPDATED.title": "通知标题:商家上传了推广数据,本次无新增付费转化,仅计数更新。taskTitle=任务标题",
   "notif.CONVERSION_UPDATED.body": "通知正文。code=赫使推广码, reg=累计注册数, used=累计使用数",
+  "notif.TASK_CLOSING.title": "通知标题:推广任务被商家关闭,进入30天数据缓冲期。date=缓冲截止日, taskTitle=任务标题",
+  "notif.TASK_CLOSING.body": "通知正文:提醒赫使催邀请用户在缓冲期内完成转化,逾期不结算",
   "category.experience": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
   "category.beauty": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
   "category.travel": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",

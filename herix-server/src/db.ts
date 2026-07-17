@@ -439,9 +439,27 @@ export async function initDatabase() {
       agreed_at TEXT NOT NULL
     )`,
     `CREATE INDEX IF NOT EXISTS idx_upload_consents_task ON upload_consents(task_id)`,
-    // 代理任务的品牌方关联（2026-07-17）：品牌方=完整商家账号，对绑定任务只看进展（数量/状态），
-    // 不可见结算金额/不可审核/不可改判。绑定由代理生成一次性邀请链接发起
-    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS brand_party_id TEXT REFERENCES users(id)`,
+    // 代理任务的品牌方关联（2026-07-17，当日两次修订后定稿）：
+    //   多账号绑定（品牌可能多个员工账号）→ 独立关联表；绑定=凭上传链接注册/登录自助；代理可逐个解绑；
+    //   生命周期：任务进行中 + 关闭后 30 天缓冲期（缓冲内仍可上传/查看，到期惰性失效，无需定时任务）
+    `CREATE TABLE IF NOT EXISTS task_brand_parties (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id),
+      user_id TEXT NOT NULL REFERENCES users(id),
+      bound_at TEXT NOT NULL,
+      UNIQUE(task_id, user_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_tbp_user ON task_brand_parties(user_id)`,
+    // 存量单列 brand_party_id → 关联表迁移后删列（条件执行，删列后此块自然跳过）
+    `DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'tasks' AND column_name = 'brand_party_id') THEN
+        INSERT INTO task_brand_parties (id, task_id, user_id, bound_at)
+          SELECT md5(random()::text || id), id, brand_party_id, now()::text
+          FROM tasks WHERE brand_party_id IS NOT NULL
+          ON CONFLICT (task_id, user_id) DO NOTHING;
+        ALTER TABLE tasks DROP COLUMN brand_party_id;
+      END IF;
+    END $$`,
     // 邀请链接机制已拆除（2026-07-17 当日修订：绑定改为凭上传链接自助+代理可解绑），列 DROP 兜底
     `ALTER TABLE tasks DROP COLUMN IF EXISTS brand_invite_token`,
     // 定价模块（2026-07-09）

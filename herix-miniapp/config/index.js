@@ -28,7 +28,7 @@ export default {
     },
   },
   h5: {
-    publicPath: '/',
+    publicPath: '/app/', // H5 挂在 herix.huaxuex.com/app 路径下（子域名方案需付费多级证书，弃用）
     staticDirectory: 'static',
     template: 'src/index.html',
     router: { mode: 'hash' },

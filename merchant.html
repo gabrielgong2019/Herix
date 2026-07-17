@@ -2913,12 +2913,8 @@ function copyUploadLink(taskId, token) {
 }
 
 function taskShareUrl(taskId) {
-  // Taro H5 版邀请落地页(hash路由)。H5 托管在 app 子域名(index.ts 按域名分流:
-  // 主域名=营销首页, app.*=H5)——商家后台在主域名上,分享链接必须指到 app
-  var origin = window.location.origin;
-  if (window.location.hostname === 'herix.huaxuex.com') origin = 'https://app.herix.huaxuex.com';
-  else if (window.location.hostname === 'localhost') origin = origin.replace('//localhost', '//app.localhost');
-  return origin + '/#/pages/landing/index?task=' + taskId;
+  // Taro H5 版邀请落地页(hash路由)，托管在同域名 /app 路径下(线上/本地同构)
+  return window.location.origin + '/app/#/pages/landing/index?task=' + taskId;
 }
 
 function copyInviteLink(taskId) {

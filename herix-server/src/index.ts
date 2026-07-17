@@ -29,16 +29,12 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 
 app.use(cors());
-// app.herix.huaxuex.com → H5 小程序
-const h5Static = express.static(path.join(__dirname, '../../herix-miniapp/dist/h5'));
-app.use((req, res, next) => {
-  // app.localhost 供本地开发预览 H5（浏览器原生支持 *.localhost 解析）
-  if (req.hostname === 'app.herix.huaxuex.com' || req.hostname === 'app.localhost') {
-    return h5Static(req, res, () => res.sendFile(path.join(__dirname, '../../herix-miniapp/dist/h5/index.html')));
-  }
-  next();
-});
-// 其他域名 → 项目根目录（营销主页、merchant.html 等）
+// H5 应用挂在 /app 路径（hash 路由，深链形如 /app/#/pages/...）。
+// 曾试过 app.herix.huaxuex.com 子域名：三级子域名超出 Universal SSL 覆盖（*.huaxuex.com 只到一级），弃用
+const H5_DIR = path.join(__dirname, '../../herix-miniapp/dist/h5');
+app.use('/app', express.static(H5_DIR));
+app.get('/app/*', (_req, res) => res.sendFile(path.join(H5_DIR, 'index.html')));
+// 根路径 → 项目根目录（营销主页、merchant.html 等）
 app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
 app.use('/uploads', express.static(UPLOADS_DIR));

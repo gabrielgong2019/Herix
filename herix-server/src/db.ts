@@ -529,6 +529,7 @@ export async function initDatabase() {
       ('referral',   '推荐', '🔗', 7),
       ('baby',       '母婴', '🍼', 8)
      ON CONFLICT (id) DO NOTHING`,
+    `ALTER TABLE task_ratings ADD COLUMN IF NOT EXISTS brand_id TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

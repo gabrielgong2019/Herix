@@ -238,6 +238,7 @@ submissionsRouter.post('/:id/rate', requireAuth, requireRole('BRAND', 'ADMIN'), 
     await insert('task_ratings', {
       task_id: submission.task_id,
       herald_id: submission.herald_id,
+      brand_id: req.user!.userId,
       score: Number(score),
       comment: comment || null,
     });
@@ -252,10 +253,12 @@ submissionsRouter.post('/:id/rate', requireAuth, requireRole('BRAND', 'ADMIN'), 
 /** GET /api/submissions/task/:taskId — 任务的提交列表 (品牌商家) */
 submissionsRouter.get('/task/:taskId', requireAuth, async (req: Request, res: Response) => {
   const subs = await findMany<any>(
-    `SELECT ts.*, u.nickname, hp.display_name, hp.country, hp.social_platforms
+    `SELECT ts.*, u.nickname, hp.display_name, hp.country, hp.social_platforms,
+            tr.score as rating_score, tr.comment as rating_comment
      FROM task_submissions ts
      JOIN users u ON u.id = ts.herald_id
      LEFT JOIN herald_profiles hp ON hp.user_id = ts.herald_id
+     LEFT JOIN task_ratings tr ON tr.task_id = ts.task_id AND tr.herald_id = ts.herald_id
      WHERE ts.task_id = ?
      ORDER BY ts.submitted_at DESC`, [req.params.taskId]
   );

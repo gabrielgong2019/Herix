@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { View, Text } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { notifications as notifApi, getToken } from '../../utils/api';
+import { refreshUnreadBadge } from '../../utils/badge';
 import { t } from '../../utils/i18n';
 import './index.scss';
 
@@ -80,6 +81,7 @@ export default class Messages extends Component<{}, State> {
       const d: any = await notifApi.list();
       const list = Array.isArray(d) ? d : d?.notifications || [];
       this.setState({ notifs: list, loading: false });
+      refreshUnreadBadge();
     } catch (err) {
       console.error('load notifications error:', err);
       this.setState({ loading: false });
@@ -90,6 +92,7 @@ export default class Messages extends Component<{}, State> {
     try {
       await notifApi.markAllRead();
       this.setState({ notifs: this.state.notifs.map(n => ({ ...n, is_read: true })) });
+      refreshUnreadBadge();
     } catch (err) {
       Taro.showToast({ title: t('common.opFailed'), icon: 'none' });
     }
@@ -100,6 +103,7 @@ export default class Messages extends Component<{}, State> {
     try {
       await notifApi.markRead(n.id);
       this.setState({ notifs: this.state.notifs.map(x => (x.id === n.id ? { ...x, is_read: true } : x)) });
+      refreshUnreadBadge();
     } catch (err) {
       console.error('mark read error:', err);
     }

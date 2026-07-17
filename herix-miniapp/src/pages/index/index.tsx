@@ -4,6 +4,7 @@ import logoIcon from '../../assets/herix-icon.png';
 import { tasks as taskApi, categories as categoriesApi } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
+import { refreshUnreadBadge } from '../../utils/badge';
 import { t, tf } from '../../utils/i18n';
 
 // 对齐 herix.html 原版：首页 = 纯浏览列表（探索）。
@@ -32,6 +33,7 @@ export default class Index extends Component<{}, State> {
   // 其他 tab 页的 componentDidShow 本来就会 setState 触发重渲染,唯独本页曾漏掉
   componentDidShow() {
     this.forceUpdate();
+    refreshUnreadBadge(); // 消息 tab 未读气泡随 tab 切换刷新
   }
 
   loadData = async () => {

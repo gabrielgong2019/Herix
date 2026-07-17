@@ -12,6 +12,7 @@ import {
 } from '../../utils/api';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
 import { t, LOCALES, getLocale, setLocale } from '../../utils/i18n';
+import { refreshUnreadBadge } from '../../utils/badge';
 import './profile.scss';
 import { fmt } from '../../utils/format';
 import { validateWechatOrPhone } from '../../components/WechatOrPhoneInput';
@@ -119,6 +120,7 @@ export default class Profile extends Component<{}, State> {
   };
 
   loadUser = async () => {
+    refreshUnreadBadge();
     try {
       const user = await authApi.me();
       this.setState({ user, isLogin: true });

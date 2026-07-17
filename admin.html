@@ -142,7 +142,7 @@ function shell(inner){
     {id:'i18n',icon:'🌐',label:'本地化'},
     {id:'pricing',icon:'💰',label:'定价'},
   ];
-  var sb='<div class="sidebar" id="sb"><div class="sb-brand"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-icon-filled.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div></div></div>';
+  var sb='<div class="sidebar" id="sb"><div class="sb-brand"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:9px;color:rgba(255,255,255,.3);font-weight:400;margin-top:1px">ADMIN</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: st.page, onclick: "go('%s')" });
   sb+='<div class="sb-bottom"><div>'+esc(st.user.nickname)+'</div><div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
 
@@ -177,7 +177,7 @@ function pageCont(){
 /* ── Login ── */
 function loginPage(){
   return '<div class="login-wrap"><div class="login-card">'
-    +'<div class="login-logo"><img src="/Logo/herix-icon-filled.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
+    +'<div class="login-logo"><img src="/Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
     +'<div style="text-align:center;font-size:12px;color:var(--muted);margin-bottom:24px">平台运营管理后台</div>'
     +Auth.loginForm({
       title: '',

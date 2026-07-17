@@ -202,7 +202,7 @@ function layout(inner) {
     { id:'settings', icon:'⚙️', label:'账户设置' },
   ];
   var sb = '<div class="sidebar" id="sidebar">';
-  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-icon-filled.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">商户后台</div></div></div></div>';
+  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="/Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">商户后台</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
   sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">品牌商家</span></div>';
   var linked = state.brandProfile?.linkedAccount;
@@ -267,7 +267,7 @@ function pageContent() {
 /* ── Login ── */
 function loginPage() {
   return '<div class="login-wrap"><div class="login-card">'
-    +'<div class="login-logo"><img src="/Logo/herix-icon-filled.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
+    +'<div class="login-logo"><img src="/Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
     +'<div class="login-sub">品牌商家管理后台</div>'
     +Auth.loginForm({
       title: '',

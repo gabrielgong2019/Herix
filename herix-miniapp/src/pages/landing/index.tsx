@@ -2,6 +2,8 @@ import { Component } from 'react';
 import { View, Text, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { auth, tasks as taskApi, categories as categoriesApi, setToken } from '../../utils/api';
+// 打包进产物的 logo（weapp 端拿不到服务器 /Logo/ 路径，H5/weapp 统一走 bundle）
+import logoIcon from '../../assets/herix-icon.png';
 import './index.scss';
 import { t, tf, LOCALES, getLocale, setLocale } from '../../utils/i18n';
 import { fmt } from '../../utils/format';
@@ -207,7 +209,7 @@ export default class Landing extends Component<{}, State> {
       <View className='landing-page'>
         {/* 品牌头 */}
         <View className='lp-header'>
-          <Image className='lp-logo' src='/Logo/herix-icon.png' mode='aspectFit' />
+          <Image className='lp-logo' src={logoIcon} mode='aspectFit' />
           <Text className='lp-brand'>Herix</Text>
         </View>
 

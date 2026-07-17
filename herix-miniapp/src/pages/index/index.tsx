@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
-import logoIcon from '../../assets/herix-icon.png';
+import logoWide from '../../assets/herix-logo-wide.png';
 import { tasks as taskApi, categories as categoriesApi } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
@@ -66,10 +66,7 @@ export default class Index extends Component<{}, State> {
       <View className='index-page'>
         <View className='header'>
           <View className='logo-row'>
-            <Image className='logo-icon' src={logoIcon} mode='aspectFit' />
-            <Text className='logo'>
-              <Text className='logo-accent'>赫</Text>使 HERIX
-            </Text>
+            <Image className='logo-wide' src={logoWide} mode='aspectFit' />
           </View>
           <Text className='slogan'>{t('index.slogan')}</Text>
         </View>

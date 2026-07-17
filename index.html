@@ -1,3 +1,8 @@
+<script>
+// H5 迁到 /app 前分享出去的旧链接形如 /#/pages/landing/index?task=x，
+// hash 不会发给服务器，只能在这里前端兜底跳转到新路径
+if (location.hash.indexOf('#/pages/') === 0) location.replace('/app/' + location.hash);
+</script>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

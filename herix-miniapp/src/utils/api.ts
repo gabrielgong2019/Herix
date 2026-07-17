@@ -8,7 +8,7 @@ declare const wx: any;
 const CLOUD_ENV_ID = 'prod-herix-d5gh5h4nv767053ae'; // 云开发环境ID
 const CLOUD_SERVICE_NAME = 'herix-proxy'; // 云托管服务名称，需与部署时一致
 
-// H5 端用相对路径，自动打"当前页面所在的服务器"——本地测试（localhost:3005）
+// H5 端用相对路径，自动打"当前页面所在的服务器"——本地测试（localhost:4005）
 // 打本地后端，以后部署到哪个域名就自动打那个域名自己，不用写死成线上地址
 const H5_BASE_URL = '/api';
 

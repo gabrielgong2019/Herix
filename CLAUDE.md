@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 cd herix-server
 DATABASE_URL=postgres://localhost:5432/herix \
 JWT_SECRET=herix-dev-secret-change-in-production \
-PORT=3005 \
+PORT=4005 \
 node node_modules/tsx/dist/cli.mjs src/index.ts
 
 # 类型检查（不输出文件）
@@ -22,7 +22,7 @@ npm run build        # 输出到 dist/
 ```
 
 前端是静态 HTML，Express 服务器同时托管 `/`（静态文件目录为项目根目录），无需单独启动。
-访问 `http://localhost:3005/herix.html` 即可。
+访问 `http://localhost:4005/herix.html` 即可。
 
 ---
 
@@ -35,7 +35,7 @@ npm run build        # 输出到 dist/
 | `herix-miniapp/` | 赫使（KOL/大使）端 | **Taro(React) 双端**：微信小程序 + H5。浏览任务、报名、提交、钱包、消息、入驻引导；中日英三语 |
 | `merchant.html` | 品牌商家端 | 发布任务、审核报名、审核内容、数据上传（纯 HTML 无构建） |
 | `admin.html` | 运营后台 | 用户管理、任务管理、结算、KYC 审核、本地化词条矩阵（纯 HTML 无构建） |
-| `herix-server/` | Express + TypeScript API | 统一后端，端口 3005 |
+| `herix-server/` | Express + TypeScript API | 统一后端，端口 4005（⚠️ 原 3005 与 MT5 回测 Agent 端口段 3000+ 冲突，2026-07-17 迁移）|
 
 **赫使端有构建步骤**：`cd herix-miniapp && npm run build:h5 / build:weapp`（输出分别到 `dist/h5` `dist/weapp`，勿共用）。
 品牌/管理端仍是纯 `var`/DOM 单页 HTML，`XMLHttpRequest` 调 `/api/...`。`herix.html` 是赫使端旧版，待退役勿再开发。
@@ -118,7 +118,7 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 **Render 已弃用**（render.yaml 与 package.json 的 render-* scripts 已删除，PRD 中 onrender.com 地址全部作废）。
 
 当前环境：
-- 开发：Mac 本地 launchd 跑 `herix-server`（端口 3005，`launchctl kickstart -k gui/$(id -u)/com.herix.server` 重启；
+- 开发：Mac 本地 launchd 跑 `herix-server`（端口 4005，`launchctl kickstart -k gui/$(id -u)/com.herix.server` 重启；
   **改 plist 环境变量后 kickstart 不够，须 `launchctl bootout` + `bootstrap` 完整重载**），
   数据库为 ECS 上的 PostgreSQL（经 SSH 隧道 `localhost:15432`，凭据在 launchd plist 环境变量，不在 .env）
 - 生产：**正式入口 `herix.huaxuex.com`**（Cloudflare Tunnel `herix-app` → ECS，2026-07-17 确认）。

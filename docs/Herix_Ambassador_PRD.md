@@ -1028,7 +1028,7 @@ GET /:id/codes   → 推广码池（requireAuth + BRAND）
 - 品牌统计面板数字显示正常（`COUNT(*)::int` 修复后）
 
 **小程序 H5 构建：**
-- `config/index.js` 中 `publicPath` 和 API 代理端口更新为 3005
+- `config/index.js` 中 `publicPath` 和 API 代理端口更新为 4005（2026-07-17 由 3005 迁移，避开 MT5 Agent 端口段）
 - `src/utils/api.ts` 中 `BASE_URL` 改为相对路径 `/api`（适配任意同源部署）
 - 首页从占位符重写为带"我的待办"标签页的任务列表
 
@@ -1037,7 +1037,7 @@ GET /:id/codes   → 推广码池（requireAuth + BRAND）
 原 Render 方案（render.yaml、onrender.com 域名、render-* npm scripts）已全部删除。
 
 当前状态：
-- **开发**：Mac 本地 herix-server（:3005）+ ECS PostgreSQL（SSH 隧道）
+- **开发**：Mac 本地 herix-server（:4005）+ ECS PostgreSQL（SSH 隧道）
 - **生产**：部署方案待定，定稿后更新本节
 
 任何新环境部署 checklist：设置 `DATABASE_URL` → 启动即自动建表/迁移（幂等）→ 跑 `scripts/seed-i18n.ts` 灌三语词条 → 验证 `/api/i18n/zh` 有数据。

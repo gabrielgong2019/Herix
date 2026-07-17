@@ -279,33 +279,36 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
 /** 品牌上传页数据条款版本（改条款文案时同步升版本）。v2：明细模式一人多码分别计费 */
 const UPLOAD_TERMS_VERSION = '2026-07-17-v2';
 
-/** POST /api/tasks/:id/brand-invite — 代理生成品牌方绑定邀请链接（一次性 token，重新生成即作废旧的） */
-tasksRouter.post('/:id/brand-invite', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, brand_party_id FROM tasks WHERE id = ?', [req.params.id]);
-  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
-  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
-    return res.status(403).json({ error: '只有任务创建者可以邀请品牌方', code: 'FORBIDDEN' });
-  }
-  if (task.brand_party_id) return res.status(409).json({ error: '该任务已绑定品牌方', code: 'ALREADY_BOUND' });
-  const inviteToken = crypto.randomBytes(16).toString('hex');
-  await update('tasks', { brand_invite_token: inviteToken }, 'id = ?', [task.id]);
-  res.json({ inviteToken, link: `/merchant.html?bind_task=${task.id}&bind_token=${inviteToken}` });
-});
-
-/** POST /api/tasks/:id/brand-bind — 品牌方凭邀请 token 绑定为该任务的关联品牌 */
+/** POST /api/tasks/:id/brand-bind — 品牌方凭数据上传链接的 token 自助绑定（2026-07-17 合并设计：
+ *  不再有单独的邀请链接/审批。先到先得，只能绑一次；代理任务详情可见绑定者并可解绑。
+ *  风险评估：上传链接持有者本就能看到码表统计，绑定的边际权限极小，代理可解绑兜底 */
 tasksRouter.post('/:id/brand-bind', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
   const { token } = req.body as { token?: string };
-  const task = await findOne<any>('SELECT id, title, creator_id, brand_party_id, brand_invite_token FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, title, creator_id, brand_party_id, upload_token FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
-  if (task.brand_party_id) return res.status(409).json({ error: '该任务已绑定品牌方', code: 'ALREADY_BOUND' });
-  if (!token || !task.brand_invite_token || token !== task.brand_invite_token) {
-    return res.status(403).json({ error: '邀请链接无效或已被使用', code: 'INVALID_INVITE' });
+  if (task.brand_party_id) return res.status(409).json({ error: '该任务已绑定品牌方，如有误请联系代理解绑', code: 'ALREADY_BOUND' });
+  if (!token || !task.upload_token || token !== task.upload_token) {
+    return res.status(403).json({ error: '链接无效或已过期', code: 'INVALID_TOKEN' });
   }
   if (task.creator_id === req.user!.userId) {
     return res.status(400).json({ error: '不能绑定自己创建的任务', code: 'CANNOT_BIND_OWN' });
   }
-  await update('tasks', { brand_party_id: req.user!.userId, brand_invite_token: null }, 'id = ?', [task.id]);
+  await update('tasks', { brand_party_id: req.user!.userId }, 'id = ?', [task.id]);
+  console.log(`[brand-bind] task=${task.id} brand_party=${req.user!.userId}`);
   res.json({ taskId: task.id, title: task.title, bound: true });
+});
+
+/** POST /api/tasks/:id/brand-unbind — 代理解绑品牌方（绑错人的兜底；解绑后可重新绑定） */
+tasksRouter.post('/:id/brand-unbind', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, brand_party_id FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '只有任务创建者可以解绑', code: 'FORBIDDEN' });
+  }
+  if (!task.brand_party_id) return res.status(400).json({ error: '该任务未绑定品牌方', code: 'NOT_BOUND' });
+  await update('tasks', { brand_party_id: null }, 'id = ?', [task.id]);
+  console.log(`[brand-unbind] task=${task.id} by=${req.user!.userId} removed=${task.brand_party_id}`);
+  res.json({ taskId: task.id, unbound: true });
 });
 
 /** GET /api/tasks/partner/mine — 我作为品牌方被绑定的任务（进展数量，无金额） */
@@ -758,12 +761,11 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
-  // 敏感凭证只给创建者/管理员：upload_token 可直接触发结算上传，brand_invite_token 可绑定品牌方
-  // （修复：此前 t.* 把两个 token 泄露给任何访问者）
+  // 敏感凭证只给创建者/管理员：upload_token 可直接触发结算上传/绑定品牌方
+  // （修复：此前 t.* 泄露给任何访问者）
   const isOwner = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
   if (!isOwner) {
     delete task.upload_token;
-    delete task.brand_invite_token;
   }
 
   const applications = await findMany<any>(

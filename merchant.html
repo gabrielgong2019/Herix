@@ -584,15 +584,13 @@ function tasksPage() {
   return html;
 }
 
-/* ── 品牌方绑定：代理生成邀请链接 / 品牌方打开链接完成绑定 ── */
-function genBrandInvite(taskId) {
-  post('/tasks/'+taskId+'/brand-invite', {}, function(d) {
+/* ── 品牌方绑定：品牌凭上传链接 token 自助绑定；代理可解绑 ── */
+function unbindBrand(taskId) {
+  if (!confirm('确认解绑该品牌方？解绑后对方将无法查看任务进展，可重新绑定')) return;
+  post('/tasks/'+taskId+'/brand-unbind', {}, function(d) {
     if (d.error) { alert(d.error); return; }
-    var box = document.getElementById('brand-invite-box');
-    var url = window.location.origin + d.link;
-    if (box) box.innerHTML = '<div style="font-family:monospace;font-size:11px;word-break:break-all;background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:8px;margin-bottom:8px">'+esc(url)+'</div>'
-      +'<button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(\''+esc(url)+'\').then(function(){showMsg(\'邀请链接已复制\',\'success\')})">复制邀请链接</button>'
-      +'<span style="font-size:11px;color:#6b7280;margin-left:8px">发给品牌方，注册/登录后自动绑定（一次性）</span>';
+    showMsg('已解绑', 'success');
+    openTask(taskId);
   });
 }
 
@@ -753,14 +751,15 @@ function taskDetailPage() {
       +'</div></div>';
   }
 
-  // 品牌方绑定（代理任务分享给品牌：品牌注册账号后可在线看进展，无金额视角）
+  // 品牌方绑定（2026-07-17 合并设计：品牌凭数据上传链接注册后自助绑定，代理可解绑）
   if (t.status !== 'DRAFT') {
     left += '<div class="panel" style="border:1px solid #d1fae5;background:#f0fdf4">'
       +'<div class="panel-title" style="color:#047857">🤝 品牌方</div>'
       + (t.brand_party_id
-        ? '<div style="font-size:13px">已绑定：<b>'+esc(t.brand_party_name||'品牌方账号')+'</b><div style="font-size:11px;color:#6b7280;margin-top:4px">品牌方可在线查看推广进展与跟踪明细（不含结算金额），并可直接上传转化数据</div></div>'
-        : '<div style="font-size:12px;color:#6b7280;margin-bottom:10px">邀请品牌方注册账号并绑定本任务：对方可在线查看进展、直接上传数据（看不到结算金额）</div>'
-          +'<div id="brand-invite-box"><button class="btn btn-outline btn-sm" onclick="genBrandInvite(\''+t.id+'\')">生成绑定邀请链接</button></div>')
+        ? '<div style="font-size:13px">已绑定：<b>'+esc(t.brand_party_name||'品牌方账号')+'</b>'
+          +'<div style="font-size:11px;color:#6b7280;margin:4px 0 10px">品牌方可在线查看推广进展与跟踪明细（不含结算金额），并可直接上传转化数据</div>'
+          +'<button class="btn btn-outline btn-sm" onclick="unbindBrand(\''+t.id+'\')">解绑</button></div>'
+        : '<div style="font-size:12px;color:#6b7280">尚未绑定。把上方「品牌数据上传链接」发给品牌方，对方注册账号后可自助绑定本任务（在线看进展、直接上传数据，看不到结算金额）。绑错了可在此解绑</div>')
       +'</div>';
   }
 

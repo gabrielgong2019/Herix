@@ -442,7 +442,8 @@ export async function initDatabase() {
     // 代理任务的品牌方关联（2026-07-17）：品牌方=完整商家账号，对绑定任务只看进展（数量/状态），
     // 不可见结算金额/不可审核/不可改判。绑定由代理生成一次性邀请链接发起
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS brand_party_id TEXT REFERENCES users(id)`,
-    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS brand_invite_token TEXT`,
+    // 邀请链接机制已拆除（2026-07-17 当日修订：绑定改为凭上传链接自助+代理可解绑），列 DROP 兜底
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS brand_invite_token`,
     // 定价模块（2026-07-09）
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,

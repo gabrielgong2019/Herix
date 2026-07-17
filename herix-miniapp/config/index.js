@@ -39,7 +39,7 @@ export default {
       devMiddleware: { writeToDisk: true },
       proxy: {
         '/api': {
-          target: "http://localhost:3005",
+          target: "http://localhost:4005",
           changeOrigin: true,
         },
       },

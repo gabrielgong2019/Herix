@@ -118,9 +118,14 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 **Render 已弃用**（render.yaml 与 package.json 的 render-* scripts 已删除，PRD 中 onrender.com 地址全部作废）。
 
 当前环境：
-- 开发：Mac 本地 launchd 跑 `herix-server`（端口 3005，`launchctl kickstart -k gui/$(id -u)/com.herix.server` 重启），
+- 开发：Mac 本地 launchd 跑 `herix-server`（端口 3005，`launchctl kickstart -k gui/$(id -u)/com.herix.server` 重启；
+  **改 plist 环境变量后 kickstart 不够，须 `launchctl bootout` + `bootstrap` 完整重载**），
   数据库为 ECS 上的 PostgreSQL（经 SSH 隧道 `localhost:15432`，凭据在 launchd plist 环境变量，不在 .env）
-- 生产：部署方案待定稿后补充本节（定稿时遵守"文档联动"准则）
+- 生产：**正式入口 `herix.huaxuex.com`**（Cloudflare Tunnel `herix-app` → ECS，2026-07-17 确认）。
+  部署到 ECS 时须同步配置全部环境变量（DATABASE_URL/JWT_SECRET/SMTP_*/REFERRAL_HASH_SALT，
+  以及小程序发布后的 WECHAT_MINI_*），并跑新环境必做步骤（见下）
+- 邮件发信域名：`noreply@huaxuex.com`（SendGrid Domain Authentication 已完成，Cloudflare 三条 CNAME + DMARC，
+  2026-07-17 实测送达。⚠️ 不要用 @outlook.com 等公共邮箱地址当发件人——SPF 必然不对齐，微软直接判伪造）
 
 部署到任何新环境的必做步骤：`initDatabase()` 启动自动建表（幂等）→ 手动跑一次 `npx tsx scripts/seed-i18n.ts` 灌词条。
 

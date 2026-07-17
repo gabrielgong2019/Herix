@@ -59,8 +59,10 @@ interface State {
   balance: any;
   editingName: boolean;
   newNick: string;
-  editingSocial: boolean;
-  socialForm: Record<string, string>; // key: wechat / plat-<id> / fol-<id>
+  /** 逐账号编辑弹层：null=关闭 */
+  socialSheet: null | { mode: 'edit' | 'add'; platformId: string; account: string; followers: string };
+  /** 添加账号的平台选择器 */
+  platformPickerOpen: boolean;
 }
 
 export default class Profile extends Component<{}, State> {
@@ -77,8 +79,8 @@ export default class Profile extends Component<{}, State> {
     balance: {},
     editingName: false,
     newNick: '',
-    editingSocial: false,
-    socialForm: {},
+    socialSheet: null,
+    platformPickerOpen: false,
   };
 
   componentDidShow() {
@@ -223,49 +225,74 @@ export default class Profile extends Component<{}, State> {
     }
   };
 
-  // ── 社交编辑 ──
-  openSocialEdit = () => {
-    const socials = parseJSON(this.state.user?.social_platforms, []);
-    const form: Record<string, string> = {};
-    socials.forEach((s: any) => {
-      if (s.platformId === 'wechat') form.wechat = (s.accountId || '').replace(/^\+86/, '');
-      else {
-        const p = platformById(s.platformId);
-        form[`plat-${s.platformId}`] = p.inputType === 'id' ? s.accountId || '' : s.url || '';
-        if (s.followers) form[`fol-${s.platformId}`] = String(s.followers);
-      }
-    });
-    this.setState({ editingSocial: true, socialForm: form });
+  // ── 社交账号：逐账号增删改（2026-07-17 由全量表单改造；接口仍收整个数组，前端改一行发全量）──
+  openAccountEdit = (s: any) => {
+    const p = platformById(s.platformId);
+    const account = s.platformId === 'wechat'
+      ? (s.accountId || '').replace(/^\+86/, '')
+      : (p.inputType === 'id' ? s.accountId || '' : s.url || '');
+    this.setState({ socialSheet: { mode: 'edit', platformId: s.platformId, account, followers: s.followers ? String(s.followers) : '' } });
   };
 
-  setSocial = (key: string, val: string) => this.setState({ socialForm: { ...this.state.socialForm, [key]: val } });
+  pickPlatform = (platformId: string) => {
+    this.setState({ platformPickerOpen: false, socialSheet: { mode: 'add', platformId, account: '', followers: '' } });
+  };
 
-  saveSocial = async () => {
-    const f = this.state.socialForm;
-    const platforms: any[] = [];
-    if (f.wechat && f.wechat.trim()) {
-      const check = validateWechatOrPhone(f.wechat.trim());
+  /** 用弹层内容替换/追加对应平台后，整个数组发回后端 */
+  buildPlatforms = (sheet: NonNullable<State['socialSheet']> | null, removeId?: string): any[] | null => {
+    const socials = parseJSON(this.state.user?.social_platforms, []);
+    const rest = socials.filter((s: any) => s.platformId !== (removeId || sheet?.platformId));
+    if (!sheet) return rest;
+    const p = platformById(sheet.platformId);
+    const val = sheet.account.trim();
+    if (!val) {
+      Taro.showToast({ title: t('profile.accountRequired'), icon: 'none' });
+      return null;
+    }
+    let entry: any;
+    if (sheet.platformId === 'wechat') {
+      const check = validateWechatOrPhone(val);
       if (!check.ok) {
         Taro.showToast({ title: check.msg!, icon: 'none' });
-        return;
+        return null;
       }
-      if (check.saved) platforms.push({ platformId: 'wechat', accountId: check.saved, url: null, followers: null });
+      entry = { platformId: 'wechat', accountId: check.saved, url: null, followers: null };
+    } else {
+      const fol = sheet.followers ? parseInt(sheet.followers, 10) : null;
+      entry = p.inputType === 'id'
+        ? { platformId: sheet.platformId, accountId: val, url: null, followers: null }
+        : { platformId: sheet.platformId, url: val, followers: fol, accountId: null };
     }
-    PLATFORM_REGISTRY.filter(p => p.id !== 'wechat').forEach(p => {
-      const val = (f[`plat-${p.id}`] || '').trim();
-      if (!val) return;
-      const fol = f[`fol-${p.id}`] ? parseInt(f[`fol-${p.id}`], 10) : null;
-      if (p.inputType === 'id') platforms.push({ platformId: p.id, accountId: val, url: null, followers: null });
-      else platforms.push({ platformId: p.id, url: val, followers: fol, accountId: null });
-    });
+    return [...rest, entry];
+  };
+
+  savePlatforms = async (platforms: any[]) => {
     try {
       await ambassador.updateProfile({ socialPlatforms: platforms });
-      this.setState({ editingSocial: false });
+      this.setState({ socialSheet: null });
       Taro.showToast({ title: t('profile.socialSaved'), icon: 'success' });
       this.loadUser();
     } catch (err: any) {
       Taro.showToast({ title: err?.message || '保存失败', icon: 'none' });
     }
+  };
+
+  saveSheet = () => {
+    const platforms = this.buildPlatforms(this.state.socialSheet);
+    if (platforms) this.savePlatforms(platforms);
+  };
+
+  deleteAccount = async () => {
+    const sheet = this.state.socialSheet;
+    if (!sheet) return;
+    const p = platformById(sheet.platformId);
+    const res = await Taro.showModal({
+      title: t('profile.deleteAccount'),
+      content: t('profile.deleteConfirm', { name: p.name }),
+    });
+    if (!res.confirm) return;
+    const platforms = this.buildPlatforms(null, sheet.platformId);
+    if (platforms) this.savePlatforms(platforms);
   };
 
   renderRow = (label: string, val: string, key?: string) => (
@@ -322,7 +349,7 @@ export default class Profile extends Component<{}, State> {
     const tierSnap = parseJSON(u.tier_snapshot, {});
     const bank = parseJSON(u.bank_account, null);
     const roles: string[] = u.roles || [u.role];
-    const { editingName, newNick, editingSocial, socialForm } = this.state;
+    const { editingName, newNick } = this.state;
 
     return (
       <View className='profile-page logged'>
@@ -413,55 +440,100 @@ export default class Profile extends Component<{}, State> {
           );
         })()}
 
-        {/* 社交账号（赫使）*/}
+        {/* 社交账号（赫使）：逐行编辑 + 添加 */}
         {isHerald && (
           <View className='card'>
             <View className='card-head-row'>
               <Text className='card-head'>{t('profile.social')}</Text>
-              <Text className='card-action' onClick={editingSocial ? () => this.setState({ editingSocial: false }) : this.openSocialEdit}>
-                {editingSocial ? t('profile.collapse') : t('profile.edit')}
+              <Text className='card-action' onClick={() => this.setState({ platformPickerOpen: true })}>
+                ＋ {t('profile.addAccount')}
               </Text>
             </View>
-            {!editingSocial &&
-              (socials.length === 0 ? (
-                <View className='info-row'>
-                  <Text className='social-empty'>{t('profile.socialEmpty')}<Text className='link' onClick={this.openSocialEdit}>{t('profile.addNow')}</Text></Text>
-                </View>
-              ) : (
-                socials.map((s: any) => {
-                  const sp = platformById(s.platformId);
-                  const tier = tierSnap[s.platformId];
-                  let sval = s.accountId || (s.url ? s.url.replace('https://', '').split('/')[0] : '—');
-                  if (s.followers) sval += ` · ${t('profile.followers', { n: fmt(s.followers) })}`;
-                  return (
-                    <View className='info-row' key={s.platformId}>
-                      <Text className='info-label'>{sp.icon} {sp.name}</Text>
-                      <Text className='info-val'>{sval}{tier ? ` [${tier}]` : ''}</Text>
-                    </View>
-                  );
-                })
-              ))}
-            {editingSocial && (
-              <View className='social-edit'>
-                <Text className='se-label'>{t('profile.wechatLabel')}</Text>
-                <Input className='input' placeholder={t('profile.wechatOptionalPh')} value={socialForm.wechat || ''} onInput={e => this.setSocial('wechat', e.detail.value)} />
-                <Text className='se-hint'>{t('wx.autoDetect')}</Text>
-                {PLATFORM_REGISTRY.filter(p => p.id !== 'wechat').map(p => (
-                  <View key={p.id} className='se-field'>
-                    <Text className='se-label'>{p.icon} {p.name} <Text className='se-opt'>{t('profile.optionalSuffix')}</Text></Text>
-                    <View className='se-row'>
-                      <Input className='input flex' placeholder={p.placeholder} value={socialForm[`plat-${p.id}`] || ''} onInput={e => this.setSocial(`plat-${p.id}`, e.detail.value)} />
-                      {p.hasFollowers && (
-                        <Input className='input fol' type='number' placeholder='粉丝数' value={socialForm[`fol-${p.id}`] || ''} onInput={e => this.setSocial(`fol-${p.id}`, e.detail.value)} />
-                      )}
-                    </View>
-                  </View>
-                ))}
-                <View className='btn-primary' onClick={this.saveSocial}>{t('common.save')}</View>
+            {socials.length === 0 ? (
+              <View className='info-row'>
+                <Text className='social-empty'>{t('profile.socialEmpty')}<Text className='link' onClick={() => this.setState({ platformPickerOpen: true })}>{t('profile.addNow')}</Text></Text>
               </View>
+            ) : (
+              socials.map((s: any) => {
+                const sp = platformById(s.platformId);
+                const tier = tierSnap[s.platformId];
+                // 行内只放最有信息量的：有粉丝数显示粉丝数[段位]，否则显示账号简写
+                const sval = s.followers
+                  ? `${t('profile.followers', { n: fmt(s.followers) })}${tier ? ` [${tier}]` : ''}`
+                  : s.accountId || (s.url ? s.url.replace('https://', '').split('/')[0] : '—');
+                return (
+                  <View className='info-row ps-account-row' key={s.platformId} onClick={() => this.openAccountEdit(s)}>
+                    <Text className='info-label'>{sp.icon} {sp.name}</Text>
+                    <Text className='info-val'>{sval} <Text className='ps-chevron'>›</Text></Text>
+                  </View>
+                );
+              })
             )}
           </View>
         )}
+
+        {/* 平台选择器（添加账号第一步） */}
+        {this.state.platformPickerOpen && (
+          <View className='ps-overlay' onClick={() => this.setState({ platformPickerOpen: false })}>
+            <View className='ps-sheet' onClick={e => e.stopPropagation()}>
+              <Text className='ps-title'>{t('profile.pickPlatform')}</Text>
+              <View className='ps-grid'>
+                {PLATFORM_REGISTRY.map(p => {
+                  const added = socials.some((s: any) => s.platformId === p.id);
+                  return (
+                    <View
+                      key={p.id}
+                      className={`ps-plat ${added ? 'added' : ''}`}
+                      onClick={added ? undefined : () => this.pickPlatform(p.id)}
+                    >
+                      <Text className='ps-plat-icon'>{p.icon}</Text>
+                      <Text className='ps-plat-name'>{p.name}</Text>
+                      {added && <Text className='ps-plat-added'>{t('profile.alreadyAdded')}</Text>}
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* 账号编辑弹层（添加/编辑共用） */}
+        {this.state.socialSheet && (() => {
+          const sheet = this.state.socialSheet!;
+          const p = platformById(sheet.platformId);
+          const isWechat = sheet.platformId === 'wechat';
+          return (
+            <View className='ps-overlay' onClick={() => this.setState({ socialSheet: null })}>
+              <View className='ps-sheet' onClick={e => e.stopPropagation()}>
+                <Text className='ps-title'>{p.icon} {p.name}</Text>
+                <Text className='ps-label'>{isWechat ? t('profile.wechatLabel') : (p.inputType === 'id' ? t('profile.accountId') : t('profile.homepageUrl'))}</Text>
+                <Input
+                  className='input'
+                  placeholder={isWechat ? t('profile.wechatOptionalPh') : p.placeholder}
+                  value={sheet.account}
+                  onInput={e => this.setState({ socialSheet: { ...sheet, account: e.detail.value } })}
+                />
+                {isWechat && <Text className='ps-hint'>{t('wx.autoDetect')}</Text>}
+                {!isWechat && p.hasFollowers && (
+                  <View>
+                    <Text className='ps-label'>{t('profile.followersLabel')}</Text>
+                    <Input
+                      className='input'
+                      type='number'
+                      placeholder={t('profile.followersLabel')}
+                      value={sheet.followers}
+                      onInput={e => this.setState({ socialSheet: { ...sheet, followers: e.detail.value } })}
+                    />
+                  </View>
+                )}
+                <View className='btn-primary' onClick={this.saveSheet}>{t('common.save')}</View>
+                {sheet.mode === 'edit' && (
+                  <Text className='ps-delete' onClick={this.deleteAccount}>{t('profile.deleteAccount')}</Text>
+                )}
+              </View>
+            </View>
+          );
+        })()}
 
         {/* 操作 */}
         <View className='card actions'>

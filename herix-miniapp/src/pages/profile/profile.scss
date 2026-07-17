@@ -289,31 +289,94 @@
   font-size: 26px;
   color: var(--text-muted);
 }
-.social-edit {
-  padding: 16px 32px 32px;
+// ── 社交账号：逐行编辑 + 底部弹层（ps- 前缀防 H5 全局样式污染）──
+.ps-account-row {
+  cursor: pointer;
 }
-.se-field {
-  margin-top: 16px;
+.ps-chevron {
+  color: var(--text-muted);
+  font-size: 28px;
+  margin-left: 6px;
 }
-.se-label {
+.ps-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.ps-sheet {
+  width: 100%;
+  max-width: 640PX;
+  box-sizing: border-box;
+  background: var(--card-bg);
+  border-radius: 32px 32px 0 0;
+  padding: 40px 40px 56px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+.ps-title {
+  display: block;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 24px;
+}
+.ps-label {
   display: block;
   font-size: 24px;
   color: var(--text-secondary);
-  margin-bottom: 8px;
+  margin: 20px 0 8px;
 }
-.se-opt {
-  color: var(--text-muted);
-}
-.se-hint {
+.ps-hint {
   display: block;
   font-size: 20px;
   color: var(--text-muted);
-  margin-top: -8px;
-  margin-bottom: 8px;
+  margin-top: 8px;
 }
-.se-row {
+.ps-delete {
+  display: block;
+  text-align: center;
+  font-size: 26px;
+  color: #dc2626;
+  margin-top: 24px;
+  padding: 12px;
+}
+.ps-grid {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.ps-plat {
+  width: calc(25% - 15px);
+  box-sizing: border-box;
+  text-align: center;
+  padding: 20px 8px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  &.added {
+    opacity: 0.4;
+  }
+}
+.ps-plat-icon {
+  display: block;
+  font-size: 44px;
+}
+.ps-plat-name {
+  display: block;
+  font-size: 20px;
+  color: var(--text-primary);
+  margin-top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ps-plat-added {
+  display: block;
+  font-size: 18px;
+  color: var(--text-muted);
 }
 
 // ── 操作 ──

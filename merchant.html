@@ -1218,8 +1218,8 @@ function csvModeBlockHTML(t) {
     : 'code,注册数,使用数\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3';
   var notes = isDetail ? [
     '<b>推荐用你系统的用户ID代替邮箱</b>（如 U10086）——只要唯一且稳定即可，平台无需知道用户是谁',
-    '每次上传<b>全量名单</b>（所有邀请用户），已存在的行自动按用户身份去重',
-    '一个用户只能归属一个推广码；出现在多个码下会被标记<b>冲突</b>，需你指定唯一归属并填写理由',
+    '每次上传<b>全量名单</b>（所有邀请用户），同一推广码下同一用户自动去重，重传不重复计费',
+    '<b>同一用户使用多个推广码将分别计费</b>（每位赫使的推广都有回报）；如不希望重复付费，请在你的系统侧限制一人一码',
     '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
   ] : [
     '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
@@ -2788,41 +2788,16 @@ function doCsvUpload() {
     if (d.blockedCodes && d.blockedCodes.length) {
       html += '<div class="alert alert-error">💰 '+esc(d.message||'部分推广码因余额不足未结算')+'：<span style="font-family:monospace">'+esc(d.blockedCodes.join(', '))+'</span></div>';
     }
-    if (d.conflicts && d.conflicts.length) {
-      html += '<div class="alert alert-error"><div style="font-weight:700;margin-bottom:6px">⚠️ '+d.conflicts.length+' 条归属冲突——同一用户出现在多个推广码下</div>'
-        +'<div style="font-size:12px;margin-bottom:8px">你的系统应保证一个用户只使用一个推广码。请为下列用户指定唯一归属（需填写理由，留审计记录）：</div>'
-        + d.conflicts.map(function(c, i) {
-            if (c.settled) return '<div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:6px;font-size:12px"><span style="font-family:monospace">'+esc(c.user)+'</span> — 已按 <b>'+esc(c.existingCode)+'</b> 结算，归属不可更改（请修正你系统里的码）</div>';
-            return '<div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:6px;font-size:12px" id="conf-'+i+'">'
-              +'<div style="font-family:monospace;margin-bottom:6px">'+esc(c.user)+'</div>'
-              +'<label style="margin-right:14px;cursor:pointer"><input type="radio" name="conf-'+i+'-code" value="'+esc(c.existingCode)+'" checked> 保留 <b>'+esc(c.existingCode)+'</b>（现归属）</label>'
-              +'<label style="cursor:pointer"><input type="radio" name="conf-'+i+'-code" value="'+esc(c.uploadedCode)+'"> 改为 <b>'+esc(c.uploadedCode)+'</b>（本次上传）</label>'
-              +'<div style="display:flex;gap:8px;margin-top:6px">'
-              +'<input type="text" id="conf-'+i+'-note" placeholder="理由（改归属时必填）" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">'
-              +'<button class="btn btn-outline btn-sm" onclick="resolveConflict(\''+esc(taskId)+'\',\''+esc(c.recordId)+'\','+i+',\''+esc(c.existingCode)+'\')">确认</button>'
-              +'</div></div>';
+    if (d.multiCodeUsers && d.multiCodeUsers.length) {
+      // 一人多码：不拦截，分别计费，透明提示（2026-07-17 定稿）
+      html += '<div class="alert" style="background:#fffbeb;border:1px solid #fde68a;color:#78350f"><div style="font-weight:700;margin-bottom:6px">ℹ️ '+d.multiCodeUsers.length+' 位用户使用了多个推广码——已按各码分别计费</div>'
+        + d.multiCodeUsers.map(function(m) {
+            return '<div style="font-family:monospace;font-size:12px;margin-bottom:4px">'+esc(m.user)+' → '+esc((m.codes||[]).join(' + '))+'</div>';
           }).join('')
-        +'</div>';
+        +'<div style="font-size:12px;margin-top:6px">如不希望同一用户产生多份报酬，请在你的系统侧限制一人只能使用一个推广码。</div></div>';
     }
     if (!html) html = '<div class="alert alert-error">没有任何记录被处理，请检查数据格式</div>';
     resultEl.innerHTML = html;
-  });
-}
-
-/* 跨码冲突：商家指定唯一归属。保留现归属=无数据变更（提醒商家修正自己系统）；改归属=调 reassign 留审计 */
-function resolveConflict(taskId, recordId, i, existingCode) {
-  var sel = document.querySelector('input[name="conf-'+i+'-code"]:checked');
-  var target = sel ? sel.value : existingCode;
-  var box = document.getElementById('conf-'+i);
-  if (target === existingCode) {
-    if (box) box.innerHTML = '<span style="font-size:12px;color:#16a34a">✓ 已确认保留 '+esc(existingCode)+'——请同步修正你系统里该用户的推广码</span>';
-    return;
-  }
-  var note = (document.getElementById('conf-'+i+'-note')||{}).value || '';
-  if (!note.trim()) { alert('改归属必须填写理由（留审计记录）'); return; }
-  post('/tasks/'+taskId+'/referrals/'+recordId+'/reassign', { code: target, note: note.trim() }, function(d) {
-    if (d.error) { alert(d.error); return; }
-    if (box) box.innerHTML = '<span style="font-size:12px;color:#16a34a">✓ 归属已改为 '+esc(d.code)+'（原 '+esc(d.from)+'），理由已留档</span>';
   });
 }
 
@@ -2847,7 +2822,7 @@ function loadTaskReferrals(taskId) {
       +'<th>用户</th><th>推广码</th><th>赫使</th><th>注册</th><th>转化</th><th>结算</th></tr></thead><tbody>'
       + rows.map(function(r) {
           return '<tr>'
-            +'<td style="font-family:monospace">'+esc(r.user_masked||'—')+(r.reassigned_at?' <span title="'+esc(r.reassign_note||'')+'" style="font-size:10px;color:#6d28d9">[改]</span>':'')+'</td>'
+            +'<td style="font-family:monospace">'+esc(r.user_masked||'—')+'</td>'
             +'<td style="font-family:monospace;font-size:11px">'+esc(r.code)+'</td>'
             +'<td>'+esc(r.herald_name||'')+'</td>'
             +'<td>'+fmtD(r.registered_at)+'</td>'

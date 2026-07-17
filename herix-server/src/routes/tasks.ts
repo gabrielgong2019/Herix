@@ -276,8 +276,8 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
   }
 });
 
-/** 品牌上传页数据条款版本（改条款文案时同步升版本） */
-const UPLOAD_TERMS_VERSION = '2026-07-17-v1';
+/** 品牌上传页数据条款版本（改条款文案时同步升版本）。v2：明细模式一人多码分别计费 */
+const UPLOAD_TERMS_VERSION = '2026-07-17-v2';
 
 /** POST /api/tasks/:id/brand-invite — 代理生成品牌方绑定邀请链接（一次性 token，重新生成即作废旧的） */
 tasksRouter.post('/:id/brand-invite', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
@@ -350,7 +350,7 @@ tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), as
   }
   const rows = await findMany<any>(
     `SELECT r.id, r.code, r.user_masked, r.registered_at, r.converted_at,
-            (r.settled_txn_id IS NOT NULL) AS settled, r.reassign_note, r.reassigned_at,
+            (r.settled_txn_id IS NOT NULL) AS settled,
             u.nickname AS herald_name
      FROM referral_records r JOIN users u ON u.id = r.herald_id
      WHERE r.task_id = ? ORDER BY r.registered_at DESC LIMIT 500`,
@@ -359,50 +359,7 @@ tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), as
   res.json({ dataMode: task.data_mode || 'AGGREGATE', records: rows });
 });
 
-/** POST /api/tasks/:id/referrals/:recordId/reassign — 跨码冲突后商家指定唯一归属（须填理由，留审计）。
- *  已结算行不可改（钱已按原归属打给赫使）。 */
-tasksRouter.post('/:id/referrals/:recordId/reassign', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const { code, note } = req.body as { code?: string; note?: string };
-  if (!code || !String(note || '').trim()) {
-    return res.status(400).json({ error: '必须指定归属推广码并填写理由', code: 'REASSIGN_PARAMS_REQUIRED' });
-  }
-  const task = await findOne<any>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
-  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
-  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
-    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
-  }
-  const rec = await findOne<any>(
-    'SELECT id, code, settled_txn_id FROM referral_records WHERE id = ? AND task_id = ?', [req.params.recordId, task.id]
-  );
-  if (!rec) return res.status(404).json({ error: '记录不存在', code: 'RECORD_NOT_FOUND' });
-  if (rec.settled_txn_id) {
-    return res.status(400).json({ error: '该记录已结算，归属不可更改', code: 'ALREADY_SETTLED' });
-  }
-  const newCode = String(code).trim().toUpperCase();
-  const at = await findOne<any>('SELECT id, herald_id FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?', [newCode, task.id]);
-  if (!at) return res.status(400).json({ error: '目标推广码在该任务下不存在', code: 'CODE_NOT_FOUND' });
-
-  const oldCode = rec.code;
-  await update('referral_records', {
-    code: newCode, herald_id: at.herald_id,
-    reassign_note: String(note).trim(), reassigned_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }, 'id = ?', [rec.id]);
-
-  // 两个码的投影都要刷新
-  for (const c of [oldCode, newCode]) {
-    await pool.query(
-      `UPDATE ambassador_tasks SET
-         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2),
-         used_count       = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.converted_at IS NOT NULL),
-         paid_conversions = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.settled_txn_id IS NOT NULL)
-       WHERE task_id = $1 AND unique_code = $2`,
-      [task.id, c]
-    );
-  }
-  console.log(`[referral-reassign] task=${task.id} record=${rec.id} ${oldCode}→${newCode} by=${req.user!.userId}`);
-  res.json({ id: rec.id, code: newCode, from: oldCode });
-});
+// （改判端点已于 2026-07-17 同日拆除：跨码不再拦截，同一用户用多个码各码分别计费——见 handleDetailUpload 注释）
 
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
@@ -597,11 +554,12 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   });
 });
 
-/** 明细模式上传处理（设计定稿 2026-07-17）：
- *  一行 = 一个被邀请用户；UNIQUE(task_id, user_hash) 按身份去重（商家手滑重复上传免疫）；
- *  跨码冲突不静默——列入 conflicts 交商家指定唯一归属（reassign 端点，已结算行不可改）；
+/** 明细模式上传处理（2026-07-17 修订版）：
+ *  一行 = 一个「用户×码」；幂等键 UNIQUE(task_id, code, user_hash)——同码内同用户只算一次
+ *  （商家手滑重复上传免疫）；同一用户用多个码 → 各码分别计费，multiCodeUsers 仅作提示不拦截
+ *  （定稿理由：赫使推广真实发生就该有回报，一人多码是品牌系统的选择与成本，条款已写明）；
  *  状态单向：未出现→已注册→已转化，不降级不回收；行级 settled_txn_id 防重复打款；
- *  ambassador_tasks 计数改为明细行投影（明细表是唯一事实来源）；
+ *  ambassador_tasks 计数为明细行投影（明细表是唯一事实来源）；
  *  隐私：原文只在内存里，落库/日志仅 hash+脱敏串（utils/privacy.ts）。 */
 async function handleDetailUpload(
   res: Response,
@@ -615,7 +573,7 @@ async function handleDetailUpload(
   let processed = 0, skipped = 0;
   const skippedCodes: string[] = [];
   const skippedHints: Array<{ code: string; belongsTo: string }> = [];
-  const conflicts: Array<{ recordId: string; user: string; existingCode: string; uploadedCode: string; settled: boolean }> = [];
+  const multiCodeUsers: Array<{ user: string; codes: string[] }> = [];
   const touchedCodes = new Set<string>();
   const atByCode = new Map<string, any>();
 
@@ -645,11 +603,20 @@ async function handleDetailUpload(
     const userHash = hashUserKey(rawUser);
     const userMasked = maskUserKey(rawUser);
     const converted = isTruthy(row.converted);
+    // 幂等键：同码内同用户唯一。同一用户在其他码下的记录不影响本行（分别计费）
     const existing = await findOne<any>(
-      'SELECT id, code, converted_at, settled_txn_id, user_masked FROM referral_records WHERE task_id = ? AND user_hash = ?',
-      [task.id, userHash]
+      'SELECT id, converted_at, settled_txn_id FROM referral_records WHERE task_id = ? AND code = ? AND user_hash = ?',
+      [task.id, code, userHash]
     );
     if (!existing) {
+      // 透明提示（不拦截）：该用户已出现在本任务其他码下 → 本行照常入库计费
+      const otherCodes = await findMany<any>(
+        'SELECT code FROM referral_records WHERE task_id = ? AND user_hash = ? AND code <> ?',
+        [task.id, userHash, code]
+      );
+      if (otherCodes.length) {
+        multiCodeUsers.push({ user: userMasked, codes: otherCodes.map((r: any) => r.code).concat(code) });
+      }
       await insert('referral_records', {
         task_id: task.id, code, herald_id: at.herald_id, user_hash: userHash, user_masked: userMasked,
         registered_at: now(), converted_at: converted ? now() : null,
@@ -657,13 +624,6 @@ async function handleDetailUpload(
       });
       touchedCodes.add(code);
       processed++;
-    } else if (existing.code !== code) {
-      // 跨码冲突：同一用户出现在两个码下。商家系统应保证一用户一码——不静默按先到先得，交商家指定唯一归属
-      conflicts.push({
-        recordId: existing.id, user: existing.user_masked || userMasked,
-        existingCode: existing.code, uploadedCode: code, settled: !!existing.settled_txn_id,
-      });
-      skipped++;
     } else {
       // 同码重复出现：仅允许 未转化→已转化 单向升级；1 改回 0 不降级、已结算不回收
       if (converted && !existing.converted_at) {
@@ -763,7 +723,7 @@ async function handleDetailUpload(
   }
 
   // 诊断日志：只打计数与 hash 前缀级信息，不打用户原文（隐私底线）
-  console.log(`[csv-upload] task=${task.id}(${task.title}) mode=DETAIL auth=${money.isTokenAuth ? 'token' : 'bearer'} records=${records.length} processed=${processed} skipped=${skipped} newConv=${totalNewConversions} paid=${totalPaid} conflicts=${conflicts.length}${skippedCodes.length ? ' skippedCodes=' + skippedCodes.join(',') : ''}${blockedCodes.length ? ' blockedCodes=' + blockedCodes.join(',') : ''}`);
+  console.log(`[csv-upload] task=${task.id}(${task.title}) mode=DETAIL auth=${money.isTokenAuth ? 'token' : 'bearer'} records=${records.length} processed=${processed} skipped=${skipped} newConv=${totalNewConversions} paid=${totalPaid} multiCode=${multiCodeUsers.length}${skippedCodes.length ? ' skippedCodes=' + skippedCodes.join(',') : ''}${blockedCodes.length ? ' blockedCodes=' + blockedCodes.join(',') : ''}`);
 
   res.json({
     dataMode: 'DETAIL',
@@ -775,7 +735,7 @@ async function handleDetailUpload(
     ...(money.stripMoney ? {} : { totalPaid, commissionPerConversion: money.costPerConv }),
     ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
     ...(skippedHints.length > 0 ? { skippedHints } : {}),
-    ...(conflicts.length > 0 ? { conflicts } : {}),
+    ...(multiCodeUsers.length > 0 ? { multiCodeUsers } : {}),
     ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),
   });
 }

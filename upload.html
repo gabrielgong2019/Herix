@@ -110,14 +110,14 @@ function renderConsentPage() {
     + '</div></div></div>';
 
   html += '<div class="card">'
-    + '<div class="sec-title">📄 数据上传条款（2026-07-17-v1）</div>'
+    + '<div class="sec-title">📄 数据上传条款（2026-07-17-v2）</div>'
     + '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:14px">'
     + '<p style="font-weight:600;margin-bottom:4px">一、您上传的数据</p>'
     + '<p style="margin-bottom:8px">为核对推广归属与结算，您将上传推广码对应的转化数据（可能包含最终用户邮箱或用户ID）。您确认已获得提供该等数据的合法授权。</p>'
     + '<p style="font-weight:600;margin-bottom:4px">二、平台如何处理</p>'
     + '<p style="margin-bottom:8px">平台<strong>不保存明文</strong>：用户标识接收后立即以 SHA-256 加盐单向哈希处理并丢弃原文，数据库与日志均不留存；哈希仅用于推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉；所有展示仅保留脱敏形式（如 a**@gmail.com）。</p>'
     + '<p style="font-weight:600;margin-bottom:4px">三、结算规则</p>'
-    + '<p style="margin-bottom:8px">数据按累计口径处理，系统只对新增转化结算；已结算部分不可撤销回收。</p>'
+    + '<p style="margin-bottom:8px">数据按累计口径处理，系统只对新增转化结算；已结算部分不可撤销回收。明细模式下，<strong>同一用户使用多个推广码将分别计费</strong>——如不希望重复付费，请在您的系统侧限制一人只能使用一个推广码。</p>'
     + '<p style="font-weight:600;margin-bottom:4px">四、记录</p>'
     + '<p>点击同意即表示接受上述条款，本次确认将记录时间、IP 地址及浏览器信息作为电子证据。</p>'
     + '</div>'
@@ -165,8 +165,8 @@ function renderUploadPage() {
     + '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f;margin-top:10px"><div style="font-weight:600;margin-bottom:4px">📋 注意事项</div><ul style="margin:0;padding-left:18px">'
     + (isDetail ? [
         '<b>推荐用你系统的用户ID代替邮箱</b>（如 U10086）——只要唯一且稳定即可，平台无需知道用户是谁',
-        '每次上传<b>全量名单</b>（所有邀请用户），已存在的行自动按用户身份去重',
-        '一个用户只能归属一个推广码；出现在多个码下会被标记<b>冲突</b>，需商家在后台指定唯一归属',
+        '每次上传<b>全量名单</b>（所有邀请用户），同一推广码下同一用户自动去重，重传不重复计费',
+        '<b>同一用户使用多个推广码将分别计费</b>；如不希望重复付费，请在您的系统侧限制一人一码',
         '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
       ] : [
         '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
@@ -324,13 +324,12 @@ function doUpload() {
             }).join('')
           + '</div>';
       }
-      if (d.conflicts && d.conflicts.length) {
-        html += '<div class="alert alert-error"><div style="font-weight:700;margin-bottom:8px">⚠️ ' + d.conflicts.length + ' 条归属冲突</div>'
-          + '<div style="font-size:12px;margin-bottom:6px">下列用户已归属其他推广码（同一用户只能使用一个码），本次未生效：</div>'
-          + d.conflicts.map(function(c) {
-              return '<div style="font-family:monospace;font-size:12px;margin-bottom:4px">' + esc(c.user) + ' — 现归属 ' + esc(c.existingCode) + '，本次标注 ' + esc(c.uploadedCode) + '</div>';
+      if (d.multiCodeUsers && d.multiCodeUsers.length) {
+        html += '<div class="alert" style="background:#fffbeb;border:1px solid #fde68a;color:#78350f"><div style="font-weight:700;margin-bottom:8px">ℹ️ ' + d.multiCodeUsers.length + ' 位用户使用了多个推广码——已按各码分别计费</div>'
+          + d.multiCodeUsers.map(function(m) {
+              return '<div style="font-family:monospace;font-size:12px;margin-bottom:4px">' + esc(m.user) + ' → ' + esc((m.codes||[]).join(' + ')) + '</div>';
             }).join('')
-          + '<div style="font-size:12px;margin-top:6px">请修正您系统里的归属后重新上传；确需改归属请联系运营在商家后台处理（需填写理由）。</div></div>';
+          + '<div style="font-size:12px;margin-top:6px">如不希望同一用户产生多份报酬，请在您的系统侧限制一人只能使用一个推广码。</div></div>';
       }
       if (d.blockedCodes && d.blockedCodes.length) {
         html += '<div class="alert alert-error">💰 ' + esc(d.message || '部分推广码因余额不足未结算') + '</div>';

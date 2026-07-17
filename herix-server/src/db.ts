@@ -402,8 +402,10 @@ export async function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS data_mode TEXT NOT NULL DEFAULT 'AGGREGATE'`,
     // 旧 referrals 死表（事件流设想的遗留，从未有写入方，各环境确认 0 行）→ 让位给明细模式新表
     `DROP TABLE IF EXISTS referrals`,
-    // 明细模式记录表：一行=一个被邀请用户。user_hash=SHA256(归一化标识+盐)，原文不落库；
-    // UNIQUE(task_id,user_hash) 同任务同用户全局唯一（跨码冲突靠它拦下来，由商家指定唯一归属）
+    // 明细模式记录表：一行=一个「用户×码」。user_hash=SHA256(归一化标识+盐)，原文不落库；
+    // 幂等键 UNIQUE(task_id, code, user_hash)：同码内同用户只算一次；
+    // 同一用户用多个码 → 各码分别计费（2026-07-17 定稿：赫使推广真实发生就该有回报，
+    // 一人多码是品牌系统的选择与成本，条款写明；平台不做跨码仲裁，改判机制已拆除）
     `CREATE TABLE IF NOT EXISTS referral_records (
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL REFERENCES tasks(id),
@@ -414,12 +416,15 @@ export async function initDatabase() {
       registered_at TEXT NOT NULL,
       converted_at TEXT,
       settled_txn_id TEXT,
-      reassign_note TEXT,
-      reassigned_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
-      UNIQUE(task_id, user_hash)
+      UNIQUE(task_id, code, user_hash)
     )`,
+    // 旧约束/旧列迁移（同日内的设计修订，幂等）
+    `ALTER TABLE referral_records DROP CONSTRAINT IF EXISTS referral_records_task_id_user_hash_key`,
+    `ALTER TABLE referral_records DROP COLUMN IF EXISTS reassign_note`,
+    `ALTER TABLE referral_records DROP COLUMN IF EXISTS reassigned_at`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_refrec_task_code_user ON referral_records(task_id, code, user_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_task_code ON referral_records(task_id, code)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_herald ON referral_records(herald_id)`,
     // 品牌上传页（upload.html，非平台用户）进入前的数据条款同意记录：时间+IP+UA 作为电子证据（2026-07-17）

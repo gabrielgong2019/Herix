@@ -207,7 +207,7 @@ export default class Landing extends Component<{}, State> {
       <View className='landing-page'>
         {/* 品牌头 */}
         <View className='lp-header'>
-          <Image className='lp-logo' src='/Logo/herix-icon-filled.png' mode='aspectFit' />
+          <Image className='lp-logo' src='/Logo/herix-icon.png' mode='aspectFit' />
           <Text className='lp-brand'>Herix</Text>
         </View>
 

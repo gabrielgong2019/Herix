@@ -27,6 +27,17 @@ const TARGETS = [
 ];
 
 const root = path.join(__dirname, '..');
+
+// Taro 源码整目录纳入（防 tsx 里硬编码文案绕过词条；标识符如 maxHeralds 已被正则排除）
+function walk(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) walk(p);
+    else if (/\.(tsx?|scss)$/.test(e.name) && !e.name.endsWith('.d.ts')) TARGETS.push(path.relative(root, p));
+  }
+}
+walk(path.join(root, 'herix-miniapp/src'));
+
 let bad = 0;
 for (const rel of TARGETS) {
   const f = path.join(root, rel);

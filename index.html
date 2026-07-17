@@ -47,22 +47,6 @@ nav {
   text-decoration: none;
 }
 
-.logo-char {
-  font-family: var(--serif);
-  font-size: 26px;
-  font-weight: 400;
-  color: var(--accent);
-  line-height: 1;
-}
-
-.logo-name {
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--ink);
-  text-transform: uppercase;
-}
-
 .lang-switcher {
   display: flex;
   border: 1px solid var(--border);
@@ -102,16 +86,10 @@ nav {
 }
 
 .hero-watermark {
-  font-family: var(--serif);
-  font-size: 200px;
-  font-weight: 300;
-  color: var(--accent);
+  width: 180px;
   opacity: 0.10;
-  line-height: 0.9;
-  text-align: center;
   user-select: none;
   pointer-events: none;
-  letter-spacing: -0.04em;
 }
 
 .hero-eyebrow {
@@ -330,8 +308,9 @@ footer {
 <!-- NAV -->
 <nav>
   <a class="logo" href="#">
-    <!-- 横版 logo 是白底图，mix-blend-mode:multiply 让白底融进米白页面背景 -->
-    <img src="Logo/herix-app-wide.png" alt="赫使 Herix" style="height:40px;display:block;mix-blend-mode:multiply">
+    <!-- 横版 logo 是白底图，mix-blend-mode:multiply 让白底融进米白页面背景。
+         中文版含"赫使"字样，非中文语言切到纯英文版（setLang 里切 src） -->
+    <img class="brand-logo" src="Logo/herix-app-wide.png" data-src-zh="Logo/herix-app-wide.png" data-src-alt="Logo/herix-logo-wide-en.png" alt="赫使 Herix" style="height:40px;display:block;mix-blend-mode:multiply">
   </a>
   <div class="lang-switcher" role="group" aria-label="Language">
     <button class="lang-btn active" onclick="setLang('zh')">中</button>
@@ -342,7 +321,7 @@ footer {
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-watermark" aria-hidden="true">赫</div>
+  <img class="hero-watermark" src="Logo/herix-app-icon.png" aria-hidden="true" alt="">
   <div class="hero-content">
     <div class="hero-eyebrow" data-key="eyebrow"></div>
     <h1 class="hero-headline" data-key="headline"></h1>
@@ -403,10 +382,7 @@ footer {
 
 <!-- FOOTER -->
 <footer>
-  <div class="logo">
-    <span class="logo-char" style="font-size:20px">赫</span>
-    <span class="logo-name" style="font-size:12px">Herix</span>
-  </div>
+  <img class="brand-logo" src="Logo/herix-app-wide.png" data-src-zh="Logo/herix-app-wide.png" data-src-alt="Logo/herix-logo-wide-en.png" alt="赫使 Herix" style="height:26px;display:block;mix-blend-mode:multiply">
   <span class="footer-copy" data-key="footerCopy"></span>
 </footer>
 
@@ -505,6 +481,11 @@ function setLang(lang) {
         el.textContent = c[key];
       }
     }
+  });
+
+  // 商标横版 logo 含"赫使"汉字，非中文语言切换为纯英文版
+  document.querySelectorAll('.brand-logo').forEach(function(img) {
+    img.src = lang === 'zh' ? img.dataset.srcZh : img.dataset.srcAlt;
   });
 }
 

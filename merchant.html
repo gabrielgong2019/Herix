@@ -2135,7 +2135,9 @@ function loadPendingReviews() {
   state.reviewTab = state.reviewTab || 'apps';
   state.allPendingApps = [];
   state.allPendingSubs = [];
-  get('/tasks?creator='+state.user.id+'&status=OPEN&limit=100', function(d) {
+  // 不过滤任务状态：已关闭任务在30天缓冲期内赫使仍可提交，待审内容必须能看到；
+  // 且气泡计数(my/stats)本来就不分任务状态，两边口径要一致
+  get('/tasks?creator='+state.user.id+'&limit=100', function(d) {
     var tasks = d.tasks || [];
     var remaining = tasks.length;
     if (!remaining) { render(); return; }

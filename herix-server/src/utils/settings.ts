@@ -49,31 +49,92 @@ export function nextPayoutDate(): string {
   return `${y}-${String(m + 2).padStart(2, '0')}-15`;
 }
 
-/** 计算提现手续费（从已保存的快照或当前设置） */
-export async function calcWithdrawalFee(requestAmount: number): Promise<{
-  fee: number;
-  netAmount: number;
-  payoutDate: string;
-}> {
-  const type    = await getSetting('withdrawal_fee_type');
-  const flat    = Number(await getSetting('withdrawal_fee_flat')) || 500;
-  const minAmt  = Number(await getSetting('withdrawal_min_amount')) || 1000;
-  const mode    = await getSetting('withdrawal_schedule_mode');
+/** 转出国 V1 恒日本（2026-07-17 拍板：钱包混池，按商家实体分仓留待多国实体阶段） */
+export const PAYOUT_FROM_COUNTRY = 'JP';
 
+/** 国家 → 打款目标币种（跨境规则配到哪国就在这加映射） */
+const COUNTRY_CURRENCY: Record<string, string> = { JP: 'JPY', CN: 'CNY' };
+
+/** 收款国归一化：兼容 'japan'/'china'/'jp'/'CN' 等历史写法 */
+export function normalizeCountry(raw?: string | null): string {
+  const s = String(raw || '').trim().toUpperCase();
+  if (s === 'JAPAN') return 'JP';
+  if (s === 'CHINA') return 'CN';
+  return s || 'JP';
+}
+
+function tierFee(tiersJson: string, amount: number): number {
+  try {
+    const tiers: Array<{ upTo: number | null; fee: number }> = JSON.parse(tiersJson);
+    for (const t of tiers) {
+      if (t.upTo === null || amount <= t.upTo) return Number(t.fee) || 0;
+    }
+  } catch { /* 配置损坏走兜底 */ }
+  return NaN;
+}
+
+export interface WithdrawalFeeInfo {
+  fee: number;
+  netAmount: number;      // 扣费后 JPY
+  payoutDate: string;
+  toCountry: string;
+  /** 跨境时存在：申请时锁定的汇率信息 */
+  fxMidRate?: number;
+  fxMarkupBps?: number;
+  fxEffectiveRate?: number;
+  targetCurrency?: string;
+  targetAmount?: number;  // 赫使预计到手（目标币种）
+}
+
+/** 计算提现费用（2026-07-17 重写：payout_fee_rules 阶梯 + 跨境汇率加点，申请时锁价）。
+ *  查无规则回退旧 flat 逻辑（兼容未配置的目的国）。 */
+export async function calcWithdrawalFee(requestAmount: number, toCountryRaw?: string | null): Promise<WithdrawalFeeInfo> {
+  const minAmt = Number(await getSetting('withdrawal_min_amount')) || 1000;
+  const mode   = await getSetting('withdrawal_schedule_mode');
   if (requestAmount < minAmt) {
     throw Object.assign(new Error(`最低提现金额 ¥${minAmt}`), { code: 'MIN_AMOUNT' });
   }
+  const payoutDate = mode === 'FIXED_DATES' ? nextPayoutDate() : 'immediate';
+  const toCountry = normalizeCountry(toCountryRaw);
 
-  const fee = type === 'NONE' ? 0 : flat;
+  const rule = await pool.query(
+    `SELECT tiers, fx_markup_bps FROM payout_fee_rules WHERE from_country = $1 AND to_country = $2 AND currency = 'JPY'`,
+    [PAYOUT_FROM_COUNTRY, toCountry]
+  );
+
+  let fee: number;
+  if (rule.rows[0]) {
+    fee = tierFee(rule.rows[0].tiers, requestAmount);
+    if (!Number.isFinite(fee)) fee = Number(await getSetting('withdrawal_fee_flat')) || 500;
+  } else {
+    // 目的国未配置规则：回退全局 flat（老行为）
+    const type = await getSetting('withdrawal_fee_type');
+    fee = type === 'NONE' ? 0 : Number(await getSetting('withdrawal_fee_flat')) || 500;
+  }
   if (requestAmount <= fee) {
     throw Object.assign(new Error(`提现金额须高于手续费 ¥${fee}`), { code: 'AMOUNT_TOO_LOW' });
   }
+  const netAmount = requestAmount - fee;
 
-  return {
-    fee,
-    netAmount:  requestAmount - fee,
-    payoutDate: mode === 'FIXED_DATES' ? nextPayoutDate() : 'immediate',
-  };
+  // 跨境：锁定申请时的中间价 ×（1 − 加点）
+  if (rule.rows[0] && toCountry !== PAYOUT_FROM_COUNTRY) {
+    const targetCurrency = COUNTRY_CURRENCY[toCountry];
+    const mid = Number(await getSetting(`fx_mid_JPY_${targetCurrency}`));
+    if (targetCurrency && mid > 0) {
+      const bps = Number(rule.rows[0].fx_markup_bps) || 0;
+      const eff = mid * (1 - bps / 10000);
+      return {
+        fee, netAmount, payoutDate, toCountry,
+        fxMidRate: mid, fxMarkupBps: bps,
+        fxEffectiveRate: Math.round(eff * 1e6) / 1e6,
+        targetCurrency,
+        targetAmount: Math.round(netAmount * eff * 100) / 100,
+      };
+    }
+    // 汇率未配置：手续费照收，目标币金额不承诺（打款时人工处理）
+  }
+
+  return { fee, netAmount, payoutDate, toCountry };
 }
 
 export interface BrandCreditInfo {

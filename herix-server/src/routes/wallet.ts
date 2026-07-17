@@ -263,23 +263,35 @@ walletRouter.get('/topup-history', async (req: Request, res: Response) => {
   res.json(rows);
 });
 
-/** GET /api/wallet/withdrawal-info — 提现前费用预览（赫使） */
+/** 解析提现目的国：优先收款方式的 country，兜底赫使居住地 */
+async function resolveToCountry(userId: string, methodId?: string): Promise<string> {
+  if (methodId) {
+    const m = await findOne<{ country: string }>(
+      'SELECT country FROM withdrawal_methods WHERE id = ? AND user_id = ?', [String(methodId), userId]
+    );
+    if (m?.country) return m.country;
+  }
+  const hp = await findOne<{ residence: string }>('SELECT residence FROM herald_profiles WHERE user_id = ?', [userId]);
+  return hp?.residence || 'JP';
+}
+
+/** GET /api/wallet/withdrawal-info — 提现前费用预览（赫使）。跨境时带锁价汇率预估 */
 walletRouter.get('/withdrawal-info', async (req: Request, res: Response) => {
-  const { amount } = req.query;
+  const { amount, methodId } = req.query;
   const requestAmount = Number(amount);
   if (!requestAmount || requestAmount <= 0) {
     return res.status(400).json({ error: '请传入有效的提现金额' });
   }
   try {
-    const { fee, netAmount, payoutDate } = await calcWithdrawalFee(requestAmount);
+    const toCountry = await resolveToCountry(req.user!.userId, methodId ? String(methodId) : undefined);
+    const info = await calcWithdrawalFee(requestAmount, toCountry);
     const mode = await getSetting('withdrawal_schedule_mode');
     res.json({
       requestAmount,
-      fee,
-      netAmount,
+      ...info,
       scheduleMode: mode,
       ...(mode === 'FIXED_DATES'
-        ? { nextPayoutDate: payoutDate, note: '平台每月15日和月末集中打款' }
+        ? { nextPayoutDate: info.payoutDate, note: '平台每月15日和月末集中打款' }
         : {}),
     });
   } catch (err: any) {
@@ -296,7 +308,7 @@ walletRouter.get('/withdrawal-info', async (req: Request, res: Response) => {
  */
 walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { amount, method, accountDetails } = req.body;
+  const { amount, method, accountDetails, methodId } = req.body;
 
   const amt = Number(amount);
   if (!Number.isFinite(amt) || amt <= 0) {
@@ -306,9 +318,10 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
     return res.status(400).json({ error: '请填写收款方式和账号信息', code: 'MISSING_METHOD_INFO' });
   }
 
-  let feeInfo: { fee: number; netAmount: number; payoutDate: string };
+  let feeInfo: import('../utils/settings').WithdrawalFeeInfo;
   try {
-    feeInfo = await calcWithdrawalFee(amt);
+    const toCountry = await resolveToCountry(userId, methodId ? String(methodId) : undefined);
+    feeInfo = await calcWithdrawalFee(amt, toCountry);
   } catch (err: any) {
     return res.status(400).json({ error: err.message, code: err.code });
   }
@@ -340,14 +353,18 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
       return res.status(409).json({ error: '已有待处理的提现申请', code: 'PENDING_WITHDRAWAL_EXISTS' });
     }
 
+    // 跨境快照：申请时锁定的汇率/加点/目标币金额（打款执行与审计依据）
     await client.query(
       `INSERT INTO withdrawal_requests
-         (id, herald_id, amount, currency, method, account_details, status, fee, net_amount, payout_date)
-       VALUES ($1, $2, $3, 'JPY', $4, $5, 'pending', $6, $7, $8)`,
+         (id, herald_id, amount, currency, method, account_details, status, fee, net_amount, payout_date,
+          to_country, fx_mid_rate, fx_markup_bps, target_currency, target_amount)
+       VALUES ($1, $2, $3, 'JPY', $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13)`,
       [
         id, userId, amt, method, JSON.stringify(accountDetails),
         feeInfo.fee, feeInfo.netAmount,
         feeInfo.payoutDate === 'immediate' ? null : feeInfo.payoutDate,
+        feeInfo.toCountry, feeInfo.fxMidRate ?? null, feeInfo.fxMarkupBps ?? null,
+        feeInfo.targetCurrency ?? null, feeInfo.targetAmount ?? null,
       ]
     );
 

@@ -207,12 +207,11 @@ export const wallet = {
   addMethod: (data: { type: string; country?: string; label: string; account_details: any; is_default?: boolean }) =>
     request<{ id: string }>('POST', '/wallet/methods', data),
   deleteMethod: (id: string) => request<any>('DELETE', `/wallet/methods/${id}`),
-  // TODO: 提现页费用预览应改用本接口(服务端费率为准), 替换页面里的 FX_RATE/FEE_RATE 临时常量
-  withdrawalInfo: (amount: number) =>
+  withdrawalInfo: (amount: number, methodId?: string) =>
     request<{ requestAmount: number; fee: number; netAmount: number; scheduleMode: string; nextPayoutDate?: string; note?: string }>(
-      'GET', '/wallet/withdrawal-info', { amount },
+      'GET', '/wallet/withdrawal-info', { amount, ...(methodId ? { methodId } : {}) },
     ),
-  withdrawRequest: (data: { amount: number; method: string; accountDetails: any }) =>
+  withdrawRequest: (data: { amount: number; method: string; accountDetails: any; methodId?: string }) =>
     request<any>('POST', '/wallet/withdraw-request', data),
   // withdraw: 对应新设计的提现执行接口，后端还没有（见迁移计划第7节），Phase 3 补上后端后再加这个方法
 };

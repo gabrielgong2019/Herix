@@ -858,9 +858,55 @@ function pricingPage(){
     h+='</tbody></table>';
   }
   h+='</div>';
+  // ④ 打款费率(2026-07-17):同国=阶梯固定费;跨国=阶梯费+汇率加点(申请时锁价)
+  var po=st.data.payout||{rules:[],fxRates:[]};
+  h+='<div class="tcard" style="padding:18px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:6px">打款费率</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:10px">阶梯格式: [{"upTo":10000,"fee":500},...,{"upTo":null,"fee":1200}](JPY,最后一档 upTo 必须 null);跨国另加汇率加点(bps,150=1.5%)。改动即时生效</div>';
+  if(!po.rules.length){h+='<div style="color:var(--muted);font-size:13px">加载中…或暂无规则</div>';}
+  else{
+    h+='<table><thead><tr><th style="width:110px">线路</th><th>阶梯(JSON)</th><th style="width:110px">加点bps</th><th style="width:90px"></th></tr></thead><tbody>';
+    h+=po.rules.map(function(r){var k=r.from_country+r.to_country;
+      return '<tr><td style="font-weight:600">'+esc(r.from_country)+' → '+esc(r.to_country)+'<div style="font-size:11px;color:var(--muted)">'+esc(r.currency)+'</div></td>'
+        +'<td><input id="po-t-'+k+'" value="'+esc(r.tiers)+'" style="width:100%;padding:6px;border:1px solid var(--border);border-radius:6px;font-family:monospace;font-size:12px"></td>'
+        +'<td><input id="po-m-'+k+'" type="number" min="0" max="2000" value="'+(r.fx_markup_bps||0)+'" style="width:80px;padding:6px;border:1px solid var(--border);border-radius:6px"></td>'
+        +'<td><button class="btn btn-primary btn-sm" onclick="savePayoutRule(\''+r.from_country+'\',\''+r.to_country+'\',\''+r.currency+'\')">保存</button></td></tr>';
+    }).join('');
+    h+='</tbody></table>';
+  }
+  h+='<div style="display:flex;gap:8px;margin-top:10px;align-items:center"><span style="font-size:12px;color:var(--muted)">新增线路:</span>'
+    +'<input id="po-new-from" placeholder="JP" maxlength="2" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px">'
+    +'<span>→</span><input id="po-new-to" placeholder="US" maxlength="2" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px">'
+    +'<button class="btn btn-outline btn-sm" onclick="addPayoutRule()">添加</button></div>';
+  // 汇率中间价
+  h+='<div style="font-weight:600;margin:14px 0 6px;font-size:13px">汇率中间价(锁价基准,接行情API前每日手动维护)</div>';
+  h+=(po.fxRates||[]).map(function(f){var pair=f.key.replace('fx_mid_','');
+    return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span style="width:90px;font-family:monospace">'+esc(pair)+'</span>'
+      +'<input id="po-fx-'+pair+'" type="number" step="0.0001" value="'+esc(f.value)+'" style="width:120px;padding:6px;border:1px solid var(--border);border-radius:6px">'
+      +'<button class="btn btn-primary btn-sm" onclick="saveFxRate(\''+pair+'\')">保存</button>'
+      +'<span style="font-size:11px;color:var(--muted)">更新于 '+esc((f.updated_at||'').slice(0,16))+'</span></div>';
+  }).join('');
+  h+='</div>';
+
   return h;
 }
-function _prReload(msg){st.msg=msg;st.msgType='success';apiGet('/admin/pricing',function(d){st.data.pricing=d;render()})}
+function _prReload(msg){st.msg=msg;st.msgType='success';apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});apiGet('/admin/pricing/payout-rules',function(d){st.data.payout=d;render()})}
+function loadPayoutRules(){apiGet('/admin/pricing/payout-rules',function(d){st.data.payout=d;render()})}
+function savePayoutRule(from,to,cur){
+  var tiersRaw=(document.getElementById('po-t-'+from+to)||{}).value||'';
+  var bps=Number((document.getElementById('po-m-'+from+to)||{}).value)||0;
+  var tiers;try{tiers=JSON.parse(tiersRaw)}catch(e){alert('阶梯 JSON 格式错误');return}
+  apiPut('/admin/pricing/payout-rules',{fromCountry:from,toCountry:to,currency:cur,tiers:tiers,fxMarkupBps:bps},function(d){if(d.error){alert(d.error);return}st.msg='打款费率已保存';st.msgType='success';loadPayoutRules()});
+}
+function addPayoutRule(){
+  var from=(document.getElementById('po-new-from')||{}).value||'',to=(document.getElementById('po-new-to')||{}).value||'';
+  if(!from||!to){alert('填转出/转入国二位代码');return}
+  apiPut('/admin/pricing/payout-rules',{fromCountry:from,toCountry:to,currency:'JPY',tiers:[{upTo:null,fee:500}],fxMarkupBps:from===to?0:150},function(d){if(d.error){alert(d.error);return}loadPayoutRules()});
+}
+function saveFxRate(pair){
+  var v=Number((document.getElementById('po-fx-'+pair)||{}).value);
+  if(!(v>0)){alert('汇率须为正数');return}
+  apiPatch('/admin/pricing/payout-fx',{pair:pair,rate:v},function(d){if(d.error){alert(d.error);return}st.msg='汇率已更新';st.msgType='success';loadPayoutRules()});
+}
 function _prErr(d){st.msg=d.error||'操作失败';st.msgType='danger';render()}
 function savePricingGlobal(){
   var v=parseFloat(document.getElementById('pr-global').value);
@@ -926,6 +972,7 @@ function saveI18n(key,kid){
 function load(page){
   if(page==='pricing'){
     apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});
+    loadPayoutRules();
   } else if(page==='i18n'){
     apiGet('/admin/i18n',function(d){st.data.i18n=d.rows||[];render()});
   } else if(page==='dashboard'){
@@ -953,6 +1000,7 @@ function load(page){
 /* ── API helpers ── */
 function apiGet(path,cb){var x=new XMLHttpRequest();x.open('GET',API+path,true);if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send()}
 function post(path,body,cb){var x=new XMLHttpRequest();x.open('POST',API+path,true);x.setRequestHeader('Content-Type','application/json');if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send(JSON.stringify(body))}
+function apiPut(path,body,cb){var x=new XMLHttpRequest();x.open('PUT',API+path,true);x.setRequestHeader('Content-Type','application/json');if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send(JSON.stringify(body))}
 function apiPatch(path,body,cb){var x=new XMLHttpRequest();x.open('PATCH',API+path,true);x.setRequestHeader('Content-Type','application/json');if(st.token)x.setRequestHeader('Authorization','Bearer '+st.token);x.onload=function(){try{cb(JSON.parse(x.responseText))}catch(e){cb({})}};x.send(JSON.stringify(body))}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function logout(){st.token=null;st.user=null;render()}

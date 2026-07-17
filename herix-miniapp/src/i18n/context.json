@@ -167,6 +167,8 @@
   "withdraw.fee": "费用明细行标签:手续费",
   "withdraw.free": "手续费为0时的值(绿色)",
   "withdraw.net": "费用明细行标签:实际到账金额",
+  "withdraw.lockedRate": "提现费用预览:跨境提现申请时锁定的有效汇率(中间价×(1−加点))标签",
+  "withdraw.targetEst": "提现费用预览:目标币种预计到手。n=金额, cur=币种代码(CNY等)",
   "withdraw.cnyRef": "人民币参考换算行,{n}=CNY金额,强调仅供参考",
   "withdraw.eta": "预计到账行,{eta}=时效文案(如1-3工作日)",
   "withdraw.etaBank": "银行方式的到账时效",

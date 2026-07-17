@@ -125,7 +125,7 @@ const AGREEMENT_VERSION = '2026-07-17-v2'; // v2: 第五条扩充为数据处理
 
 /** POST /api/users/brand/onboard — 品牌入驻 */
 usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {
-  const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail, agreedToTerms } = req.body;
+  const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail, agreedToTerms, country } = req.body;
   if (!companyName || !contactName) {
     return res.status(400).json({ error: '公司名称和联系人姓名为必填项' });
   }
@@ -137,6 +137,8 @@ usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Respon
 
   const data: Record<string, any> = {
     company_name: companyName,
+    // 商家归属国（转出实体，打款费率的 from 端；V1 默认日本）
+    country: ['JP', 'CN'].includes(String(country || '').toUpperCase()) ? String(country).toUpperCase() : 'JP',
     industry: industry || null,
     company_desc: companyDesc || null,
     website: website || null,

@@ -382,6 +382,37 @@ export async function initDatabase() {
     `INSERT INTO users (id, password_hash, nickname, role, created_at, updated_at)
       VALUES ('HERIX_PLATFORM', '!', 'Herix Platform', 'PLATFORM', now()::text, now()::text)
       ON CONFLICT (id) DO NOTHING`,
+    // 打款费率规则（2026-07-17 定稿）：同国=阶梯固定费；跨国=阶梯费+汇率加点。
+    // 汇率申请时锁定（对称波动期望不亏，规模大后上远期对冲——Remitly 同款路径）；
+    // 转出国 V1 恒 'JP'（钱包混池，按商家实体分仓留待多国实体阶段）
+    `CREATE TABLE IF NOT EXISTS payout_fee_rules (
+      id TEXT PRIMARY KEY,
+      from_country TEXT NOT NULL,
+      to_country TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'JPY',
+      tiers TEXT NOT NULL,
+      fx_markup_bps INTEGER NOT NULL DEFAULT 0,
+      updated_by TEXT,
+      updated_at TEXT,
+      UNIQUE(from_country, to_country, currency)
+    )`,
+    // 种子（2026-07-17 用户拍板）：JP→JP ≤5万¥300/以上¥500；JP→CN ≤1万¥500/≤5万¥800/以上¥1200 + 150bps
+    `INSERT INTO payout_fee_rules (id, from_country, to_country, currency, tiers, fx_markup_bps, updated_by, updated_at) VALUES
+      ('rule_jp_jp_jpy', 'JP', 'JP', 'JPY', '[{"upTo":50000,"fee":300},{"upTo":null,"fee":500}]', 0, 'seed', now()::text),
+      ('rule_jp_cn_jpy', 'JP', 'CN', 'JPY', '[{"upTo":10000,"fee":500},{"upTo":50000,"fee":800},{"upTo":null,"fee":1200}]', 150, 'seed', now()::text)
+     ON CONFLICT (from_country, to_country, currency) DO NOTHING`,
+    // 汇率中间价（申请时锁定用；接行情 API 前由运营在设置里维护）
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('fx_mid_JPY_CNY', '0.0490', 'JPY→CNY 中间价（打款锁价用，运营手动维护，接 API 前每日更新）')
+     ON CONFLICT (key) DO NOTHING`,
+    // 商家归属国（转出实体，V1 默认日本）
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'JP'`,
+    // 提现申请的跨境快照（锁定的汇率/加点/目标币金额，审计与打款执行依据）
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS to_country TEXT`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fx_mid_rate DOUBLE PRECISION`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fx_markup_bps INTEGER`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS target_currency TEXT`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS target_amount DOUBLE PRECISION`,
     // 小程序 URL Link 缓存（30天有效，过期重新生成）（2026-07-17）
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS weapp_link TEXT`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS weapp_link_expires TEXT`,

@@ -326,6 +326,11 @@ function activateBrandPage() {
     h += '<div class="field"><label>业务市场 *</label><div style="display:flex;gap:10px;margin-top:6px">';
     h += '<div class="btn btn-outline btn-sm" style="flex:1;border-color:var(--primary);color:var(--primary)">🇯🇵 日本市场（JPY）</div>';
     h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
+    // 商家归属国（打款费率的转出实体，V1 默认日本）
+    h += '<div class="field" style="margin-top:12px"><label>公司归属国家 *</label><select id="act-country">';
+    h += '<option value="JP"'+((state.activateData?.country||'JP')==='JP'?' selected':'')+'>🇯🇵 日本</option>';
+    h += '<option value="CN"'+(state.activateData?.country==='CN'?' selected':'')+'>🇨🇳 中国</option>';
+    h += '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">以贵司注册实体所在国为准，影响结算与打款费率</div></div>';
     h += '<div class="field" style="margin-top:12px"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Herix" value="'+esc(state.activateData?.companyName||'')+'"></div>';
     h += '<div class="field" style="margin-top:12px"><label>所属行业</label><select id="act-industry">';
     ['金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他'].forEach(function(i){h+='<option>'+i+'</option>'});
@@ -389,6 +394,7 @@ function activateStep2() {
   if (!company.trim()) { alert('请填写品牌名称'); return; }
   state.activateData = Object.assign({}, state.activateData, {
     currency: 'JPY',
+    country: (document.getElementById('act-country')||{}).value || 'JP',
     companyName: company.trim(),
     industry: (document.getElementById('act-industry')||{}).value||'',
     website: (document.getElementById('act-website')||{}).value||'',

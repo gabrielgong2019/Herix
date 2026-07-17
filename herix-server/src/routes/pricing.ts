@@ -98,6 +98,51 @@ pricingAdminRouter.post('/promotions', async (req: Request, res: Response) => {
   res.status(201).json({ id });
 });
 
+/** GET /api/admin/pricing/payout-rules — 打款费率规则 + 汇率中间价 */
+pricingAdminRouter.get('/payout-rules', async (_req: Request, res: Response) => {
+  const rules = await pool.query(`SELECT * FROM payout_fee_rules ORDER BY from_country, to_country`);
+  const fx = await pool.query(`SELECT key, value, updated_at FROM platform_settings WHERE key LIKE 'fx_mid_%'`);
+  res.json({ rules: rules.rows, fxRates: fx.rows });
+});
+
+/** PUT /api/admin/pricing/payout-rules — 新建/更新一条打款费率规则 */
+pricingAdminRouter.put('/payout-rules', async (req: Request, res: Response) => {
+  const { fromCountry, toCountry, currency, tiers, fxMarkupBps } = req.body;
+  const from = String(fromCountry || '').trim().toUpperCase();
+  const to = String(toCountry || '').trim().toUpperCase();
+  const cur = String(currency || 'JPY').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(from) || !/^[A-Z]{2}$/.test(to)) {
+    return res.status(400).json({ error: '国家须为两位代码（如 JP/CN）', code: 'INVALID_COUNTRY' });
+  }
+  if (!Array.isArray(tiers) || !tiers.length ||
+      !tiers.every((t: any) => (t.upTo === null || Number(t.upTo) > 0) && Number(t.fee) >= 0) ||
+      tiers[tiers.length - 1].upTo !== null) {
+    return res.status(400).json({ error: '阶梯格式错误：[{upTo,fee}...]，最后一档 upTo 须为 null', code: 'INVALID_TIERS' });
+  }
+  const bps = Math.max(0, Math.min(2000, parseInt(String(fxMarkupBps ?? 0), 10) || 0));
+  await pool.query(
+    `INSERT INTO payout_fee_rules (id, from_country, to_country, currency, tiers, fx_markup_bps, updated_by, updated_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     ON CONFLICT (from_country, to_country, currency)
+     DO UPDATE SET tiers = EXCLUDED.tiers, fx_markup_bps = EXCLUDED.fx_markup_bps,
+                   updated_by = EXCLUDED.updated_by, updated_at = EXCLUDED.updated_at`,
+    [genId(), from, to, cur, JSON.stringify(tiers), bps, (req as any).user?.userId || 'admin', now()]
+  );
+  res.json({ fromCountry: from, toCountry: to, currency: cur, tiers, fxMarkupBps: bps });
+});
+
+/** PATCH /api/admin/pricing/payout-fx — 更新汇率中间价（如 pair=JPY_CNY） */
+pricingAdminRouter.patch('/payout-fx', async (req: Request, res: Response) => {
+  const { pair, rate } = req.body;
+  if (!/^[A-Z]{3}_[A-Z]{3}$/.test(String(pair || ''))) {
+    return res.status(400).json({ error: 'pair 格式如 JPY_CNY', code: 'INVALID_PAIR' });
+  }
+  const r = Number(rate);
+  if (!(r > 0)) return res.status(400).json({ error: '汇率须为正数', code: 'INVALID_RATE' });
+  await setSetting(`fx_mid_${pair}`, String(r), (req as any).user?.userId || 'admin', '打款锁价中间价');
+  res.json({ pair, rate: r });
+});
+
 /** PATCH /api/admin/pricing/promotions/:id/cancel — 提前终止（软删） */
 pricingAdminRouter.patch('/promotions/:id/cancel', async (req: Request, res: Response) => {
   const r = await pool.query(

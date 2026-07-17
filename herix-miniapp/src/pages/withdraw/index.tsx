@@ -22,8 +22,7 @@ const METHOD_ETA_KEYS: Record<string, string> = {
   PAYPAL: 'withdraw.etaInstant',
   CASH: 'withdraw.etaCash',
 };
-const FX_RATE = 0.049; // 参考汇率 JPY→CNY，接入 Airwallex 后替换（对齐 herix）
-const FEE_RATE = 0; // 暂时免手续费
+// 费用/汇率一律由服务端 withdrawal-info 计算（payout_fee_rules 阶梯 + 申请时锁价），前端不再写死
 
 
 interface State {
@@ -31,6 +30,8 @@ interface State {
   loggedIn: boolean;
   balance: any;
   methods: any[];
+  /** 服务端费用预览（阶梯手续费 + 跨境锁价汇率） */
+  feeInfo: any;
   selMethodId: string;
   amount: string;
   submitting: boolean;
@@ -43,6 +44,7 @@ export default class Withdraw extends Component<{}, State> {
     loggedIn: true,
     balance: {},
     methods: [],
+    feeInfo: null,
     selMethodId: '',
     amount: '',
     submitting: false,
@@ -77,6 +79,25 @@ export default class Withdraw extends Component<{}, State> {
 
   goAddMethod = () => Taro.navigateTo({ url: '/pages/add-method/index' });
 
+  feeTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** 金额/收款方式变化后 400ms 拉服务端费用预览 */
+  scheduleFeeRefresh = () => {
+    if (this.feeTimer) clearTimeout(this.feeTimer);
+    this.feeTimer = setTimeout(async () => {
+      const { amount, methods, selMethodId, minAmount } = this.state;
+      const amt = parseFloat(amount) || 0;
+      const sel = methods.find(m => m.id === selMethodId) || methods[0];
+      if (!sel || amt < minAmount) { this.setState({ feeInfo: null }); return; }
+      try {
+        const info = await walletApi.withdrawalInfo(amt, sel.id);
+        this.setState({ feeInfo: info });
+      } catch {
+        this.setState({ feeInfo: null });
+      }
+    }, 400);
+  };
+
   setAll = () => {
     const avail = this.state.balance.available || 0;
     this.setState({ amount: String(avail) });
@@ -103,6 +124,7 @@ export default class Withdraw extends Component<{}, State> {
       await walletApi.withdrawRequest({
         amount: amt,
         method: sel.type,
+        methodId: sel.id,  // 服务端据此定收款国 → 阶梯/汇率规则
         accountDetails: detail || {},
       });
       Taro.showToast({ title: t('withdraw.success'), icon: 'success' });
@@ -158,17 +180,17 @@ export default class Withdraw extends Component<{}, State> {
     }
 
     const sel = methods.find(m => m.id === selMethodId) || methods[0];
-    const isCNY = sel && (sel.type === 'ALIPAY' || sel.type === 'WECHAT');
     const amt = parseFloat(amount) || 0;
     const valid = amt >= minAmount && amt <= avail;
-    const fee = Math.round(amt * FEE_RATE);
-    const net = amt - fee;
-    const cny = isCNY ? (net * FX_RATE).toFixed(2) : null;
+    const fi = this.state.feeInfo;
+    const fee = fi ? fi.fee : null;
+    const net = fi ? fi.netAmount : null;
     const eta = t(sel ? METHOD_ETA_KEYS[sel.type] || 'withdraw.etaBank' : 'withdraw.etaBank');
 
     let btnText = t('withdraw.btnEnter');
     if (amt > avail) btnText = t('withdraw.btnExceed');
-    else if (valid) btnText = t('withdraw.btnConfirm', { n: fmt(net) });
+    else if (valid && net !== null) btnText = t('withdraw.btnConfirm', { n: fmt(net) });
+    else if (valid) btnText = t('withdraw.btnEnter');
 
     return (
       <View className='withdraw-page'>
@@ -190,7 +212,7 @@ export default class Withdraw extends Component<{}, State> {
                 <View
                   key={m.id}
                   className={`method-card ${active ? 'active' : ''}`}
-                  onClick={() => this.setState({ selMethodId: m.id })}
+                  onClick={() => this.setState({ selMethodId: m.id }, this.scheduleFeeRefresh)}
                 >
                   <Text className='mc-icon'>{METHOD_ICONS[m.type] || '💳'}</Text>
                   <Text className='mc-label'>{m.label}</Text>
@@ -215,7 +237,7 @@ export default class Withdraw extends Component<{}, State> {
             type='number'
             value={amount}
             placeholder='0'
-            onInput={e => this.setState({ amount: e.detail.value })}
+            onInput={e => this.setState({ amount: e.detail.value }, this.scheduleFeeRefresh)}
           />
           <Text className='amount-all' onClick={this.setAll}>
             {t('withdraw.all')}
@@ -232,13 +254,23 @@ export default class Withdraw extends Component<{}, State> {
             </View>
             <View className='pv-row'>
               <Text className='pv-label'>{t('withdraw.fee')}</Text>
-              <Text className={`pv-val ${fee === 0 ? 'free' : ''}`}>{fee === 0 ? t('withdraw.free') : `−¥${fmt(fee)}`}</Text>
+              <Text className={`pv-val ${fee === 0 ? 'free' : ''}`}>
+                {fee === null ? '…' : fee === 0 ? t('withdraw.free') : `−¥${fmt(fee)}`}
+              </Text>
             </View>
+            {fi?.fxEffectiveRate && (
+              <View className='pv-row'>
+                <Text className='pv-label'>{t('withdraw.lockedRate')}</Text>
+                <Text className='pv-val'>1 JPY = {fi.fxEffectiveRate} {fi.targetCurrency}</Text>
+              </View>
+            )}
             <View className='pv-row net'>
               <Text className='pv-label'>{t('withdraw.net')}</Text>
               <View className='pv-net-box'>
-                <Text className='pv-net'>¥{fmt(net)} JPY</Text>
-                {cny && <Text className='pv-cny'>{t('withdraw.cnyRef', { n: cny })}</Text>}
+                <Text className='pv-net'>{net === null ? '…' : `¥${fmt(net)} JPY`}</Text>
+                {fi?.targetAmount != null && (
+                  <Text className='pv-cny'>{t('withdraw.targetEst', { n: fmt(fi.targetAmount), cur: fi.targetCurrency })}</Text>
+                )}
               </View>
             </View>
           </View>

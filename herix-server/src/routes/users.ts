@@ -121,7 +121,7 @@ usersRouter.post('/add-role', requireAuth, async (req: Request, res: Response) =
   res.json({ success: true, roles: newRoles, token });
 });
 
-const AGREEMENT_VERSION = '2026-07-09-v1';
+const AGREEMENT_VERSION = '2026-07-17-v2'; // v2: 第五条扩充为数据处理(委托)条款
 
 /** POST /api/users/brand/onboard — 品牌入驻 */
 usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {

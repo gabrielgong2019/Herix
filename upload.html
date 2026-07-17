@@ -88,12 +88,57 @@ function init() {
       var d = JSON.parse(xhr.responseText);
       if (d.error) { render('<div class="card"><div class="alert alert-error">❌ ' + esc(d.error) + '</div></div>'); return; }
       taskInfo = d;
-      renderUploadPage();
+      // 首次进入须同意数据上传条款（记录时间/IP/UA），同意状态按 任务+浏览器 记忆
+      if (localStorage.getItem('herix_upload_consent_' + TASK_ID)) renderUploadPage();
+      else renderConsentPage();
     } catch(e) {
       render('<div class="card"><div class="alert alert-error">❌ 加载失败，请稍后重试</div></div>');
     }
   };
   xhr.onerror = function() { render('<div class="card"><div class="alert alert-error">❌ 网络错误</div></div>'); };
+  xhr.send();
+}
+
+/* ── 数据上传条款同意门（品牌方非平台用户，进入前必须点击同意） ── */
+function renderConsentPage() {
+  var t = taskInfo;
+  var html = '<div class="card">'
+    + '<div class="task-header">'
+    + '<div class="task-icon">📋</div>'
+    + '<div><div class="task-title">' + esc(t.title) + '</div>'
+    + '<div class="task-meta">任务数据上传 · 由 Herix 赫使平台提供</div>'
+    + '</div></div></div>';
+
+  html += '<div class="card">'
+    + '<div class="sec-title">📄 数据上传条款（2026-07-17-v1）</div>'
+    + '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:14px">'
+    + '<p style="font-weight:600;margin-bottom:4px">一、您上传的数据</p>'
+    + '<p style="margin-bottom:8px">为核对推广归属与结算，您将上传推广码对应的转化数据（可能包含最终用户邮箱或用户ID）。您确认已获得提供该等数据的合法授权。</p>'
+    + '<p style="font-weight:600;margin-bottom:4px">二、平台如何处理</p>'
+    + '<p style="margin-bottom:8px">平台<strong>不保存明文</strong>：用户标识接收后立即以 SHA-256 加盐单向哈希处理并丢弃原文，数据库与日志均不留存；哈希仅用于推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉；所有展示仅保留脱敏形式（如 a**@gmail.com）。</p>'
+    + '<p style="font-weight:600;margin-bottom:4px">三、结算规则</p>'
+    + '<p style="margin-bottom:8px">数据按累计口径处理，系统只对新增转化结算；已结算部分不可撤销回收。</p>'
+    + '<p style="font-weight:600;margin-bottom:4px">四、记录</p>'
+    + '<p>点击同意即表示接受上述条款，本次确认将记录时间、IP 地址及浏览器信息作为电子证据。</p>'
+    + '</div>'
+    + '<div id="consent-err"></div>'
+    + '<button class="btn btn-primary" onclick="doConsent()">✓ 我已阅读并同意，进入上传</button>'
+    + '</div>';
+  render(html);
+}
+
+function doConsent() {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API + '/tasks/' + TASK_ID + '/upload-consent?token=' + encodeURIComponent(TOKEN), true);
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d.error) { document.getElementById('consent-err').innerHTML = '<div class="alert alert-error">' + esc(d.error) + '</div>'; return; }
+      localStorage.setItem('herix_upload_consent_' + TASK_ID, d.version || '1');
+      renderUploadPage();
+    } catch(e) { document.getElementById('consent-err').innerHTML = '<div class="alert alert-error">提交失败，请重试</div>'; }
+  };
+  xhr.onerror = function() { document.getElementById('consent-err').innerHTML = '<div class="alert alert-error">网络错误，请重试</div>'; };
   xhr.send();
 }
 
@@ -174,6 +219,16 @@ function renderUploadPage() {
     + '<div id="upload-result"></div>'
     + '<button class="btn btn-primary" onclick="doUpload()">提交数据</button>'
     + '</div>';
+
+  // 获客入口：品牌方注册商家账号后可在线查看任务进展
+  html += '<div class="card" style="background:linear-gradient(135deg,#f5f3ff,#eff6ff);border:1px solid #ddd6fe">'
+    + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+    + '<div style="flex:1;min-width:200px">'
+    + '<div style="font-weight:700;font-size:14px;margin-bottom:4px">🎁 想随时掌握任务进展？</div>'
+    + '<div style="font-size:12px;color:#6b7280">注册 Herix 商家账号，在线查看推广数据、跟踪明细与结算记录，还可自主发布任务直接招募海外华人 KOL。</div>'
+    + '</div>'
+    + '<a href="/merchant.html" target="_blank" class="btn btn-outline" style="text-decoration:none;white-space:nowrap">免费注册商家账号 →</a>'
+    + '</div></div>';
 
   render(html);
 }
@@ -281,6 +336,11 @@ function doUpload() {
         html += '<div class="alert alert-error">💰 ' + esc(d.message || '部分推广码因余额不足未结算') + '</div>';
       }
       if (!html) html = '<div class="alert alert-error">没有任何记录被处理，请检查数据格式</div>';
+      if ((d.processed||0) > 0) {
+        html += '<div style="background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:10px 14px;font-size:12px;margin-top:8px">'
+          + '💡 数据已生效。<a href="/merchant.html" target="_blank" style="color:#6d28d9;font-weight:600">注册 Herix 商家账号</a>，随时在线查看任务进展与跟踪明细，无需等待链接上传。'
+          + '</div>';
+      }
       resultEl.innerHTML = html;
       // 刷新任务信息
       setTimeout(init, 1500);

@@ -275,6 +275,26 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
   }
 });
 
+/** 品牌上传页数据条款版本（改条款文案时同步升版本） */
+const UPLOAD_TERMS_VERSION = '2026-07-17-v1';
+
+/** POST /api/tasks/:id/upload-consent — 品牌方（非平台用户）进入上传页前的条款同意，记录 IP/UA 作为电子证据 */
+tasksRouter.post('/:id/upload-consent', async (req: Request, res: Response) => {
+  const token = String(req.query.token || '');
+  const task = await findOne<any>('SELECT id, upload_token FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task || !token || task.upload_token !== token) {
+    return res.status(403).json({ error: '链接无效或已过期', code: 'INVALID_TOKEN' });
+  }
+  await insert('upload_consents', {
+    task_id: task.id,
+    agreed_version: UPLOAD_TERMS_VERSION,
+    ip: req.ip || req.socket?.remoteAddress || null,
+    user_agent: String(req.headers['user-agent'] || '').slice(0, 300),
+    agreed_at: new Date().toISOString(),
+  });
+  res.json({ agreed: true, version: UPLOAD_TERMS_VERSION });
+});
+
 /** GET /api/tasks/:id/referrals — 明细模式跟踪列表（商家）。只回脱敏标识，不存在原文 */
 tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>('SELECT id, creator_id, data_mode FROM tasks WHERE id = ?', [req.params.id]);
@@ -353,6 +373,14 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   if (!isTokenAuth && !isBearerAuth) return res.status(403).json({ error: '无权限' });
 
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
+
+  // token 通道（品牌方，非平台用户）须先同意数据条款；Bearer 通道（商家/管理员）入驻时已签服务协议
+  if (isTokenAuth && !isBearerAuth) {
+    const consent = await findOne<any>('SELECT id FROM upload_consents WHERE task_id = ? LIMIT 1', [task.id]);
+    if (!consent) {
+      return res.status(403).json({ error: '请先阅读并同意数据上传条款', code: 'CONSENT_REQUIRED' });
+    }
+  }
 
   const { records } = req.body as { records: Array<{ code: string; registered_count?: number; used_count?: number }> };
   if (!Array.isArray(records) || records.length === 0) return res.status(400).json({ error: 'records 不能为空' });

@@ -422,6 +422,16 @@ export async function initDatabase() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_task_code ON referral_records(task_id, code)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_herald ON referral_records(herald_id)`,
+    // 品牌上传页（upload.html，非平台用户）进入前的数据条款同意记录：时间+IP+UA 作为电子证据（2026-07-17）
+    `CREATE TABLE IF NOT EXISTS upload_consents (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id),
+      agreed_version TEXT NOT NULL,
+      ip TEXT,
+      user_agent TEXT,
+      agreed_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_upload_consents_task ON upload_consents(task_id)`,
     // 定价模块（2026-07-09）
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,

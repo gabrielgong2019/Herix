@@ -347,7 +347,7 @@ function activateBrandPage() {
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">请仔细阅读以下协议，确认后完成入驻。</div>';
 
     h += '<div style="height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:16px">';
-    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">Herix 品牌商家服务协议（版本 2026-07-09-v1）</p>';
+    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">Herix 品牌商家服务协议（版本 2026-07-17-v2）</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">一、服务内容</p>';
     h += '<p style="margin-bottom:10px">Herix（以下简称"平台"）由 HUAXUE 合同会社运营，提供海外华人赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">二、资金与结算</p>';
@@ -356,8 +356,11 @@ function activateBrandPage() {
     h += '<p style="margin-bottom:10px">1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">四、争议处理</p>';
     h += '<p style="margin-bottom:10px">平台对赫使提交内容的质量判断有最终解释权。如您对结算结果有异议，须在结算后 7 日内通过平台客服提出，逾期视为认可。</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">五、隐私与数据</p>';
-    h += '<p style="margin-bottom:10px">平台将按照隐私政策处理您的业务数据。赫使的个人信息仅用于任务匹配，不会向第三方出售。</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">五、隐私与数据处理（委托处理条款）</p>';
+    h += '<p style="margin-bottom:10px">1. 平台将按照隐私政策处理您的业务数据。赫使的个人信息仅用于任务匹配，不会向第三方出售。<br>'
+      + '2. 您为核对推广归属与结算向平台上传的最终用户标识（邮箱/用户ID 等），属于您<strong>委托平台处理</strong>的数据：平台<strong>不保存明文</strong>（接收后立即以 SHA-256 加盐单向哈希处理并丢弃原文，数据库与日志均不留存），仅用于推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉。<br>'
+      + '3. 所有界面展示（含平台内部后台）仅保留脱敏形式；任务结束后您可申请清除全部明细记录（结算凭证按法定财务要求另行保留）。<br>'
+      + '4. 您应确保向平台提供上述数据已获得合法授权（含您的隐私政策对该等委托处理的覆盖）；如发生数据安全事件，平台将在知悉后 72 小时内通知您。</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">六、协议变更</p>';
     h += '<p>平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。</p>';
     h += '</div>';

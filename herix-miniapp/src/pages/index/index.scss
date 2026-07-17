@@ -23,8 +23,9 @@
 }
 
 .logo-wide {
-  width: 300px;
-  height: 126px;
+  /* 跟旧版图标同高(80)，宽按横版原图比例 2.37 */
+  width: 190px;
+  height: 80px;
 }
 
 .logo {

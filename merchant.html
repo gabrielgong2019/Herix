@@ -671,11 +671,13 @@ function taskDetailPage() {
     +'<div class="tab'+(state.taskTab==='applicants'?' active':'')+'" onclick="switchTab(\'applicants\')">报名审核 ('+apps.length+')'+(pendingApps.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingApps.length+'</span>':'')+'</div>'
     +'<div class="tab'+(state.taskTab==='submissions'?' active':'')+'" onclick="switchTab(\'submissions\')">内容提交 ('+subs.length+')'+(pendingSubs.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingSubs.length+'</span>':'')+'</div>'
     +(t.mode==='PERFORMANCE'?'<div class="tab'+(state.taskTab==='codes'?' active':'')+'" onclick="switchTab(\'codes\')">推广码</div>':'')
+    +(t.mode==='PERFORMANCE'&&t.data_mode==='DETAIL'?'<div class="tab'+(state.taskTab==='referrals'?' active':'')+'" onclick="switchTab(\'referrals\')">跟踪明细</div>':'')
     +'</div>';
 
   var tabContent = '';
   if (state.taskTab === 'applicants') tabContent = applicantsPanel(apps);
   else if (state.taskTab === 'submissions') tabContent = submissionsPanel(subs);
+  else if (state.taskTab === 'referrals') tabContent = referralsPanel(t);
   else tabContent = codesPanel(t);
 
   var right = '<div>'
@@ -778,8 +780,10 @@ function toggleCodeMode() {
 function toggleCodeModeSection() {
   var mode = document.getElementById('mode')?.value;
   var codeSection = document.getElementById('code-mode-section');
+  var dataModeSection = document.getElementById('data-mode-section');
   var ctField = document.getElementById('contentType-field');
   if (codeSection) codeSection.style.display = (mode === 'PERFORMANCE') ? 'block' : 'none';
+  if (dataModeSection) dataModeSection.style.display = (mode === 'PERFORMANCE') ? 'block' : 'none';
   // PERFORMANCE 任务不需要内容形式（赫使用推广码，不提交内容）
   if (ctField) ctField.style.display = (mode === 'PERFORMANCE') ? 'none' : 'block';
 }
@@ -898,6 +902,12 @@ function taskFormPage(t) {
     +'</div>'
     +'<div id="custom-code-hint" style="margin-top:8px;font-size:12px;color:var(--muted);'+(t&&t.code_mode==='custom'?'':'display:none')+'">任务创建后，在任务详情页上传推广码文件。</div>'
     +'</div>'
+    // 数据回传模式（仅 PERFORMANCE 任务显示，发布后锁定）
+    +'<div class="field form-full" id="data-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>数据回传模式 <span style="font-weight:400;font-size:11px;color:var(--muted)">发布后锁定，不可切换</span></label>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">'
+    +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-agg" value="AGGREGATE" '+((!t||t.data_mode!=='DETAIL')?'checked':'')+' style="margin-top:2px"><span>汇总模式 — 每个码填累计注册数/使用数，最简单<br><span style="font-size:11px;color:var(--muted)">系统按增量结算，重复上传不重复打款</span></span></label>'
+    +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-detail" value="DETAIL" '+(t&&t.data_mode==='DETAIL'?'checked':'')+' style="margin-top:2px"><span>明细模式 — 逐用户上传（邮箱/ID + 是否成交），可对账可追溯<br><span style="font-size:11px;color:var(--muted)">按用户身份去重防误报多付；邮箱即刻哈希脱敏，平台不存原文</span></span></label>'
+    +'</div></div>'
     +'</div>'  // close form-grid
     +'<div id="task-form-error" style="display:none;margin-bottom:12px"></div>'
     +'<div class="form-actions">'
@@ -1097,23 +1107,56 @@ function submitReview(id, type, action) {
 
 
 /* ── CSV Upload ── */
+function csvSelectedTask() {
+  var id = (document.getElementById('csv-task')||{}).value;
+  return state.tasks.find(function(x){ return x.id === id; });
+}
+
+/* 按任务的数据回传模式渲染：模板示例 + 注意事项 */
+function csvModeBlockHTML(t) {
+  var isDetail = t && t.data_mode === 'DETAIL';
+  var sample = isDetail
+    ? 'code,用户邮箱或ID,是否完成交易\nHERIX-A3K9Z2,alice@gmail.com,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,0'
+    : 'code,注册数,使用数\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3';
+  var notes = isDetail ? [
+    '每次上传<b>全量名单</b>（所有邀请用户），已存在的行自动按用户身份去重',
+    '一个用户只能归属一个推广码；出现在多个码下会被标记<b>冲突</b>，需你指定唯一归属并填写理由',
+    '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
+    '邮箱/用户ID 仅用于识别去重，系统即刻哈希脱敏，<b>不存储原文</b>',
+  ] : [
+    '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
+    '系统只对新增部分结算；重复上传同样数据<b>不会重复打款</b>',
+    '已结算部分不可回收；填小于历史的数不会退款',
+    '推广码必须属于所选任务，传错任务会被明确提示',
+  ];
+  return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+    +'<div style="font-weight:600">上传转化数据（CSV）<span style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:8px;background:'+(isDetail?'#ede9fe':'#dbeafe')+';color:'+(isDetail?'#6d28d9':'#1d4ed8')+'">'+(isDetail?'明细模式':'汇总模式')+'</span></div>'
+    +'<button class="btn btn-outline btn-sm" onclick="downloadCsvTemplate()">⬇ 下载模板</button>'
+    +'</div>'
+    +'<div style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:8px;white-space:pre">'+sample+'</div>'
+    +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f"><div style="font-weight:600;margin-bottom:4px">📋 注意事项</div><ul style="margin:0;padding-left:18px">'
+    + notes.map(function(n){ return '<li style="margin-bottom:3px">'+n+'</li>'; }).join('')
+    +'</ul></div>';
+}
+
+function renderCsvModeUI() {
+  var t = csvSelectedTask();
+  var el = document.getElementById('csv-mode-block');
+  if (el && t) el.innerHTML = csvModeBlockHTML(t);
+  var resultEl = document.getElementById('csv-result');
+  if (resultEl) resultEl.innerHTML = '';
+}
+
 function csvPage() {
   var perfTasks = state.tasks.filter(function(t){return t.mode==='PERFORMANCE' && t.status==='OPEN'});
   if (!perfTasks.length) return '<div class="table-card"><div class="empty"><div class="empty-icon">📤</div><div>没有进行中的成果报酬任务</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">创建类型A任务后可在此上传转化数据</div></div></div>';
 
-  var opts = perfTasks.map(function(t){return '<option value="'+t.id+'">'+esc(t.title)+'</option>'}).join('');
+  var opts = perfTasks.map(function(t){return '<option value="'+t.id+'">'+esc(t.title)+(t.data_mode==='DETAIL'?' [明细]':' [汇总]')+'</option>'}).join('');
   return '<div class="form-card"><div style="max-width:600px">'
-    +'<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">选择任务</div><select id="csv-task" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px">'+opts+'</select></div>'
-    +'<div style="margin-bottom:12px">'
-    +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-    +'<div style="font-weight:600">上传转化数据（CSV）</div>'
-    +'<button class="btn btn-outline btn-sm" onclick="downloadCsvTemplate()">⬇ 下载模板</button>'
-    +'</div>'
-    +'<div style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:6px;white-space:pre">code,注册数,使用数\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3</div>'
-    +'<div style="font-size:11px;color:var(--muted)">每人一行，code 是赫使的推广码，注册数和使用数填写整数</div>'
-    +'</div>'
+    +'<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">选择任务</div><select id="csv-task" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px" onchange="renderCsvModeUI()">'+opts+'</select></div>'
+    +'<div style="margin-bottom:12px" id="csv-mode-block">'+csvModeBlockHTML(perfTasks[0])+'</div>'
     +'<div class="field"><label>粘贴 CSV 数据或选择文件</label>'
-    +'<textarea id="csv-data" rows="8" placeholder="code,注册数,使用数&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3"></textarea>'
+    +'<textarea id="csv-data" rows="8" placeholder="粘贴 CSV 内容，格式见上方模板"></textarea>'
     +'<input type="file" accept=".csv" style="margin-top:8px;font-size:13px" onchange="loadCsvFile(event)">'
     +'</div>'
     +'<div id="csv-result"></div>'
@@ -2203,6 +2246,7 @@ function saveTask(publish) {
     platformRequirements: taskPlatformReqs.length > 0 ? taskPlatformReqs : undefined,
     reqMode: taskReqMode,
     reqMinCount: taskReqMode === 'ANY_N' ? taskReqMinCount : undefined,
+    dataMode: document.getElementById('dataMode-detail')?.checked ? 'DETAIL' : 'AGGREGATE',
     visibility: (document.getElementById('visibility')||{}).value || 'PUBLIC',
   };
   showFormError('');  // 清除旧错误
@@ -2559,6 +2603,8 @@ function reviewSubReject(id, fromAll) {
 
 function doCsvUpload() {
   var taskId = (document.getElementById('csv-task')||{}).value;
+  var task = csvSelectedTask();
+  var isDetail = task && task.data_mode === 'DETAIL';
   var raw = (document.getElementById('csv-data')||{}).value;
   var resultEl = document.getElementById('csv-result');
   if (!raw.trim()) { resultEl.innerHTML='<div class="alert alert-error">请粘贴数据或选择CSV文件</div>'; return; }
@@ -2569,21 +2615,40 @@ function doCsvUpload() {
   // 解析第一行表头
   var headers = lines[0].split(',').map(function(h){return h.trim().toLowerCase()});
   var codeIdx = headers.indexOf('code');
-  var regIdx = headers.indexOf('注册数');
-  var usedIdx = headers.indexOf('使用数');
   if (codeIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">表头需要包含 "code" 列</div>'; return; }
 
   var records = [];
-  for (var i = 1; i < lines.length; i++) {
-    var cols = lines[i].split(',');
-    var code = (cols[codeIdx]||'').trim();
-    if (!code) continue;
-    var regCount = regIdx >= 0 ? parseInt(cols[regIdx]||'0',10) : 0;
-    var usedCount = usedIdx >= 0 ? parseInt(cols[usedIdx]||'0',10) : 0;
-    records.push({ code: code, registered_count: isNaN(regCount)?0:regCount, used_count: isNaN(usedCount)?0:usedCount });
+  var i, cols, code;
+  if (isDetail) {
+    // 明细模式：code + 用户标识 + 是否完成交易
+    var userIdx = -1, convIdx = -1;
+    headers.forEach(function(h, idx) {
+      if (userIdx === -1 && (h.indexOf('邮箱') >= 0 || h.indexOf('用户') >= 0 || h.indexOf('email') >= 0 || h.indexOf('user') >= 0)) userIdx = idx;
+      if (convIdx === -1 && (h.indexOf('交易') >= 0 || h.indexOf('转化') >= 0 || h.indexOf('convert') >= 0 || h.indexOf('txn') >= 0)) convIdx = idx;
+    });
+    if (userIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">该任务为<b>明细模式</b>，表头需要包含用户列（如「用户邮箱或ID」）——请下载对应模板</div>'; return; }
+    for (i = 1; i < lines.length; i++) {
+      cols = lines[i].split(',');
+      code = (cols[codeIdx]||'').trim();
+      var user = (cols[userIdx]||'').trim();
+      if (!code || !user) continue;
+      records.push({ code: code, user: user, converted: convIdx >= 0 ? (cols[convIdx]||'').trim() : '0' });
+    }
+  } else {
+    var regIdx = headers.indexOf('注册数');
+    var usedIdx = headers.indexOf('使用数');
+    if (regIdx === -1 && usedIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板</div>'; return; }
+    for (i = 1; i < lines.length; i++) {
+      cols = lines[i].split(',');
+      code = (cols[codeIdx]||'').trim();
+      if (!code) continue;
+      var regCount = regIdx >= 0 ? parseInt(cols[regIdx]||'0',10) : 0;
+      var usedCount = usedIdx >= 0 ? parseInt(cols[usedIdx]||'0',10) : 0;
+      records.push({ code: code, registered_count: isNaN(regCount)?0:regCount, used_count: isNaN(usedCount)?0:usedCount });
+    }
   }
 
-  if (!records.length) { resultEl.innerHTML='<div class="alert alert-error">没有有效的推广码数据</div>'; return; }
+  if (!records.length) { resultEl.innerHTML='<div class="alert alert-error">没有有效的数据行</div>'; return; }
 
   post('/tasks/' + taskId + '/csv', { records: records }, function(d) {
     if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>'; return; }
@@ -2604,8 +2669,74 @@ function doCsvUpload() {
     if (d.blockedCodes && d.blockedCodes.length) {
       html += '<div class="alert alert-error">💰 '+esc(d.message||'部分推广码因余额不足未结算')+'：<span style="font-family:monospace">'+esc(d.blockedCodes.join(', '))+'</span></div>';
     }
+    if (d.conflicts && d.conflicts.length) {
+      html += '<div class="alert alert-error"><div style="font-weight:700;margin-bottom:6px">⚠️ '+d.conflicts.length+' 条归属冲突——同一用户出现在多个推广码下</div>'
+        +'<div style="font-size:12px;margin-bottom:8px">你的系统应保证一个用户只使用一个推广码。请为下列用户指定唯一归属（需填写理由，留审计记录）：</div>'
+        + d.conflicts.map(function(c, i) {
+            if (c.settled) return '<div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:6px;font-size:12px"><span style="font-family:monospace">'+esc(c.user)+'</span> — 已按 <b>'+esc(c.existingCode)+'</b> 结算，归属不可更改（请修正你系统里的码）</div>';
+            return '<div style="margin-bottom:8px;padding:8px;background:#fff;border-radius:6px;font-size:12px" id="conf-'+i+'">'
+              +'<div style="font-family:monospace;margin-bottom:6px">'+esc(c.user)+'</div>'
+              +'<label style="margin-right:14px;cursor:pointer"><input type="radio" name="conf-'+i+'-code" value="'+esc(c.existingCode)+'" checked> 保留 <b>'+esc(c.existingCode)+'</b>（现归属）</label>'
+              +'<label style="cursor:pointer"><input type="radio" name="conf-'+i+'-code" value="'+esc(c.uploadedCode)+'"> 改为 <b>'+esc(c.uploadedCode)+'</b>（本次上传）</label>'
+              +'<div style="display:flex;gap:8px;margin-top:6px">'
+              +'<input type="text" id="conf-'+i+'-note" placeholder="理由（改归属时必填）" style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">'
+              +'<button class="btn btn-outline btn-sm" onclick="resolveConflict(\''+esc(taskId)+'\',\''+esc(c.recordId)+'\','+i+',\''+esc(c.existingCode)+'\')">确认</button>'
+              +'</div></div>';
+          }).join('')
+        +'</div>';
+    }
     if (!html) html = '<div class="alert alert-error">没有任何记录被处理，请检查数据格式</div>';
     resultEl.innerHTML = html;
+  });
+}
+
+/* 跨码冲突：商家指定唯一归属。保留现归属=无数据变更（提醒商家修正自己系统）；改归属=调 reassign 留审计 */
+function resolveConflict(taskId, recordId, i, existingCode) {
+  var sel = document.querySelector('input[name="conf-'+i+'-code"]:checked');
+  var target = sel ? sel.value : existingCode;
+  var box = document.getElementById('conf-'+i);
+  if (target === existingCode) {
+    if (box) box.innerHTML = '<span style="font-size:12px;color:#16a34a">✓ 已确认保留 '+esc(existingCode)+'——请同步修正你系统里该用户的推广码</span>';
+    return;
+  }
+  var note = (document.getElementById('conf-'+i+'-note')||{}).value || '';
+  if (!note.trim()) { alert('改归属必须填写理由（留审计记录）'); return; }
+  post('/tasks/'+taskId+'/referrals/'+recordId+'/reassign', { code: target, note: note.trim() }, function(d) {
+    if (d.error) { alert(d.error); return; }
+    if (box) box.innerHTML = '<span style="font-size:12px;color:#16a34a">✓ 归属已改为 '+esc(d.code)+'（原 '+esc(d.from)+'），理由已留档</span>';
+  });
+}
+
+/* ── 明细模式：任务详情「跟踪明细」面板（返回占位，异步填充） ── */
+function referralsPanel(t) {
+  setTimeout(function() { loadTaskReferrals(t.id); }, 0);
+  return '<div class="table-card" id="referrals-panel"><div class="empty" style="padding:24px"><div style="font-size:13px;color:var(--muted)">⏳ 加载明细…</div></div></div>';
+}
+
+function loadTaskReferrals(taskId) {
+  get('/tasks/'+taskId+'/referrals', function(d) {
+    var el = document.getElementById('referrals-panel');
+    if (!el) return;
+    if (d.error) { el.innerHTML = '<div class="empty" style="padding:24px">'+esc(d.error)+'</div>'; return; }
+    var rows = d.records || [];
+    if (!rows.length) {
+      el.innerHTML = '<div class="empty" style="padding:32px"><div class="empty-icon">👥</div><div>还没有邀请明细</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">上传明细数据后，每位被邀请用户在此逐行可见</div></div>';
+      return;
+    }
+    var fmtD = function(s){ return s ? String(s).slice(0,10) : '—'; };
+    el.innerHTML = '<table class="table"><thead><tr>'
+      +'<th>用户</th><th>推广码</th><th>赫使</th><th>注册</th><th>转化</th><th>结算</th></tr></thead><tbody>'
+      + rows.map(function(r) {
+          return '<tr>'
+            +'<td style="font-family:monospace">'+esc(r.user_masked||'—')+(r.reassigned_at?' <span title="'+esc(r.reassign_note||'')+'" style="font-size:10px;color:#6d28d9">[改]</span>':'')+'</td>'
+            +'<td style="font-family:monospace;font-size:11px">'+esc(r.code)+'</td>'
+            +'<td>'+esc(r.herald_name||'')+'</td>'
+            +'<td>'+fmtD(r.registered_at)+'</td>'
+            +'<td>'+(r.converted_at?'<span style="color:#16a34a">✓ '+fmtD(r.converted_at)+'</span>':'<span style="color:var(--muted)">—</span>')+'</td>'
+            +'<td>'+(r.settled?'<span style="color:#16a34a">已入账</span>':(r.converted_at?'<span style="color:#d97706">待结算</span>':'<span style="color:var(--muted)">—</span>'))+'</td>'
+            +'</tr>';
+        }).join('')
+      +'</tbody></table><div style="font-size:11px;color:var(--muted);padding:8px 12px">共 '+rows.length+' 条 · 用户标识已脱敏，平台不存储原文</div>';
   });
 }
 
@@ -2620,11 +2751,15 @@ function loadCsvFile(event) {
 }
 
 function downloadCsvTemplate() {
-  var csv = 'code,注册数,使用数\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0';
+  var t = csvSelectedTask();
+  var isDetail = t && t.data_mode === 'DETAIL';
+  var csv = isDetail
+    ? 'code,用户邮箱或ID,是否完成交易\nHERIX-EXAMPLE1,alice@gmail.com,1\nHERIX-EXAMPLE1,bob@yahoo.co.jp,0'
+    : 'code,注册数,使用数\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0';
   var blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'herix_conversion_template.csv';
+  a.download = isDetail ? 'herix_detail_template.csv' : 'herix_conversion_template.csv';
   a.click();
 }
 

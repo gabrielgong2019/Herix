@@ -111,11 +111,25 @@ function renderUploadPage() {
     + '✅ 链接有效，您可以直接上传转化数据，无需登录账号。'
     + '</div></div>';
 
+  var isDetail = t.dataMode === 'DETAIL';
   html += '<div class="card">'
-    + '<div class="sec-title">📥 上传说明</div>'
+    + '<div class="sec-title">📥 上传说明 <span style="font-size:11px;padding:2px 8px;border-radius:8px;background:' + (isDetail?'#ede9fe':'#dbeafe') + ';color:' + (isDetail?'#6d28d9':'#1d4ed8') + '">' + (isDetail?'明细模式':'汇总模式') + '</span></div>'
     + '<div class="step"><div class="step-num">1</div><div class="step-body">下载推广码列表，确认各赫使对应的推广码</div></div>'
-    + '<div class="step"><div class="step-num">2</div><div class="step-body">从您的系统中导出各推广码的转化数据（注册数、使用数）</div></div>'
+    + '<div class="step"><div class="step-num">2</div><div class="step-body">' + (isDetail ? '从您的系统中导出各推广码邀请的用户明细（邮箱/ID + 是否完成交易）' : '从您的系统中导出各推广码的转化数据（注册数、使用数）') + '</div></div>'
     + '<div class="step"><div class="step-num">3</div><div class="step-body">按下方格式粘贴或上传 CSV，点击提交</div></div>'
+    + '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f;margin-top:10px"><div style="font-weight:600;margin-bottom:4px">📋 注意事项</div><ul style="margin:0;padding-left:18px">'
+    + (isDetail ? [
+        '每次上传<b>全量名单</b>（所有邀请用户），已存在的行自动按用户身份去重',
+        '一个用户只能归属一个推广码；出现在多个码下会被标记<b>冲突</b>，需商家在后台指定唯一归属',
+        '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
+        '邮箱/用户ID 仅用于识别去重，系统即刻哈希脱敏，<b>不存储原文</b>',
+      ] : [
+        '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
+        '系统只对新增部分结算；重复上传同样数据<b>不会重复打款</b>',
+        '已结算部分不可回收；填小于历史的数不会退款',
+        '推广码必须属于本任务，其他任务的码会被明确提示',
+      ]).map(function(n){ return '<li style="margin-bottom:3px">'+n+'</li>'; }).join('')
+    + '</ul></div>'
     + '</div>';
 
   // 推广码列表 + 模板下载
@@ -140,8 +154,8 @@ function renderUploadPage() {
   // 上传区域
   html += '<div class="card">'
     + '<div class="sec-title">📤 上传转化数据</div>'
-    + '<div style="font-size:12px;color:#6b7280;margin-bottom:10px">CSV 格式：<code style="background:#f3f4f6;padding:1px 6px;border-radius:4px">推广码, 注册数, 使用数</code>（第一行为表头，忽略）</div>'
-    + '<textarea id="csv-input" placeholder="code,registered_count,used_count&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3"></textarea>'
+    + '<div style="font-size:12px;color:#6b7280;margin-bottom:10px">CSV 格式：<code style="background:#f3f4f6;padding:1px 6px;border-radius:4px">' + (isDetail ? '推广码, 用户邮箱或ID, 是否完成交易' : '推广码, 注册数, 使用数') + '</code>（第一行为表头，忽略）</div>'
+    + '<textarea id="csv-input" placeholder="' + (isDetail ? 'code,用户邮箱或ID,是否完成交易&#10;HERIX-A3K9Z2,alice@gmail.com,1&#10;HERIX-A3K9Z2,bob@yahoo.co.jp,0' : 'code,registered_count,used_count&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3') + '"></textarea>'
     + '<div class="file-row">'
     + '<label class="file-label" for="csv-file">📁 选择文件</label>'
     + '<input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="loadFile(event)">'
@@ -165,29 +179,44 @@ function loadFile(e) {
 
 function downloadTemplate() {
   var codes = taskInfo.codes || [];
-  var rows = ['code,registered_count,used_count'];
-  codes.forEach(function(c) { rows.push(c.code + ',0,0'); });
+  var isDetail = taskInfo.dataMode === 'DETAIL';
+  var rows, fname;
+  if (isDetail) {
+    rows = ['code,用户邮箱或ID,是否完成交易'];
+    codes.forEach(function(c) { rows.push(c.code + ',example@gmail.com,0'); });
+    fname = 'herix_detail_template.csv';
+  } else {
+    rows = ['code,registered_count,used_count'];
+    codes.forEach(function(c) { rows.push(c.code + ',0,0'); });
+    fname = 'herix_upload_template.csv';
+  }
   var blob = new Blob([rows.join('\n')], {type:'text/csv;charset=utf-8'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'herix_upload_template.csv';
+  a.download = fname;
   a.click();
 }
 
 function parseCsv(raw) {
   var lines = raw.trim().split('\n').filter(function(l){ return l.trim(); });
   var records = [];
+  var isDetail = taskInfo && taskInfo.dataMode === 'DETAIL';
   var start = 0;
   // 跳过表头
   if (lines.length > 0 && /code|推广码|promo/i.test(lines[0])) start = 1;
   for (var i = start; i < lines.length; i++) {
     var cols = lines[i].split(',');
-    if (cols.length < 3) continue;
-    var code = cols[0].trim();
-    var reg  = parseInt(cols[1].trim(), 10) || 0;
-    var used = parseInt(cols[2].trim(), 10) || 0;
+    var code = (cols[0]||'').trim();
     if (!code) continue;
-    records.push({ code: code, registered_count: reg, used_count: used });
+    if (isDetail) {
+      // 明细：code, 用户标识, 是否完成交易
+      var user = (cols[1]||'').trim();
+      if (!user) continue;
+      records.push({ code: code, user: user, converted: (cols[2]||'0').trim() });
+    } else {
+      if (cols.length < 3) continue;
+      records.push({ code: code, registered_count: parseInt(cols[1].trim(),10)||0, used_count: parseInt(cols[2].trim(),10)||0 });
+    }
   }
   return records;
 }
@@ -229,6 +258,14 @@ function doUpload() {
                 + '</div>';
             }).join('')
           + '</div>';
+      }
+      if (d.conflicts && d.conflicts.length) {
+        html += '<div class="alert alert-error"><div style="font-weight:700;margin-bottom:8px">⚠️ ' + d.conflicts.length + ' 条归属冲突</div>'
+          + '<div style="font-size:12px;margin-bottom:6px">下列用户已归属其他推广码（同一用户只能使用一个码），本次未生效：</div>'
+          + d.conflicts.map(function(c) {
+              return '<div style="font-family:monospace;font-size:12px;margin-bottom:4px">' + esc(c.user) + ' — 现归属 ' + esc(c.existingCode) + '，本次标注 ' + esc(c.uploadedCode) + '</div>';
+            }).join('')
+          + '<div style="font-size:12px;margin-top:6px">请修正您系统里的归属后重新上传；确需改归属请联系运营在商家后台处理（需填写理由）。</div></div>';
       }
       if (d.blockedCodes && d.blockedCodes.length) {
         html += '<div class="alert alert-error">💰 ' + esc(d.message || '部分推广码因余额不足未结算') + '</div>';

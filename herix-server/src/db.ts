@@ -398,6 +398,30 @@ export async function initDatabase() {
     // 资格要求满足模式：ALL=required项全须满足(默认，现行为)；ANY_N=列出项满足任意 req_min_count 项即可（2026-07-17）
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS req_mode TEXT NOT NULL DEFAULT 'ALL'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS req_min_count INTEGER`,
+    // 数据回传模式：AGGREGATE=每码累计计数(水位线防重)；DETAIL=逐用户明细(身份去重+行级结算)。发布后锁定（2026-07-17）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS data_mode TEXT NOT NULL DEFAULT 'AGGREGATE'`,
+    // 旧 referrals 死表（事件流设想的遗留，从未有写入方，各环境确认 0 行）→ 让位给明细模式新表
+    `DROP TABLE IF EXISTS referrals`,
+    // 明细模式记录表：一行=一个被邀请用户。user_hash=SHA256(归一化标识+盐)，原文不落库；
+    // UNIQUE(task_id,user_hash) 同任务同用户全局唯一（跨码冲突靠它拦下来，由商家指定唯一归属）
+    `CREATE TABLE IF NOT EXISTS referral_records (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL REFERENCES tasks(id),
+      code TEXT NOT NULL,
+      herald_id TEXT NOT NULL REFERENCES users(id),
+      user_hash TEXT NOT NULL,
+      user_masked TEXT,
+      registered_at TEXT NOT NULL,
+      converted_at TEXT,
+      settled_txn_id TEXT,
+      reassign_note TEXT,
+      reassigned_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      UNIQUE(task_id, user_hash)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_refrec_task_code ON referral_records(task_id, code)`,
+    `CREATE INDEX IF NOT EXISTS idx_refrec_herald ON referral_records(herald_id)`,
     // 定价模块（2026-07-09）
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,

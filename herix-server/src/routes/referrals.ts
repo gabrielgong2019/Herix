@@ -82,6 +82,19 @@ referralsRouter.get('/my-codes', requireAuth, requireRole('HERALD'), async (req:
 // 真实数据回传统一走 POST /api/tasks/:id/csv（写 ambassador_tasks 聚合列 + 钱包结算）
 
 
+/** GET /api/referrals/my-records/:taskId — 明细模式下赫使查看自己的邀请进度（脱敏标识，原文不存在） */
+referralsRouter.get('/my-records/:taskId', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT r.id, r.code, r.user_masked, r.registered_at, r.converted_at,
+            (r.settled_txn_id IS NOT NULL) AS settled
+     FROM referral_records r
+     WHERE r.task_id = ? AND r.herald_id = ?
+     ORDER BY r.registered_at DESC LIMIT 200`,
+    [req.params.taskId, req.user!.userId]
+  );
+  res.json(rows);
+});
+
 /** GET /api/referrals/stats/:taskId — 推广数据统计（品牌方） */
 referralsRouter.get('/stats/:taskId', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   // 同 my-codes：直读 ambassador_tasks 聚合列，不再从 referrals 死表统计（2026-07-17）

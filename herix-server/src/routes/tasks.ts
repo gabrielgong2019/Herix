@@ -8,6 +8,7 @@ import { settleCreditTask, creditHerald, creditPlatformFee, getBalance, PLATFORM
 import { createNotification } from './notifications';
 import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
+import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
 import pool from '../db';
 
@@ -203,7 +204,7 @@ tasksRouter.get('/:id/upload-info', async (req: Request, res: Response) => {
   const token = String(req.query.token || '');
   if (!token) return res.status(401).json({ error: '缺少 token' });
   const task = await findOne<any>(
-    'SELECT id, title, mode, status, upload_token, max_heralds FROM tasks WHERE id = ?',
+    'SELECT id, title, mode, status, upload_token, max_heralds, data_mode FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task || task.upload_token !== token) return res.status(403).json({ error: '链接无效或已过期' });
@@ -212,7 +213,7 @@ tasksRouter.get('/:id/upload-info', async (req: Request, res: Response) => {
     'SELECT at.unique_code as code, at.registered_count, at.used_count, at.paid_conversions, u.nickname as herald_name FROM ambassador_tasks at JOIN users u ON u.id=at.herald_id WHERE at.task_id=?',
     [task.id]
   );
-  res.json({ id: task.id, title: task.title, status: task.status, maxHeralds: task.max_heralds, codes });
+  res.json({ id: task.id, title: task.title, status: task.status, maxHeralds: task.max_heralds, dataMode: task.data_mode || 'AGGREGATE', codes });
 });
 
 /** GET /api/tasks/:id/weapp-link — 小程序 URL Link（30天有效，DB 缓存自动续期）。
@@ -274,10 +275,73 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
   }
 });
 
+/** GET /api/tasks/:id/referrals — 明细模式跟踪列表（商家）。只回脱敏标识，不存在原文 */
+tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, data_mode FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+  }
+  const rows = await findMany<any>(
+    `SELECT r.id, r.code, r.user_masked, r.registered_at, r.converted_at,
+            (r.settled_txn_id IS NOT NULL) AS settled, r.reassign_note, r.reassigned_at,
+            u.nickname AS herald_name
+     FROM referral_records r JOIN users u ON u.id = r.herald_id
+     WHERE r.task_id = ? ORDER BY r.registered_at DESC LIMIT 500`,
+    [task.id]
+  );
+  res.json({ dataMode: task.data_mode || 'AGGREGATE', records: rows });
+});
+
+/** POST /api/tasks/:id/referrals/:recordId/reassign — 跨码冲突后商家指定唯一归属（须填理由，留审计）。
+ *  已结算行不可改（钱已按原归属打给赫使）。 */
+tasksRouter.post('/:id/referrals/:recordId/reassign', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const { code, note } = req.body as { code?: string; note?: string };
+  if (!code || !String(note || '').trim()) {
+    return res.status(400).json({ error: '必须指定归属推广码并填写理由', code: 'REASSIGN_PARAMS_REQUIRED' });
+  }
+  const task = await findOne<any>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+  }
+  const rec = await findOne<any>(
+    'SELECT id, code, settled_txn_id FROM referral_records WHERE id = ? AND task_id = ?', [req.params.recordId, task.id]
+  );
+  if (!rec) return res.status(404).json({ error: '记录不存在', code: 'RECORD_NOT_FOUND' });
+  if (rec.settled_txn_id) {
+    return res.status(400).json({ error: '该记录已结算，归属不可更改', code: 'ALREADY_SETTLED' });
+  }
+  const newCode = String(code).trim().toUpperCase();
+  const at = await findOne<any>('SELECT id, herald_id FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?', [newCode, task.id]);
+  if (!at) return res.status(400).json({ error: '目标推广码在该任务下不存在', code: 'CODE_NOT_FOUND' });
+
+  const oldCode = rec.code;
+  await update('referral_records', {
+    code: newCode, herald_id: at.herald_id,
+    reassign_note: String(note).trim(), reassigned_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  }, 'id = ?', [rec.id]);
+
+  // 两个码的投影都要刷新
+  for (const c of [oldCode, newCode]) {
+    await pool.query(
+      `UPDATE ambassador_tasks SET
+         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2),
+         used_count       = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.converted_at IS NOT NULL),
+         paid_conversions = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.settled_txn_id IS NOT NULL)
+       WHERE task_id = $1 AND unique_code = $2`,
+      [task.id, c]
+    );
+  }
+  console.log(`[referral-reassign] task=${task.id} record=${rec.id} ${oldCode}→${newCode} by=${req.user!.userId}`);
+  res.json({ id: rec.id, code: newCode, from: oldCode });
+});
+
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, mode, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, mode, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, data_mode FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -298,6 +362,19 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   const payoutPerConv = Number(task.payout_per_herald) || 0;
   const costPerConv   = Math.max(Number(task.cost_per_herald) || 0, payoutPerConv);
   const feePerConv    = costPerConv - payoutPerConv;
+
+  // 上传格式须与任务的数据回传模式一致（表头驱动：明细行带 user 字段）
+  const isDetailShaped = records.some((r: any) => r.user !== undefined);
+  const dataMode = task.data_mode === 'DETAIL' ? 'DETAIL' : 'AGGREGATE';
+  if (dataMode === 'AGGREGATE' && isDetailShaped) {
+    return res.status(400).json({ error: '该任务为汇总模式，请按「code,注册数,使用数」模板上传', code: 'MODE_MISMATCH', dataMode });
+  }
+  if (dataMode === 'DETAIL' && !isDetailShaped) {
+    return res.status(400).json({ error: '该任务为明细模式，请按「code,用户邮箱或ID,是否完成交易」模板上传', code: 'MODE_MISMATCH', dataMode });
+  }
+  if (dataMode === 'DETAIL') {
+    return handleDetailUpload(res, task, records as any[], { payoutPerConv, costPerConv, feePerConv, isTokenAuth: !!isTokenAuth });
+  }
 
   let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
   const blockedCodes: string[] = [];
@@ -445,6 +522,189 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   });
 });
 
+/** 明细模式上传处理（设计定稿 2026-07-17）：
+ *  一行 = 一个被邀请用户；UNIQUE(task_id, user_hash) 按身份去重（商家手滑重复上传免疫）；
+ *  跨码冲突不静默——列入 conflicts 交商家指定唯一归属（reassign 端点，已结算行不可改）；
+ *  状态单向：未出现→已注册→已转化，不降级不回收；行级 settled_txn_id 防重复打款；
+ *  ambassador_tasks 计数改为明细行投影（明细表是唯一事实来源）；
+ *  隐私：原文只在内存里，落库/日志仅 hash+脱敏串（utils/privacy.ts）。 */
+async function handleDetailUpload(
+  res: Response,
+  task: any,
+  records: Array<{ code?: string; user?: string; converted?: any }>,
+  money: { payoutPerConv: number; costPerConv: number; feePerConv: number; isTokenAuth: boolean },
+) {
+  const now = () => new Date().toISOString();
+  const isTruthy = (v: any) => ['1', 'true', '是', 'yes', 'y'].includes(String(v ?? '').trim().toLowerCase());
+
+  let processed = 0, skipped = 0;
+  const skippedCodes: string[] = [];
+  const skippedHints: Array<{ code: string; belongsTo: string }> = [];
+  const conflicts: Array<{ recordId: string; user: string; existingCode: string; uploadedCode: string; settled: boolean }> = [];
+  const touchedCodes = new Set<string>();
+  const atByCode = new Map<string, any>();
+
+  // pass 1：逐行 upsert
+  for (const row of records) {
+    const code = String(row.code || '').trim().toUpperCase();
+    const rawUser = String(row.user || '').trim();
+    if (!code || !rawUser) { skipped++; continue; }
+
+    let at = atByCode.get(code);
+    if (at === undefined) {
+      at = await findOne<any>('SELECT id, herald_id FROM ambassador_tasks WHERE unique_code = ? AND task_id = ?', [code, task.id]);
+      atByCode.set(code, at || null);
+    }
+    if (!at) {
+      skipped++;
+      if (!skippedCodes.includes(code)) {
+        skippedCodes.push(code);
+        const elsewhere = await findOne<any>(
+          'SELECT t.title, t.creator_id FROM ambassador_tasks at2 JOIN tasks t ON t.id = at2.task_id WHERE at2.unique_code = ?', [code]
+        );
+        if (elsewhere && elsewhere.creator_id === task.creator_id) skippedHints.push({ code, belongsTo: elsewhere.title });
+      }
+      continue;
+    }
+
+    const userHash = hashUserKey(rawUser);
+    const userMasked = maskUserKey(rawUser);
+    const converted = isTruthy(row.converted);
+    const existing = await findOne<any>(
+      'SELECT id, code, converted_at, settled_txn_id, user_masked FROM referral_records WHERE task_id = ? AND user_hash = ?',
+      [task.id, userHash]
+    );
+    if (!existing) {
+      await insert('referral_records', {
+        task_id: task.id, code, herald_id: at.herald_id, user_hash: userHash, user_masked: userMasked,
+        registered_at: now(), converted_at: converted ? now() : null,
+        created_at: now(), updated_at: now(),
+      });
+      touchedCodes.add(code);
+      processed++;
+    } else if (existing.code !== code) {
+      // 跨码冲突：同一用户出现在两个码下。商家系统应保证一用户一码——不静默按先到先得，交商家指定唯一归属
+      conflicts.push({
+        recordId: existing.id, user: existing.user_masked || userMasked,
+        existingCode: existing.code, uploadedCode: code, settled: !!existing.settled_txn_id,
+      });
+      skipped++;
+    } else {
+      // 同码重复出现：仅允许 未转化→已转化 单向升级；1 改回 0 不降级、已结算不回收
+      if (converted && !existing.converted_at) {
+        await update('referral_records', { converted_at: now(), updated_at: now() }, 'id = ?', [existing.id]);
+        touchedCodes.add(code);
+      }
+      processed++;
+    }
+  }
+
+  // pass 2：按码结算（行级 settled_txn_id 保证每行只打一次款）+ 投影刷新 + 通知
+  let totalNewConversions = 0, totalPaid = 0;
+  const blockedCodes: string[] = [];
+  for (const code of touchedCodes) {
+    const at = atByCode.get(code);
+    const unsettled = await findMany<any>(
+      'SELECT id FROM referral_records WHERE task_id = ? AND code = ? AND converted_at IS NOT NULL AND settled_txn_id IS NULL',
+      [task.id, code]
+    );
+    const delta = unsettled.length;
+    let settledNow = false;
+
+    if (delta > 0) {
+      const totalNeeded = money.costPerConv * delta;
+      const brandBal = await getBalance(task.creator_id, 'brand');
+      if (brandBal.available < totalNeeded) {
+        blockedCodes.push(code);
+        await createNotification({
+          userId: task.creator_id, targetRole: 'BRAND', type: 'SETTLEMENT_BLOCKED',
+          title: '邀请码任务结算失败 — 请充值',
+          body: `推广码 ${code} 新增 ${delta} 次转化，需支付 ¥${totalNeeded}，当前余额 ¥${brandBal.available} 不足，请充值后重新上传数据。`,
+          metadata: { taskId: task.id, taskTitle: task.title, code, needed: totalNeeded, available: brandBal.available },
+        });
+      } else {
+        const releaseTxnId = await insert('task_transactions', {
+          task_id: task.id, type: 'TASK_RELEASE',
+          task_amount: money.costPerConv * delta, amount: money.payoutPerConv * delta, platform_fee: money.feePerConv * delta,
+          from_user_id: task.creator_id, to_user_id: at.herald_id, parent_txn_id: task.lock_txn_id || null,
+          status: 'completed', note: `推广码 ${code} 新增 ${delta} 次转化（明细）`,
+        });
+        await Promise.all([
+          settleCreditTask({
+            userId: task.creator_id, amount: money.costPerConv * delta,
+            idempotencyKey: `SETTLE:${releaseTxnId}`, referenceType: 'task_transaction', referenceId: releaseTxnId,
+            note: `推广码 ${code} 结算 ${delta} 次`,
+          }),
+          creditHerald({
+            userId: at.herald_id, amount: money.payoutPerConv * delta,
+            idempotencyKey: `CREDIT:${releaseTxnId}`, referenceType: 'task_transaction', referenceId: releaseTxnId,
+            note: `任务《${task.title}》推广收入`,
+          }),
+          creditPlatformFee({
+            userId: PLATFORM_USER_ID, amount: money.feePerConv * delta,
+            idempotencyKey: `FEE:${releaseTxnId}`, referenceType: 'task_transaction', referenceId: releaseTxnId,
+            note: `平台服务费（发布时费率快照）`,
+          }),
+        ]);
+        await pool.query('UPDATE referral_records SET settled_txn_id = $1, updated_at = $2 WHERE id = ANY($3)',
+          [releaseTxnId, now(), unsettled.map((r: any) => r.id)]);
+        totalNewConversions += delta;
+        totalPaid += money.payoutPerConv * delta;
+        settledNow = true;
+      }
+    }
+
+    // 投影：计数从明细行派生（赫使端/任务页展示零改动）
+    await pool.query(
+      `UPDATE ambassador_tasks SET
+         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2),
+         used_count       = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.converted_at IS NOT NULL),
+         paid_conversions = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.settled_txn_id IS NOT NULL)
+       WHERE task_id = $1 AND unique_code = $2`,
+      [task.id, code]
+    );
+
+    // 通知赫使：结算成功发 SETTLED；数据有变但无新结算发 UPDATED；余额拦截只通知商家（钱没到不预告）
+    const counts = await findOne<any>(
+      'SELECT registered_count, used_count FROM ambassador_tasks WHERE task_id = ? AND unique_code = ?', [task.id, code]
+    );
+    if (settledNow) {
+      const heraldUser = await findOne<any>('SELECT email FROM users WHERE id = ?', [at.herald_id]);
+      const paidAmount = money.payoutPerConv * delta;
+      await notify({
+        userId: at.herald_id, email: heraldUser?.email || null, targetRole: 'HERALD', type: 'CONVERSION_SETTLED',
+        title: `推广收入到账：${task.title}`,
+        body: `你的推广码 ${code} 新增 ${delta} 次转化，收入 ¥${paidAmount} 已入账钱包。`,
+        metadata: { taskId: task.id, taskTitle: task.title, code, conversions: delta, amount: paidAmount, reg: counts?.registered_count, used: counts?.used_count },
+      }).catch((e) => console.error('[notify] CONVERSION_SETTLED failed:', e));
+    } else if (delta === 0) {
+      await notify({
+        userId: at.herald_id, targetRole: 'HERALD', type: 'CONVERSION_UPDATED',
+        title: `推广数据更新：${task.title}`,
+        body: `你的推广码 ${code} 数据已更新：注册 ${counts?.registered_count || 0}、使用 ${counts?.used_count || 0}。`,
+        metadata: { taskId: task.id, taskTitle: task.title, code, reg: counts?.registered_count, used: counts?.used_count },
+      }).catch((e) => console.error('[notify] CONVERSION_UPDATED failed:', e));
+    }
+  }
+
+  // 诊断日志：只打计数与 hash 前缀级信息，不打用户原文（隐私底线）
+  console.log(`[csv-upload] task=${task.id}(${task.title}) mode=DETAIL auth=${money.isTokenAuth ? 'token' : 'bearer'} records=${records.length} processed=${processed} skipped=${skipped} newConv=${totalNewConversions} paid=${totalPaid} conflicts=${conflicts.length}${skippedCodes.length ? ' skippedCodes=' + skippedCodes.join(',') : ''}${blockedCodes.length ? ' blockedCodes=' + blockedCodes.join(',') : ''}`);
+
+  res.json({
+    dataMode: 'DETAIL',
+    processed,
+    skipped,
+    total: records.length,
+    newConversions: totalNewConversions,
+    totalPaid,
+    commissionPerConversion: money.costPerConv,
+    ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
+    ...(skippedHints.length > 0 ? { skippedHints } : {}),
+    ...(conflicts.length > 0 ? { conflicts } : {}),
+    ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),
+  });
+}
+
 /** PATCH /api/tasks/:id/publish});
 
 /** PATCH /api/tasks/:id/publish — 发布任务 */
@@ -505,6 +765,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       platform_requirements: data.platformRequirements ? JSON.stringify(data.platformRequirements) : null,
       req_mode:          data.reqMode,
       req_min_count:     data.reqMode === 'ANY_N' ? (data.reqMinCount || 1) : null,
+      data_mode:         data.mode === 'PERFORMANCE' ? data.dataMode : 'AGGREGATE',
       visibility:        data.visibility || 'PUBLIC',
       status:            'DRAFT',
       // cost_per_herald 和 commission_rate 在发布时计算快照
@@ -550,6 +811,10 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
     data.req_mode = reqMode;
     data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;
+  }
+  // 数据回传模式只在草稿期可改（发布后锁定，防两套数据对不上）
+  if (req.body.dataMode && ['AGGREGATE', 'DETAIL'].includes(req.body.dataMode)) {
+    data.data_mode = req.body.dataMode;
   }
 
   await update('tasks', data, 'id = ?', [req.params.id]);

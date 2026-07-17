@@ -39,6 +39,8 @@ interface State {
   mySubmission: any;
   myAmbassadorTask: any;
   ambassadorProfile: any;
+  /** 明细模式：我的邀请进度（脱敏行） */
+  referralRecords: any[];
   applying: boolean;
   // 报名不满足资质要求时的补充账号弹窗
   showReqModal: boolean;
@@ -57,6 +59,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     myApplication: null,
     mySubmission: null,
     myAmbassadorTask: null,
+    referralRecords: [],
     ambassadorProfile: null,
     applying: false,
     showReqModal: false,
@@ -108,6 +111,13 @@ export default class TaskDetail extends Component<{ id: string }, State> {
                 const myTaskCodes = (myCodes || []).filter((c: any) => c.task_id === id);
                 if (myTaskCodes.length > 0) {
                   this.setState({ myAmbassadorTask: myTaskCodes[0] });
+                  // 明细模式任务：拉取邀请进度列表
+                  if ((task as any).data_mode === 'DETAIL') {
+                    try {
+                      const recs = await referrals.myRecords(id);
+                      this.setState({ referralRecords: recs || [] });
+                    } catch {}
+                  }
                 }
               } catch {}
             }
@@ -385,7 +395,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
   }
 
   render() {
-    const { task, loading, myAmbassadorTask, ambassadorProfile } = this.state;
+    const { task, loading, myAmbassadorTask, ambassadorProfile, referralRecords } = this.state;
 
     if (loading) {
       return <View className='loading'><Text>{t('common.loading')}</Text></View>;
@@ -456,6 +466,31 @@ export default class TaskDetail extends Component<{ id: string }, State> {
               <Text className='code-copy' onClick={this.copyCode}>{t('hd.copy')}</Text>
             </View>
             <Text className='code-hint'>{t('task.codeHint')}</Text>
+
+            {/* 明细模式：邀请进度（脱敏标识，平台不存原文） */}
+            {(task as any).data_mode === 'DETAIL' && (
+              <View className='referral-progress'>
+                <Text className='rp-title'>{t('referral.progressTitle')}</Text>
+                {referralRecords.length === 0 ? (
+                  <Text className='rp-empty'>{t('referral.empty')}</Text>
+                ) : (
+                  referralRecords.map((r: any, idx: number) => (
+                    <View key={r.id || idx} className='rp-row'>
+                      <Text className='rp-user'>{r.user_masked || `#${idx + 1}`}</Text>
+                      <Text className='rp-date'>{String(r.registered_at || '').slice(0, 10)}</Text>
+                      <Text
+                        className='rp-status'
+                        style={{
+                          color: r.settled ? '#16a34a' : r.converted_at ? '#d97706' : 'var(--text-muted)',
+                        }}
+                      >
+                        {r.settled ? t('referral.settled') : r.converted_at ? t('referral.converted') : t('referral.registered')}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            )}
           </View>
         )}
 

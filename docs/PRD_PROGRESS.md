@@ -91,6 +91,7 @@
 | 转化数据上传生效 + 赫使通知 | ✅ | 2026-07-16：修3处根因——①历史 PERFORMANCE 任务 upload_token 为 NULL（迁移回填）②码匹配不归一化+全跳过仍显示绿色成功（归一化+skippedCodes 如实警示）③HERIX_PLATFORM 用户缺失致首次结算 FK 崩服务器（迁移种子+unhandledRejection 兜底）。新增 CONVERSION_SETTLED/CONVERSION_UPDATED 赫使通知（三语），行为测试 11/11（详见 PRD §4） |
 | 分享区块三入口 | ✅ | 2026-07-17：H5链接（永久）+ 小程序 URL Link（30天DB缓存自动续，`GET /tasks/:id/weapp-link`）+ 小程序码（永久，`GET /tasks/:id/weapp-qrcode`，landing 支持 scene 参数）。凭据未配置/小程序未发布时优雅降级显示占位——**待用户发布小程序后配 WECHAT_MINI_APPID/SECRET**（见 CLAUDE.md 部署节） |
 | 资格要求"任N满足/全部满足" | ✅ | 2026-07-17：tasks.req_mode(ALL/ANY_N)+req_min_count；ANY_N=列出项全算候选、满足任意N项即可（忽略单项"必须"标志）；ALL=现行为不变。创建/草稿编辑/meta编辑三处UI+接口，服务端校验带 needCount/satisfiedCount，Taro 预检面板同语义+anyN提示行（三语）。行为测试 7/7 |
+| 数据回传明细模式 | ✅ | 2026-07-17：tasks.data_mode(AGGREGATE/DETAIL,发布后锁定,不可混用)+referral_records 表(UNIQUE(task_id,user_hash) 身份去重+行级 settled_txn_id)。跨码冲突列 conflicts 由商家指定归属(reassign+理由审计,已结算不可改)；隐私三底线(原文不落库/全局盐哈希/脱敏展示)；商家「跟踪明细」tab+赫使「邀请进度」(三语)；两个上传页模式感知+注意事项清单；旧 referrals 死表删除。行为测试 17/17（详见 PRD §4） |
 
 ---
 

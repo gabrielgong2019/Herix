@@ -176,3 +176,20 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **金额展示**统一用 `utils/format.ts` 的 `fmt`，不要 `toLocaleString`（小程序引擎差异）
 - **配置类数值**（提现最低额等）走 `platform_settings` 单一事实源，前端由接口下发，禁止写死
 
+
+## 品牌术语规范（2026-07-17 定稿，PRD §27 为唯一权威）
+
+对外文案（主页/后台/小程序词条/邮件/通知）必须使用定稿术语，**写文案前查表，改完跑检查器**：
+
+| 概念 | 中 | 日 | 英 |
+|------|-----|-----|-----|
+| 推广者 | 赫使 | アンバサダー | Ambassador（禁 Heralds） |
+| 代理 | 广告代理（禁"代理商"） | 広告代理店 | Agency |
+| 推广码 | 推广码 | 紹介コード（禁プロモコード） | Referral code |
+| 转化/结算 | 转化/结算 | コンバージョン（禁転換）/ 精算（禁結算） | Conversion / Settlement |
+| 定位 | 海外生活社群（禁"海外华人"） | 海外ルーツコミュニティ（禁移住者） | Diaspora communities |
+| 一单合作 | 任务 | 案件（营销文案层；界面词条现用タスク） | Campaign（营销层；界面用 task） |
+
+- **检查器**：`node scripts/check-terms.js`（扫全部对外文案文件，违例退出码 1）——发版前必跑
+- 新增对外文案文件时，把路径补进 check-terms.js 的 TARGETS
+- 术语变更 = 产品决策：先改 PRD §27，再改 check-terms.js 禁用词表，最后改文案

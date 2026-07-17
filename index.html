@@ -138,6 +138,9 @@ nav {
   transition: opacity 0.15s;
   cursor: pointer;
   border: none;
+  white-space: nowrap; /* .cta-card 是 flex column，按钮被拉伸到等宽，
+    个别语言/文案在临界宽度下会独自换成两行，行高和邻居不一致 */
+  text-align: center;
 }
 
 .btn-primary:hover { opacity: 0.85; }
@@ -154,6 +157,8 @@ nav {
   border: 1px solid var(--border);
   transition: border-color 0.15s, background 0.15s;
   cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
 }
 
 .btn-outline:hover {

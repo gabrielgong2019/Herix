@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 40px 40px 16px;
+  padding: 16px 40px 16px; // 原顶部留白40，跟原生标题栏(空)叠加显得太空，收紧让内容上移
   background: var(--bg);
 }
 

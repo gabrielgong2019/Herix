@@ -121,9 +121,16 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - 开发：Mac 本地 launchd 跑 `herix-server`（端口 4005，`launchctl kickstart -k gui/$(id -u)/com.herix.server` 重启；
   **改 plist 环境变量后 kickstart 不够，须 `launchctl bootout` + `bootstrap` 完整重载**），
   数据库为 ECS 上的 PostgreSQL（经 SSH 隧道 `localhost:15432`，凭据在 launchd plist 环境变量，不在 .env）
-- 生产：**正式入口 `herix.huaxuex.com`**（Cloudflare Tunnel `herix-app` → ECS，2026-07-17 确认）。
-  部署到 ECS 时须同步配置全部环境变量（DATABASE_URL/JWT_SECRET/SMTP_*/REFERRAL_HASH_SALT，
-  以及小程序发布后的 WECHAT_MINI_*），并跑新环境必做步骤（见下）
+- 生产：**正式入口 `herix.huaxuex.com`**（Cloudflare Tunnel `herix-app`/cloudflared-herix.service → ECS 8.210.73.0）。
+  **ECS 部署手册（2026-07-17 首次全量部署实录）**：代码在 `/home/herix/Herix`，pm2 应用名 `herix`，
+  跑的是**编译产物** `herix-server/dist/index.js`（非 tsx），端口 3005（ECS 无 MT5 冲突，勿与本地 4005 混淆）：
+  1. Mac：`git push`（ECS 走 pull 部署，先推）
+  2. ECS：`cd /home/herix/Herix && git status --short`（必须干净）→ `git pull`
+  3. `cd herix-server && npm install && npm run build`（tsc → dist，**漏 build = 跑旧代码**）
+  4. `pm2 restart herix --update-env` → `curl localhost:3005/api/tasks` 冒烟
+  5. H5 前端 ECS 不构建，从 Mac rsync：`rsync -az --delete herix-miniapp/dist/h5/ root@8.210.73.0:/home/herix/Herix/herix-miniapp/dist/h5/`
+  6. 环境变量在 `herix-server/.env`（DATABASE_URL/JWT_SECRET/PORT/SMTP_*/REFERRAL_HASH_SALT/WX_PROXY_SECRET 已配齐）
+  7. 数据库与本地开发是同一个 PG（本地经隧道连它），迁移/词条在本地重启时已生效，部署侧无 DB 步骤
 - 邮件发信域名：`noreply@huaxuex.com`（SendGrid Domain Authentication 已完成，Cloudflare 三条 CNAME + DMARC，
   2026-07-17 实测送达。⚠️ 不要用 @outlook.com 等公共邮箱地址当发件人——SPF 必然不对齐，微软直接判伪造）
 

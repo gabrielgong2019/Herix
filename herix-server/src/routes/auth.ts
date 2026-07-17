@@ -5,8 +5,73 @@ import { requireAuth, signToken } from '../middleware/auth';
 import { RegisterSchema, LoginSchema } from '../types';
 import { ZodError } from 'zod';
 import { getEffectiveCommissionRate } from '../utils/settings';
+import { sendMail } from '../utils/mailer';
+import crypto from 'crypto';
 
 export const authRouter = Router();
+
+/** POST /api/auth/send-code — 发送邮箱验证码（注册用）。限频：同邮箱 60 秒一次、每小时 5 次 */
+authRouter.post('/send-code', async (req: Request, res: Response) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const purpose = String(req.body?.purpose || 'REGISTER');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: '邮箱格式不正确', code: 'INVALID_EMAIL' });
+  }
+  if (purpose !== 'REGISTER') {
+    return res.status(400).json({ error: '不支持的验证码用途', code: 'INVALID_PURPOSE' });
+  }
+  const taken = await findOne<{ id: string }>('SELECT id FROM users WHERE email = ?', [email]);
+  if (taken) return res.status(409).json({ error: '该邮箱已被注册', code: 'ACCOUNT_TAKEN' });
+
+  // 限频（防轰炸他人邮箱 + 防刷发信配额）
+  const last = await findOne<any>(
+    `SELECT created_at FROM verification_codes WHERE email = ? AND purpose = ? ORDER BY created_at DESC LIMIT 1`,
+    [email, purpose]
+  );
+  if (last && Date.now() - new Date(last.created_at).getTime() < 60_000) {
+    return res.status(429).json({ error: '发送太频繁，请 1 分钟后再试', code: 'CODE_TOO_FREQUENT' });
+  }
+  const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+  const cnt = await findOne<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM verification_codes WHERE email = ? AND purpose = ? AND created_at > ?`,
+    [email, purpose, hourAgo]
+  );
+  if ((cnt?.n || 0) >= 5) {
+    return res.status(429).json({ error: '发送次数已达上限，请 1 小时后再试', code: 'CODE_HOURLY_LIMIT' });
+  }
+
+  const code = String(crypto.randomInt(100000, 1000000));
+  await insert('verification_codes', {
+    email, purpose, code,
+    expires_at: new Date(Date.now() + 5 * 60_000).toISOString(),
+    created_at: new Date().toISOString(),
+  });
+  await sendMail(
+    email,
+    '【Herix】注册验证码',
+    `你的 Herix 注册验证码是：${code}\n5 分钟内有效。如非本人操作，请忽略此邮件。\n\nYour Herix verification code is ${code} (valid for 5 minutes).`
+  );
+  res.json({ sent: true });
+});
+
+/** 校验并消费注册验证码。通过返回 null，否则返回错误响应参数 */
+async function consumeRegisterCode(email: string, code: string): Promise<{ status: number; error: string; code: string } | null> {
+  const rec = await findOne<any>(
+    `SELECT id, code, expires_at, attempts FROM verification_codes
+     WHERE email = ? AND purpose = 'REGISTER' AND used_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+    [email]
+  );
+  if (!rec) return { status: 400, error: '请先获取邮箱验证码', code: 'CODE_REQUIRED' };
+  if (new Date(rec.expires_at).getTime() < Date.now() || Number(rec.attempts) >= 5) {
+    return { status: 400, error: '验证码已过期，请重新获取', code: 'CODE_EXPIRED' };
+  }
+  if (rec.code !== code) {
+    await update('verification_codes', { attempts: Number(rec.attempts) + 1 }, 'id = ?', [rec.id]);
+    return { status: 400, error: '验证码错误', code: 'CODE_INVALID' };
+  }
+  await update('verification_codes', { used_at: new Date().toISOString() }, 'id = ?', [rec.id]);
+  return null;
+}
 
 /** 从 users.roles 字段解析角色数组，兼容旧数据 */
 function parseRoles(rolesJson: string | null, primaryRole: string): string[] {
@@ -20,6 +85,15 @@ function parseRoles(rolesJson: string | null, primaryRole: string): string[] {
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {
     const data = RegisterSchema.parse(req.body);
+
+    // 邮箱注册须通过验证码验证邮箱所有权（2026-07-17；否则通知/对账/找回全不可靠）
+    if (data.email) {
+      const vcode = String((req.body as any).code || '').trim();
+      if (!vcode) return res.status(400).json({ error: '请输入邮箱验证码', code: 'CODE_REQUIRED' });
+      const fail = await consumeRegisterCode(data.email.trim().toLowerCase(), vcode);
+      if (fail) return res.status(fail.status).json({ error: fail.error, code: fail.code });
+    }
+
     const passwordHash = await bcrypt.hash(data.password, 10);
 
     const conditions: string[] = [];

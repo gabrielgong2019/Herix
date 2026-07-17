@@ -16,6 +16,10 @@ interface State {
   email: string;
   nick: string;
   pass: string;
+  /** 注册邮箱验证码 */
+  vcode: string;
+  /** 验证码重发倒计时秒数，0=可发送 */
+  codeCountdown: number;
   err: string;
   submitting: boolean;
 }
@@ -30,6 +34,8 @@ export default class Landing extends Component<{}, State> {
     email: '',
     nick: '',
     pass: '',
+    vcode: '',
+    codeCountdown: 0,
     err: '',
     submitting: false,
   };
@@ -65,6 +71,37 @@ export default class Landing extends Component<{}, State> {
     }
   };
 
+  codeTimer: ReturnType<typeof setInterval> | null = null;
+
+  componentWillUnmount() {
+    if (this.codeTimer) clearInterval(this.codeTimer);
+  }
+
+  /** 发送注册验证码 + 60 秒倒计时 */
+  sendVcode = async () => {
+    const em = this.state.email.trim();
+    if (!em) {
+      this.setState({ err: t('landing.fillEmailFirst') });
+      return;
+    }
+    if (this.state.codeCountdown > 0) return;
+    try {
+      await auth.sendCode(em);
+      this.setState({ err: '', codeCountdown: 60 });
+      Taro.showToast({ title: t('landing.codeSent'), icon: 'none' });
+      this.codeTimer = setInterval(() => {
+        const s = this.state.codeCountdown - 1;
+        if (s <= 0 && this.codeTimer) {
+          clearInterval(this.codeTimer);
+          this.codeTimer = null;
+        }
+        this.setState({ codeCountdown: Math.max(0, s) });
+      }, 1000);
+    } catch (err: any) {
+      this.setState({ err: err?.message || t('common.opFailed') });
+    }
+  };
+
   switchLanguage = async () => {
     try {
       const res = await Taro.showActionSheet({ itemList: LOCALES.map(l => l.label) });
@@ -77,7 +114,7 @@ export default class Landing extends Component<{}, State> {
   };
 
   doAuth = async () => {
-    const { authTab, email, nick, pass, taskId, submitting } = this.state;
+    const { authTab, email, nick, pass, vcode, taskId, submitting } = this.state;
     if (submitting) return;
     const em = email.trim();
     const pw = pass.trim();
@@ -90,12 +127,16 @@ export default class Landing extends Component<{}, State> {
       this.setState({ err: t('landing.fillNickname') });
       return;
     }
+    if (authTab === 'register' && !vcode.trim()) {
+      this.setState({ err: t('landing.codeRequired') });
+      return;
+    }
     this.setState({ err: '', submitting: true });
     try {
       const d: any =
         authTab === 'login'
           ? await auth.login({ account: em, password: pw })
-          : await auth.register({ email: em, password: pw, nickname: nk, role: 'HERALD' });
+          : await auth.register({ email: em, password: pw, nickname: nk, role: 'HERALD', code: vcode.trim() });
       if (d?.token) setToken(d.token);
       // 新注册赫使 or 未完成入驻 → 先走入职引导（透传邀请任务，引导完再报名）；
       // 已入驻登录用户 → 有邀请任务直达详情、否则进首页
@@ -174,6 +215,26 @@ export default class Landing extends Component<{}, State> {
             value={email}
             onInput={e => this.setState({ email: e.detail.value })}
           />
+          {isReg && (
+            <View className='lp-code-row'>
+              <Input
+                className='lp-input lp-code-input'
+                type='number'
+                maxlength={6}
+                placeholder={t('landing.codePlaceholder')}
+                value={this.state.vcode}
+                onInput={e => this.setState({ vcode: e.detail.value })}
+              />
+              <View
+                className={`lp-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`}
+                onClick={this.state.codeCountdown > 0 ? undefined : this.sendVcode}
+              >
+                {this.state.codeCountdown > 0
+                  ? t('landing.codeResend', { s: this.state.codeCountdown })
+                  : t('landing.codeSend')}
+              </View>
+            </View>
+          )}
           {isReg && (
             <Input
               className='lp-input'

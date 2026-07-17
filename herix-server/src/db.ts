@@ -427,6 +427,18 @@ export async function initDatabase() {
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_refrec_task_code_user ON referral_records(task_id, code, user_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_task_code ON referral_records(task_id, code)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_herald ON referral_records(herald_id)`,
+    // 邮箱验证码（2026-07-17）：注册验证等用途。6位码/5分钟有效/5次尝试上限/60秒限频+小时配额（逻辑在 auth.ts）
+    `CREATE TABLE IF NOT EXISTS verification_codes (
+      id TEXT PRIMARY KEY,
+      email TEXT NOT NULL,
+      purpose TEXT NOT NULL,
+      code TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      used_at TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_vcodes_email ON verification_codes(email, purpose, created_at)`,
     // 品牌上传页（upload.html，非平台用户）进入前的数据条款同意记录：时间+IP+UA 作为电子证据（2026-07-17）
     `CREATE TABLE IF NOT EXISTS upload_consents (
       id TEXT PRIMARY KEY,

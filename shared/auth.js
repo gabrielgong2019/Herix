@@ -51,6 +51,12 @@ var Auth = (function() {
     if (o.subtitle) h += '<div class="' + (o.subtitleClass || 'modal-sub') + '">' + (l ? o.subtitle : o.registerSubtitle) + '</div>';
     h += '<div id="' + o.formId + '-err"></div>';
     h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + (o.emailLabel || '邮箱') + '</label><input id="' + o.emailId + '" name="email" type="email"' + (o.autoComplete ? ' autocomplete="username"' : '') + ' placeholder="' + o.emailPlaceholder + '"></div>';
+    // 注册须验证邮箱所有权（2026-07-17）
+    if (!l) {
+      h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + (o.vcodeLabel || '邮箱验证码') + '</label>'
+        + '<div style="display:flex;gap:8px"><input id="' + o.emailId + '-vcode" name="vcode" inputmode="numeric" maxlength="6" placeholder="6 位验证码" style="flex:1">'
+        + '<button type="button" class="btn btn-outline" style="white-space:nowrap;padding:0 14px" onclick="Auth.sendCode(\'' + o.emailId + '\', this)">获取验证码</button></div></div>';
+    }
     if (!l && o.nicknameLabel) {
       h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + o.nicknameLabel + '</label><input id="' + o.nicknameId + '" name="nickname" placeholder="' + (o.nicknamePlaceholder || '') + '"></div>';
     }
@@ -85,10 +91,39 @@ var Auth = (function() {
     var isRegister = nicknameId && document.getElementById(nicknameId);
     if (isRegister) {
       var nk = (document.getElementById(nicknameId) || {}).value || '';
-      register(e, p, nk, formId);
+      var vc = (document.getElementById(emailId + '-vcode') || {}).value || '';
+      if (!vc.trim()) { showError(formId, '请输入邮箱验证码'); return; }
+      register(e, p, nk, formId, vc.trim());
     } else {
       login(e, p, formId);
     }
+  }
+
+  /** 发送注册验证码 + 60 秒倒计时（按钮复用） */
+  function sendCode(emailId, btn) {
+    var email = ((document.getElementById(emailId) || {}).value || '').trim();
+    if (!email) { alert('请先填写邮箱'); return; }
+    var api = window.AUTH_API || '/api/auth';
+    btn.disabled = true;
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', api + '/send-code', true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.onload = function() {
+      try {
+        var d = JSON.parse(xhr.responseText);
+        if (d.error) { alert(d.error); btn.disabled = false; return; }
+        var left = 60;
+        btn.textContent = left + 's 后重发';
+        var timer = setInterval(function() {
+          left--;
+          if (left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = '获取验证码'; }
+          else btn.textContent = left + 's 后重发';
+        }, 1000);
+        alert('验证码已发送，请查收邮箱（含垃圾箱）');
+      } catch (e) { alert('发送失败'); btn.disabled = false; }
+    };
+    xhr.onerror = function() { alert('网络错误'); btn.disabled = false; };
+    xhr.send(JSON.stringify({ email: email, purpose: 'REGISTER' }));
   }
 
   function login(email, password, formId) {
@@ -109,7 +144,7 @@ var Auth = (function() {
     xhr.send(JSON.stringify({account: email, password: password}));
   }
 
-  function register(email, password, nickname, formId) {
+  function register(email, password, nickname, formId, vcode) {
     var role = window._regRole || window._r || 'HERALD';
     var api = window.AUTH_API || '/api/auth';
     var xhr = new XMLHttpRequest();
@@ -124,7 +159,7 @@ var Auth = (function() {
       } catch(e) { showError(formId, '注册失败'); }
     };
     xhr.onerror = function() { showError(formId, '网络错误'); };
-    xhr.send(JSON.stringify({email: email, password: password, nickname: nickname, role: role}));
+    xhr.send(JSON.stringify({email: email, password: password, nickname: nickname, role: role, code: vcode || ''}));
   }
 
   function saveCredential(email, password) {
@@ -176,6 +211,7 @@ var Auth = (function() {
     login: login,
     register: register,
     submit: submit,
+    sendCode: sendCode,
     init: init,
     saveCredential: saveCredential,
     extend: extend

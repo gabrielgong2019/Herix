@@ -94,6 +94,7 @@
 | 数据回传明细模式 | ✅ | 2026-07-17：tasks.data_mode(AGGREGATE/DETAIL,发布后锁定,不可混用)+referral_records 表(UNIQUE(task_id,user_hash) 身份去重+行级 settled_txn_id)。一人多码各码分别计费(multiCodeUsers 透明提示,当日修订取代冲突拦截+改判设计,理由:赫使推广真实发生就该有回报)；隐私三底线(原文不落库/全局盐哈希/脱敏展示)；商家「跟踪明细」tab+赫使「邀请进度」(三语)；两个上传页模式感知+注意事项清单；旧 referrals 死表删除。行为测试 17/17（详见 PRD §4） |
 | 上传页条款同意门 + 获客钩子 | ✅ | 2026-07-17：upload.html 品牌方(非平台用户)进入前须点击同意「数据上传条款」，upload_consents 表记录时间/IP/UA 电子证据；token 通道服务端强制(无同意记录 403 CONSENT_REQUIRED)，Bearer 商家通道豁免(入驻已签协议)。商家服务协议升 2026-07-17-v2：第五条扩充为数据处理(委托)条款(不存明文/用途限定/可清除/72h泄露通知)。上传页加注册商家账号获客 CTA(页底常驻+上传成功后)。测试 19/19+14/14 |
 | 代理任务的品牌方权限 | ✅ | 2026-07-17：tasks.brand_party_id+一次性绑定邀请(代理生成链接→品牌注册/登录自动绑定)。品牌方=完整商家账号，对绑定任务只看进展(数量/状态)不见结算金额(csv响应裁剪totalPaid/单价)、可直接上传数据、不可审核/改判。顺手修3处：公开任务详情泄露upload_token/brand_invite_token(改optionalAuth+创建者才回token)、referrals/stats无归属校验任何商家可查、codes/export与my/stats仍查已删referrals死表致500。测试14/14 |
+| 注册邮箱验证码 | ✅ | 2026-07-17：verification_codes 表+POST /auth/send-code（6位码/5分钟/60秒限频/小时5次/5次尝试锁死/一次性消费），邮箱注册强制验证所有权。三处前端接入：Taro landing（三语+60s倒计时）、shared/auth.js 注册表单（herix.html 自动获得）、herix.html 落地弹窗。发信走 noreply@huaxuex.com（SendGrid 域名认证）。行为测试 9/9。验证码免密登录/二步验证待需求 |
 | 商户信任-好友进度查询 | ❌ | 待做：赫使输入自己认识的邮箱→本地哈希→匹配自己名下记录→显示已注册/已转化，明文不上传；商家用ID模式时不可用(催单责任回商家CRM)——2026-07-17 讨论定案，见会话记录 |
 
 ---

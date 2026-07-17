@@ -2196,6 +2196,7 @@ function landingHTML(){
     +'</div>'
     +'<div id="landing-err" style="color:#ef4444;font-size:12px;min-height:18px;margin-bottom:4px"></div>'
     +'<div style="margin-bottom:12px"><input id="l-email" type="email" placeholder="邮箱地址" style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff;-webkit-tap-highlight-color:transparent" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"></div>'
+    +(isReg?'<div style="margin-bottom:12px;display:flex;gap:8px"><input id="l-vcode" inputmode="numeric" maxlength="6" placeholder="邮箱验证码" style="flex:1;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"><button type="button" onclick="Auth.sendCode(\'l-email\', this)" style="padding:0 16px;border:1.5px solid var(--primary);color:var(--primary);background:#fff;border-radius:12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">获取验证码</button></div>':'')
     +(isReg?'<div style="margin-bottom:12px"><input id="l-nick" type="text" placeholder="昵称" style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"></div>':'')
     +'<div style="margin-bottom:20px"><input id="l-pass" type="password" placeholder="密码（至少6位）" style="width:100%;padding:14px 16px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;outline:none;background:#fff" onfocus="this.style.borderColor=\'var(--primary)\'" onblur="this.style.borderColor=\'var(--border)\'"></div>'
     +'<button onclick="doLandingAuth()" style="width:100%;padding:16px;background:var(--primary);color:#fff;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.5px">'
@@ -2221,8 +2222,10 @@ function doLandingAuth(){
   var nick=((document.getElementById('l-nick')||{}).value||'').trim();
   var errEl=document.getElementById('landing-err');
   if(!errEl) return;
+  var vcode=((document.getElementById('l-vcode')||{}).value||'').trim();
   if(!email||!pass){errEl.textContent='请填写邮箱和密码';return;}
   if(tab==='register'&&!nick){errEl.textContent='请填写昵称';return;}
+  if(tab==='register'&&!vcode){errEl.textContent='请输入邮箱验证码';return;}
   errEl.textContent='';
   _landingAuthPending=true;
   var btn=document.querySelector('button[onclick="doLandingAuth()"]');
@@ -2230,7 +2233,7 @@ function doLandingAuth(){
   var path=tab==='login'?'/api/auth/login':'/api/auth/register';
   var body=tab==='login'
     ?{account:email,password:pass}
-    :{email:email,password:pass,nickname:nick,role:'HERALD'};
+    :{email:email,password:pass,nickname:nick,role:'HERALD',code:vcode};
   var xhr=new XMLHttpRequest();
   xhr.open('POST',path);
   xhr.setRequestHeader('Content-Type','application/json');

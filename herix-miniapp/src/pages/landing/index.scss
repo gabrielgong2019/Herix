@@ -140,6 +140,33 @@
   color: var(--text-primary);
   margin-bottom: 24px;
 }
+// 注册验证码行：输入框 + 发送按钮
+.lp-code-row {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+.lp-code-input {
+  flex: 1;
+  min-width: 0;
+}
+.lp-code-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 28px;
+  margin-bottom: 24px;
+  border: 3px solid var(--primary);
+  border-radius: 24px;
+  color: var(--primary);
+  font-size: 26px;
+  font-weight: 600;
+  white-space: nowrap;
+  &.disabled {
+    border-color: var(--border);
+    color: var(--text-muted);
+  }
+}
 .lp-submit {
   width: 100%;
   box-sizing: border-box;

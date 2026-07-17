@@ -117,8 +117,11 @@ async function request<T = any>(
 
 // ── Auth ──
 export const auth = {
-  register: (data: { email: string; password: string; nickname?: string; role: string }) =>
+  register: (data: { email: string; password: string; nickname?: string; role: string; code?: string }) =>
     request<{ token: string; user: any }>('POST', '/auth/register', data, false),
+  /** 注册邮箱验证码（60秒限频，5分钟有效） */
+  sendCode: (email: string) =>
+    request<{ sent: boolean }>('POST', '/auth/send-code', { email, purpose: 'REGISTER' }, false),
   login: (data: { account: string; password: string }) =>
     request<{ token: string; user: any }>('POST', '/auth/login', data, false),
   me: () => request<any>('GET', '/auth/me'),

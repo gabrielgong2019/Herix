@@ -878,7 +878,7 @@ function pricingPage(){
     +'<span>→</span><input id="po-new-to" placeholder="US" maxlength="2" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px">'
     +'<button class="btn btn-outline btn-sm" onclick="addPayoutRule()">添加</button></div>';
   // 汇率中间价
-  h+='<div style="font-weight:600;margin:14px 0 6px;font-size:13px">汇率中间价(锁价基准,接行情API前每日手动维护)</div>';
+  h+='<div style="font-weight:600;margin:14px 0 6px;font-size:13px">汇率中间价(锁价基准;每6小时自动同步 ECB 市场价,手动修改会被下次同步覆盖;偏离超15%的异常值会被拒写)</div>';
   h+=(po.fxRates||[]).map(function(f){var pair=f.key.replace('fx_mid_','');
     return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span style="width:90px;font-family:monospace">'+esc(pair)+'</span>'
       +'<input id="po-fx-'+pair+'" type="number" step="0.0001" value="'+esc(f.value)+'" style="width:120px;padding:6px;border:1px solid var(--border);border-radius:6px">'

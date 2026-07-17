@@ -264,6 +264,9 @@ export default class Withdraw extends Component<{}, State> {
                 <Text className='pv-val'>1 JPY = {fi.fxEffectiveRate} {fi.targetCurrency}</Text>
               </View>
             )}
+            {fi?.fxEffectiveRate && (
+              <Text className='pv-lock-note'>{t('withdraw.lockNote')}</Text>
+            )}
             <View className='pv-row net'>
               <Text className='pv-label'>{t('withdraw.net')}</Text>
               <View className='pv-net-box'>

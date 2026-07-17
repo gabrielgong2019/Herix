@@ -74,6 +74,7 @@
   "withdraw.net": "到账金额",
   "withdraw.lockedRate": "锁定汇率",
   "withdraw.targetEst": "预计到手 {n} {cur}",
+  "withdraw.lockNote": "🔒 提交申请后汇率即锁定，到账金额不受之后汇率波动影响",
   "withdraw.cnyRef": "≈ {n} CNY（参考汇率，实际以到账为准）",
   "withdraw.eta": "⏱ 预计到账：{eta}",
   "withdraw.etaBank": "1–3 工作日",

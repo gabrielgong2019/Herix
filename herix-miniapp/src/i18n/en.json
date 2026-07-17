@@ -74,6 +74,7 @@
   "withdraw.net": "You receive",
   "withdraw.lockedRate": "Locked rate",
   "withdraw.targetEst": "Est. payout {n} {cur}",
+  "withdraw.lockNote": "🔒 The rate is locked when you submit — your payout is protected from later fluctuations",
   "withdraw.cnyRef": "≈ {n} CNY (reference rate, final amount may vary)",
   "withdraw.eta": "⏱ ETA: {eta}",
   "withdraw.etaBank": "1–3 business days",

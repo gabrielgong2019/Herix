@@ -68,6 +68,10 @@ process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
 });
 
+// 汇率中间价自动同步（锁价基准），启动+每6小时
+import { startFxSync } from './utils/fxSync';
+startFxSync();
+
 app.listen(PORT, () => {
   console.log(`Herix server running on http://localhost:${PORT}`);
 });

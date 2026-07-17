@@ -74,6 +74,7 @@
   "withdraw.net": "受取額",
   "withdraw.lockedRate": "確定レート",
   "withdraw.targetEst": "受取見込 {n} {cur}",
+  "withdraw.lockNote": "🔒 申請時にレートが確定し、その後の為替変動の影響を受けません",
   "withdraw.cnyRef": "≈ {n} CNY（参考レート、実際の着金額と異なる場合があります）",
   "withdraw.eta": "⏱ 着金目安：{eta}",
   "withdraw.etaBank": "1〜3営業日",

@@ -119,10 +119,10 @@ function renderUploadPage() {
     + '<div class="step"><div class="step-num">3</div><div class="step-body">按下方格式粘贴或上传 CSV，点击提交</div></div>'
     + '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f;margin-top:10px"><div style="font-weight:600;margin-bottom:4px">📋 注意事项</div><ul style="margin:0;padding-left:18px">'
     + (isDetail ? [
+        '<b>推荐用你系统的用户ID代替邮箱</b>（如 U10086）——只要唯一且稳定即可，平台无需知道用户是谁',
         '每次上传<b>全量名单</b>（所有邀请用户），已存在的行自动按用户身份去重',
         '一个用户只能归属一个推广码；出现在多个码下会被标记<b>冲突</b>，需商家在后台指定唯一归属',
         '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
-        '邮箱/用户ID 仅用于识别去重，系统即刻哈希脱敏，<b>不存储原文</b>',
       ] : [
         '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
         '系统只对新增部分结算；重复上传同样数据<b>不会重复打款</b>',
@@ -130,6 +130,16 @@ function renderUploadPage() {
         '推广码必须属于本任务，其他任务的码会被明确提示',
       ]).map(function(n){ return '<li style="margin-bottom:3px">'+n+'</li>'; }).join('')
     + '</ul></div>'
+    + (isDetail
+      ? '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534;margin-top:8px">'
+        + '<div style="font-weight:600;margin-bottom:4px">🔒 数据处理承诺</div>'
+        + '<ul style="margin:0;padding-left:18px">'
+        + '<li style="margin-bottom:3px">依据《服务协议》数据处理条款，平台<b>不保存明文邮箱/用户ID</b>：接收后立即以 SHA-256 加盐单向哈希处理，原文即刻丢弃，任何数据库、日志中均不留存</li>'
+        + '<li style="margin-bottom:3px">哈希值<b>仅用于</b>推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉</li>'
+        + '<li style="margin-bottom:3px">所有展示（含平台内部后台）仅保留脱敏形式（如 a**@gmail.com），单向哈希<b>不可还原</b>出原文</li>'
+        + '<li>任务结束后可联系运营清除全部明细记录（结算凭证按财务要求另行保留）</li>'
+        + '</ul></div>'
+      : '')
     + '</div>';
 
   // 推广码列表 + 模板下载

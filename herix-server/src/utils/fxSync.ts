@@ -49,6 +49,23 @@ export async function syncFxRates(): Promise<void> {
       await setSetting(key, String(fetched.rate), 'fx-sync', `自动同步自 ${fetched.source}`);
       console.log(`[fx-sync] ${key} = ${fetched.rate} (${fetched.source})`);
     }
+    // 静默过期告警：任何 fx_mid_* 超过 48 小时未更新（两源连挂/被墙/服务停摆），邮件通知运营
+    const stale = await pool.query(
+      `SELECT key, value, updated_at FROM platform_settings
+       WHERE key LIKE 'fx_mid_%' AND updated_at < $1`,
+      [new Date(Date.now() - 48 * 3600_000).toISOString()]
+    );
+    if (stale.rows.length) {
+      const alertTo = await getSetting('ops_alert_email');
+      const detail = stale.rows.map((r: any) => `${r.key}=${r.value}（更新于 ${r.updated_at}）`).join('\n');
+      console.error(`[fx-sync] ⚠️ 汇率超48小时未更新：\n${detail}`);
+      if (alertTo) {
+        const { sendMail } = await import('./mailer');
+        sendMail(alertTo, '【Herix 告警】汇率中间价超48小时未更新',
+          `以下锁价基准已过期，请检查数据源或到 admin 定价页手动更新：\n\n${detail}`
+        ).catch(() => {});
+      }
+    }
   } catch (e: any) {
     console.error('[fx-sync] 同步失败:', e.message);
   }

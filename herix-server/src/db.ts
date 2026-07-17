@@ -403,7 +403,8 @@ export async function initDatabase() {
      ON CONFLICT (from_country, to_country, currency) DO NOTHING`,
     // 汇率中间价（申请时锁定用；接行情 API 前由运营在设置里维护）
     `INSERT INTO platform_settings (key, value, note) VALUES
-      ('fx_mid_JPY_CNY', '0.0490', 'JPY→CNY 中间价（打款锁价用，运营手动维护，接 API 前每日更新）')
+      ('fx_mid_JPY_CNY', '0.0490', 'JPY→CNY 中间价（fx-sync 每6小时自动同步 ECB；此值仅为首启种子）'),
+      ('ops_alert_email', 'gabrielgong2019@outlook.com', '运营告警收件邮箱（汇率过期等系统告警）')
      ON CONFLICT (key) DO NOTHING`,
     // 商家归属国（转出实体，V1 默认日本）
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'JP'`,

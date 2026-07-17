@@ -553,7 +553,7 @@ function tasksPage() {
 
   var rows = filtered.map(function(t) {
     var st = t.status || 'DRAFT';
-    var created = t.created_at ? t.created_at.slice(0,10) : '-';
+    var created = t.created_at ? fmtLocal(t.created_at).slice(0,10) : '-';
     var fpBadge = t.fast_payout ? '<span style="display:inline-block;font-size:10px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:5px;vertical-align:middle">⚡ 极速打款</span>' : '';
     return '<tr data-task-id="'+esc(t.id)+'" style="cursor:pointer">'
       +'<td><div style="font-weight:500">'+esc(t.title)+fpBadge+'</div>'
@@ -667,7 +667,7 @@ function taskDetailPage() {
     + infoRow('赫使获得', '¥'+Number(t.payout_per_herald||0).toLocaleString()+'（单人成本 ¥'+Number(t.cost_per_herald||0).toLocaleString()+'，含'+(((t.commission_rate||0.15)*100).toFixed(0))+'%服务费）')
     + infoRow('招募名额', t.max_heralds+' 人')
     + infoRow('已报名', apps.length+' 人（'+apps.filter(function(a){return a.status==='APPROVED'}).length+' 通过）')
-    + infoRow('发布时间', t.published_at ? t.published_at.slice(0,10) : '未发布')
+    + infoRow('发布时间', t.published_at ? fmtLocal(t.published_at).slice(0,10) : '未发布')
     + infoRow('发布范围', t.visibility==='INVITE' ? '🔒 定向' : '🌐 公开')
     + (t.status === 'DRAFT'
       ? '<div style="margin:8px 12px 4px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted)">🔗 任务发布后可获取分享链接与海报</div>'
@@ -851,7 +851,7 @@ function submissionsPanel(subs) {
       +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:6px;word-break:break-all">🔗 '+esc(s.content_url)+'</a>':'')
       +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
       +(screenshots.length?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+screenshots.length+' 张截图</div>':'')
-      +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交于 '+s.submitted_at.slice(0,16).replace('T',' ')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交于 '+fmtLocal(s.submitted_at)+'</div>'
       +(s.status==='PENDING_REVIEW'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\')">✗ 拒绝</button></div>':'')
       +(s.status==='APPROVED'&&s.rating_score?'<div style="font-size:12px;color:var(--muted);margin-top:6px">已评价 '+'★'.repeat(s.rating_score)+'☆'.repeat(5-s.rating_score)+(s.rating_comment?' · '+esc(s.rating_comment):'')+'</div>':'')
       +(s.status==='APPROVED'&&!s.rating_score?'<button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="showRatingModal(\''+s.id+'\')">★ 评价赫使</button>':'')
@@ -1186,7 +1186,7 @@ function allSubsPanel(subs) {
     return reviewRow(s.id, 'sub', {
       initials: name[0].toUpperCase(),
       name: name,
-      sub: s.submitted_at ? s.submitted_at.slice(0,10) : '',
+      sub: s.submitted_at ? fmtLocal(s.submitted_at).slice(0,10) : '',
       taskTitle: s.task_title,
       taskId: null,
       tiers: '', rating: '',
@@ -1370,6 +1370,20 @@ function markAllRead() {
     var panel = document.getElementById('notif-panel');
     if (panel) { notifOpen=false; toggleNotifPanel(); }
   });
+}
+
+
+/* 时间统一本地化显示：库里有两种存法——Node 写的 ISO UTC(带T/Z)、
+   PG 列默认值写的无时区裸串(服务器时区，生产 ECS 固定+08)。
+   都转成浏览器本地时间；纯日期(长度<=10)不做时区换算。 */
+function fmtLocal(s) {
+  if (!s) return '';
+  s = String(s);
+  if (s.length <= 10) return s;
+  var d = s.indexOf('T') >= 0 ? new Date(s) : new Date(s.replace(' ', 'T') + '+08:00');
+  if (isNaN(d.getTime())) return s.slice(0, 16).replace('T', ' ');
+  var p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 
 function timeAgo(iso) {
@@ -1919,7 +1933,7 @@ function pendingTopupHTML() {
     h += '<tr>';
     h += '<td style="font-family:monospace;font-size:12px;color:var(--muted)">'+esc(r.note||'—')+'</td>';
     h += '<td><b>¥'+Number(r.amount).toLocaleString()+' '+(r.currency||'')+'</b></td>';
-    h += '<td>'+r.created_at.slice(0,16).replace('T',' ')+'</td>';
+    h += '<td>'+fmtLocal(r.created_at)+'</td>';
     h += '<td><span style="color:'+sc[r.status]+';font-weight:600">'+(sl[r.status]||r.status)+'</span></td>';
     h += '</tr>';
   });
@@ -1957,7 +1971,7 @@ function walletLedgerHTML() {
     rows.forEach(function(r) {
       var out = r.direction === 'out';
       h += '<tr>';
-      h += '<td style="font-size:12px;color:var(--muted)">'+r.created_at.slice(0,16).replace('T',' ')+'</td>';
+      h += '<td style="font-size:12px;color:var(--muted)">'+fmtLocal(r.created_at)+'</td>';
       h += '<td>'+esc(r.label)+'</td>';
       h += '<td style="font-size:12px;color:var(--muted)">'+esc(r.note||'—')+'</td>';
       h += '<td style="font-weight:600;color:'+(out?'#dc2626':'#16a34a')+'">'+(out?'-':'+')+'¥'+Math.abs(Number(r.amount)).toLocaleString()+' '+r.currency+'</td>';
@@ -2834,7 +2848,7 @@ function loadTaskReferrals(taskId) {
       el.innerHTML = '<div class="empty" style="padding:32px"><div class="empty-icon">👥</div><div>还没有邀请明细</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">上传明细数据后，每位被邀请用户在此逐行可见</div></div>';
       return;
     }
-    var fmtD = function(s){ return s ? String(s).slice(0,10) : '—'; };
+    var fmtD = function(s){ return s ? fmtLocal(s).slice(0,10) : '—'; };
     el.innerHTML = '<table class="table"><thead><tr>'
       +'<th>用户</th><th>推广码</th><th>赫使</th><th>注册</th><th>转化</th><th>结算</th></tr></thead><tbody>'
       + rows.map(function(r) {
@@ -2941,7 +2955,7 @@ function loadWeappLink(taskId) {
     if (d.available && d.link) {
       box.innerHTML = '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:6px" id="weapp-link-text">'+esc(d.link)+'</div>'
         +'<button class="btn btn-outline btn-sm" onclick="copyWeappLink()">复制小程序链接</button>'
-        +'<span style="font-size:11px;color:var(--muted);margin-left:8px">有效期至 '+(d.expiresAt||'').slice(0,10)+'（过期自动续）</span>';
+        +'<span style="font-size:11px;color:var(--muted);margin-left:8px">有效期至 '+fmtLocal(d.expiresAt).slice(0,10)+'（过期自动续）</span>';
     } else {
       box.innerHTML = '<span style="font-size:12px;color:var(--muted)">⏳ '+esc(d.reason||'小程序发布后可用')+'</span>';
     }

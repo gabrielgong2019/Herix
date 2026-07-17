@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import { wallet as walletApi, getToken } from '../../utils/api';
 import { t } from '../../utils/i18n';
 import './index.scss';
-import { fmt } from '../../utils/format';
+import { fmt, fmtLocal } from '../../utils/format';
 import BackBar from '../../components/BackBar';
 
 // ── 常量存 labelKey，渲染时 t() 取值——存 t() 结果会冻结在启动时语言 ──
@@ -320,7 +320,7 @@ export default class Wallet extends Component<{}, State> {
                     {tx.label || tx.type}
                     {tx.note ? ` · ${tx.note}` : ''}
                   </Text>
-                  <Text className='txn-time'>{(tx.created_at || '').slice(0, 16).replace('T', ' ')}</Text>
+                  <Text className='txn-time'>{fmtLocal(tx.created_at)}</Text>
                 </View>
                 <Text className={`txn-amount ${out ? 'out' : 'in'}`}>
                   {out ? '-' : '+'}¥{fmt(tx.amount)} {tx.currency}

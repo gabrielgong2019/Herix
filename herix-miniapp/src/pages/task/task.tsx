@@ -3,6 +3,7 @@ import { View, Text, Button } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, auth, ApiError, getToken } from '../../utils/api';
 import { getAmbassadorProfile, invalidateProfileCache } from '../../utils/profileCache';
+import { fmtLocal } from '../../utils/format';
 import { checkRequirements, RequirementFailure } from '../../utils/requirements';
 import { platformById } from '../../utils/platforms';
 import RequirementsChecklist from '../../components/RequirementsChecklist';
@@ -477,7 +478,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
                   referralRecords.map((r: any, idx: number) => (
                     <View key={r.id || idx} className='rp-row'>
                       <Text className='rp-user'>{r.user_masked || `#${idx + 1}`}</Text>
-                      <Text className='rp-date'>{String(r.registered_at || '').slice(0, 10)}</Text>
+                      <Text className='rp-date'>{fmtLocal(r.registered_at).slice(0, 10)}</Text>
                       <Text
                         className='rp-status'
                         style={{

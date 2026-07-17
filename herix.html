@@ -251,6 +251,20 @@ function applyProfilePatch(serverRow) {
   _profileFetchedAt = Date.now(); // 刚从服务器来的，视为新鲜
 }
 
+
+/* 时间统一本地化显示：库里有两种存法——Node 写的 ISO UTC(带T/Z)、
+   PG 列默认值写的无时区裸串(服务器时区，生产 ECS 固定+08)。
+   都转成浏览器本地时间；纯日期(长度<=10)不做时区换算。 */
+function fmtLocal(s) {
+  if (!s) return '';
+  s = String(s);
+  if (s.length <= 10) return s;
+  var d = s.indexOf('T') >= 0 ? new Date(s) : new Date(s.replace(' ', 'T') + '+08:00');
+  if (isNaN(d.getTime())) return s.slice(0, 16).replace('T', ' ');
+  var p = function(n){ return (n < 10 ? '0' : '') + n; };
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
 var state = {view:'list',tasks:[],filter:'',user:null,token:null,showLogin:false,loginTab:'login',loading:true,tab:'explore',detailTask:null,myTasks:[],myApps:[],mySubs:[],myCodes:[],showOnboard:false,onboardStep:1,onboardData:{},ambassadorProfile:null,brandProfile:null,activeRole:null,walletBalance:null,walletMethods:[],walletTxns:[],heraldFilter:'all',txnFilter:'all',methodType:'BANK',displayCurrency:null,exchangeRate:null,addStep:'region',addRegion:'',addType:'',wMethodId:null,landingTask:null,landingAuthTab:'login',notifications:[],unread:0,_notifsLoaded:false,categories:[
   {id:'experience',label:'体验',icon:'🎪'},
   {id:'beauty',    label:'美妆',icon:'💄'},
@@ -1183,7 +1197,7 @@ function profileHTML(){
     var tierSnap={};
     try{socials=ap2.social_platforms?JSON.parse(ap2.social_platforms):[];}catch(e){}
     try{tierSnap=ap2.tier_snapshot?JSON.parse(ap2.tier_snapshot):{};}catch(e){}
-    var updAt=ap2.social_platforms_updated_at?ap2.social_platforms_updated_at.slice(0,10):'';
+    var updAt=ap2.social_platforms_updated_at?fmtLocal(ap2.social_platforms_updated_at).slice(0,10):'';
     h+='<div style="background:#fff;border-radius:16px;margin:0 16px 12px;overflow:hidden">';
     h+='<div style="padding:14px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)">';
     h+='<span style="font-size:12px;color:var(--muted);font-weight:600">社交账号'+(updAt?' <span style="font-weight:400;opacity:.5">更新于 '+updAt+'</span>':'')+'</span>';
@@ -1471,7 +1485,7 @@ function walletHTML(){
     var out=tx.direction==='out';
     h+='<div style="background:#fff;border-radius:10px;padding:12px 14px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">';
     h+='<div><div style="font-size:13px">'+escHtml(tx.label||tx.type)+(tx.note?' · '+escHtml(tx.note):'')+'</div>';
-    h+='<div style="font-size:10px;color:var(--muted)">'+(tx.created_at||'').slice(0,16).replace('T',' ')+'</div></div>';
+    h+='<div style="font-size:10px;color:var(--muted)">'+fmtLocal(tx.created_at)+'</div></div>';
     h+='<div style="font-size:14px;font-weight:600;color:'+(out?'#dc2626':'#16a34a')+'">'+(out?'-':'+')+'¥'+Math.abs(Number(tx.amount)).toLocaleString()+' '+tx.currency+'</div>';
     h+='</div>';
   }
@@ -2055,7 +2069,7 @@ function adminDeclHTML(){
     var d=adminState.decls[i];
     h+='<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:10px">';
     h+='<div style="display:flex;justify-content:space-between;margin-bottom:8px">';
-    h+='<div style="font-weight:600">'+escHtml(d.nickname)+'</div><div style="font-size:11px;color:var(--muted)">'+d.submitted_at.slice(0,10)+'</div></div>';
+    h+='<div style="font-weight:600">'+escHtml(d.nickname)+'</div><div style="font-size:11px;color:var(--muted)">'+fmtLocal(d.submitted_at).slice(0,10)+'</div></div>';
     h+='<div style="font-size:12px;color:#555;margin-bottom:4px">在留资格：'+escHtml(d.visa_type)+'</div>';
     h+='<div style="font-size:12px;color:var(--muted);margin-bottom:12px">'+escHtml(d.email||'')+'</div>';
     h+='<div style="display:flex;gap:8px">';
@@ -2077,7 +2091,7 @@ function adminSubsHTML(){
     h+='<div style="font-weight:600;margin-bottom:6px">'+escHtml(s.herald_name)+'</div>';
     if(s.content_url) h+='<a href="'+escHtml(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary)">查看内容链接 →</a>';
     if(s.description) h+='<div style="font-size:12px;color:#555;margin-top:6px">'+escHtml(s.description)+'</div>';
-    h+='<div style="font-size:11px;color:var(--muted);margin:8px 0">提交时间：'+s.submitted_at.slice(0,16).replace('T',' ')+'</div>';
+    h+='<div style="font-size:11px;color:var(--muted);margin:8px 0">提交时间：'+fmtLocal(s.submitted_at)+'</div>';
     h+='<div style="display:flex;gap:8px">';
     h+='<button class="btn btn-primary btn-sm" style="flex:1" onclick="adminApproveSub(\''+s.id+'\')">✓ 通过</button>';
     h+='<button class="btn btn-outline btn-sm" style="flex:1;color:#ff3b30;border-color:#ff3b30" onclick="adminRejectSub(\''+s.id+'\')">✗ 拒绝</button>';

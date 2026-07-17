@@ -2620,6 +2620,7 @@ function reviewApp(id, status, fromAll, note) {
     if (fromAll) {
       state.allPendingApps = state.allPendingApps.filter(function(a){return a.id!==id});
       render();
+      loadDashStats(); // 侧边栏"审核中心"气泡取自 dashStats.summary，不刷会残留旧计数
     } else {
       openTask(state.currentTask.id);
       loadMyTasks();
@@ -2635,6 +2636,7 @@ function reviewSub(id, status, fromAll, note) {
     if (fromAll) {
       state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==id});
       render();
+      loadDashStats(); // 同上，气泡计数刷新
     } else {
       openTask(state.currentTask.id);
       loadMyTasks();
@@ -2708,6 +2710,7 @@ function showRatingModal(submissionId, fromAll) {
     if (fromAll) {
       state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==submissionId});
       render();
+      loadDashStats(); // 同上，气泡计数刷新
     } else {
       openTask(state.currentTask.id);
       loadMyTasks();

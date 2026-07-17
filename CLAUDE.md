@@ -170,7 +170,8 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **Taro H5 页面样式全局生效**（小程序才按页隔离）：页面级类名必须带页面前缀（如 `hd-card`），裸 `.task-card`/`.card`/`.btn-primary` 曾造成跨页污染
 - **模块级常量不存 `t()` 结果**（会冻结在启动时语言），存 `labelKey` 渲染时取值
 - **局部变量不要叫 `t`**（遮蔽 i18n 的 `t()`，已炸过两次：messages timeAgo、apply loadContext）
-- **i18n 词条 key 由代码 seed 创建**，运营只改译文；seed 只覆盖 `updated_by='seed'` 的行
+- **i18n 词条 key 由代码 seed 创建**，运营只改译文；seed 只覆盖 `updated_by='seed'` 的行。
+  **任何触碰 i18n 的改动（含其他 AI 会话的）收尾跑 `/i18n-review`**——体系是四件套(三语json+context+seed双库+构建部署)，外部改动常只做第一件（2026-07-17 实例）
 - **钱包代码**：余额读写必须走 `utils/wallet.ts` 的 `applyWalletEntry`（行锁+幂等+事务）；多步业务+钱包操作用 extClient 合并进单事务
 - **金额展示**统一用 `utils/format.ts` 的 `fmt`，不要 `toLocaleString`（小程序引擎差异）
 - **配置类数值**（提现最低额等）走 `platform_settings` 单一事实源，前端由接口下发，禁止写死

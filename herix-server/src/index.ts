@@ -29,9 +29,16 @@ const app = express();
 const PORT = process.env.PORT || 3005;
 
 app.use(cors());
-// 优先：小程序的 H5 版
-app.use('/', express.static(path.join(__dirname, '../../herix-miniapp/dist/h5')));
-// 后备：项目根目录的静态文件
+// app.herix.huaxuex.com → H5 小程序
+const h5Static = express.static(path.join(__dirname, '../../herix-miniapp/dist/h5'));
+app.use((req, res, next) => {
+  // app.localhost 供本地开发预览 H5（浏览器原生支持 *.localhost 解析）
+  if (req.hostname === 'app.herix.huaxuex.com' || req.hostname === 'app.localhost') {
+    return h5Static(req, res, () => res.sendFile(path.join(__dirname, '../../herix-miniapp/dist/h5/index.html')));
+  }
+  next();
+});
+// 其他域名 → 项目根目录（营销主页、merchant.html 等）
 app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
 app.use('/uploads', express.static(UPLOADS_DIR));

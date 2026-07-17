@@ -627,14 +627,18 @@ export default class Profile extends Component<{}, State> {
               socials.map((s: any) => {
                 const sp = platformById(s.platformId);
                 const tier = tierSnap[s.platformId];
-                // 行内只放最有信息量的：有粉丝数显示粉丝数[段位]，否则显示账号简写
+                // 行内只放最有信息量的：有粉丝数显示 粉丝数+段位标签，否则显示账号简写
                 const sval = s.followers
-                  ? `${t('profile.followers', { n: fmt(s.followers) })}${tier ? ` [${tier}]` : ''}`
+                  ? t('profile.followers', { n: fmt(s.followers) })
                   : s.accountId || (s.url ? s.url.replace('https://', '').split('/')[0] : '—');
                 return (
                   <View className='info-row ps-account-row' key={s.platformId} onClick={() => this.openAccountEdit(s)}>
                     <Text className='info-label'>{sp.icon} {sp.name}</Text>
-                    <Text className='info-val'>{sval} <Text className='ps-chevron'>›</Text></Text>
+                    <Text className='info-val'>
+                      {sval}
+                      {s.followers && tier ? <Text className='ps-tier'>{tier}</Text> : null}
+                      <Text className='ps-chevron'>›</Text>
+                    </Text>
                   </View>
                 );
               })

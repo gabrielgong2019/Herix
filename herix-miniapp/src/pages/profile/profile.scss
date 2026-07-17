@@ -352,6 +352,17 @@
   font-size: 28px;
   margin-left: 6px;
 }
+// 段位标签（替代旧版 [Micro] 方括号写法）
+.ps-tier {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 2px 12px;
+  border-radius: 16px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 20px;
+  font-weight: 600;
+}
 .ps-overlay {
   position: fixed;
   inset: 0;

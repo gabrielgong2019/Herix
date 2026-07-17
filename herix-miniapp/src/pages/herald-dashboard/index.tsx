@@ -254,29 +254,32 @@ export default class HeraldDashboard extends Component<{}, State> {
                   const payout = Number(code?.payout_per_herald || ab.payout_per_herald || 0);
                   const allZero = code && !Number(code.earned_amount) && !Number(code.registered_count) && !Number(code.used_count);
                   const body = code ? (
-                    <View className='code-box'>
+                    <>
+                      {/* 推广码是卡片主角：上移到标题行正下方，不再埋在灰色统计区里 */}
                       <View className='code-line'>
                         <Text className='code-text'>{code.unique_code || ''}</Text>
                         <Text className='code-copy' onClick={() => this.copyCode(code.unique_code || '')}>
                           {t('hd.copy')}
                         </Text>
                       </View>
-                      <View className='code-stats'>
-                        <View className='cs-item'>
-                          <Text className='cs-val'>¥{fmt(code.earned_amount)}</Text>
-                          <Text className='cs-label'>{t('hd.statEarned')}</Text>
+                      <View className='code-box'>
+                        <View className='code-stats'>
+                          <View className='cs-item'>
+                            <Text className='cs-val'>¥{fmt(code.earned_amount)}</Text>
+                            <Text className='cs-label'>{t('hd.statEarned')}</Text>
+                          </View>
+                          <View className='cs-item'>
+                            <Text className='cs-val'>{code.registered_count || 0}</Text>
+                            <Text className='cs-label'>{t('hd.statReg')}</Text>
+                          </View>
+                          <View className='cs-item'>
+                            <Text className='cs-val'>{code.used_count || 0}</Text>
+                            <Text className='cs-label'>{t('hd.statUsed')}</Text>
+                          </View>
                         </View>
-                        <View className='cs-item'>
-                          <Text className='cs-val'>{code.registered_count || 0}</Text>
-                          <Text className='cs-label'>{t('hd.statReg')}</Text>
-                        </View>
-                        <View className='cs-item'>
-                          <Text className='cs-val'>{code.used_count || 0}</Text>
-                          <Text className='cs-label'>{t('hd.statUsed')}</Text>
-                        </View>
+                        {allZero && payout > 0 && <Text className='code-hint'>{t('hd.zeroHint', { n: fmt(payout) })}</Text>}
                       </View>
-                      {allZero && payout > 0 && <Text className='code-hint'>{t('hd.zeroHint', { n: fmt(payout) })}</Text>}
-                    </View>
+                    </>
                   ) : (
                     <Text className='code-pending'>{t('hd.codeGenerating')}</Text>
                   );

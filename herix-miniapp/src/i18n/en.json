@@ -395,6 +395,8 @@
   "ob.visa4": "Other (please specify)",
   "ob.declaration": "I hold the residence status above and am legally permitted to take side work. False declarations forfeit all rewards.",
   "ob.agree": "I agree to the declaration above",
+  "ob.taxAgree": "I am solely responsible for tax reporting obligations in my country of residence. Herix bears no responsibility for tax matters.",
+  "ob.taxAgreeFirst": "Please agree to the tax disclaimer",
   "ob.confirmDecl": "Confirm & continue",
   "ob.agreeFirst": "Please agree to the declaration first",
   "ob.wiseSub": "Recommended — lowest fees",

@@ -42,6 +42,7 @@ interface OnboardData {
   residence: string;
   visaType: string;
   agreed: boolean;
+  taxAgreed: boolean;
   bankType: string;
   bankEmail: string;
   swiftCode: string;
@@ -66,6 +67,7 @@ export default class Onboard extends Component<{}, State> {
       residence: '',
       visaType: '',
       agreed: false,
+      taxAgreed: false,
       bankType: '',
       bankEmail: '',
       swiftCode: '',
@@ -107,13 +109,21 @@ export default class Onboard extends Component<{}, State> {
       Taro.showToast({ title: t('ob.agreeFirst'), icon: 'none' });
       return;
     }
+    if (!this.state.data.taxAgreed) {
+      Taro.showToast({ title: t('ob.taxAgreeFirst'), icon: 'none' });
+      return;
+    }
     this.submit();
   };
 
   nextBank = () => {
-    const { bankType, bankEmail } = this.state.data;
+    const { bankType, bankEmail, taxAgreed } = this.state.data;
     if ((bankType === 'wise' || bankType === 'paypal') && !bankEmail) {
       Taro.showToast({ title: t('ob.fillEmail'), icon: 'none' });
+      return;
+    }
+    if (!taxAgreed) {
+      Taro.showToast({ title: t('ob.taxAgreeFirst'), icon: 'none' });
       return;
     }
     this.submit();
@@ -286,6 +296,10 @@ export default class Onboard extends Component<{}, State> {
                   <View className={`checkbox ${d.agreed ? 'checked' : ''}`}>{d.agreed ? '✓' : ''}</View>
                   <Text className='agree-label'>{t('ob.agree')}</Text>
                 </View>
+                <View className='agree-row' onClick={() => this.set('taxAgreed', !d.taxAgreed)}>
+                  <View className={`checkbox ${d.taxAgreed ? 'checked' : ''}`}>{d.taxAgreed ? '✓' : ''}</View>
+                  <Text className='agree-label'>{t('ob.taxAgree')}</Text>
+                </View>
                 <View className={`btn-primary ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.nextJapan}>
                   {submitting ? t('withdraw.submitting') : t('ob.confirmDecl')}
                 </View>
@@ -319,6 +333,10 @@ export default class Onboard extends Component<{}, State> {
                     <Input className='ob-input' placeholder={t('addMethod.ph.cnAcctNo')} value={d.iban} onInput={e => this.set('iban', e.detail.value)} />
                   </View>
                 )}
+                <View className='agree-row' onClick={() => this.set('taxAgreed', !d.taxAgreed)}>
+                  <View className={`checkbox ${d.taxAgreed ? 'checked' : ''}`}>{d.taxAgreed ? '✓' : ''}</View>
+                  <Text className='agree-label'>{t('ob.taxAgree')}</Text>
+                </View>
                 <View className={`btn-primary ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.nextBank}>
                   {submitting ? t('withdraw.submitting') : t('common.submit')}
                 </View>

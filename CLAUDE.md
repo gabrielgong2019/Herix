@@ -133,6 +133,10 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 邮件（`utils/mailer.ts`，nodemailer SMTP 465）需要 `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM`（发件地址，SendGrid/Resend 的 SMTP 用户名是字面量不是邮箱，所以单独配）。未配置时只打日志不真发。SendGrid：host=smtp.sendgrid.net、user=apikey、pass=API Key、from=已验证发件邮箱。
 
+小程序账号体系（`auth.ts` wechat-login/register/bind-wechat/bind-email）：openid 取自云托管注入的
+`X-WX-OPENID` 请求头。⚠️ 公网 ECS 可被直连伪造该头——**生产必须配 `WX_PROXY_SECRET`**，并让云托管代理
+（herix-proxy）转发时附 `X-Proxy-Auth: <同值>` 头；未配置=开发模式放行。邮箱统一小写存储、登录 LOWER() 比较。
+
 明细模式去重盐 `REFERRAL_HASH_SALT`（`utils/privacy.ts`）：邀请用户邮箱/ID 的 SHA-256 去重键所用全局盐。未配置有应用级默认值（开发可用），**生产必须显式配置**且配置后不可更换（换盐 = 历史去重键全部失效）。
 
 ### 产品路线图（v1.3）

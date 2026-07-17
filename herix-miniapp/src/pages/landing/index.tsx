@@ -102,6 +102,28 @@ export default class Landing extends Component<{}, State> {
     }
   };
 
+  /** 小程序一键进入：openid 有账号即登录，无账号即一键注册（分享落地场景摩擦最小化） */
+  handleWechatEnter = async () => {
+    if (this.state.submitting) return;
+    this.setState({ err: '', submitting: true });
+    try {
+      let d: any = await auth.wechatLogin();
+      if (d?.needRegister) d = await auth.wechatRegister();
+      if (d?.token) setToken(d.token);
+      const { taskId } = this.state;
+      const onboarded = d?.user?.is_onboarded;
+      if (!onboarded) {
+        Taro.redirectTo({ url: `/pages/onboard/index${taskId ? `?taskId=${taskId}` : ''}` });
+      } else if (taskId) {
+        Taro.redirectTo({ url: `/pages/task/task?id=${taskId}` });
+      } else {
+        Taro.switchTab({ url: '/pages/index/index' });
+      }
+    } catch (err: any) {
+      this.setState({ err: err?.message || t('landing.loginFailed'), submitting: false });
+    }
+  };
+
   switchLanguage = async () => {
     try {
       const res = await Taro.showActionSheet({ itemList: LOCALES.map(l => l.label) });
@@ -133,10 +155,30 @@ export default class Landing extends Component<{}, State> {
     }
     this.setState({ err: '', submitting: true });
     try {
-      const d: any =
-        authTab === 'login'
-          ? await auth.login({ account: em, password: pw })
-          : await auth.register({ email: em, password: pw, nickname: nk, role: 'HERALD', code: vcode.trim() });
+      const isWeapp = process.env.TARO_ENV === 'weapp';
+      let d: any;
+      if (authTab === 'login') {
+        if (isWeapp) {
+          // 小程序里邮箱登录 = 顺手把当前微信挂到该账号（双端统一）；绑定冲突时退回普通登录
+          try {
+            d = await auth.bindWechat({ account: em, password: pw });
+          } catch (bindErr: any) {
+            if (['WECHAT_ALREADY_BOUND', 'OPENID_TAKEN'].includes(bindErr?.data?.code)) {
+              d = await auth.login({ account: em, password: pw });
+            } else {
+              throw bindErr;
+            }
+          }
+        } else {
+          d = await auth.login({ account: em, password: pw });
+        }
+      } else {
+        d = await auth.register({ email: em, password: pw, nickname: nk, role: 'HERALD', code: vcode.trim() });
+        // 小程序里注册的邮箱账号顺手绑定当前微信（尽力而为，失败不阻断）
+        if (isWeapp && d?.token) {
+          try { await auth.bindWechat({ account: em, password: pw }); } catch { /* 冲突则跳过 */ }
+        }
+      }
       if (d?.token) setToken(d.token);
       // 新注册赫使 or 未完成入驻 → 先走入职引导（透传邀请任务，引导完再报名）；
       // 已入驻登录用户 → 有邀请任务直达详情、否则进首页
@@ -207,6 +249,13 @@ export default class Landing extends Component<{}, State> {
           </View>
 
           <Text className='lp-err'>{err}</Text>
+
+          {process.env.TARO_ENV === 'weapp' && (
+            <>
+              <View className='lp-wechat-btn' onClick={this.handleWechatEnter}>{t('auth.wechatOneTap')}</View>
+              <Text className='lp-divider'>{t('auth.orEmailLogin')}</Text>
+            </>
+          )}
 
           <Input
             className='lp-input'

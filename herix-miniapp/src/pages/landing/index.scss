@@ -140,6 +140,27 @@
   color: var(--text-primary);
   margin-bottom: 24px;
 }
+// 小程序微信一键进入
+.lp-wechat-btn {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 26px;
+  background: #07c160;
+  color: #fff;
+  border-radius: 24px;
+  font-size: 30px;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.lp-divider {
+  display: block;
+  text-align: center;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
 // 注册验证码行：输入框 + 发送按钮
 .lp-code-row {
   display: flex;

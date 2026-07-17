@@ -119,9 +119,20 @@ async function request<T = any>(
 export const auth = {
   register: (data: { email: string; password: string; nickname?: string; role: string; code?: string }) =>
     request<{ token: string; user: any }>('POST', '/auth/register', data, false),
-  /** 注册邮箱验证码（60秒限频，5分钟有效） */
-  sendCode: (email: string) =>
-    request<{ sent: boolean }>('POST', '/auth/send-code', { email, purpose: 'REGISTER' }, false),
+  /** 邮箱验证码（REGISTER 注册 / BIND_EMAIL 绑定邮箱；60秒限频，30分钟有效） */
+  sendCode: (email: string, purpose: 'REGISTER' | 'BIND_EMAIL' = 'REGISTER') =>
+    request<{ sent: boolean }>('POST', '/auth/send-code', { email, purpose }, false),
+  /** 小程序静默登录（openid 由云托管注入）。无账号时返回 {needRegister:true} */
+  wechatLogin: () => request<{ token?: string; user?: any; needRegister?: boolean }>('POST', '/auth/wechat-login', {}, false),
+  /** 微信一键注册（幂等：已注册直接返回登录态） */
+  wechatRegister: (nickname?: string) =>
+    request<{ token: string; user: any }>('POST', '/auth/wechat-register', { nickname }, false),
+  /** 已有邮箱账号登录并绑定当前微信 */
+  bindWechat: (data: { account: string; password: string }) =>
+    request<{ token: string; user: any }>('POST', '/auth/bind-wechat', data, false),
+  /** 微信注册用户补绑邮箱+密码 */
+  bindEmail: (data: { email: string; code: string; password: string }) =>
+    request<{ bound: boolean; email: string }>('POST', '/auth/bind-email', data),
   login: (data: { account: string; password: string }) =>
     request<{ token: string; user: any }>('POST', '/auth/login', data, false),
   me: () => request<any>('GET', '/auth/me'),

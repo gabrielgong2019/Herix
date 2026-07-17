@@ -63,6 +63,16 @@ interface State {
   socialSheet: null | { mode: 'edit' | 'add'; platformId: string; account: string; followers: string };
   /** 添加账号的平台选择器 */
   platformPickerOpen: boolean;
+  /** 注册表单的邮箱验证码 */
+  vcode: string;
+  codeCountdown: number;
+  /** 微信登录：openid 无账号时的选择界面 */
+  wxChoice: boolean;
+  /** 登录表单提交到"登录并绑定微信" */
+  wxBindMode: boolean;
+  /** 绑定邮箱弹层（微信注册用户） */
+  beSheet: null | { email: string; code: string; password: string };
+  beCountdown: number;
 }
 
 export default class Profile extends Component<{}, State> {
@@ -81,11 +91,32 @@ export default class Profile extends Component<{}, State> {
     newNick: '',
     socialSheet: null,
     platformPickerOpen: false,
+    vcode: '',
+    codeCountdown: 0,
+    wxChoice: false,
+    wxBindMode: false,
+    beSheet: null,
+    beCountdown: 0,
   };
 
   componentDidShow() {
     if (getToken()) this.loadUser();
+    // 小程序端：无 token 时先试静默登录（openid 已有账号则零操作进入）
+    else if (process.env.TARO_ENV === 'weapp') this.trySilentWechatLogin();
   }
+
+  trySilentWechatLogin = async () => {
+    try {
+      const res = await authApi.wechatLogin();
+      if (res?.token) {
+        setToken(res.token);
+        Taro.setStorageSync('herix_user', res.user);
+        this.setState({ user: res.user, isLogin: true });
+        this.loadUser();
+      }
+      // needRegister：停留在登录页，用户自选一键注册或绑定已有账号
+    } catch { /* 静默失败不打扰 */ }
+  };
 
   loadUser = async () => {
     try {
@@ -111,17 +142,21 @@ export default class Profile extends Component<{}, State> {
   };
 
   handleLogin = async () => {
-    const { account, password } = this.state;
+    const { account, password, wxBindMode } = this.state;
     if (!account || !password) {
       Taro.showToast({ title: t('profile.errAccountPass'), icon: 'none' });
       return;
     }
     this.setState({ loading: true });
     try {
-      const res = await authApi.login({ account, password });
+      // 绑定模式（小程序）：邮箱密码验证通过后把当前微信挂到该账号，双端同一身份
+      const res = wxBindMode
+        ? await authApi.bindWechat({ account, password })
+        : await authApi.login({ account, password });
       setToken(res.token);
       Taro.setStorageSync('herix_user', res.user);
-      this.setState({ user: res.user, isLogin: true });
+      this.setState({ user: res.user, isLogin: true, wxBindMode: false, wxChoice: false });
+      if (wxBindMode) Taro.showToast({ title: t('auth.wechatBoundOk'), icon: 'success' });
       this.loadUser();
     } catch (err: any) {
       Taro.showToast({ title: err.message || t('profile.loginFailed'), icon: 'none' });
@@ -130,16 +165,124 @@ export default class Profile extends Component<{}, State> {
     }
   };
 
+  // ── 微信登录（weapp 专用，openid 由云托管注入）──
+  handleWechatTap = async () => {
+    this.setState({ loading: true });
+    try {
+      const res = await authApi.wechatLogin();
+      if (res?.token) {
+        setToken(res.token);
+        Taro.setStorageSync('herix_user', res.user);
+        this.setState({ user: res.user, isLogin: true });
+        this.loadUser();
+      } else if (res?.needRegister) {
+        this.setState({ wxChoice: true });
+      }
+    } catch (err: any) {
+      Taro.showToast({ title: err.message || t('profile.loginFailed'), icon: 'none' });
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  handleWechatRegister = async () => {
+    this.setState({ loading: true });
+    try {
+      const res = await authApi.wechatRegister();
+      setToken(res.token);
+      Taro.setStorageSync('herix_user', res.user);
+      this.setState({ user: res.user, isLogin: true, wxChoice: false });
+      Taro.navigateTo({ url: '/pages/onboard/index' });
+    } catch (err: any) {
+      Taro.showToast({ title: err.message || t('profile.registerFailed'), icon: 'none' });
+    } finally {
+      this.setState({ loading: false });
+    }
+  };
+
+  // ── 注册验证码 ──
+  codeTimer: ReturnType<typeof setInterval> | null = null;
+  beTimer: ReturnType<typeof setInterval> | null = null;
+
+  componentWillUnmount() {
+    if (this.codeTimer) clearInterval(this.codeTimer);
+    if (this.beTimer) clearInterval(this.beTimer);
+  }
+
+  sendRegCode = async () => {
+    const em = this.state.email.trim();
+    if (!em) {
+      Taro.showToast({ title: t('landing.fillEmailFirst'), icon: 'none' });
+      return;
+    }
+    if (this.state.codeCountdown > 0) return;
+    try {
+      await authApi.sendCode(em, 'REGISTER');
+      this.setState({ codeCountdown: 60 });
+      Taro.showToast({ title: t('landing.codeSent'), icon: 'none' });
+      this.codeTimer = setInterval(() => {
+        const s = this.state.codeCountdown - 1;
+        if (s <= 0 && this.codeTimer) { clearInterval(this.codeTimer); this.codeTimer = null; }
+        this.setState({ codeCountdown: Math.max(0, s) });
+      }, 1000);
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
+  // ── 绑定邮箱（微信注册用户补邮箱+密码）──
+  sendBindCode = async () => {
+    const sheet = this.state.beSheet;
+    if (!sheet || !sheet.email.trim()) {
+      Taro.showToast({ title: t('landing.fillEmailFirst'), icon: 'none' });
+      return;
+    }
+    if (this.state.beCountdown > 0) return;
+    try {
+      await authApi.sendCode(sheet.email.trim(), 'BIND_EMAIL');
+      this.setState({ beCountdown: 60 });
+      Taro.showToast({ title: t('landing.codeSent'), icon: 'none' });
+      this.beTimer = setInterval(() => {
+        const s = this.state.beCountdown - 1;
+        if (s <= 0 && this.beTimer) { clearInterval(this.beTimer); this.beTimer = null; }
+        this.setState({ beCountdown: Math.max(0, s) });
+      }, 1000);
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
+  submitBindEmail = async () => {
+    const sheet = this.state.beSheet;
+    if (!sheet) return;
+    if (!sheet.email.trim() || !sheet.code.trim() || sheet.password.length < 6) {
+      Taro.showToast({ title: t('profile.bindEmailInvalid'), icon: 'none' });
+      return;
+    }
+    try {
+      await authApi.bindEmail({ email: sheet.email.trim(), code: sheet.code.trim(), password: sheet.password });
+      this.setState({ beSheet: null });
+      Taro.showToast({ title: t('profile.emailBoundOk'), icon: 'success' });
+      this.loadUser();
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
   handleRegister = async () => {
-    const { email, password, nickname, roleIndex } = this.state;
+    const { email, password, nickname, roleIndex, vcode } = this.state;
     if (!email || !password) {
       Taro.showToast({ title: t('profile.errEmailPass'), icon: 'none' });
+      return;
+    }
+    if (!vcode.trim()) {
+      Taro.showToast({ title: t('landing.codeRequired'), icon: 'none' });
       return;
     }
     this.setState({ loading: true });
     try {
       const role = roleIndex === 0 ? 'BRAND' : 'HERALD';
-      const res = await authApi.register({ email, password, nickname, role });
+      const res = await authApi.register({ email, password, nickname, role, code: vcode.trim() });
       setToken(res.token);
       Taro.setStorageSync('herix_user', res.user);
       this.setState({ user: res.user, isLogin: true, showRegister: false });
@@ -311,9 +454,29 @@ export default class Profile extends Component<{}, State> {
           <View className='auth-card'>
             <Text className='auth-title'>{showRegister ? t('profile.register') : t('profile.login')}</Text>
             <Text className='auth-subtitle'>Herix 赫使</Text>
-            {showRegister ? (
+            {/* 小程序：微信一键登录 / 首次使用选择 */}
+            {process.env.TARO_ENV === 'weapp' && !this.state.wxChoice && !this.state.wxBindMode && (
+              <>
+                <Button className='btn-wechat' onClick={this.handleWechatTap} loading={loading}>{t('auth.wechatOneTap')}</Button>
+                <Text className='auth-divider'>{t('auth.orEmailLogin')}</Text>
+              </>
+            )}
+            {this.state.wxChoice ? (
+              <>
+                <Text className='auth-subtitle'>{t('auth.firstUseChoice')}</Text>
+                <Button className='btn-wechat' onClick={this.handleWechatRegister} loading={loading}>{t('auth.wechatQuickRegister')}</Button>
+                <Button className='btn-primary' onClick={() => this.setState({ wxChoice: false, wxBindMode: true, showRegister: false })}>{t('auth.bindExisting')}</Button>
+                <Text className='switch-auth' onClick={() => this.setState({ wxChoice: false })}>{t('common.cancel')}</Text>
+              </>
+            ) : showRegister ? (
               <>
                 <Input className='input' placeholder={t('profile.email')} value={email} onInput={e => this.setState({ email: e.detail.value })} />
+                <View className='pf-code-row'>
+                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} value={this.state.vcode} onInput={e => this.setState({ vcode: e.detail.value })} />
+                  <View className={`pf-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.codeCountdown > 0 ? undefined : this.sendRegCode}>
+                    {this.state.codeCountdown > 0 ? t('landing.codeResend', { s: this.state.codeCountdown }) : t('landing.codeSend')}
+                  </View>
+                </View>
                 <Input className='input' placeholder={t('profile.nickname')} value={nickname} onInput={e => this.setState({ nickname: e.detail.value })} />
                 <Input className='input' placeholder={t('profile.passwordMin')} password value={password} onInput={e => this.setState({ password: e.detail.value })} />
                 <View className='role-select'>
@@ -325,10 +488,15 @@ export default class Profile extends Component<{}, State> {
               </>
             ) : (
               <>
+                {this.state.wxBindMode && <Text className='auth-hint'>{t('auth.bindModeHint')}</Text>}
                 <Input className='input' placeholder={t('profile.account')} value={account} onInput={e => this.setState({ account: e.detail.value })} />
                 <Input className='input' placeholder={t('profile.password')} password value={password} onInput={e => this.setState({ password: e.detail.value })} />
-                <Button className='btn-primary' onClick={this.handleLogin} loading={loading}>{t('profile.login')}</Button>
-                <Text className='switch-auth' onClick={() => this.setState({ showRegister: true })}>{t('profile.toRegister')}</Text>
+                <Button className='btn-primary' onClick={this.handleLogin} loading={loading}>
+                  {this.state.wxBindMode ? t('auth.loginAndBind') : t('profile.login')}
+                </Button>
+                {this.state.wxBindMode
+                  ? <Text className='switch-auth' onClick={() => this.setState({ wxBindMode: false })}>{t('common.cancel')}</Text>
+                  : <Text className='switch-auth' onClick={() => this.setState({ showRegister: true })}>{t('profile.toRegister')}</Text>}
               </>
             )}
             {/* 未登录也能切语言(此前入口只在登录后的操作区) */}
@@ -472,6 +640,31 @@ export default class Profile extends Component<{}, State> {
           </View>
         )}
 
+        {/* 绑定邮箱弹层（微信注册用户） */}
+        {this.state.beSheet && (() => {
+          const be = this.state.beSheet!;
+          return (
+            <View className='ps-overlay' onClick={() => this.setState({ beSheet: null })}>
+              <View className='ps-sheet' onClick={e => e.stopPropagation()}>
+                <Text className='ps-title'>📧 {t('profile.bindEmail')}</Text>
+                <Text className='ps-hint'>{t('profile.bindEmailHint')}</Text>
+                <Text className='ps-label'>{t('profile.emailAddr')}</Text>
+                <Input className='input' type='text' placeholder={t('profile.emailAddr')} value={be.email} onInput={e => this.setState({ beSheet: { ...be, email: e.detail.value } })} />
+                <Text className='ps-label'>{t('landing.codePlaceholder')}</Text>
+                <View className='pf-code-row'>
+                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} value={be.code} onInput={e => this.setState({ beSheet: { ...be, code: e.detail.value } })} />
+                  <View className={`pf-code-btn ${this.state.beCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.beCountdown > 0 ? undefined : this.sendBindCode}>
+                    {this.state.beCountdown > 0 ? t('landing.codeResend', { s: this.state.beCountdown }) : t('landing.codeSend')}
+                  </View>
+                </View>
+                <Text className='ps-label'>{t('profile.setPassword')}</Text>
+                <Input className='input' password placeholder={t('profile.passwordMin')} value={be.password} onInput={e => this.setState({ beSheet: { ...be, password: e.detail.value } })} />
+                <View className='btn-primary' onClick={this.submitBindEmail}>{t('common.save')}</View>
+              </View>
+            </View>
+          );
+        })()}
+
         {/* 平台选择器（添加账号第一步） */}
         {this.state.platformPickerOpen && (
           <View className='ps-overlay' onClick={() => this.setState({ platformPickerOpen: false })}>
@@ -540,6 +733,12 @@ export default class Profile extends Component<{}, State> {
           <Text className='action-item' onClick={this.switchLanguage}>
             🌐 {t('profile.language')}：{LOCALES.find(l => l.id === getLocale())?.label}
           </Text>
+          {/* 微信注册用户补绑邮箱（可用邮箱登录网页版 + 接收邮件提醒） */}
+          {!u.email && (
+            <Text className='action-item' onClick={() => this.setState({ beSheet: { email: '', code: '', password: '' } })}>
+              📧 {t('profile.bindEmail')}
+            </Text>
+          )}
           {!u.is_onboarded && <Text className='action-item primary' onClick={this.goOnboard}>{t('profile.finishOnboard')}</Text>}
           {!roles.includes('BRAND') && roles.includes('HERALD') && (
             <Text className='action-item' onClick={this.addBrandRole}>{t('profile.enableBrand')}</Text>

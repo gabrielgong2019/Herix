@@ -252,6 +252,7 @@ function pageContent() {
     case 'dashboard':   return dashPage();
     case 'tasks':       return tasksPage();
     case 'task_detail': return taskDetailPage();
+    case 'partner_task_detail': return partnerTaskPage();
     case 'task_create': taskPlatformReqs=[]; taskReqMode='ALL'; taskReqMinCount=1; return taskFormPage(null);
     case 'task_edit':   taskPlatformReqs=[]; taskReqMode='ALL'; taskReqMinCount=1; return taskFormPage(state.editingTask);
     case 'task_meta_edit': taskPlatformReqs=[]; taskReqMode='ALL'; taskReqMinCount=1; return taskMetaEditPage();
@@ -297,6 +298,7 @@ function bindLogin() {
       state.token=d.token;state.user=d.user;
       state.msg='登录成功';state.msgType='success';
       loadDashStats();loadMyTasks();loadBrandProfile();
+      handleBrandBindFromUrl();  // 品牌方绑定邀请链接（?bind_task=&bind_token=）
       loadNotifications();
       setInterval(loadNotifications, 60000);  // 每分钟轮询一次
     },
@@ -559,7 +561,88 @@ function tasksPage() {
       +'<td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openTask(\''+esc(t.id)+'\')">查看</button></td>'
       +'</tr>';
   }).join('');
-  return creditBanner+filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>任务</th><th>状态</th><th>类型</th><th>报酬/人</th><th>名额</th><th>报名数</th><th>创建</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  var html = creditBanner+filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>任务</th><th>状态</th><th>类型</th><th>报酬/人</th><th>名额</th><th>报名数</th><th>创建</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+  // 品牌方关联任务（代理创建、绑定给我看进展的任务；无金额视角）
+  var pts = state.partnerTasks || [];
+  if (pts.length) {
+    html += '<div style="font-weight:600;margin:24px 0 10px">🤝 品牌方关联任务 <span style="font-weight:400;font-size:11px;color:var(--muted)">由代理创建并邀请你查看进展</span></div>'
+      +'<div class="table-card"><table><thead><tr><th>任务</th><th>代理</th><th>状态</th><th>推广赫使</th><th>累计注册</th><th>累计转化</th><th></th></tr></thead><tbody>'
+      + pts.map(function(t) {
+          return '<tr>'
+            +'<td style="font-weight:500">'+esc(t.title)+(t.data_mode==='DETAIL'?' <span style="font-size:10px;color:#6d28d9;background:#ede9fe;border-radius:4px;padding:1px 5px">明细</span>':'')+'</td>'
+            +'<td>'+esc(t.agency_name||'')+'</td>'
+            +'<td><span class="tag tag-'+(t.status||'').toLowerCase()+'">'+statusLabel(t.status)+'</span></td>'
+            +'<td>'+(t.code_holders||0)+'</td>'
+            +'<td>'+(t.total_registered||0)+'</td>'
+            +'<td>'+(t.total_converted||0)+'</td>'
+            +'<td><button class="btn btn-outline btn-sm" onclick="openPartnerTask(\''+esc(t.id)+'\')">查看进展</button></td>'
+            +'</tr>';
+        }).join('')
+      +'</tbody></table></div>';
+  }
+  return html;
+}
+
+/* ── 品牌方绑定：代理生成邀请链接 / 品牌方打开链接完成绑定 ── */
+function genBrandInvite(taskId) {
+  post('/tasks/'+taskId+'/brand-invite', {}, function(d) {
+    if (d.error) { alert(d.error); return; }
+    var box = document.getElementById('brand-invite-box');
+    var url = window.location.origin + d.link;
+    if (box) box.innerHTML = '<div style="font-family:monospace;font-size:11px;word-break:break-all;background:#fff;border:1px solid #d1fae5;border-radius:6px;padding:8px;margin-bottom:8px">'+esc(url)+'</div>'
+      +'<button class="btn btn-outline btn-sm" onclick="navigator.clipboard.writeText(\''+esc(url)+'\').then(function(){showMsg(\'邀请链接已复制\',\'success\')})">复制邀请链接</button>'
+      +'<span style="font-size:11px;color:#6b7280;margin-left:8px">发给品牌方，注册/登录后自动绑定（一次性）</span>';
+  });
+}
+
+function handleBrandBindFromUrl() {
+  var p = new URLSearchParams(window.location.search);
+  var bt = p.get('bind_task'), tk = p.get('bind_token');
+  if (!bt || !tk) return;
+  if (!state.token) return; // 未登录：登录成功后由调用方再触发
+  post('/tasks/'+bt+'/brand-bind', { token: tk }, function(d) {
+    // 无论成败都清掉 URL 参数，防止重复触发
+    window.history.replaceState({}, '', window.location.pathname);
+    if (d.error) { alert('绑定失败：'+d.error); return; }
+    showMsg('已绑定任务「'+(d.title||'')+'」，可在任务列表查看进展', 'success');
+    loadMyTasks();
+  });
+}
+
+/* ── 品牌方视角：任务进展页（只读，数量/状态，无金额） ── */
+function openPartnerTask(id) {
+  state.currentPartnerTask = (state.partnerTasks||[]).find(function(t){return t.id===id}) || null;
+  go('partner_task_detail');
+}
+
+function partnerTaskPage() {
+  var t = state.currentPartnerTask;
+  if (!t) return '<div class="empty" style="padding:60px">任务不存在</div>';
+  var isDetail = t.data_mode === 'DETAIL';
+  var html = '<div class="form-card"><div style="max-width:760px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:18px;font-weight:700">'+esc(t.title)+'</div>'
+    +'<span class="tag tag-'+(t.status||'').toLowerCase()+'">'+statusLabel(t.status)+'</span></div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:16px">代理：'+esc(t.agency_name||'')+' · 你以品牌方身份查看进展（结算金额由代理管理）</div>'
+    +'<div style="display:flex;gap:12px;margin-bottom:20px">'
+    +[['推广赫使', t.code_holders||0], ['累计注册', t.total_registered||0], ['累计转化', t.total_converted||0]].map(function(s) {
+        return '<div style="flex:1;background:var(--bg);border-radius:10px;padding:14px;text-align:center"><div style="font-size:22px;font-weight:700">'+s[1]+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+s[0]+'</div></div>';
+      }).join('')
+    +'</div>';
+  if (isDetail) {
+    html += '<div style="font-weight:600;margin-bottom:8px">跟踪明细</div>'
+      +'<div id="referrals-panel"><div style="font-size:12px;color:var(--muted);padding:12px">⏳ 加载明细…</div></div>';
+    setTimeout(function(){ loadTaskReferrals(t.id); }, 0);
+  }
+  // 数据上传（品牌方登录直传，与上传链接同一处理管道）
+  html += '<div style="font-weight:600;margin:20px 0 8px">上传转化数据</div>'
+    +'<input type="hidden" id="csv-task" value="'+esc(t.id)+'">'
+    +'<div id="csv-mode-block" style="margin-bottom:10px">'+csvModeBlockHTML(t)+'</div>'
+    +'<textarea id="csv-data" rows="6" style="width:100%" placeholder="粘贴 CSV 内容，格式见上方模板"></textarea>'
+    +'<div id="csv-result" style="margin-top:8px"></div>'
+    +'<div style="margin-top:10px"><button class="btn btn-primary" onclick="doCsvUpload()">上传数据</button></div>'
+    +'</div></div>';
+  return html;
 }
 
 /* ── Task Detail ── */
@@ -668,6 +751,17 @@ function taskDetailPage() {
       +'<button class="btn btn-outline btn-sm" onclick="copyUploadLink(\''+t.id+'\',\''+t.upload_token+'\')">复制链接</button>'
       +'<button class="btn btn-outline btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成海报</button>'
       +'</div></div>';
+  }
+
+  // 品牌方绑定（代理任务分享给品牌：品牌注册账号后可在线看进展，无金额视角）
+  if (t.status !== 'DRAFT') {
+    left += '<div class="panel" style="border:1px solid #d1fae5;background:#f0fdf4">'
+      +'<div class="panel-title" style="color:#047857">🤝 品牌方</div>'
+      + (t.brand_party_id
+        ? '<div style="font-size:13px">已绑定：<b>'+esc(t.brand_party_name||'品牌方账号')+'</b><div style="font-size:11px;color:#6b7280;margin-top:4px">品牌方可在线查看推广进展与跟踪明细（不含结算金额），并可直接上传转化数据</div></div>'
+        : '<div style="font-size:12px;color:#6b7280;margin-bottom:10px">邀请品牌方注册账号并绑定本任务：对方可在线查看进展、直接上传数据（看不到结算金额）</div>'
+          +'<div id="brand-invite-box"><button class="btn btn-outline btn-sm" onclick="genBrandInvite(\''+t.id+'\')">生成绑定邀请链接</button></div>')
+      +'</div>';
   }
 
   var tabs = '<div class="tabs">'
@@ -1112,7 +1206,8 @@ function submitReview(id, type, action) {
 /* ── CSV Upload ── */
 function csvSelectedTask() {
   var id = (document.getElementById('csv-task')||{}).value;
-  return state.tasks.find(function(x){ return x.id === id; });
+  return (state.tasks||[]).find(function(x){ return x.id === id; })
+      || (state.partnerTasks||[]).find(function(x){ return x.id === id; });
 }
 
 /* 按任务的数据回传模式渲染：模板示例 + 注意事项 */
@@ -2017,6 +2112,11 @@ function loadMyTasks() {
     state.tasksLoading = false;
     render();
   });
+  // 作为品牌方被绑定的任务（只看进展，无金额）
+  get('/tasks/partner/mine', function(d) {
+    state.partnerTasks = Array.isArray(d) ? d : [];
+    render();
+  });
 }
 
 function loadPendingReviews() {
@@ -2670,7 +2770,10 @@ function doCsvUpload() {
     if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>'; return; }
     var html = '';
     if (d.processed > 0) {
-      html += '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次，结算 ¥'+Number(d.totalPaid||0).toLocaleString()+'（单价 ¥'+Number(d.commissionPerConversion||0).toLocaleString()+'/次）</div>';
+      // 品牌方视角响应不含金额字段（totalPaid undefined），只展示数量
+      html += d.totalPaid !== undefined
+        ? '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次，结算 ¥'+Number(d.totalPaid||0).toLocaleString()+'（单价 ¥'+Number(d.commissionPerConversion||0).toLocaleString()+'/次）</div>'
+        : '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次（结算由代理方处理）</div>';
     }
     if (d.skippedCodes && d.skippedCodes.length) {
       var hints = {};
@@ -2916,6 +3019,7 @@ function tryResumeSwitchedSession() {
     };
     state.brandProfile = d;
     loadDashStats(); loadMyTasks();
+    handleBrandBindFromUrl();
   });
   return true;
 }

@@ -432,6 +432,10 @@ export async function initDatabase() {
       agreed_at TEXT NOT NULL
     )`,
     `CREATE INDEX IF NOT EXISTS idx_upload_consents_task ON upload_consents(task_id)`,
+    // 代理任务的品牌方关联（2026-07-17）：品牌方=完整商家账号，对绑定任务只看进展（数量/状态），
+    // 不可见结算金额/不可审核/不可改判。绑定由代理生成一次性邀请链接发起
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS brand_party_id TEXT REFERENCES users(id)`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS brand_invite_token TEXT`,
     // 定价模块（2026-07-09）
     `CREATE TABLE IF NOT EXISTS platform_settings (
       key TEXT PRIMARY KEY,

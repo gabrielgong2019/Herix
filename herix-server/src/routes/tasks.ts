@@ -88,7 +88,7 @@ tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) =>
   const uid = req.user!.userId;
 
   const tasks = await findMany<any>(`
-    SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at,
+    SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at, t.data_mode, t.brand_party_id,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id) as app_total,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='APPROVED') as app_approved,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='PENDING') as app_pending,
@@ -96,8 +96,9 @@ tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) =>
       (SELECT COUNT(*)::int FROM task_submissions ts WHERE ts.task_id=t.id AND ts.status='APPROVED') as sub_approved,
       (SELECT COUNT(*)::int FROM task_submissions ts WHERE ts.task_id=t.id AND ts.status='PENDING_REVIEW') as sub_pending,
       (SELECT COUNT(*)::int FROM ambassador_tasks at WHERE at.task_id=t.id) as code_holders,
-      (SELECT COUNT(*)::int FROM ambassador_tasks at JOIN referrals r ON r.ambassador_task_id=at.id WHERE at.task_id=t.id AND r.qualified=1) as qualified_referrals,
-      (SELECT COUNT(*)::int FROM ambassador_tasks at JOIN referrals r ON r.ambassador_task_id=at.id WHERE at.task_id=t.id) as total_referrals
+      -- 旧 referrals 死表已删（2026-07-17），计数改读 ambassador_tasks 聚合列（汇总/明细两模式的统一投影）
+      (SELECT COALESCE(SUM(at.used_count),0)::int FROM ambassador_tasks at WHERE at.task_id=t.id) as qualified_referrals,
+      (SELECT COALESCE(SUM(at.registered_count),0)::int FROM ambassador_tasks at WHERE at.task_id=t.id) as total_referrals
     FROM tasks t WHERE t.creator_id=? ORDER BY t.created_at DESC
   `, [uid]);
 
@@ -151,8 +152,8 @@ tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'),
       u.nickname as herald_name,
       u.email as herald_email,
       hp.country, hp.residence,
-      COALESCE((SELECT COUNT(*)::int FROM referrals r JOIN ambassador_tasks at ON at.id = r.ambassador_task_id WHERE at.unique_code = pc.code AND r.qualified = 1), 0) as qualified_count,
-      COALESCE((SELECT COUNT(*)::int FROM referrals r JOIN ambassador_tasks at ON at.id = r.ambassador_task_id WHERE at.unique_code = pc.code), 0) as total_referrals
+      COALESCE((SELECT at.used_count FROM ambassador_tasks at WHERE at.unique_code = pc.code), 0) as qualified_count,
+      COALESCE((SELECT at.registered_count FROM ambassador_tasks at WHERE at.unique_code = pc.code), 0) as total_referrals
     FROM task_promo_codes pc
     LEFT JOIN users u ON u.id = pc.herald_id
     LEFT JOIN herald_profiles hp ON hp.user_id = pc.herald_id
@@ -278,6 +279,50 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
 /** 品牌上传页数据条款版本（改条款文案时同步升版本） */
 const UPLOAD_TERMS_VERSION = '2026-07-17-v1';
 
+/** POST /api/tasks/:id/brand-invite — 代理生成品牌方绑定邀请链接（一次性 token，重新生成即作废旧的） */
+tasksRouter.post('/:id/brand-invite', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const task = await findOne<any>('SELECT id, creator_id, brand_party_id FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '只有任务创建者可以邀请品牌方', code: 'FORBIDDEN' });
+  }
+  if (task.brand_party_id) return res.status(409).json({ error: '该任务已绑定品牌方', code: 'ALREADY_BOUND' });
+  const inviteToken = crypto.randomBytes(16).toString('hex');
+  await update('tasks', { brand_invite_token: inviteToken }, 'id = ?', [task.id]);
+  res.json({ inviteToken, link: `/merchant.html?bind_task=${task.id}&bind_token=${inviteToken}` });
+});
+
+/** POST /api/tasks/:id/brand-bind — 品牌方凭邀请 token 绑定为该任务的关联品牌 */
+tasksRouter.post('/:id/brand-bind', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const { token } = req.body as { token?: string };
+  const task = await findOne<any>('SELECT id, title, creator_id, brand_party_id, brand_invite_token FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.brand_party_id) return res.status(409).json({ error: '该任务已绑定品牌方', code: 'ALREADY_BOUND' });
+  if (!token || !task.brand_invite_token || token !== task.brand_invite_token) {
+    return res.status(403).json({ error: '邀请链接无效或已被使用', code: 'INVALID_INVITE' });
+  }
+  if (task.creator_id === req.user!.userId) {
+    return res.status(400).json({ error: '不能绑定自己创建的任务', code: 'CANNOT_BIND_OWN' });
+  }
+  await update('tasks', { brand_party_id: req.user!.userId, brand_invite_token: null }, 'id = ?', [task.id]);
+  res.json({ taskId: task.id, title: task.title, bound: true });
+});
+
+/** GET /api/tasks/partner/mine — 我作为品牌方被绑定的任务（进展数量，无金额） */
+tasksRouter.get('/partner/mine', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT t.id, t.title, t.status, t.mode, t.data_mode, t.max_heralds, t.created_at,
+            u.nickname AS agency_name,
+            (SELECT COUNT(*)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS code_holders,
+            (SELECT COALESCE(SUM(at.registered_count),0)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS total_registered,
+            (SELECT COALESCE(SUM(at.used_count),0)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS total_converted
+     FROM tasks t JOIN users u ON u.id = t.creator_id
+     WHERE t.brand_party_id = ? ORDER BY t.created_at DESC`,
+    [req.user!.userId]
+  );
+  res.json(rows);
+});
+
 /** POST /api/tasks/:id/upload-consent — 品牌方（非平台用户）进入上传页前的条款同意，记录 IP/UA 作为电子证据 */
 tasksRouter.post('/:id/upload-consent', async (req: Request, res: Response) => {
   const token = String(req.query.token || '');
@@ -297,9 +342,10 @@ tasksRouter.post('/:id/upload-consent', async (req: Request, res: Response) => {
 
 /** GET /api/tasks/:id/referrals — 明细模式跟踪列表（商家）。只回脱敏标识，不存在原文 */
 tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, data_mode FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id, brand_party_id, data_mode FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
-  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+  // 代理（创建者）/管理员/绑定的品牌方均可看跟踪明细（行内只有状态无金额）
+  if (task.creator_id !== req.user!.userId && task.brand_party_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
   }
   const rows = await findMany<any>(
@@ -361,15 +407,16 @@ tasksRouter.post('/:id/referrals/:recordId/reassign', requireAuth, requireRole('
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, mode, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, data_mode FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, brand_party_id, mode, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, data_mode FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
-  // 鉴权：Bearer token（代理商家/管理员）或 upload_token（品牌专属链接）
+  // 鉴权：Bearer token（代理商家/绑定品牌方/管理员）或 upload_token（品牌专属链接）
   const uploadToken = String(req.query.token || '');
   const isTokenAuth = uploadToken && task.upload_token && uploadToken === task.upload_token;
-  const isBearerAuth = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
+  const isBrandParty = !!(req.user && task.brand_party_id && req.user.userId === task.brand_party_id);
+  const isBearerAuth = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN' || isBrandParty);
   if (!isTokenAuth && !isBearerAuth) return res.status(403).json({ error: '无权限' });
 
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
@@ -401,7 +448,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     return res.status(400).json({ error: '该任务为明细模式，请按「code,用户邮箱或ID,是否完成交易」模板上传', code: 'MODE_MISMATCH', dataMode });
   }
   if (dataMode === 'DETAIL') {
-    return handleDetailUpload(res, task, records as any[], { payoutPerConv, costPerConv, feePerConv, isTokenAuth: !!isTokenAuth });
+    return handleDetailUpload(res, task, records as any[], { payoutPerConv, costPerConv, feePerConv, isTokenAuth: !!isTokenAuth, stripMoney: isBrandParty });
   }
 
   let processed = 0, skipped = 0, totalNewConversions = 0, totalPaid = 0;
@@ -542,8 +589,8 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     skipped,
     total: records.length,
     newConversions: totalNewConversions,
-    totalPaid,
-    commissionPerConversion: costPerConv, // 商家视角单次转化成本（含服务费）
+    // 品牌方（非创建者）看不到结算金额——金额是代理的成本价（2026-07-17 权限定稿）
+    ...(isBrandParty ? {} : { totalPaid, commissionPerConversion: costPerConv }),
     ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
     ...(skippedHints.length > 0 ? { skippedHints } : {}),
     ...(blockedCodes.length > 0 ? { blockedCodes, message: `${blockedCodes.length} 个推广码因余额不足未结算，请充值后重新上传` } : {}),
@@ -560,7 +607,7 @@ async function handleDetailUpload(
   res: Response,
   task: any,
   records: Array<{ code?: string; user?: string; converted?: any }>,
-  money: { payoutPerConv: number; costPerConv: number; feePerConv: number; isTokenAuth: boolean },
+  money: { payoutPerConv: number; costPerConv: number; feePerConv: number; isTokenAuth: boolean; stripMoney?: boolean },
 ) {
   const now = () => new Date().toISOString();
   const isTruthy = (v: any) => ['1', 'true', '是', 'yes', 'y'].includes(String(v ?? '').trim().toLowerCase());
@@ -724,8 +771,8 @@ async function handleDetailUpload(
     skipped,
     total: records.length,
     newConversions: totalNewConversions,
-    totalPaid,
-    commissionPerConversion: money.costPerConv,
+    // 品牌方看不到结算金额（代理成本价）
+    ...(money.stripMoney ? {} : { totalPaid, commissionPerConversion: money.costPerConv }),
     ...(skippedCodes.length > 0 ? { skippedCodes } : {}),
     ...(skippedHints.length > 0 ? { skippedHints } : {}),
     ...(conflicts.length > 0 ? { conflicts } : {}),
@@ -736,18 +783,28 @@ async function handleDetailUpload(
 /** PATCH /api/tasks/:id/publish});
 
 /** PATCH /api/tasks/:id/publish — 发布任务 */
-tasksRouter.get('/:id', async (req: Request, res: Response) => {
+tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
     `SELECT t.*, u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
+            bp2.nickname as brand_party_name,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
             (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
+     LEFT JOIN users bp2 ON bp2.id = t.brand_party_id
      WHERE t.id = ?`, [req.params.id]
   );
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
+
+  // 敏感凭证只给创建者/管理员：upload_token 可直接触发结算上传，brand_invite_token 可绑定品牌方
+  // （修复：此前 t.* 把两个 token 泄露给任何访问者）
+  const isOwner = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
+  if (!isOwner) {
+    delete task.upload_token;
+    delete task.brand_invite_token;
+  }
 
   const applications = await findMany<any>(
     `SELECT ta.*, u.nickname, hp.display_name, hp.country, hp.social_platforms,

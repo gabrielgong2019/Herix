@@ -95,8 +95,14 @@ referralsRouter.get('/my-records/:taskId', requireAuth, requireRole('HERALD'), a
   res.json(rows);
 });
 
-/** GET /api/referrals/stats/:taskId — 推广数据统计（品牌方） */
+/** GET /api/referrals/stats/:taskId — 推广数据统计（创建者/绑定品牌方/管理员） */
 referralsRouter.get('/stats/:taskId', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  // 归属校验（2026-07-17 补：原实现任何商家可查任何任务）
+  const task = await findOne<any>('SELECT creator_id, brand_party_id FROM tasks WHERE id = ?', [req.params.taskId]);
+  if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
+  if (task.creator_id !== req.user!.userId && task.brand_party_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
+  }
   // 同 my-codes：直读 ambassador_tasks 聚合列，不再从 referrals 死表统计（2026-07-17）
   const stats = await findMany<any>(
     `SELECT at.unique_code, u.nickname as herald_name,

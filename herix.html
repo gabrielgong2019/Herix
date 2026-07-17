@@ -359,7 +359,7 @@ function switchTab(t){
 function hdrHTML(title){
   var taglines=['赫赫有名','使命必达','品牌桥梁','酷酷体验','赫然而至','不止于赫','为你而来','以赫为名','赫赫之光','一出好戏'];
   var tag=taglines[Math.floor(Math.random()*taglines.length)];
-  return '<div class="header"><div class="logo"><img src="/Logo/herix-orig-icon.png" style="width:24px;height:24px;border-radius:6px;vertical-align:middle;margin-right:6px">Herix</div><div class="hdr-actions" style="font-size:12px;color:var(--muted);white-space:nowrap">'+tag+'</div></div>';}
+  return '<div class="header"><div class="logo"><img src="Logo/herix-orig-icon.png" style="width:24px;height:24px;border-radius:6px;vertical-align:middle;margin-right:6px">Herix</div><div class="hdr-actions" style="font-size:12px;color:var(--muted);white-space:nowrap">'+tag+'</div></div>';}
 function userBarHTML(){
   if(!state.user) return '<div class="user-bar"><span style="font-size:12px;color:var(--muted)">发现适合你的品牌体验</span><span class="login-btn" onclick="openLogin()">登录 →</span></div>';
   var roles=state.user.roles||[state.user.role];
@@ -2184,7 +2184,7 @@ function landingHTML(){
   var isReg=tab==='register';
   return '<div style="min-height:100vh;display:flex;flex-direction:column;background:#fff;max-width:500px;margin:0 auto;padding-bottom:40px">'
     +'<div style="padding:52px 24px 20px;text-align:center">'
-    +'<img src="/Logo/herix-orig-icon.png" style="width:44px;height:44px;border-radius:11px;margin-bottom:8px;display:block;margin:0 auto 8px">'
+    +'<img src="Logo/herix-orig-icon.png" style="width:44px;height:44px;border-radius:11px;margin-bottom:8px;display:block;margin:0 auto 8px">'
     +'<div style="font-size:20px;font-weight:800;letter-spacing:1px">Herix</div>'
     +'</div>'
     +taskBlock
@@ -2252,7 +2252,7 @@ function doLandingAuth(){
 
 function loginHTML(){
   var l=state.loginTab==='login';
-  var h='<div style="text-align:center;margin-bottom:16px"><img src="/Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px"><span style="font-size:18px;font-weight:800;letter-spacing:2px">Herix</span></div>';
+  var h='<div style="text-align:center;margin-bottom:16px"><img src="Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px"><span style="font-size:18px;font-weight:800;letter-spacing:2px">Herix</span></div>';
   var opts = {
     mode: l ? 'login' : 'both',
     emailId: 'email',

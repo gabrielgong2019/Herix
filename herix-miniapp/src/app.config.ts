@@ -19,6 +19,8 @@ if (process.env.TARO_ENV === 'h5') {
 
 export default {
   pages,
+  // 按需注入：只加载当前页面用到的组件代码，加快启动（微信代码质量体检项）
+  lazyCodeLoading: 'requiredComponents',
   // 颜色对齐 herix.html：顶栏/下拉背景用品牌灰 #f5f5f7 黑字，
   // tab 选中态是黑字（herix.html 的 .tab-item.active 就是黑字加粗，不是红色）
   window: {

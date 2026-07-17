@@ -5,8 +5,9 @@
  * 值的更新语义：新 key 插入；已有行仅当 updated_by='seed'（运营从没碰过）时
  * 用代码词典刷新——机翻/复审修订能进库，运营的人工改动永不被覆盖。
  *
- * 用法: cd herix-server && npx tsx --env-file=.env scripts/seed-i18n.ts
+ * 用法: cd herix-server && npx tsx scripts/seed-i18n.ts
  */
+import 'dotenv/config'; // 入口自己加载 .env，不再依赖调用方 source
 import fs from 'fs';
 import path from 'path';
 import pool from '../src/db';

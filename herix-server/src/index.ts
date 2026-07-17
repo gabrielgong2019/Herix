@@ -1,3 +1,7 @@
+// 必须是第一个 import：后续所有模块(db/mailer/…)都在模块加载期读 process.env。
+// 之前不加载 .env、全靠 pm2 首次启动缓存的 shell 环境——后来加进 .env 的变量
+// (如 SMTP_*)进程永远看不到，邮件静默降级成只打日志(2026-07-17 生产事故)
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import cors from 'cors';

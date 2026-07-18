@@ -349,21 +349,22 @@ function pageContent() {
 function loginPage() {
   return '<div class="login-wrap"><div class="login-card">'
     +'<div class="login-logo"><img src="Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
-    +'<div class="login-sub">品牌商家管理后台</div>'
+    +'<div class="login-sub">'+t('merchant.login.subtitle','品牌商家管理后台')+'</div>'
     +Auth.loginForm({
       title: '',
       subtitle: '',
       emailId: 'email',
       passwordId: 'password',
       emailPlaceholder: 'brand@company.com',
-      passwordPlaceholder: '密码',
+      passwordPlaceholder: t('merchant.login.password','密码'),
+      submitText: t('merchant.login.submit','登录'),
       fieldClass: 'field field-lg',
       titleClass: '',
       subtitleClass: '',
       submitStyle: 'width:100%;padding:12px',
       submitBtnClass: '',
     })
-    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">还没有账号？<a href="herix.html" style="color:var(--primary)">前往注册</a></div>'
+    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">'+t('merchant.login.noAccount','还没有账号？')+'<a href="herix.html" style="color:var(--primary)">'+t('merchant.login.goRegister','前往注册')+'</a></div>'
     +'</div></div>';
 }
 
@@ -1581,7 +1582,13 @@ var topupAmount = 0;
 var topupMethod = 'bank';
 var topupRef = null;
 
-var WALLET_PERIOD_LABELS = {month:'本月', last_month:'上月', '7d':'最近7天', '30d':'最近30天', all:'全部'};
+function walletPeriodLabels() {
+  return {
+    month: t('merchant.wallet.periodMonth','本月'), last_month: t('merchant.wallet.periodLastMonth','上月'),
+    '7d': t('merchant.wallet.period7d','最近7天'), '30d': t('merchant.wallet.period30d','最近30天'),
+    all: t('merchant.wallet.periodAll','全部'),
+  };
+}
 
 function walletPeriodRange(period) {
   var now = new Date();
@@ -1648,7 +1655,7 @@ function copyText(text) {
 }
 
 function walletPage() {
-  if (!brandBalance) { loadBrandWallet(); return '<div style="padding:80px;text-align:center;color:var(--muted)">加载中...</div>'; }
+  if (!brandBalance) { loadBrandWallet(); return '<div style="padding:80px;text-align:center;color:var(--muted)">'+t('common.loading','加载中...')+'</div>'; }
   var b = brandBalance;
   var cur = b.currency || 'JPY';
   var h = '';
@@ -1667,11 +1674,11 @@ function walletPage() {
   }
 
   h += '<div style="background:linear-gradient(135deg,#1e3a5f 0%,#1a4731 100%);border-radius:14px;padding:18px 20px;margin-bottom:20px">';
-  h += '<div style="font-weight:600;font-size:14px;color:rgba(255,255,255,0.85);margin-bottom:14px">账户余额</div>';
+  h += '<div style="font-weight:600;font-size:14px;color:rgba(255,255,255,0.85);margin-bottom:14px">'+t('merchant.wallet.accountBalance','账户余额')+'</div>';
   h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">';
-  h += balStat('当前余额', total, '#fff', '充值到账总额，含冻结部分');
-  h += balStat('冻结中',   frozen, frozen > 0 ? '#fbbf24' : 'rgba(255,255,255,0.4)', '进行中任务已锁定');
-  h += balStat('可用余额', avail,  avail < 0 ? '#f87171' : avail > 0 ? '#6ee7b7' : 'rgba(255,255,255,0.4)', '当前余额 − 冻结中');
+  h += balStat(t('merchant.wallet.currentBalance','当前余额'), total, '#fff', t('merchant.wallet.currentBalanceSub','充值到账总额，含冻结部分'));
+  h += balStat(t('merchant.wallet.frozen','冻结中'),   frozen, frozen > 0 ? '#fbbf24' : 'rgba(255,255,255,0.4)', t('merchant.wallet.frozenSub','进行中任务已锁定'));
+  h += balStat(t('merchant.wallet.available','可用余额'), avail,  avail < 0 ? '#f87171' : avail > 0 ? '#6ee7b7' : 'rgba(255,255,255,0.4)', t('merchant.wallet.availableSub','当前余额 − 冻结中'));
   h += '</div>';
   h += '</div>';
 
@@ -1908,7 +1915,7 @@ function creditStatusBanner() {
 }
 
 function topupWizardHTML() {
-  var steps = ['选择金额','支付方式','付款详情','完成'];
+  var steps = [t('merchant.topup.stepAmount','选择金额'), t('merchant.topup.stepMethod','支付方式'), t('merchant.topup.stepDetail','付款详情'), t('merchant.topup.stepDone','完成')];
   var h = '';
 
   // 步骤指示器
@@ -1940,7 +1947,7 @@ function topupStep1() {
   var presets = [1000, 3000, 5000, 10000, 30000, 50000];
   var ok = topupAmount >= 1000;
   var h = '<div style="max-width:420px;margin:0 auto">';
-  h += '<div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:16px">充值金额（日元）</div>';
+  h += '<div style="text-align:center;font-size:13px;color:var(--muted);margin-bottom:16px">'+t('merchant.topup.amountLabel','充值金额（日元）')+'</div>';
 
   // 顶部金额：可直接编辑
   h += '<div style="text-align:center;margin-bottom:6px">';
@@ -1950,11 +1957,11 @@ function topupStep1() {
   h += '</div></div>';
 
   h += '<div style="text-align:center;margin-bottom:24px">';
-  h += '<span onclick="topupAmount=0;render()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">清空</span>';
+  h += '<span onclick="topupAmount=0;render()" style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline">'+t('merchant.topup.clear','清空')+'</span>';
   h += '</div>';
 
   // 点击累加金额
-  h += '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">点击下方金额可累加</div>';
+  h += '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">'+t('merchant.topup.clickToAdd','点击下方金额可累加')+'</div>';
   h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px">';
   presets.forEach(function(p) {
     h += '<div onclick="topupAmount=(topupAmount||0)+'+p+';render()" style="padding:14px 8px;border-radius:10px;cursor:pointer;text-align:center;font-weight:600;font-size:15px;border:2px solid #e5e7eb;background:#fff;color:#374151;transition:all .15s">';
@@ -1964,8 +1971,8 @@ function topupStep1() {
   h += '</div>';
 
   h += '<div style="text-align:center">';
-  h += '<button id="topup-next-btn" class="btn btn-primary" style="min-width:160px;padding:12px 24px;font-size:15px" onclick="onTopupNext()" '+(ok?'':'disabled')+'>下一步 →</button>';
-  h += '<div id="topup-min-hint" style="font-size:12px;color:var(--muted);margin-top:8px'+(ok?';display:none':'')+'">最低充值金额 ¥1,000</div>';
+  h += '<button id="topup-next-btn" class="btn btn-primary" style="min-width:160px;padding:12px 24px;font-size:15px" onclick="onTopupNext()" '+(ok?'':'disabled')+'>'+t('merchant.wizard.next','下一步')+' →</button>';
+  h += '<div id="topup-min-hint" style="font-size:12px;color:var(--muted);margin-top:8px'+(ok?';display:none':'')+'">'+t('merchant.topup.minAmount','最低充值金额 ¥1,000')+'</div>';
   h += '</div></div>';
   return h;
 }
@@ -1989,7 +1996,7 @@ function onTopupNext() {
 function topupStep2() {
   var h = '<div style="max-width:400px;margin:0 auto">';
   h += '<div style="text-align:center;margin-bottom:20px">';
-  h += '<div style="font-size:13px;color:var(--muted)">充值金额</div>';
+  h += '<div style="font-size:13px;color:var(--muted)">'+t('merchant.topup.amountLabelShort','充值金额')+'</div>';
   h += '<div style="font-size:28px;font-weight:800;color:#111">¥'+topupAmount.toLocaleString()+'</div>';
   h += '</div>';
 
@@ -1999,8 +2006,8 @@ function topupStep2() {
   h += '<div style="display:flex;align-items:center;gap:16px">';
   h += '<div style="font-size:32px;width:48px;text-align:center">🏦</div>';
   h += '<div style="flex:1">';
-  h += '<div style="font-weight:600;font-size:14px;color:#111">銀行振込（银行转账）</div>';
-  h += '<div style="font-size:12px;color:var(--muted);margin-top:3px">手续费：免费 · 到账：1个工作日内</div>';
+  h += '<div style="font-weight:600;font-size:14px;color:#111">'+t('merchant.topup.bankTransfer','銀行振込（银行转账）')+'</div>';
+  h += '<div style="font-size:12px;color:var(--muted);margin-top:3px">'+t('merchant.topup.bankTransferSub','手续费：免费 · 到账：1个工作日内')+'</div>';
   h += '</div>';
   h += '<div style="width:22px;height:22px;border-radius:50%;border:2px solid '+(bSel?'var(--primary)':'#d1d5db')+';background:'+(bSel?'var(--primary)':'#fff')+';display:flex;align-items:center;justify-content:center;flex-shrink:0">';
   if (bSel) h += '<div style="width:8px;height:8px;border-radius:50%;background:#fff"></div>';
@@ -2008,8 +2015,8 @@ function topupStep2() {
 
 
   h += '<div style="display:flex;gap:10px;justify-content:center">';
-  h += '<button class="btn btn-outline" onclick="topupStep=1;render()">← 返回</button>';
-  h += '<button class="btn btn-primary" style="min-width:120px" onclick="topupRef=genTopupRef();topupStep=3;render()">下一步 →</button>';
+  h += '<button class="btn btn-outline" onclick="topupStep=1;render()">← '+t('merchant.wizard.back','返回')+'</button>';
+  h += '<button class="btn btn-primary" style="min-width:120px" onclick="topupRef=genTopupRef();topupStep=3;render()">'+t('merchant.wizard.next','下一步')+' →</button>';
   h += '</div></div>';
   return h;
 }
@@ -2021,36 +2028,36 @@ function topupStep3() {
 
   // 金额醒目展示
   h += '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px;text-align:center;margin-bottom:20px">';
-  h += '<div style="font-size:13px;color:#166534;margin-bottom:4px">请将以下金额转账至指定账户</div>';
+  h += '<div style="font-size:13px;color:#166534;margin-bottom:4px">'+t('merchant.topup.transferInstruction','请将以下金额转账至指定账户')+'</div>';
   h += '<div style="font-size:36px;font-weight:800;color:#15803d">¥'+topupAmount.toLocaleString()+'</div>';
   h += '</div>';
 
-  // 账户明细
+  // 账户明细（日本银行转账标准字段，保持日文原样——同 IBAN/routing number，不随界面语言翻译）
   h += '<div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:16px">';
   h += aRow('収款方', 'カ）アフターワークスタジオ', false);
   h += aRow('銀行名', 'みずほ銀行', true);
   h += aRow('支店名', '渋谷支店（支店番号 210）', false);
   h += aRow('口座種別', '普通預金', false);
   h += aRow('口座番号', '3214958', false);
-  h += aRowHL('振込附言（必填）', topupRef);
+  h += aRowHL(t('merchant.topup.transferNote','振込附言（必填）'), topupRef);
   h += '</div>';
 
   // 警告
   h += '<div style="background:#fff8e1;border-left:4px solid #f59e0b;border-radius:0 10px 10px 0;padding:12px 16px;margin-bottom:16px">';
-  h += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">⚠️ 转账时必须填写附言</div>';
-  h += '<div style="font-size:12px;color:#92400e;line-height:1.6">附言 <b>'+topupRef+'</b> 用于识别您的充值，<b>缺少附言将导致无法自动到账</b>。</div>';
+  h += '<div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:4px">⚠️ '+t('merchant.topup.noteRequired','转账时必须填写附言')+'</div>';
+  h += '<div style="font-size:12px;color:#92400e;line-height:1.6">'+t('merchant.topup.noteRequiredDetail','附言 <b>{ref}</b> 用于识别您的充值，<b>缺少附言将导致无法自动到账</b>。',{ref:topupRef})+'</div>';
   h += '</div>';
 
   // 信任标志
   h += '<div style="display:flex;gap:20px;justify-content:center;margin-bottom:24px">';
-  ['🔒 安全支付', '✅ 运营确认', '📧 到账通知'].forEach(function(s) {
+  ['🔒 '+t('merchant.topup.trustSecure','安全支付'), '✅ '+t('merchant.topup.trustConfirm','运营确认'), '📧 '+t('merchant.topup.trustNotify','到账通知')].forEach(function(s) {
     h += '<div style="font-size:11px;color:var(--muted)">'+s+'</div>';
   });
   h += '</div>';
 
   h += '<div style="display:flex;gap:10px;justify-content:center">';
-  h += '<button class="btn btn-outline" onclick="topupStep=2;render()">← 返回</button>';
-  h += '<button class="btn btn-primary" style="padding:12px 28px;font-size:14px" onclick="submitTopupFinal()">✓ 已完成转账，提交申请</button>';
+  h += '<button class="btn btn-outline" onclick="topupStep=2;render()">← '+t('merchant.wizard.back','返回')+'</button>';
+  h += '<button class="btn btn-primary" style="padding:12px 28px;font-size:14px" onclick="submitTopupFinal()">✓ '+t('merchant.topup.submitApplication','已完成转账，提交申请')+'</button>';
   h += '</div></div>';
   return h;
 }
@@ -2077,21 +2084,21 @@ function aRowHL(label, value) {
 function topupStep4() {
   var h = '<div style="text-align:center;padding:8px 0">';
   h += '<div style="width:70px;height:70px;border-radius:50%;background:#d1fae5;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:32px">✅</div>';
-  h += '<div style="font-size:20px;font-weight:700;margin-bottom:8px">申请已提交</div>';
-  h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">运营确认收款后，余额将自动增加，并发送邮件通知</div>';
+  h += '<div style="font-size:20px;font-weight:700;margin-bottom:8px">'+t('merchant.topup.submitted','申请已提交')+'</div>';
+  h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">'+t('merchant.topup.submittedHint','运营确认收款后，余额将自动增加，并发送邮件通知')+'</div>';
 
   h += '<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:14px;padding:20px;max-width:300px;margin:0 auto 24px">';
-  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">参考编号</div>';
+  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+t('merchant.topup.refNumber','参考编号')+'</div>';
   h += '<div style="font-size:18px;font-weight:800;letter-spacing:1px;color:#111;margin-bottom:12px">'+topupRef+'</div>';
   h += '<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1px solid #e5e7eb">';
-  h += '<span style="color:var(--muted)">充值金额</span><b>¥'+topupAmount.toLocaleString()+'</b>';
+  h += '<span style="color:var(--muted)">'+t('merchant.topup.amountLabelShort','充值金额')+'</span><b>¥'+topupAmount.toLocaleString()+'</b>';
   h += '</div>';
   h += '<div style="display:flex;justify-content:space-between;font-size:13px;padding:8px 0;border-top:1px solid #e5e7eb">';
-  h += '<span style="color:var(--muted)">预计到账</span><b>1个工作日内</b>';
+  h += '<span style="color:var(--muted)">'+t('merchant.topup.etaLabel','预计到账')+'</span><b>'+t('merchant.topup.eta1day','1个工作日内')+'</b>';
   h += '</div></div>';
 
-  h += '<div style="font-size:12px;color:var(--muted);margin-bottom:24px">如有问题请联系 support@herix.com</div>';
-  h += '<button class="btn btn-outline" onclick="topupStep=1;topupAmount=0;topupRef=null;loadBrandWallet();render()">← 返回钱包</button>';
+  h += '<div style="font-size:12px;color:var(--muted);margin-bottom:24px">'+t('merchant.topup.contactSupport','如有问题请联系 support@herix.com')+'</div>';
+  h += '<button class="btn btn-outline" onclick="topupStep=1;topupAmount=0;topupRef=null;loadBrandWallet();render()">← '+t('merchant.topup.backToWallet','返回钱包')+'</button>';
   h += '</div>';
   return h;
 }
@@ -2101,11 +2108,11 @@ function pendingTopupHTML() {
   var pending = (topupHistory||[]).filter(function(r){ return r.status !== 'confirmed'; });
   if (!pending.length) return '';
   var h = '<div class="card" style="margin-bottom:20px">';
-  h += '<div style="font-weight:600;font-size:14px;margin-bottom:16px">充值申请</div>';
-  h += '<table class="data-table"><thead><tr><th>参考编号</th><th>金额</th><th>申请时间</th><th>状态</th></tr></thead><tbody>';
+  h += '<div style="font-weight:600;font-size:14px;margin-bottom:16px">'+t('merchant.topup.applications','充值申请')+'</div>';
+  h += '<table class="data-table"><thead><tr><th>'+t('merchant.topup.refNumber','参考编号')+'</th><th>'+t('merchant.wallet.amount','金额')+'</th><th>'+t('merchant.topup.appliedAt','申请时间')+'</th><th>'+t('merchant.dash.perfTable.status','状态')+'</th></tr></thead><tbody>';
   pending.forEach(function(r) {
     var sc = {pending:'#f59e0b', rejected:'#ef4444'};
-    var sl = {pending:'⏳ 待确认', rejected:'❌ 已拒绝'};
+    var sl = {pending:'⏳ '+t('merchant.topup.statusPending','待确认'), rejected:'❌ '+t('merchant.topup.statusRejected','已拒绝')};
     h += '<tr>';
     h += '<td style="font-family:monospace;font-size:12px;color:var(--muted)">'+esc(r.note||'—')+'</td>';
     h += '<td><b>¥'+Number(r.amount).toLocaleString()+' '+(r.currency||'')+'</b></td>';
@@ -2121,29 +2128,30 @@ function pendingTopupHTML() {
 function walletLedgerHTML() {
   var h = '<div class="card">';
   h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">';
-  h += '<div style="font-weight:600;font-size:14px">钱包流水</div>';
+  h += '<div style="font-weight:600;font-size:14px">'+t('merchant.wallet.ledger','钱包流水')+'</div>';
   h += '<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  var periodLabels = walletPeriodLabels();
   ['month','last_month','7d','30d','all'].forEach(function(p) {
     var active = walletPeriod === p;
-    h += '<div onclick="setWalletPeriod(\''+p+'\')" style="padding:5px 12px;border-radius:16px;font-size:12px;cursor:pointer;'+(active?'background:#111;color:#fff':'background:#f3f4f6;color:#555')+'">'+WALLET_PERIOD_LABELS[p]+'</div>';
+    h += '<div onclick="setWalletPeriod(\''+p+'\')" style="padding:5px 12px;border-radius:16px;font-size:12px;cursor:pointer;'+(active?'background:#111;color:#fff':'background:#f3f4f6;color:#555')+'">'+periodLabels[p]+'</div>';
   });
   h += '</div></div>';
 
   if (!walletLedger) {
-    h += '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">加载中...</div></div>';
+    h += '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">'+t('common.loading','加载中...')+'</div></div>';
     return h;
   }
 
   h += '<div style="display:flex;gap:24px;margin-bottom:16px;padding:12px 16px;background:#f9fafb;border-radius:10px">';
-  h += '<div><div style="font-size:11px;color:var(--muted)">期间流入</div><div style="font-size:16px;font-weight:700;color:#16a34a">+¥'+(walletLedger.periodInflow||0).toLocaleString()+'</div></div>';
-  h += '<div><div style="font-size:11px;color:var(--muted)">期间流出</div><div style="font-size:16px;font-weight:700;color:#dc2626">-¥'+(walletLedger.periodOutflow||0).toLocaleString()+'</div></div>';
+  h += '<div><div style="font-size:11px;color:var(--muted)">'+t('merchant.wallet.periodInflow','期间流入')+'</div><div style="font-size:16px;font-weight:700;color:#16a34a">+¥'+(walletLedger.periodInflow||0).toLocaleString()+'</div></div>';
+  h += '<div><div style="font-size:11px;color:var(--muted)">'+t('merchant.wallet.periodOutflow','期间流出')+'</div><div style="font-size:16px;font-weight:700;color:#dc2626">-¥'+(walletLedger.periodOutflow||0).toLocaleString()+'</div></div>';
   h += '</div>';
 
   var rows = walletLedger.transactions || [];
   if (!rows.length) {
-    h += '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">该期间暂无流水记录</div>';
+    h += '<div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">'+t('merchant.wallet.emptyLedger','该期间暂无流水记录')+'</div>';
   } else {
-    h += '<table class="data-table"><thead><tr><th>时间</th><th>类型</th><th>备注</th><th>金额</th></tr></thead><tbody>';
+    h += '<table class="data-table"><thead><tr><th>'+t('merchant.wallet.colTime','时间')+'</th><th>'+t('merchant.tasks.colType','类型')+'</th><th>'+t('merchant.wallet.colNote','备注')+'</th><th>'+t('merchant.wallet.amount','金额')+'</th></tr></thead><tbody>';
     rows.forEach(function(r) {
       var out = r.direction === 'out';
       h += '<tr>';

@@ -996,5 +996,16 @@
   "merchant.login.nickname": "Nickname / Contact Name",
   "merchant.login.registerSubmit": "Register & Start Onboarding",
   "merchant.login.hasAccount": "Already have an account? ",
-  "merchant.login.goLogin": "Log In"
+  "merchant.login.goLogin": "Log In",
+  "auth.sendCode": "Get Code",
+  "auth.vcodePlaceholder": "6-digit code",
+  "auth.resendIn": "Resend in {s}s",
+  "auth.fillEmailFirst": "Enter your email first",
+  "auth.codeSent": "Code sent — check your inbox (and spam folder)",
+  "auth.sendFailed": "Failed to send",
+  "auth.netError": "Network error",
+  "auth.fillEmailPassword": "Enter your email and password",
+  "auth.vcodeRequired": "Enter the verification code",
+  "auth.loginFailed": "Login failed",
+  "auth.registerFailed": "Registration failed"
 }

@@ -996,5 +996,16 @@
   "merchant.login.nickname": "昵称 / 负责人姓名",
   "merchant.login.registerSubmit": "注册并开始入驻",
   "merchant.login.hasAccount": "已有账号？",
-  "merchant.login.goLogin": "去登录"
+  "merchant.login.goLogin": "去登录",
+  "auth.sendCode": "获取验证码",
+  "auth.vcodePlaceholder": "6 位验证码",
+  "auth.resendIn": "{s}s 后重发",
+  "auth.fillEmailFirst": "请先填写邮箱",
+  "auth.codeSent": "验证码已发送，请查收邮箱（含垃圾箱）",
+  "auth.sendFailed": "发送失败",
+  "auth.netError": "网络错误",
+  "auth.fillEmailPassword": "请填写邮箱和密码",
+  "auth.vcodeRequired": "请输入邮箱验证码",
+  "auth.loginFailed": "登录失败",
+  "auth.registerFailed": "注册失败"
 }

@@ -996,5 +996,16 @@
   "merchant.login.nickname": "ニックネーム / ご担当者名",
   "merchant.login.registerSubmit": "登録してオンボーディングを開始",
   "merchant.login.hasAccount": "アカウントをお持ちの方は",
-  "merchant.login.goLogin": "ログインへ"
+  "merchant.login.goLogin": "ログインへ",
+  "auth.sendCode": "認証コードを取得",
+  "auth.vcodePlaceholder": "6桁のコード",
+  "auth.resendIn": "{s}秒後に再送",
+  "auth.fillEmailFirst": "先にメールアドレスを入力してください",
+  "auth.codeSent": "認証コードを送信しました。メール（迷惑メールフォルダ含む）をご確認ください",
+  "auth.sendFailed": "送信に失敗しました",
+  "auth.netError": "ネットワークエラー",
+  "auth.fillEmailPassword": "メールアドレスとパスワードを入力してください",
+  "auth.vcodeRequired": "メール認証コードを入力してください",
+  "auth.loginFailed": "ログインに失敗しました",
+  "auth.registerFailed": "登録に失敗しました"
 }

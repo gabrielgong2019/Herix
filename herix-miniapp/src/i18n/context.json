@@ -997,5 +997,16 @@
   "merchant.login.nickname": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
   "merchant.login.registerSubmit": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
   "merchant.login.hasAccount": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
-  "merchant.login.goLogin": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)"
+  "merchant.login.goLogin": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
+  "auth.sendCode": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.vcodePlaceholder": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.resendIn": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.fillEmailFirst": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.codeSent": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.sendFailed": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.netError": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.fillEmailPassword": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.vcodeRequired": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.loginFailed": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback",
+  "auth.registerFailed": "shared/auth.js 三端共用登录模块的运行时文案——通过宿主页面全局t()可选消费(2026-07-18)，herix/admin未接i18n时落回中文fallback"
 }

@@ -17,6 +17,14 @@
 
 var Auth = (function() {
   var API = window.AUTH_API || '/api/auth';
+  // 可选 i18n：宿主页面定义了全局 t(key, fallback, params) 就走词条（merchant.html），
+  // 没定义就用中文 fallback（herix/admin 未接 i18n，行为不变）。渲染/回调时求值，切语言即生效
+  function tr(key, fb, params) {
+    return (typeof window.t === 'function') ? window.t(key, fb, params) : (function(v){
+      if (params) for (var k in params) v = v.split('{'+k+'}').join(params[k]);
+      return v;
+    })(fb);
+  }
   var defaults = {
     mode: 'login',         // 'login' | 'both'
     emailId: 'email',
@@ -54,8 +62,8 @@ var Auth = (function() {
     // 注册须验证邮箱所有权（2026-07-17）
     if (!l) {
       h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + (o.vcodeLabel || '邮箱验证码') + '</label>'
-        + '<div style="display:flex;gap:8px"><input id="' + o.emailId + '-vcode" name="vcode" inputmode="numeric" maxlength="6" placeholder="6 位验证码" style="flex:1">'
-        + '<button type="button" class="btn btn-outline" style="white-space:nowrap;padding:0 14px" onclick="Auth.sendCode(\'' + o.emailId + '\', this)">获取验证码</button></div></div>';
+        + '<div style="display:flex;gap:8px"><input id="' + o.emailId + '-vcode" name="vcode" inputmode="numeric" maxlength="6" placeholder="' + tr('auth.vcodePlaceholder','6 位验证码') + '" style="flex:1">'
+        + '<button type="button" class="btn btn-outline" style="white-space:nowrap;padding:0 14px" onclick="Auth.sendCode(\'' + o.emailId + '\', this)">' + tr('auth.sendCode','获取验证码') + '</button></div></div>';
     }
     if (!l && o.nicknameLabel) {
       h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + o.nicknameLabel + '</label><input id="' + o.nicknameId + '" name="nickname" placeholder="' + (o.nicknamePlaceholder || '') + '"></div>';
@@ -85,14 +93,14 @@ var Auth = (function() {
     if (!email || !password) { if(window.log) log('Auth.submit ERR: inputs not found'); return; }
     var e = email.value.trim();
     var p = password.value;
-    if (!e || !p) { showError(formId, '请填写邮箱和密码'); return; }
+    if (!e || !p) { showError(formId, tr('auth.fillEmailPassword','请填写邮箱和密码')); return; }
 
     // 判断登录还是注册：有 nickname input 就是注册
     var isRegister = nicknameId && document.getElementById(nicknameId);
     if (isRegister) {
       var nk = (document.getElementById(nicknameId) || {}).value || '';
       var vc = (document.getElementById(emailId + '-vcode') || {}).value || '';
-      if (!vc.trim()) { showError(formId, '请输入邮箱验证码'); return; }
+      if (!vc.trim()) { showError(formId, tr('auth.vcodeRequired','请输入邮箱验证码')); return; }
       register(e, p, nk, formId, vc.trim());
     } else {
       login(e, p, formId);
@@ -102,7 +110,7 @@ var Auth = (function() {
   /** 发送注册验证码 + 60 秒倒计时（按钮复用） */
   function sendCode(emailId, btn) {
     var email = ((document.getElementById(emailId) || {}).value || '').trim();
-    if (!email) { alert('请先填写邮箱'); return; }
+    if (!email) { alert(tr('auth.fillEmailFirst','请先填写邮箱')); return; }
     var api = window.AUTH_API || '/api/auth';
     btn.disabled = true;
     var xhr = new XMLHttpRequest();
@@ -113,16 +121,16 @@ var Auth = (function() {
         var d = JSON.parse(xhr.responseText);
         if (d.error) { alert(d.error); btn.disabled = false; return; }
         var left = 60;
-        btn.textContent = left + 's 后重发';
+        btn.textContent = tr('auth.resendIn','{s}s 后重发',{s:left});
         var timer = setInterval(function() {
           left--;
-          if (left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = '获取验证码'; }
-          else btn.textContent = left + 's 后重发';
+          if (left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = tr('auth.sendCode','获取验证码'); }
+          else btn.textContent = tr('auth.resendIn','{s}s 后重发',{s:left});
         }, 1000);
-        alert('验证码已发送，请查收邮箱（含垃圾箱）');
-      } catch (e) { alert('发送失败'); btn.disabled = false; }
+        alert(tr('auth.codeSent','验证码已发送，请查收邮箱（含垃圾箱）'));
+      } catch (e) { alert(tr('auth.sendFailed','发送失败')); btn.disabled = false; }
     };
-    xhr.onerror = function() { alert('网络错误'); btn.disabled = false; };
+    xhr.onerror = function() { alert(tr('auth.netError','网络错误')); btn.disabled = false; };
     xhr.send(JSON.stringify({ email: email, purpose: 'REGISTER' }));
   }
 
@@ -138,9 +146,9 @@ var Auth = (function() {
         if(window.log) log('Auth.login OK');
         saveCredential(email, password);
         if (window._authOnLogin) window._authOnLogin(d);
-      } catch(e) { if(window.log) log('Auth.login EXCEPTION: '+e.message); showError(formId, '登录失败'); }
+      } catch(e) { if(window.log) log('Auth.login EXCEPTION: '+e.message); showError(formId, tr('auth.loginFailed','登录失败')); }
     };
-    xhr.onerror = function() { if(window.log) log('Auth.login network error'); showError(formId, '网络错误'); };
+    xhr.onerror = function() { if(window.log) log('Auth.login network error'); showError(formId, tr('auth.netError','网络错误')); };
     xhr.send(JSON.stringify({account: email, password: password}));
   }
 
@@ -156,9 +164,9 @@ var Auth = (function() {
         if (d.error) { showError(formId, d.error); return; }
         saveCredential(email, password);
         if (window._authOnRegister) window._authOnRegister(d);
-      } catch(e) { showError(formId, '注册失败'); }
+      } catch(e) { showError(formId, tr('auth.registerFailed','注册失败')); }
     };
-    xhr.onerror = function() { showError(formId, '网络错误'); };
+    xhr.onerror = function() { showError(formId, tr('auth.netError','网络错误')); };
     xhr.send(JSON.stringify({email: email, password: password, nickname: nickname, role: role, code: vcode || ''}));
   }
 

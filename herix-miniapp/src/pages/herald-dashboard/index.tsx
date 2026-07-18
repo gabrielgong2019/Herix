@@ -278,6 +278,13 @@ export default class HeraldDashboard extends Component<{}, State> {
                           </View>
                         </View>
                         {allZero && payout > 0 && <Text className='code-hint'>{t('hd.zeroHint', { n: fmt(payout) })}</Text>}
+                        {/* 欠结算披露（2026-07-18）：转化已发生但商家余额不足未结算时，
+                            对赫使诚实展示而非静默——数据即 used_count 与 paid_conversions 的差 */}
+                        {Number(code.used_count || 0) > Number(code.paid_conversions || 0) && (
+                          <Text className='code-unsettled'>
+                            {t('hd.unsettledHint', { n: Number(code.used_count || 0) - Number(code.paid_conversions || 0) })}
+                          </Text>
+                        )}
                       </View>
                     </>
                   ) : (

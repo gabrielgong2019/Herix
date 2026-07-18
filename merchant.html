@@ -508,11 +508,11 @@ function activateBrandPage() {
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">'+t('merchant.wizard.agreementSub','请仔细阅读以下协议，确认后完成入驻。')+'</div>';
 
     h += '<div style="height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:16px">';
-    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">'+t('merchant.agreement.docTitle','Herix 商家服务协议（版本 2026-07-18-v3）')+'</p>';
+    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">'+t('merchant.agreement.docTitle','Herix 商家服务协议（版本 2026-07-18-v4）')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h1','一、服务内容')+'</p>';
-    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s1','Herix（以下简称"平台"）由 HUAXUE 合同会社运营，提供海外生活社群赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s1','Herix（以下简称"平台"）由 {operator} 运营，提供海外生活社群赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。',{operator:PLATFORM_INFO.operatorEntity})+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h2','二、资金与结算')+'</p>';
-    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s2','1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，退款仅退回至原汇款账户（原路退回），到账时间为 3 个工作日内。')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s2','1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算按<strong>平台公示的费率</strong>收取服务费（含支付处理费），当前费率以任务发布页实时展示为准，费率调整将提前通知。<br>4. 未使用的锁定资金可在任务关闭后申请退回，退款仅退回至原汇款账户（原路退回），到账时间为 3 个工作日内。')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h3','三、您的义务')+'</p>';
     h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s3','1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h4','四、争议处理')+'</p>';
@@ -539,7 +539,7 @@ function activateBrandPage() {
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=3;render()">'+t('merchant.wizard.back','返回')+'</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">'+t('merchant.wizard.signAndActivate','确认签署并开通')+'</button>';
     h += '</div>';
-    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">'+t('merchant.agreement.version','协议版本 2026-07-18-v3')+'</div>';
+    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">'+t('merchant.agreement.version','协议版本 2026-07-18-v4')+'</div>';
   }
 
   h += '</div></div>';
@@ -3591,6 +3591,8 @@ function downloadPoster() {
 
 // Init
 loadCategories();
+var PLATFORM_INFO = { operatorEntity: 'HUAXUE 合同会社' };
+fetch(API + '/platform-info').then(function(r){return r.json()}).then(function(d){ if (d && d.operatorEntity) PLATFORM_INFO = d; }).catch(function(){});
 loadI18nDict(MI18N_LOCALE); // 缓存词典先渲染(可能为空,fallback顶上)，这次异步拉到最新覆盖
 if (!tryResumeSwitchedSession()) loadDashStats();
 </script>

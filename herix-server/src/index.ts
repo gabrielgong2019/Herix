@@ -48,6 +48,12 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// 平台公开信息（运营主体等，服务协议渲染用；值在 platform_settings 维护）
+app.get('/api/platform-info', async (_req, res) => {
+  const { getSetting } = await import('./utils/settings');
+  res.json({ operatorEntity: (await getSetting('operator_entity')) || 'HUAXUE 合同会社' });
+});
+
 app.use('/api/auth', authRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/applications', applicationRouter);

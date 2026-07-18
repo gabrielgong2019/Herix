@@ -838,6 +838,10 @@ function pricingPage(){
     +'<div style="display:flex;gap:10px;align-items:center">'
     +'<input id="pr-global" type="number" step="0.1" min="0" max="99" value="'+pct(d.globalRate)+'" style="width:100px;padding:8px;border:1px solid var(--border);border-radius:8px"> %'
     +'<button class="btn btn-primary btn-sm" onclick="savePricingGlobal()">保存</button>'
+    +'<div style="margin-top:18px;padding-top:14px;border-top:1px solid var(--border)"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">运营主体（服务协议等法律文本引用的法定名称）</div>'
+    +'<div style="display:flex;gap:8px;align-items:center"><input id="pr-operator" value="'+esc((st.data.platformInfo||{}).operatorEntity||'')+'" style="width:260px">'
+    +'<button class="btn btn-primary btn-sm" onclick="saveOperatorEntity()">保存</button></div>'
+    +'<div style="font-size:11px;color:var(--muted);margin-top:4px">⚠️ 改动即刻反映到商家看到的服务协议正文，属重大变更，改前确认法务口径</div></div>'
     +'<span style="font-size:12px;color:var(--muted)">对所有无协议价商家生效; 任务发布时快照, 不回溯已发布任务</span></div></div>';
   // ② 商家协议价
   h+='<div class="tcard" style="padding:18px;margin-bottom:16px"><div style="font-weight:700;margin-bottom:10px">商家协议费率 <span style="font-size:12px;color:var(--muted);font-weight:400">留空=走全局默认; 填0有效(免佣)</span></div>';
@@ -948,6 +952,11 @@ function saveFxRate(pair){
   apiPatch('/admin/pricing/payout-fx',{pair:pair,rate:v},function(d){if(d.error){showToast(d.error);return}st.msg='汇率已更新';st.msgType='success';loadPayoutRules();apiGet('/admin/pricing/fx-history',function(h){st.data.fxHistory=Array.isArray(h)?h:[];render()});});
 }
 function _prErr(d){st.msg=d.error||'操作失败';st.msgType='danger';render()}
+function saveOperatorEntity(){
+  var v=((document.getElementById('pr-operator')||{}).value||'').trim();
+  if(!v){showToast('运营主体名称不能为空');return}
+  apiPatch('/admin/pricing/operator-entity',{name:v},function(d){if(d.error){_prErr(d);return}st.data.platformInfo={operatorEntity:d.operatorEntity};st.msg='运营主体已更新';st.msgType='success';render()});
+}
 function savePricingGlobal(){
   var v=parseFloat(document.getElementById('pr-global').value);
   if(isNaN(v)||v<0||v>=100){_prErr({error:'费率须为 0~99.9 的百分数'});return}
@@ -1026,6 +1035,7 @@ function fmtLocal(s) {
 function load(page){
   if(page==='pricing'){
     apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});
+    apiGet('/platform-info',function(d){st.data.platformInfo=d||{};render()});
     loadPayoutRules();
     apiGet('/admin/pricing/fx-history',function(d){st.data.fxHistory=Array.isArray(d)?d:[];render()});
   } else if(page==='i18n'){

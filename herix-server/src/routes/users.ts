@@ -121,7 +121,7 @@ usersRouter.post('/add-role', requireAuth, async (req: Request, res: Response) =
   res.json({ success: true, roles: newRoles, token });
 });
 
-const AGREEMENT_VERSION = '2026-07-18-v3'; // v3: 新增第七条反社会势力排除+退款限原路退回(待法务审阅)；v2: 第五条数据处理(委托)条款
+const AGREEMENT_VERSION = '2026-07-18-v4'; // v4: 运营主体改配置占位符+服务费改'按平台公示费率'；v3: 暴排条款+退款原路退回(待法务审阅)；v2: 数据处理条款
 // ⚠️ 改版本号时三处同步：本常量 + merchant.agreement.docTitle + merchant.agreement.version 词条
 //（签约证据完整性：落库的 agreed_version 必须与商家看到的协议标题/页脚一致，2026-07-18 曾出现不一致）
 

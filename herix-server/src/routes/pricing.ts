@@ -147,6 +147,14 @@ pricingAdminRouter.patch('/payout-fx', async (req: Request, res: Response) => {
   res.json({ pair, rate: r });
 });
 
+/** PATCH /api/admin/pricing/operator-entity — 运营主体名称（服务协议等法律文本引用） */
+pricingAdminRouter.patch('/operator-entity', async (req: Request, res: Response) => {
+  const name = String(req.body?.name || '').trim();
+  if (!name) return res.status(400).json({ error: '运营主体名称不能为空' });
+  await setSetting('operator_entity', name, (req as any).user?.userId || 'admin', '平台运营主体（法律文本引用）');
+  res.json({ operatorEntity: name });
+});
+
 /** GET /api/admin/pricing/fx-history — 最近 30 条汇率变动记录 */
 pricingAdminRouter.get('/fx-history', async (_req: Request, res: Response) => {
   const rows = await pool.query(

@@ -1012,5 +1012,6 @@
   "merchant.wizard.siteInfo": "現在は Herix 日本マーケットプレイス（JPY決済）のみ · 他の地域も順次開放予定",
   "merchant.wizard.regCountry": "会社の登録国 *",
   "merchant.wizard.regCountryHint": "貴社の登録法人の所在国をご選択ください。マーケットプレイスと異なる国の場合は国際契約となりますが、ご利用に影響はありません",
-  "merchant.settings.industryPh": "選択してください"
+  "merchant.settings.industryPh": "選択してください",
+  "merchant.login.accountTaken": "このメールアドレスは登録済みです。ログインしてください"
 }

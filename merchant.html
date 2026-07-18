@@ -376,6 +376,7 @@ function loginPage() {
       emailId: 'email',
       passwordId: 'password',
       emailPlaceholder: 'brand@company.com',
+      emailValue: state.prefillEmail || '',
       emailLabel: t('merchant.login.email','邮箱'),
       vcodeLabel: t('merchant.login.vcode','邮箱验证码'),
       nicknameLabel: isReg ? t('merchant.login.nickname','昵称 / 负责人姓名') : null,
@@ -421,6 +422,14 @@ function bindLogin() {
     api: API + '/auth',
     onLogin: handleAuthed,
     onRegister: handleAuthed,
+    onAccountTaken: function(email) {
+      // 注册时邮箱已存在：直接切到登录模式并预填邮箱，比让用户读报错自己想明白友好得多
+      state.authMode = 'login';
+      state.prefillEmail = email;
+      render();
+      var el = document.getElementById('auth-form-err');
+      if (el) el.innerHTML = '<div class="alert" style="background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8">'+t('merchant.login.accountTaken','该邮箱已注册，请直接登录')+'</div>';
+    },
     onError: function(msg) {
       var el=document.getElementById('auth-form-err');
       if(el)el.innerHTML='<div class="alert alert-error">'+esc(msg)+'</div>';

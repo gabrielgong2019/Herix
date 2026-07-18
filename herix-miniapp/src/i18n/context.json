@@ -1013,5 +1013,6 @@
   "merchant.wizard.siteInfo": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
   "merchant.wizard.regCountry": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
   "merchant.wizard.regCountryHint": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
-  "merchant.settings.industryPh": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地"
+  "merchant.settings.industryPh": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
+  "merchant.login.accountTaken": "注册时邮箱已存在→自动切登录模式的提示条(2026-07-18)"
 }

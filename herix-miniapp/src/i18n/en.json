@@ -1012,5 +1012,6 @@
   "merchant.wizard.siteInfo": "Currently Herix Japan Marketplace (JPY settlement) · more marketplaces coming soon",
   "merchant.wizard.regCountry": "Company Registration Country *",
   "merchant.wizard.regCountryHint": "Use your registered entity's country; if it differs from the marketplace country the contract is cross-border — this doesn't affect your use of the platform",
-  "merchant.settings.industryPh": "Select…"
+  "merchant.settings.industryPh": "Select…",
+  "merchant.login.accountTaken": "This email is already registered — please log in"
 }

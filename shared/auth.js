@@ -58,7 +58,7 @@ var Auth = (function() {
     h += '<div class="' + (o.titleClass || 'modal-title') + '">' + (l ? o.title : o.registerTitle) + '</div>';
     if (o.subtitle) h += '<div class="' + (o.subtitleClass || 'modal-sub') + '">' + (l ? o.subtitle : o.registerSubtitle) + '</div>';
     h += '<div id="' + o.formId + '-err"></div>';
-    h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + (o.emailLabel || '邮箱') + '</label><input id="' + o.emailId + '" name="email" type="email"' + (o.autoComplete ? ' autocomplete="username"' : '') + ' placeholder="' + o.emailPlaceholder + '"></div>';
+    h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + (o.emailLabel || '邮箱') + '</label><input id="' + o.emailId + '" name="email" type="email"' + (o.autoComplete ? ' autocomplete="username"' : '') + ' placeholder="' + o.emailPlaceholder + '" value="' + String(o.emailValue || '').replace(/"/g, '&quot;') + '"></div>';
     // 注册须验证邮箱所有权（2026-07-17）
     if (!l) {
       h += '<div class="' + (o.fieldClass || 'ig') + '"><label>' + (o.vcodeLabel || '邮箱验证码') + '</label>'
@@ -161,7 +161,11 @@ var Auth = (function() {
     xhr.onload = function() {
       try {
         var d = JSON.parse(xhr.responseText);
-        if (d.error) { showError(formId, d.error); return; }
+        if (d.error) {
+          // 邮箱已注册：宿主页面可接管（如自动切到登录并预填邮箱），未接管则退回错误提示
+          if (d.code === 'ACCOUNT_TAKEN' && window._authOnAccountTaken) { window._authOnAccountTaken(email); return; }
+          showError(formId, d.error); return;
+        }
         saveCredential(email, password);
         if (window._authOnRegister) window._authOnRegister(d);
       } catch(e) { showError(formId, tr('auth.registerFailed','注册失败')); }
@@ -199,6 +203,7 @@ var Auth = (function() {
   function init(opts) {
     if (opts.onLogin) window._authOnLogin = opts.onLogin;
     if (opts.onRegister) window._authOnRegister = opts.onRegister;
+    if (opts.onAccountTaken) window._authOnAccountTaken = opts.onAccountTaken;
     if (opts.onError) window._authOnError = opts.onError;
     if (opts.api) window.AUTH_API = opts.api;
   }

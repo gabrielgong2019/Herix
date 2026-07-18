@@ -1012,5 +1012,6 @@
   "merchant.wizard.siteInfo": "当前为 Herix 日本站（JPY 结算）· 更多站点即将开放",
   "merchant.wizard.regCountry": "公司注册地 *",
   "merchant.wizard.regCountryHint": "以贵司注册实体所在国为准；与站点不同国时为跨境合同，不影响正常使用",
-  "merchant.settings.industryPh": "请选择"
+  "merchant.settings.industryPh": "请选择",
+  "merchant.login.accountTaken": "该邮箱已注册，请直接登录"
 }

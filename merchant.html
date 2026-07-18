@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Herix 商户后台</title>
+<title>Herix 商家后台</title>
 <style>
 :root {
   --primary: #D43B27; --sidebar: #111827; --sidebar-text: #9ca3af;
@@ -285,7 +285,7 @@ function layout(inner) {
     { id:'settings', icon:'⚙️', label:t('merchant.nav.settings','账户设置') },
   ];
   var sb = '<div class="sidebar" id="sidebar">';
-  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">'+t('merchant.sidebar.subtitle','商户后台')+'</div></div></div></div>';
+  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">'+t('merchant.sidebar.subtitle','商家后台')+'</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
   sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">'+t('merchant.sidebar.brandLabel','品牌商家')+'</span></div>';
   var linked = state.brandProfile?.linkedAccount;
@@ -363,7 +363,7 @@ function loginPage() {
   return '<div class="login-wrap"><div class="login-card">'
     +'<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'+langSwitcherHTML()+'</div>'
     +'<div class="login-logo"><img src="Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
-    +'<div class="login-sub">'+t('merchant.login.subtitle','品牌商家管理后台')+'</div>'
+    +'<div class="login-sub">'+t('merchant.login.subtitle','商家后台')+'</div>'
     +Auth.loginForm({
       title: '',
       subtitle: '',

@@ -207,6 +207,15 @@ function toggleDb(){
 
 
 var API = '/api';
+/* 全站替代原生 showToast() 的悬浮提示（2026-07-18）：深色胶囊，2.2s 自动消失，不阻塞操作 */
+function showToast(msg) {
+  var el = document.createElement('div');
+  el.textContent = String(msg);
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 22px;border-radius:22px;font-size:13px;z-index:99999;pointer-events:none;max-width:80vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+  document.body.appendChild(el);
+  setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 2200);
+}
+
 var DIFF = {easy:{label:'轻松'},medium:{label:'刚好'},hard:{label:'挑战'}};
 var TABS = [{id:'explore',icon:'🔍',label:'探索'},{id:'tasks',icon:'📋',label:'任务'},{id:'messages',icon:'💬',label:'消息'},{id:'profile',icon:'👤',label:'我的'}];
 /* ── 档案缓存（TTL 30s + 请求去重）── */
@@ -640,10 +649,10 @@ function submitAddAccountSheet(missingIds){
     var pid=missingIds[i],pm=platformById(pid);
     var inp=document.getElementById('as-val-'+pid);
     var val=inp?inp.value.trim():'';
-    if(!val){alert('请填写 '+pm.name+' 账号');return;}
+    if(!val){showToast('请填写 '+pm.name+' 账号');return;}
     if(pid==='wechat'){
       var check=obValidateWechat(val);
-      if(!check.ok){alert(check.msg);return;}
+      if(!check.ok){showToast(check.msg);return;}
       toAdd.push({platformId:pid,accountId:check.saved,url:null,followers:null});
     } else if(pm.inputType==='id'){
       toAdd.push({platformId:pid,accountId:val,url:null,followers:null});
@@ -660,11 +669,11 @@ function submitAddAccountSheet(missingIds){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return;}
+      if(d.error){showToast(d.error);return;}
       applyProfilePatch(d);
       document.getElementById('add-acct-sheet').remove();
       applyTask();
-    }catch(e){alert('保存失败');}
+    }catch(e){showToast('保存失败');}
   };
   xhr.send(JSON.stringify({socialPlatforms:merged}));
 }
@@ -962,9 +971,9 @@ function dashAssignReferral(taskId){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       loadMyCodes();
-    }catch(e){alert('领取失败，请重试')}
+    }catch(e){showToast('领取失败，请重试')}
   };
   xhr.send('{}');
 }
@@ -1332,7 +1341,7 @@ function saveSocialProfile(){
   var platforms=[];
   if(wVal){
     var check=obValidateWechat(wVal);
-    if(!check.ok){alert(check.msg);return}
+    if(!check.ok){showToast(check.msg);return}
     if(check.saved) platforms.push({platformId:'wechat',accountId:check.saved,url:null,followers:null});
   }
   var sns=PLATFORM_REGISTRY.filter(function(p){return p.id!=='wechat'});
@@ -1352,13 +1361,13 @@ function saveSocialProfile(){
   xhr.onload=function(){
     try{
       var res=JSON.parse(xhr.responseText);
-      if(res.error){alert(res.error);return}
+      if(res.error){showToast(res.error);return}
       // 刷新本地档案
       applyProfilePatch(res);
       hideSocialEdit();
       toast('社交账号已保存');
       render();
-    }catch(e){alert('保存失败')}
+    }catch(e){showToast('保存失败')}
   };
   xhr.send(JSON.stringify({socialPlatforms:platforms}));
 }
@@ -1512,9 +1521,9 @@ function submitWithdrawRequest(){
   var method=(document.getElementById('wr-method')||{}).value;
   var acc=((document.getElementById('wr-acc')||{}).value||'').trim();
   var bank=((document.getElementById('wr-bank')||{}).value||'').trim();
-  if(!amount||amount<1000){alert('最低提现金额 ¥1000');return;}
-  if(!method){alert('请选择收款方式');return;}
-  if(!acc){alert('请填写收款账号');return;}
+  if(!amount||amount<1000){showToast('最低提现金额 ¥1000');return;}
+  if(!method){showToast('请选择收款方式');return;}
+  if(!acc){showToast('请填写收款账号');return;}
   var accountDetails={account:acc};
   if(bank) accountDetails.bankName=bank;
   var currency=(document.getElementById('wr-currency')||{}).value||(state.walletBalance||{}).displayCurrency||'JPY';
@@ -1525,10 +1534,10 @@ function submitWithdrawRequest(){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return;}
-      alert('提现申请已提交！预计1-3个工作日内打款。');
+      if(d.error){showToast(d.error);return;}
+      showToast('提现申请已提交！预计1-3个工作日内打款。');
       loadWalletBalance();render();
-    }catch(e){alert('提现失败，请重试');}
+    }catch(e){showToast('提现失败，请重试');}
   };
   xhr.send(JSON.stringify({amount:amount,currency:currency,method:method,accountDetails:accountDetails}));
 }
@@ -1723,7 +1732,7 @@ function doAddMethod(){
   var sel    = state.addType  || 'BANK';
   var label  = (document.getElementById('method-label')||{}).value||'';
   label = label.trim();
-  if(!label && sel!=='CASH'){alert('请填写收款方式名称');return;}
+  if(!label && sel!=='CASH'){showToast('请填写收款方式名称');return;}
   var details={};
 
   if(sel==='CASH'){
@@ -1759,11 +1768,11 @@ function doAddMethod(){
   x.onload=function(){
     try{
       var d=JSON.parse(x.responseText);
-      if(d.error){alert(d.error);return;}
+      if(d.error){showToast(d.error);return;}
       loadWalletMethods();
       state.view='wallet'; state.addStep='region'; state.addRegion=''; state.addType='';
       render();
-    }catch(e){alert('添加失败');}
+    }catch(e){showToast('添加失败');}
   };
   x.send(JSON.stringify({type:sel,country:country,label:label,account_details:details,is_default:isDefault}));
 }
@@ -1901,9 +1910,9 @@ function updateWithdrawPreview(){
 function doWithdraw(){
   var methods = state.walletMethods || [];
   var selMethod = methods.find(function(m){ return m.id===state.wMethodId; }) || methods[0];
-  if(!selMethod){ alert('请选择收款方式'); return; }
+  if(!selMethod){ showToast('请选择收款方式'); return; }
   var amount = parseFloat((document.getElementById('w-amount')||{}).value||0);
-  if(!amount||amount<1000){ alert('最低提现 ¥1000'); return; }
+  if(!amount||amount<1000){ showToast('最低提现 ¥1000'); return; }
 
   var btn = document.getElementById('w-submit-btn');
   if(btn){ btn.disabled=true; btn.textContent='提交中...'; }
@@ -1915,10 +1924,10 @@ function doWithdraw(){
   x.onload=function(){
     try{
       var d=JSON.parse(x.responseText);
-      if(d.error){ if(btn){btn.disabled=false;btn.textContent='确认提现';} alert(d.error); return; }
+      if(d.error){ if(btn){btn.disabled=false;btn.textContent='确认提现';} showToast(d.error); return; }
       loadWalletBalance(); loadWalletTxns();
       state.view='wallet'; render();
-    }catch(e){ alert('提现失败'); }
+    }catch(e){ showToast('提现失败'); }
   };
   x.send(JSON.stringify({method_id:selMethod.id, amount:amount}));
 }
@@ -1954,7 +1963,7 @@ function cancelEditName(){
 
 function saveNickname(){
   var input=document.getElementById('new-nickname');
-  if(!input||!input.value.trim()){alert('昵称不能为空');return}
+  if(!input||!input.value.trim()){showToast('昵称不能为空');return}
   var name=input.value.trim();
   var xhr=new XMLHttpRequest();
   xhr.open('PATCH',API+'/users/me',true);
@@ -1963,11 +1972,11 @@ function saveNickname(){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       state.user.nickname=name;
       state.ambassadorProfile=null;state.brandProfile=null;
       render();
-    }catch(e){alert('保存失败')}
+    }catch(e){showToast('保存失败')}
   };
   xhr.send(JSON.stringify({nickname:name}));
 }
@@ -1981,7 +1990,7 @@ function addRole(role){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       // 更新 token 和 roles
       state.token=d.token;
       state.user.roles=d.roles;
@@ -1994,7 +2003,7 @@ function addRole(role){
         return;
       }
       render();
-    }catch(e){alert('开通失败，请重试')}
+    }catch(e){showToast('开通失败，请重试')}
   };
   xhr.send(JSON.stringify({role:role}));
 }
@@ -2544,24 +2553,24 @@ function saveCredential(email, password, user){
 function doLogin(){
   log('doLogin');
   var e=qs('#email').value,pw=qs('#password').value;
-  if(!e||!pw){alert('请填写完整');return}
+  if(!e||!pw){showToast('请填写完整');return}
   var xhr=new XMLHttpRequest();
   xhr.open('POST',API+'/auth/login',true);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}afterAuth(d);saveCredential(e,pw,d.user)}catch(err){alert('登录失败')}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}afterAuth(d);saveCredential(e,pw,d.user)}catch(err){showToast('登录失败')}
   };
   xhr.send(JSON.stringify({account:e,password:pw}));
 }
 
 function doRegister(){
   var e=qs('#email').value,nk=(qs('#nickname')||{}).value||'',pw=qs('#password').value;
-  if(!e||!pw){alert('请填写完整');return}
+  if(!e||!pw){showToast('请填写完整');return}
   var xhr=new XMLHttpRequest();
   xhr.open('POST',API+'/auth/register',true);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}afterAuth(d)}catch(e){alert('注册失败')}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}afterAuth(d)}catch(e){showToast('注册失败')}
   };
   xhr.send(JSON.stringify({email:e,password:pw,nickname:nk,role:window._r||'HERALD'}));
 }
@@ -2579,12 +2588,12 @@ function toggleDisplayCurrency(){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       state.ambassadorProfile=d;
       state.walletBalance=null;
       loadWalletBalance();
       render();
-    }catch(e){alert('保存失败')}
+    }catch(e){showToast('保存失败')}
   };
   xhr.send(JSON.stringify({displayCurrency:next}));
 }
@@ -2597,7 +2606,7 @@ function switchAccount(){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       var roles=d.user.roles||[d.user.role];
       if(d.user.role==='BRAND'&&!roles.includes('HERALD')){
         sessionStorage.setItem('herix_switch_token',d.token);
@@ -2605,7 +2614,7 @@ function switchAccount(){
         return;
       }
       afterAuth(d);
-    }catch(e){alert('切换失败')}
+    }catch(e){showToast('切换失败')}
   };
   xhr.send('{}');
 }
@@ -2796,7 +2805,7 @@ function obNextPlatforms(){
   var d=state.onboardData;
   if(wechat&&wechat.value.trim()){
     var check=obValidateWechat(wechat.value.trim());
-    if(!check.ok){alert(check.msg);return}
+    if(!check.ok){showToast(check.msg);return}
     d.wechatId=check.saved;
   }
   // 收集 SNS 信息
@@ -2812,7 +2821,7 @@ function obSkipPlatforms(){
   var wechat=qs('#ob-wechat');
   if(wechat&&wechat.value.trim()){
     var check=obValidateWechat(wechat.value.trim());
-    if(!check.ok){alert(check.msg);return}
+    if(!check.ok){showToast(check.msg);return}
     if(check.saved) state.onboardData.wechatId=check.saved;
   }
   state.onboardStep=2;render();
@@ -2830,7 +2839,7 @@ function obSkipToFinish(){
 
 function obNextJapan(){
   var agree=qs('#ob-agree');
-  if(!agree||!agree.checked){alert('请先同意声明');return}
+  if(!agree||!agree.checked){showToast('请先同意声明');return}
   state.onboardData.agreed=true;
   obSubmit();
 }
@@ -2839,7 +2848,7 @@ function obNextBank(){
   var d=state.onboardData;
   if(d.bankType==='wise'||d.bankType==='paypal'){
     var em=qs('#ob-email');
-    if(!em||!em.value){alert('请填写账户邮箱');return}
+    if(!em||!em.value){showToast('请填写账户邮箱');return}
     d.bankEmail=em.value;
   } else {
     var sw=qs('#ob-swift'),ib=qs('#ob-iban');
@@ -2875,11 +2884,11 @@ function obSubmit(){
   xhr.onload=function(){
     try{
       var res=JSON.parse(xhr.responseText);
-      if(res.error){alert(res.error);return}
+      if(res.error){showToast(res.error);return}
       state.user.is_onboarded=1;
       state.onboardStep=4;
       render();
-    }catch(e){alert('提交失败')}
+    }catch(e){showToast('提交失败')}
   };
   xhr.send(JSON.stringify(body));
 }
@@ -2944,8 +2953,8 @@ function onboardBrandHTML(){
 
 function obBrandStep1(){
   var company=qs('#ob-company'),website=qs('#ob-website');
-  if(!state.onboardData.currency){alert('请选择业务市场');return}
-  if(!company||!company.value.trim()){alert('请填写品牌名称');return}
+  if(!state.onboardData.currency){showToast('请选择业务市场');return}
+  if(!company||!company.value.trim()){showToast('请填写品牌名称');return}
   state.onboardData.companyName=company.value.trim();
   state.onboardData.website=website?website.value.trim():'';
   state.onboardStep=2;render();
@@ -2953,7 +2962,7 @@ function obBrandStep1(){
 
 function obBrandStep2(){
   var contact=qs('#ob-contact'),phone=qs('#ob-phone'),desc=qs('#ob-desc');
-  if(!contact||!contact.value.trim()){alert('请填写联系人姓名');return}
+  if(!contact||!contact.value.trim()){showToast('请填写联系人姓名');return}
   state.onboardData.contactName=contact.value.trim();
   state.onboardData.contactPhone=phone?phone.value.trim():'';
   state.onboardData.companyDesc=desc?desc.value.trim():'';
@@ -2965,10 +2974,10 @@ function obBrandStep2(){
   xhr.onload=function(){
     try{
       var res=JSON.parse(xhr.responseText);
-      if(res.error){alert(res.error);return}
+      if(res.error){showToast(res.error);return}
       state.user.is_onboarded=1;
       state.onboardStep=3;render();
-    }catch(e){alert('提交失败')}
+    }catch(e){showToast('提交失败')}
   };
   xhr.send(JSON.stringify({companyName:d.companyName,industry:d.industry||'',website:d.website,contactName:d.contactName,contactPhone:d.contactPhone,companyDesc:d.companyDesc,currency:d.currency}));
 }
@@ -2987,10 +2996,10 @@ function applyTask(){
           showRequirementsModal(d.failures, d.canRetry, function(){ applyTask(); });
           return;
         }
-        alert(d.error);return;
+        showToast(d.error);return;
       }
       toast('报名成功！');openDetail(state.detailTask.id);
-    }catch(e){alert('报名失败')}
+    }catch(e){showToast('报名失败')}
   };
   xhr.send('{}');
 }
@@ -3092,10 +3101,10 @@ function submitRequirementsAdd(missingIds){
     var pm=platformById(pid);
     var inp=document.getElementById('req-plat-'+pid);
     var val=inp?inp.value.trim():'';
-    if(!val){alert('请填写 '+pm.name+' 账号');return}
+    if(!val){showToast('请填写 '+pm.name+' 账号');return}
     if(pid==='wechat'){
       var check=obValidateWechat(val);
-      if(!check.ok){alert(check.msg);return}
+      if(!check.ok){showToast(check.msg);return}
       toAdd.push({platformId:pid,accountId:check.saved,url:null,followers:null});
     } else if(pm.inputType==='id'){
       toAdd.push({platformId:pid,accountId:val,url:null,followers:null});
@@ -3113,12 +3122,12 @@ function submitRequirementsAdd(missingIds){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       applyProfilePatch(d);
       var m=document.getElementById('req-modal');
       if(m) m.remove();
       if(window._reqModalCallback) window._reqModalCallback();
-    }catch(e){alert('保存失败')}
+    }catch(e){showToast('保存失败')}
   };
   xhr.send(JSON.stringify({socialPlatforms:merged}));
 }
@@ -3191,13 +3200,13 @@ function pcWechatInput(el){
 function submitPlatformCollect(platformId, isWechat){
   var inputEl=qs('#pc-platform-input');
   var val=inputEl?inputEl.value.trim():'';
-  if(!val){alert('请填写账号信息');return}
+  if(!val){showToast('请填写账号信息');return}
 
   var pMeta=platformById(platformId);
   var newEntry={platformId:platformId};
   if(isWechat){
     var check=obValidateWechat(val);
-    if(!check.ok){alert(check.msg);return}
+    if(!check.ok){showToast(check.msg);return}
     newEntry.accountId=check.saved;newEntry.url=null;newEntry.followers=null;
   } else if(pMeta.inputType==='id'){
     newEntry.accountId=val;newEntry.url=null;newEntry.followers=null;
@@ -3220,12 +3229,12 @@ function submitPlatformCollect(platformId, isWechat){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       applyProfilePatch(d);
       var modal=document.getElementById('plat-collect-modal');
       if(modal) modal.remove();
       if(window._platformCollectCallback) window._platformCollectCallback();
-    }catch(e){alert('保存失败')}
+    }catch(e){showToast('保存失败')}
   };
   xhr.send(JSON.stringify({socialPlatforms:merged}));
 }
@@ -3275,11 +3284,11 @@ function showFollowersUpdateModal(platformId, required, onSuccess){
 function submitFollowersUpdate(platformId, required){
   var inp=document.getElementById('fu-followers');
   var newCount=inp?parseInt(inp.value,10):NaN;
-  if(isNaN(newCount)||newCount<=0){alert('请输入有效的粉丝数');return}
+  if(isNaN(newCount)||newCount<=0){showToast('请输入有效的粉丝数');return}
   if(newCount<required){
     // 明确告知不符合，不再循环
     document.getElementById('followers-update-modal').remove();
-    alert('你的 '+platformById(platformId).name+' 粉丝数（'+newCount.toLocaleString()+'）不满足该任务要求（'+required.toLocaleString()+'+ 粉），暂时无法报名。');
+    showToast('你的 '+platformById(platformId).name+' 粉丝数（'+newCount.toLocaleString()+'）不满足该任务要求（'+required.toLocaleString()+'+ 粉），暂时无法报名。');
     return;
   }
   // 更新档案里的粉丝数
@@ -3296,12 +3305,12 @@ function submitFollowersUpdate(platformId, required){
   xhr.onload=function(){
     try{
       var d=JSON.parse(xhr.responseText);
-      if(d.error){alert(d.error);return}
+      if(d.error){showToast(d.error);return}
       applyProfilePatch(d);
       var modal=document.getElementById('followers-update-modal');
       if(modal) modal.remove();
       if(window._followersUpdateCallback) window._followersUpdateCallback();
-    }catch(e){alert('保存失败')}
+    }catch(e){showToast('保存失败')}
   };
   xhr.send(JSON.stringify({socialPlatforms:merged}));
 }
@@ -3312,9 +3321,9 @@ function assignReferral(){
   xhr.open('POST',API+'/referrals/assign/'+state.detailTask.id,true);
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
-      alert('推广码：'+d.unique_code);openDetail(state.detailTask.id)
-    }catch(e){alert('领取失败')}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}
+      showToast('推广码：'+d.unique_code);openDetail(state.detailTask.id)
+    }catch(e){showToast('领取失败')}
   };
   xhr.send();
 }
@@ -3333,16 +3342,16 @@ function openSubmit(taskId){
 
 function doSubmit(){
   var url=qs('#sub-url').value;
-  if(!url){alert('请填写内容链接');return}
+  if(!url){showToast('请填写内容链接');return}
   var xhr=new XMLHttpRequest();
   xhr.open('POST',API+'/submissions/'+state.detailTask.id,true);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}
       state._subsLoaded=false;state.mySubs=[];
-      alert('提交成功！等待品牌审核');switchView('herald-dashboard')
-    }catch(e){alert('提交失败')}
+      showToast('提交成功！等待品牌审核');switchView('herald-dashboard')
+    }catch(e){showToast('提交失败')}
   };
   xhr.send(JSON.stringify({contentUrl:url,description:(qs('#sub-desc')||{}).value||''}));
 }
@@ -3353,9 +3362,9 @@ function reviewSub(id,status){
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
-      alert(status==='APPROVED'?'已通过并结算':'已拒绝');openBrandTask(state.detailTask.id)
-    }catch(e){alert('操作失败')}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}
+      showToast(status==='APPROVED'?'已通过并结算':'已拒绝');openBrandTask(state.detailTask.id)
+    }catch(e){showToast('操作失败')}
   };
   xhr.send(JSON.stringify({status:status,reviewNote:status==='REJECTED'?prompt('拒绝原因：'):''}));
 }
@@ -3366,9 +3375,9 @@ function reviewApp(id,status){
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
-      alert(status==='APPROVED'?'已通过':'已拒绝');openBrandTask(state.detailTask.id)
-    }catch(e){alert('操作失败')}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}
+      showToast(status==='APPROVED'?'已通过':'已拒绝');openBrandTask(state.detailTask.id)
+    }catch(e){showToast('操作失败')}
   };
   xhr.send(JSON.stringify({status:status}));
 }
@@ -3384,13 +3393,13 @@ function publishTask(id){
 function doCreateTask(){
   var title=qs('#ct-title').value,desc=qs('#ct-desc').value,budget=qs('#ct-budget').value,comm=qs('#ct-comm').value;
   var max=qs('#ct-max').value||1,mode=qs('#ct-mode').value,cat=qs('#ct-cat').value;
-  if(!title||!desc||!comm){alert('请填写标题、描述和报酬');return}
+  if(!title||!desc||!comm){showToast('请填写标题、描述和报酬');return}
   var xhr=new XMLHttpRequest();
   xhr.open('POST',API+'/tasks',true);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);if(d.error){alert(d.error);return}
+    try{var d=JSON.parse(xhr.responseText);if(d.error){showToast(d.error);return}
       // 自动发布
       var xhr2=new XMLHttpRequest();
       xhr2.open('PATCH',API+'/tasks/'+d.id+'/publish',true);
@@ -3400,25 +3409,25 @@ function doCreateTask(){
         var xhr3=new XMLHttpRequest();
         xhr3.open('PATCH',API+'/tasks/'+d.id+'/escrow',true);
         xhr3.setRequestHeader('Authorization','Bearer '+state.token);
-        xhr3.onload=function(){alert('任务已创建并发布！');loadMyTasks()};
+        xhr3.onload=function(){showToast('任务已创建并发布！');loadMyTasks()};
         xhr3.send();
       };
       xhr2.send();
-    }catch(e){alert('创建失败')}
+    }catch(e){showToast('创建失败')}
   };
   xhr.send(JSON.stringify({title:title,description:desc,payoutPerHerald:Number(comm),maxHeralds:Number(max),mode:mode,category:cat}));
 }
 
 function doCsvImport(){
   var data=qs('#csv-data').value;
-  if(!data){alert('请填写数据');return}
-  try{JSON.parse(data)}catch(e){alert('JSON 格式错误');return}
+  if(!data){showToast('请填写数据');return}
+  try{JSON.parse(data)}catch(e){showToast('JSON 格式错误');return}
   var xhr=new XMLHttpRequest();
   xhr.open('POST',API+'/referrals/csv-import',true);
   xhr.setRequestHeader('Content-Type','application/json');
   xhr.setRequestHeader('Authorization','Bearer '+state.token);
   xhr.onload=function(){
-    try{var d=JSON.parse(xhr.responseText);alert('导入完成：'+d.imported+'条成功，'+d.skipped+'条跳过')}catch(e){alert('导入失败')}
+    try{var d=JSON.parse(xhr.responseText);showToast('导入完成：'+d.imported+'条成功，'+d.skipped+'条跳过')}catch(e){showToast('导入失败')}
   };
   xhr.send(JSON.stringify({taskId:state.detailTask.id,rows:JSON.parse(data)}));
 }

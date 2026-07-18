@@ -167,6 +167,15 @@ tr:hover td { background:#f9fafb; cursor:pointer; }
 
 <script>
 var API = '/api';
+/* 全站替代原生 showToast() 的悬浮提示（2026-07-18）：深色胶囊，2.2s 自动消失，不阻塞操作 */
+function showToast(msg) {
+  var el = document.createElement('div');
+  el.textContent = String(msg);
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 22px;border-radius:22px;font-size:13px;z-index:99999;pointer-events:none;max-width:80vw;text-align:center;box-shadow:0 4px 16px rgba(0,0,0,.25)';
+  document.body.appendChild(el);
+  setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 2200);
+}
+
 var state = {
   page: 'login', user: null, token: null,
   tasks: [], currentTask: null, taskTab: 'applicants',
@@ -543,14 +552,14 @@ function pickIdentity(isAgency) {
 }
 
 function activateStep1Next() {
-  if (state.activateData?.isAgency === undefined) { alert(t('merchant.wizard.pickIdentityFirst','请先选择一个身份')); return; }
+  if (state.activateData?.isAgency === undefined) { showToast(t('merchant.wizard.pickIdentityFirst','请先选择一个身份')); return; }
   state.activateStep = 2;
   render();
 }
 
 function activateStep2Next() {
   var company = (document.getElementById('act-company')||{}).value||'';
-  if (!company.trim()) { alert(t('merchant.wizard.errCompanyRequired','请填写品牌名称')); return; }
+  if (!company.trim()) { showToast(t('merchant.wizard.errCompanyRequired','请填写品牌名称')); return; }
   state.activateData = Object.assign({}, state.activateData, {
     currency: 'JPY',
     country: (document.getElementById('act-country')||{}).value || 'JP',
@@ -564,7 +573,7 @@ function activateStep2Next() {
 
 function activateStep3Next() {
   var contact = (document.getElementById('act-contact')||{}).value||'';
-  if (!contact.trim()) { alert(t('merchant.wizard.errContactRequired','请填写联系人姓名')); return; }
+  if (!contact.trim()) { showToast(t('merchant.wizard.errContactRequired','请填写联系人姓名')); return; }
   state.activateData = Object.assign({}, state.activateData, {
     contactName: contact.trim(),
     contactPhone: (document.getElementById('act-phone')||{}).value||'',
@@ -795,11 +804,18 @@ function tasksPage() {
 
 /* ── 品牌方绑定：品牌凭上传链接 token 自助绑定（多账号）；代理逐个解绑 ── */
 function unbindBrand(taskId, userId, name) {
-  if (!confirm(t('merchant.taskDetail.unbindConfirm','确认解绑品牌账号「{name}」？解绑后该账号将无法查看任务进展，可重新绑定',{name:name||''}))) return;
-  post('/tasks/'+taskId+'/brand-unbind', { userId: userId }, function(d) {
-    if (d.error) { alert(d.error); return; }
-    showMsg(t('merchant.taskDetail.unbound','已解绑'), 'success');
-    openTask(taskId);
+  showConfirmModal({
+    title: t('merchant.taskDetail.unbind','解绑'),
+    body: t('merchant.taskDetail.unbindConfirm','确认解绑品牌账号「{name}」？解绑后该账号将无法查看任务进展，可重新绑定',{name:name||''}),
+    danger: true,
+    confirmText: t('merchant.taskDetail.unbind','解绑'),
+    onConfirm: function() {
+      post('/tasks/'+taskId+'/brand-unbind', { userId: userId }, function(d) {
+        if (d.error) { showToast(d.error); return; }
+        showMsg(t('merchant.taskDetail.unbound','已解绑'), 'success');
+        openTask(taskId);
+      });
+    },
   });
 }
 
@@ -811,7 +827,7 @@ function handleBrandBindFromUrl() {
   post('/tasks/'+bt+'/brand-bind', { token: tk }, function(d) {
     // 无论成败都清掉 URL 参数，防止重复触发
     window.history.replaceState({}, '', window.location.pathname);
-    if (d.error) { alert(t('merchant.bind.failed','绑定失败：')+d.error); return; }
+    if (d.error) { showToast(t('merchant.bind.failed','绑定失败：')+d.error); return; }
     showMsg(t('merchant.bind.success','已绑定任务「{title}」，可在任务列表查看进展',{title:d.title||''}), 'success');
     loadMyTasks();
   });
@@ -1116,7 +1132,7 @@ function toggleCodeModeSection() {
 function uploadCustomCodes(taskId) {
   var raw = (document.getElementById('custom-codes-input') || {}).value || '';
   var codes = raw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
-  if (!codes.length) { alert(t('merchant.codes.errAtLeastOne','请输入至少一个推广码')); return; }
+  if (!codes.length) { showToast(t('merchant.codes.errAtLeastOne','请输入至少一个推广码')); return; }
   var resultEl = document.getElementById('upload-result');
   patch('POST', '/tasks/' + taskId + '/codes/upload', { codes: codes }, function(d) {
     if (d.error) {
@@ -1693,13 +1709,7 @@ function genTopupRef() {
 }
 
 function copyText(text) {
-  navigator.clipboard.writeText(text).then(function() {
-    var toast = document.createElement('div');
-    toast.textContent = t('common.copied','已复制');
-    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none';
-    document.body.appendChild(toast);
-    setTimeout(function(){if(toast.parentNode)toast.parentNode.removeChild(toast);}, 1500);
-  });
+  navigator.clipboard.writeText(text).then(function() { showToast(t('common.copied','已复制')); });
 }
 
 function walletPage() {
@@ -2218,7 +2228,7 @@ function walletLedgerHTML() {
 
 function submitTopupFinal() {
   api('POST', '/wallet/topup', {amount: topupAmount, note: topupRef}, function(d) {
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error); return; }
     topupStep = 4;
     render();
   });
@@ -2562,8 +2572,8 @@ function saveTaskMeta() {
   var req  = (document.getElementById('meta-requirements')||{}).value || '';
   var dl   = (document.getElementById('meta-deadline')||{}).value || '';
   var mh   = Number((document.getElementById('meta-maxHeralds')||{}).value || task.max_heralds);
-  if (!desc.trim()) { alert(t('merchant.metaEdit.errDescRequired','描述不能为空')); return; }
-  if (mh < task.max_heralds) { alert(t('merchant.metaEdit.errQuotaDecrease','名额不能减少')); return; }
+  if (!desc.trim()) { showToast(t('merchant.metaEdit.errDescRequired','描述不能为空')); return; }
+  if (mh < task.max_heralds) { showToast(t('merchant.metaEdit.errQuotaDecrease','名额不能减少')); return; }
   var body = {
     description: desc,
     requirements: req || undefined,
@@ -2574,7 +2584,7 @@ function saveTaskMeta() {
     reqMinCount: taskReqMode === 'ANY_N' ? taskReqMinCount : undefined,
   };
   patch('PATCH', '/tasks/'+task.id+'/meta', body, function(d) {
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error); return; }
     state.currentTask = Object.assign(state.currentTask, d);
     state.editingTask = null;
     taskPlatformReqs = [];
@@ -2914,7 +2924,7 @@ function showReviewModal(opts) {
 
 function reviewApp(id, status, fromAll, note) {
   patch('PATCH', '/applications/'+id+'/review', {status:status, reviewNote:note||undefined}, function(d) {
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error); return; }
     if (fromAll) {
       state.allPendingApps = state.allPendingApps.filter(function(a){return a.id!==id});
       render();
@@ -2929,7 +2939,7 @@ function reviewApp(id, status, fromAll, note) {
 
 function reviewSub(id, status, fromAll, note) {
   patch('PATCH', '/submissions/'+id+'/review', {status:status, reviewNote:note||undefined}, function(d) {
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error); return; }
     if (d.needsRating) { showRatingModal(id, fromAll); return; }
     if (fromAll) {
       state.allPendingSubs = state.allPendingSubs.filter(function(s){return s.id!==id});
@@ -3020,7 +3030,7 @@ function showRatingModal(submissionId, fromAll) {
   overlay.querySelector('#submit-rate').addEventListener('click', function() {
     var comment = overlay.querySelector('#rate-comment').value.trim();
     patch('POST', '/submissions/'+submissionId+'/rate', {score:selected, comment:comment||undefined}, function(d) {
-      if (d.error) { alert(d.error); return; }
+      if (d.error) { showToast(d.error); return; }
       close();
     });
   });
@@ -3188,7 +3198,7 @@ function saveSettings() {
     billingEmail: (document.getElementById('billing_email')||{}).value,
   };
   patch('PATCH', '/users/profile/brand', body, function(d) {
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error); return; }
     state.brandProfile = d;
     state.msg = '设置已保存'; state.msgType = 'success';
     render();
@@ -3202,7 +3212,7 @@ function logout() {
 
 function switchAccount() {
   post('/auth/switch-account', {}, function(d) {
-    if (d.error) { alert(d.error); return; }
+    if (d.error) { showToast(d.error); return; }
     var roles = d.user.roles || [d.user.role];
     sessionStorage.setItem('herix_switch_token', d.token);
     window.location.href = roles.includes('BRAND') ? 'merchant.html' : 'herix.html';

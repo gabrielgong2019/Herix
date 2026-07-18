@@ -1404,24 +1404,27 @@ function csvModeBlockHTML(t) {
     ? 'code,用户邮箱或ID,是否完成交易\nHERIX-A3K9Z2,alice@gmail.com,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,0'
     : 'code,注册数,使用数\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3';
   var notes = isDetail ? [
-    '<b>直接使用你系统里现成的用户标识</b>（邮箱/用户名均可）——上传后立即加盐单向加密，平台不保存明文（见下方数据处理承诺）；同一用户请始终使用同一标识',
-    '<b>增量或全量上传均可</b>——系统按推广码+用户自动去重，重传、重叠都不会重复计费',
-    '请在你的系统侧<b>确保每位用户仅能使用一个推广码</b>——同一用户经多个码转化将分别计费（每位赫使的推广都有回报），此类重复支出需由商家承担',
-    '「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收',
-    '任务关闭后仍有 <b>30 天数据缓冲期</b>，逾期不再收录——请在缓冲期内传完尾部转化',
+    t('merchant.csv.noteUseExistingId','<b>直接使用你系统里现成的用户标识</b>（邮箱/用户名均可）——上传后立即加盐单向加密，平台不保存明文（见下方数据处理承诺）；同一用户请始终使用同一标识'),
+    t('merchant.csv.noteIncrementalOk','<b>增量或全量上传均可</b>——系统按推广码+用户自动去重，重传、重叠都不会重复计费'),
+    t('merchant.csv.noteOneCodePerUser','请在你的系统侧<b>确保每位用户仅能使用一个推广码</b>——同一用户经多个码转化将分别计费（每位赫使的推广都有回报），此类重复支出需由商家承担'),
+    t('merchant.csv.noteConvertedFlag','「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收'),
+    t('merchant.csv.noteGracePeriod','任务关闭后仍有 <b>30 天数据缓冲期</b>，逾期不再收录——请在缓冲期内传完尾部转化'),
   ] : [
-    '注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增',
-    '系统只对新增部分结算；重复上传同样数据<b>不会重复打款</b>',
-    '已结算部分不可回收；填小于历史的数不会退款',
-    '推广码必须属于所选任务，传错任务会被明确提示',
-    '任务关闭后仍有 <b>30 天数据缓冲期</b>，逾期不再收录——请在缓冲期内传完尾部转化',
+    t('merchant.csv.noteCumulative','注册数/使用数填<b>累计总数</b>（截至今天），不是当日新增'),
+    t('merchant.csv.noteNoDoublePay','系统只对新增部分结算；重复上传同样数据<b>不会重复打款</b>'),
+    t('merchant.csv.noteNoRefund','已结算部分不可回收；填小于历史的数不会退款'),
+    t('merchant.csv.noteCodeMustMatch','推广码必须属于所选任务，传错任务会被明确提示'),
+    t('merchant.csv.noteGracePeriod','任务关闭后仍有 <b>30 天数据缓冲期</b>，逾期不再收录——请在缓冲期内传完尾部转化'),
   ];
+  // ⚠️ sample/模板 CSV 表头刻意不翻译：doCsvUpload() 对汇总模式按字面中文
+  // (headers.indexOf('注册数'/'使用数')) 硬匹配解析，翻译后非中文商家用翻译版
+  // 模板上传反而会解析失败——这是后端解析逻辑的既有限制，不是这次翻译能改的
   return '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
-    +'<div style="font-weight:600">上传转化数据（CSV）<span style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:8px;background:'+(isDetail?'#ede9fe':'#dbeafe')+';color:'+(isDetail?'#6d28d9':'#1d4ed8')+'">'+(isDetail?'明细模式':'汇总模式')+'</span></div>'
-    +'<button class="btn btn-outline btn-sm" onclick="downloadCsvTemplate()">⬇ 下载模板</button>'
+    +'<div style="font-weight:600">'+t('merchant.csv.title','上传转化数据（CSV）')+'<span style="margin-left:8px;font-size:11px;padding:2px 8px;border-radius:8px;background:'+(isDetail?'#ede9fe':'#dbeafe')+';color:'+(isDetail?'#6d28d9':'#1d4ed8')+'">'+(isDetail?t('merchant.csv.tagDetailMode','明细模式'):t('merchant.csv.tagAggregateMode','汇总模式'))+'</span></div>'
+    +'<button class="btn btn-outline btn-sm" onclick="downloadCsvTemplate()">⬇ '+t('merchant.csv.downloadTemplate','下载模板')+'</button>'
     +'</div>'
     +'<div style="background:#1e293b;color:#e2e8f0;padding:16px;border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:8px;white-space:pre">'+sample+'</div>'
-    +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f;margin-bottom:8px"><div style="font-weight:600;margin-bottom:4px">📋 注意事项</div><ul style="margin:0;padding-left:18px">'
+    +'<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#78350f;margin-bottom:8px"><div style="font-weight:600;margin-bottom:4px">📋 '+t('merchant.csv.notesTitle','注意事项')+'</div><ul style="margin:0;padding-left:18px">'
     + notes.map(function(n){ return '<li style="margin-bottom:3px">'+n+'</li>'; }).join('')
     +'</ul></div>'
     + (isDetail ? privacyCommitmentHTML() : '');
@@ -1430,12 +1433,12 @@ function csvModeBlockHTML(t) {
 /* 明细模式数据处理承诺（依据服务协议数据处理条款；实现见 herix-server/src/utils/privacy.ts） */
 function privacyCommitmentHTML() {
   return '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534">'
-    +'<div style="font-weight:600;margin-bottom:4px">🔒 数据处理承诺</div>'
+    +'<div style="font-weight:600;margin-bottom:4px">🔒 '+t('merchant.csv.privacyTitle','数据处理承诺')+'</div>'
     +'<ul style="margin:0;padding-left:18px">'
-    +'<li style="margin-bottom:3px">依据《服务协议》数据处理条款，平台<b>不保存明文邮箱/用户ID</b>：接收后立即以 SHA-256 加盐单向哈希处理，原文即刻丢弃，任何数据库、日志中均不留存</li>'
-    +'<li style="margin-bottom:3px">哈希值<b>仅用于</b>推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉</li>'
-    +'<li style="margin-bottom:3px">所有展示（含平台内部后台）仅保留脱敏形式（如 a**@gmail.com），单向哈希<b>不可还原</b>出原文</li>'
-    +'<li>任务结束后可联系运营清除全部明细记录（结算凭证按财务要求另行保留）</li>'
+    +'<li style="margin-bottom:3px">'+t('merchant.csv.privacy1','依据《服务协议》数据处理条款，平台<b>不保存明文邮箱/用户ID</b>：接收后立即以 SHA-256 加盐单向哈希处理，原文即刻丢弃，任何数据库、日志中均不留存')+'</li>'
+    +'<li style="margin-bottom:3px">'+t('merchant.csv.privacy2','哈希值<b>仅用于</b>推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉')+'</li>'
+    +'<li style="margin-bottom:3px">'+t('merchant.csv.privacy3','所有展示（含平台内部后台）仅保留脱敏形式（如 a**@gmail.com），单向哈希<b>不可还原</b>出原文')+'</li>'
+    +'<li>'+t('merchant.csv.privacy4','任务结束后可联系运营清除全部明细记录（结算凭证按财务要求另行保留）')+'</li>'
     +'</ul></div>';
 }
 
@@ -1449,18 +1452,18 @@ function renderCsvModeUI() {
 
 function csvPage() {
   var perfTasks = state.tasks.filter(function(t){return t.mode==='PERFORMANCE' && t.status==='OPEN'});
-  if (!perfTasks.length) return '<div class="table-card"><div class="empty"><div class="empty-icon">📤</div><div>没有进行中的成果报酬任务</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">创建类型A任务后可在此上传转化数据</div></div></div>';
+  if (!perfTasks.length) return '<div class="table-card"><div class="empty"><div class="empty-icon">📤</div><div>'+t('merchant.csv.noTasks','没有进行中的成果报酬任务')+'</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">'+t('merchant.csv.noTasksHint','创建类型A任务后可在此上传转化数据')+'</div></div></div>';
 
-  var opts = perfTasks.map(function(t){return '<option value="'+t.id+'">'+esc(t.title)+(t.data_mode==='DETAIL'?' [明细]':' [汇总]')+'</option>'}).join('');
+  var opts = perfTasks.map(function(t){return '<option value="'+t.id+'">'+esc(t.title)+(t.data_mode==='DETAIL'?' ['+t('merchant.csv.tagDetail','明细')+']':' ['+t('merchant.csv.tagAggregate','汇总')+']')+'</option>'}).join('');
   return '<div class="form-card"><div style="max-width:600px">'
-    +'<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">选择任务</div><select id="csv-task" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px" onchange="renderCsvModeUI()">'+opts+'</select></div>'
+    +'<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">'+t('merchant.csv.selectTask','选择任务')+'</div><select id="csv-task" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px" onchange="renderCsvModeUI()">'+opts+'</select></div>'
     +'<div style="margin-bottom:12px" id="csv-mode-block">'+csvModeBlockHTML(perfTasks[0])+'</div>'
-    +'<div class="field"><label>粘贴 CSV 数据或选择文件</label>'
-    +'<textarea id="csv-data" rows="8" placeholder="粘贴 CSV 内容，格式见上方模板"></textarea>'
+    +'<div class="field"><label>'+t('merchant.csv.pasteOrChoose','粘贴 CSV 数据或选择文件')+'</label>'
+    +'<textarea id="csv-data" rows="8" placeholder="'+t('merchant.csv.pastePlaceholder','粘贴 CSV 内容，格式见上方模板')+'"></textarea>'
     +'<input type="file" accept=".csv" style="margin-top:8px;font-size:13px" onchange="loadCsvFile(event)">'
     +'</div>'
     +'<div id="csv-result"></div>'
-    +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="doCsvUpload()">上传数据</button></div>'
+    +'<div style="margin-top:16px"><button class="btn btn-primary" onclick="doCsvUpload()">'+t('merchant.csv.upload','上传数据')+'</button></div>'
     +'</div></div>';
 }
 

@@ -826,7 +826,7 @@
   "merchant.agreement.s6": "本プラットフォームは本規約を更新する権利を有し、その際バージョン番号も変更されます。重要な変更については14日前に通知し、引き続き本プラットフォームをご利用いただいた場合、新規約に同意したものとみなされます。",
   "merchant.agreement.confirm": "私は上記の利用規約を読み、理解しました。<strong>{company}</strong>を代表して本規約の全条項に同意します。本確認の署名日時とIPアドレスは電子的証拠として記録されます。",
   "merchant.agreement.thisCompany": "当社",
-  "merchant.agreement.version": "規約バージョン 2026-07-09-v1",
+  "merchant.agreement.version": "規約バージョン 2026-07-17-v2",
   "merchant.industry.finance": "金融サービス",
   "merchant.industry.beauty": "美容・コスメ",
   "merchant.industry.fashion": "ファッション",

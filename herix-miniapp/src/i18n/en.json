@@ -826,7 +826,7 @@
   "merchant.agreement.s6": "The Platform may update this Agreement, with the version number changing accordingly. Material changes will be notified 14 days in advance; continued use of the Platform constitutes acceptance of the updated Agreement.",
   "merchant.agreement.confirm": "I have read and understood the Service Agreement above and accept all its terms on behalf of <strong>{company}</strong>. This confirmation records the signing time and IP address as electronic evidence.",
   "merchant.agreement.thisCompany": "this company",
-  "merchant.agreement.version": "Agreement Version 2026-07-09-v1",
+  "merchant.agreement.version": "Agreement Version 2026-07-17-v2",
   "merchant.industry.finance": "Financial Services",
   "merchant.industry.beauty": "Beauty",
   "merchant.industry.fashion": "Fashion",

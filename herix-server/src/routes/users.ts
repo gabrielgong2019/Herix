@@ -122,6 +122,8 @@ usersRouter.post('/add-role', requireAuth, async (req: Request, res: Response) =
 });
 
 const AGREEMENT_VERSION = '2026-07-17-v2'; // v2: 第五条扩充为数据处理(委托)条款
+// ⚠️ 改版本号时三处同步：本常量 + merchant.agreement.docTitle + merchant.agreement.version 词条
+//（签约证据完整性：落库的 agreed_version 必须与商家看到的协议标题/页脚一致，2026-07-18 曾出现不一致）
 
 /** POST /api/users/brand/onboard — 品牌入驻 */
 usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {

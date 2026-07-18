@@ -36,6 +36,8 @@
   left: 0;
   right: 0;
   z-index: 100;
+  box-sizing: border-box; // 关键：不加的话 content-box 下 padding-top(状态栏高度)会叠加在 height 之外，
+                          // 实际渲染高度变成 height+padding-top，logo 被挤到偏下、整体比胶囊按钮那行高一截
   display: flex;
   align-items: center;
   padding-left: 24px;

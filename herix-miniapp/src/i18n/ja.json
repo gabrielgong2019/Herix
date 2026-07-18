@@ -685,5 +685,20 @@
   "merchant.topup.applications": "入金申請",
   "merchant.topup.appliedAt": "申請日時",
   "merchant.topup.statusPending": "確認待ち",
-  "merchant.topup.statusRejected": "却下"
+  "merchant.topup.statusRejected": "却下",
+  "merchant.settings.brandInfo": "ブランド情報",
+  "merchant.settings.agencyAccount": "広告代理店アカウント",
+  "merchant.settings.agencyAccountSub": "一括管理などの代理店機能が有効です",
+  "merchant.settings.companyName": "会社名/ブランド名",
+  "merchant.settings.industry": "業種",
+  "merchant.settings.website": "公式サイト",
+  "merchant.settings.contactName": "担当者名",
+  "merchant.settings.contactPhone": "連絡先電話番号",
+  "merchant.settings.billingEmail": "請求先メールアドレス（請求書/領収書送付用）",
+  "merchant.settings.companyDesc": "ブランド紹介",
+  "merchant.settings.save": "保存",
+  "merchant.settings.brandImage": "ブランドイメージ",
+  "merchant.settings.logoHint": "ロゴ（正方形アイコン、400×400px以上推奨）",
+  "merchant.settings.promoHint": "宣伝画像（16:9横型、1200×675px以上推奨）",
+  "merchant.settings.notSet": "未設定"
 }

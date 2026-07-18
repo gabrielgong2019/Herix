@@ -685,5 +685,20 @@
   "merchant.topup.applications": "Top-up Requests",
   "merchant.topup.appliedAt": "Applied At",
   "merchant.topup.statusPending": "Pending",
-  "merchant.topup.statusRejected": "Rejected"
+  "merchant.topup.statusRejected": "Rejected",
+  "merchant.settings.brandInfo": "Brand Info",
+  "merchant.settings.agencyAccount": "Agency Account",
+  "merchant.settings.agencyAccountSub": "Batch management and other agency features enabled",
+  "merchant.settings.companyName": "Company / Brand Name",
+  "merchant.settings.industry": "Industry",
+  "merchant.settings.website": "Website",
+  "merchant.settings.contactName": "Contact Name",
+  "merchant.settings.contactPhone": "Contact Phone",
+  "merchant.settings.billingEmail": "Billing Email (for invoices/receipts)",
+  "merchant.settings.companyDesc": "Brand Description",
+  "merchant.settings.save": "Save",
+  "merchant.settings.brandImage": "Brand Assets",
+  "merchant.settings.logoHint": "Logo (square icon, ≥400×400px recommended)",
+  "merchant.settings.promoHint": "Promo Image (16:9 landscape, ≥1200×675px recommended)",
+  "merchant.settings.notSet": "Not set"
 }

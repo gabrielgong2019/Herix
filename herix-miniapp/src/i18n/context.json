@@ -686,5 +686,20 @@
   "merchant.topup.applications": "商家后台钱包/充值向导 walletPage()及topup*系列函数，merchant.html 专用词条(2026-07-18)",
   "merchant.topup.appliedAt": "商家后台钱包/充值向导 walletPage()及topup*系列函数，merchant.html 专用词条(2026-07-18)",
   "merchant.topup.statusPending": "商家后台钱包/充值向导 walletPage()及topup*系列函数，merchant.html 专用词条(2026-07-18)",
-  "merchant.topup.statusRejected": "商家后台钱包/充值向导 walletPage()及topup*系列函数，merchant.html 专用词条(2026-07-18)"
+  "merchant.topup.statusRejected": "商家后台钱包/充值向导 walletPage()及topup*系列函数，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.brandInfo": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.agencyAccount": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.agencyAccountSub": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.companyName": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.industry": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.website": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.contactName": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.contactPhone": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.billingEmail": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.companyDesc": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.save": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.brandImage": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.logoHint": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.promoHint": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.settings.notSet": "商家后台账户设置 settingsPage()，merchant.html 专用词条(2026-07-18)"
 }

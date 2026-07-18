@@ -2181,39 +2181,39 @@ function settingsPage() {
   var logoUrl = p.logo_url || p.brand_logo_url || '';
   var promoUrl = p.promo_image_url || p.brand_promo_image_url || '';
   var billingEmail = p.billing_email!==undefined ? p.billing_email : (p.brand_billing_email||'');
-  var h = '<div class="form-card" style="max-width:600px"><div class="panel-title">品牌信息</div>';
+  var h = '<div class="form-card" style="max-width:600px"><div class="panel-title">'+t('merchant.settings.brandInfo','品牌信息')+'</div>';
   if (p.is_agency) {
     h += '<div style="display:inline-flex;align-items:center;gap:6px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:6px 12px;margin-bottom:16px;font-size:13px;color:#c2410c;font-weight:600">'
-      +'<span>📢</span><span>广告代理账户</span>'
-      +'<span style="font-weight:400;color:#9a3412;font-size:12px">· 已开通批量管理等代理功能</span>'
+      +'<span>📢</span><span>'+t('merchant.settings.agencyAccount','广告代理账户')+'</span>'
+      +'<span style="font-weight:400;color:#9a3412;font-size:12px">· '+t('merchant.settings.agencyAccountSub','已开通批量管理等代理功能')+'</span>'
       +'</div>';
   }
   h += '<div class="form-grid">'
-    + field('公司/品牌名称', 'company_name', 'text', p.company_name||'', '')
-    + '<div class="field"><label>行业</label><select id="industry">'
+    + field(t('merchant.settings.companyName','公司/品牌名称'), 'company_name', 'text', p.company_name||'', '')
+    + '<div class="field"><label>'+t('merchant.settings.industry','行业')+'</label><select id="industry">'
     + ['美妆','时尚','食品饮料','金融服务','旅游','母婴','电商','其他'].map(function(i){return '<option value="'+i+'"'+(p.industry===i?' selected':'')+'>'+i+'</option>'}).join('')
     + '</select></div>'
-    + field('官网', 'website', 'text', p.website||'', 'https://...')
-    + field('联系人姓名', 'contact_name', 'text', p.contact_name||'', '')
-    + field('联系电话', 'contact_phone', 'text', p.contact_phone||'', '')
-    + field('账单邮箱（用于接收请求书/領収書）', 'billing_email', 'email', billingEmail, 'accounting@company.com')
-    + '<div class="field form-full"><label>品牌简介</label><textarea id="company_desc" rows="3">'+esc(p.company_desc||'')+'</textarea></div>'
-    +'</div><div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">保存</button></div></div>';
+    + field(t('merchant.settings.website','官网'), 'website', 'text', p.website||'', 'https://...')
+    + field(t('merchant.settings.contactName','联系人姓名'), 'contact_name', 'text', p.contact_name||'', '')
+    + field(t('merchant.settings.contactPhone','联系电话'), 'contact_phone', 'text', p.contact_phone||'', '')
+    + field(t('merchant.settings.billingEmail','账单邮箱（用于接收请求书/領収書）'), 'billing_email', 'email', billingEmail, 'accounting@company.com')
+    + '<div class="field form-full"><label>'+t('merchant.settings.companyDesc','品牌简介')+'</label><textarea id="company_desc" rows="3">'+esc(p.company_desc||'')+'</textarea></div>'
+    +'</div><div class="form-actions"><button class="btn btn-primary" onclick="saveSettings()">'+t('merchant.settings.save','保存')+'</button></div></div>';
 
-  h += '<div class="form-card" style="max-width:600px;margin-top:16px"><div class="panel-title">品牌形象</div>'
+  h += '<div class="form-card" style="max-width:600px;margin-top:16px"><div class="panel-title">'+t('merchant.settings.brandImage','品牌形象')+'</div>'
     + '<div style="display:flex;gap:32px;flex-wrap:wrap">'
     + '<div>'
-    +   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">LOGO（方形头像/App图标，建议≥400×400px）</div>'
+    +   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+t('merchant.settings.logoHint','LOGO（方形头像/App图标，建议≥400×400px）')+'</div>'
     +   (logoUrl
           ? '<img src="'+esc(logoUrl)+'" style="width:80px;height:80px;border-radius:12px;object-fit:contain;background:#f9fafb;border:1px solid #eee">'
-          : '<div style="width:80px;height:80px;border-radius:12px;background:#f3f4f6;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">未设置</div>')
+          : '<div style="width:80px;height:80px;border-radius:12px;background:#f3f4f6;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">'+t('merchant.settings.notSet','未设置')+'</div>')
     +   '<input type="file" accept="image/*" onchange="uploadBrandAsset(\'logo\',this)" style="display:block;margin-top:8px;font-size:12px;max-width:160px">'
     + '</div>'
     + '<div>'
-    +   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">宣传图（16:9横版，建议≥1200×675px）</div>'
+    +   '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+t('merchant.settings.promoHint','宣传图（16:9横版，建议≥1200×675px）')+'</div>'
     +   (promoUrl
           ? '<img src="'+esc(promoUrl)+'" style="width:180px;height:101px;border-radius:8px;object-fit:cover;background:#f9fafb;border:1px solid #eee">'
-          : '<div style="width:180px;height:101px;border-radius:8px;background:#f3f4f6;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">未设置</div>')
+          : '<div style="width:180px;height:101px;border-radius:8px;background:#f3f4f6;border:1px solid #eee;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:11px">'+t('merchant.settings.notSet','未设置')+'</div>')
     +   '<input type="file" accept="image/*" onchange="uploadBrandAsset(\'promo\',this)" style="display:block;margin-top:8px;font-size:12px;max-width:180px">'
     + '</div>'
     + '</div>'

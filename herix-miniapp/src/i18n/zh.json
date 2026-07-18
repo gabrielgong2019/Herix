@@ -685,5 +685,20 @@
   "merchant.topup.applications": "充值申请",
   "merchant.topup.appliedAt": "申请时间",
   "merchant.topup.statusPending": "待确认",
-  "merchant.topup.statusRejected": "已拒绝"
+  "merchant.topup.statusRejected": "已拒绝",
+  "merchant.settings.brandInfo": "品牌信息",
+  "merchant.settings.agencyAccount": "广告代理账户",
+  "merchant.settings.agencyAccountSub": "已开通批量管理等代理功能",
+  "merchant.settings.companyName": "公司/品牌名称",
+  "merchant.settings.industry": "行业",
+  "merchant.settings.website": "官网",
+  "merchant.settings.contactName": "联系人姓名",
+  "merchant.settings.contactPhone": "联系电话",
+  "merchant.settings.billingEmail": "账单邮箱（用于接收请求书/領収書）",
+  "merchant.settings.companyDesc": "品牌简介",
+  "merchant.settings.save": "保存",
+  "merchant.settings.brandImage": "品牌形象",
+  "merchant.settings.logoHint": "LOGO（方形头像/App图标，建议≥400×400px）",
+  "merchant.settings.promoHint": "宣传图（16:9横版，建议≥1200×675px）",
+  "merchant.settings.notSet": "未设置"
 }

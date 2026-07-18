@@ -248,6 +248,7 @@ function industryToId(v) { return INDUSTRY_LEGACY[v] || v || ''; }
 function industrySelectHTML(domId, currentRaw) {
   var cur = industryToId(currentRaw);
   return '<select id="'+domId+'">'
+    + '<option value="" disabled'+(cur?'':' selected')+'>'+t('merchant.settings.industryPh','请选择')+'</option>'
     + INDUSTRIES.map(function(id){ return '<option value="'+id+'"'+(cur===id?' selected':'')+'>'+t('merchant.industry.'+id, id)+'</option>'; }).join('')
     + '</select>';
 }
@@ -432,9 +433,13 @@ function activateBrandPage() {
   var h = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc">';
   h += '<div style="background:#fff;border-radius:16px;padding:40px;width:440px;max-width:94vw;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
 
-  // 进度条
+  // 进度条（带步骤标签）
+  var stepLabels = [t('merchant.wizard.step1','身份'), t('merchant.wizard.step2','公司信息'), t('merchant.wizard.step3','联系方式'), t('merchant.wizard.step4','协议')];
   h += '<div style="display:flex;gap:6px;margin-bottom:28px">';
-  for (var i = 1; i <= 4; i++) h += '<div style="flex:1;height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>';
+  for (var i = 1; i <= 4; i++) {
+    h += '<div style="flex:1"><div style="height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>'
+      +'<div style="font-size:10px;margin-top:4px;text-align:center;color:'+(i===step?'var(--primary)':i<step?'var(--text)':'var(--muted)')+';font-weight:'+(i===step?'600':'400')+'">'+stepLabels[i-1]+'</div></div>';
+  }
   h += '</div>';
 
   if (step === 1) {
@@ -454,17 +459,16 @@ function activateBrandPage() {
     h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep1Next()">'+t('merchant.wizard.next','下一步')+'</button>';
     h += '</div>';
   } else if (step === 2) {
-    var actCur = state.activateData?.currency;
-    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.activateTitle','开通品牌商家功能')+'</div>';
-    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">'+t('merchant.wizard.activateGreeting','你好，{name}！填写品牌信息后即可发布任务、招募赫使。',{name:esc(state.user.nickname)})+'</div>';
-    h += '<div class="field"><label>'+t('merchant.wizard.market','业务市场 *')+'</label><div style="display:flex;gap:10px;margin-top:6px">';
-    h += '<div class="btn btn-outline btn-sm" style="flex:1;border-color:var(--primary);color:var(--primary)">🇯🇵 '+t('merchant.wizard.marketJP','日本市场（JPY）')+'</div>';
-    h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">'+t('merchant.wizard.marketHint','入驻后业务市场和结算币种不可更改，请谨慎选择')+'</div></div>';
-    // 商家归属国（打款费率的转出实体，V1 默认日本）
-    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.wizard.country','公司归属国家 *')+'</label><select id="act-country">';
+    var isAgencyW = state.activateData?.isAgency === true;
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+(isAgencyW?t('merchant.wizard.activateTitleAgency','开通广告代理账户'):t('merchant.wizard.activateTitleBrand','开通品牌方账户'))+'</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:20px">'+(isAgencyW?t('merchant.wizard.activateSubAgency','填写公司信息，即可为你的客户发布任务、招募赫使。'):t('merchant.wizard.activateSubBrand','填写公司信息，即可发布任务、招募赫使。'))+'</div>';
+    // 站点说明（中性信息条，非选择项——多站点开放后此处长回选择器，术语见 PRD §27「站点」）
+    h += '<div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:14px">🇯🇵 '+t('merchant.wizard.siteInfo','当前为 Herix 日本站（JPY 结算）· 更多站点即将开放')+'</div>';
+    // 公司注册地：相对站点而言，跨国即跨境合同（不影响使用，影响结算路径与票据形式）
+    h += '<div class="field"><label>'+t('merchant.wizard.regCountry','公司注册地 *')+'</label><select id="act-country">';
     h += '<option value="JP"'+((state.activateData?.country||'JP')==='JP'?' selected':'')+'>🇯🇵 '+t('merchant.wizard.countryJP','日本')+'</option>';
     h += '<option value="CN"'+(state.activateData?.country==='CN'?' selected':'')+'>🇨🇳 '+t('merchant.wizard.countryCN','中国')+'</option>';
-    h += '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.wizard.countryHint','以贵司注册实体所在国为准，影响结算与打款费率')+'</div></div>';
+    h += '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.wizard.regCountryHint','以贵司注册实体所在国为准；与站点不同国时为跨境合同，不影响正常使用')+'</div></div>';
     h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.companyName','公司/品牌名称')+' *</label><input id="act-company" placeholder="例：Herix" value="'+esc(state.activateData?.companyName||'')+'"></div>';
     h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.industry','行业')+'</label>'+industrySelectHTML('act-industry', state.activateData?.industry)+'</div>';
     h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.wizard.websiteOptional','官网（选填）')+'</label><input id="act-website" placeholder="https://..." value="'+esc(state.activateData?.website||'')+'"></div>';

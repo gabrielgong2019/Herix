@@ -1790,13 +1790,23 @@ function retryBrandWallet() {
   loadBrandWallet();
 }
 
-function loadBrandWallet() {
+function loadBrandWallet(_isRetry) {
   var r = walletPeriodRange(walletPeriod);
   var qs = '?from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to);
   api('GET', '/wallet/brand-balance'+qs, null, function(d) {
-    // 失败响应(网络错/401/服务器重启瞬间)曾被直接当数据渲染成全 ¥0，
-    // 跟"真没额度"无法区分(2026-07-18 实测踩到)——标记错误态，banner 显示重试
-    brandBalance = (d && d.currency) ? d : { loadError: true };
+    if (d && d.currency) {
+      brandBalance = d;
+    } else if (!_isRetry) {
+      // 首次失败(网络瞬时抖动/服务重启窗口撞车，服务端本身实测首次调用即成功，
+      // 2026-07-19 用户反馈"手动重试就好"坐实是瞬时性问题)：静默自动重试一次，
+      // 不打扰用户、不切错误态，维持当前"加载中"外观
+      setTimeout(function(){ loadBrandWallet(true); }, 1200);
+      return;
+    } else {
+      // 失败响应(网络错/401/服务器重启瞬间)曾被直接当数据渲染成全 ¥0，
+      // 跟"真没额度"无法区分(2026-07-18 实测踩到)——标记错误态，banner 显示重试
+      brandBalance = { loadError: true };
+    }
     // 在任务表单页，直接更新 banner 节点，不重渲（否则清空用户输入）
     if (state.page === 'task_create' || state.page === 'task_edit') {
       var b = document.getElementById('task-capacity-banner');
@@ -1922,7 +1932,7 @@ function onTaskCostInput() {
   if (!payout || !mh) { meter.innerHTML = ''; return; }
 
   var rate = (state.brandProfile && state.brandProfile.commission_rate) || 0.15;
-  var cost  = Math.round(payout / (1 - rate));
+  var cost  = Math.round(payout * (1 + rate));
   var fee   = cost - payout;
   var total = cost * mh;
   var isPerformance = ((document.getElementById('mode')||{}).value) === 'PERFORMANCE';

@@ -994,7 +994,7 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
 
   // 发布时计算费率快照和单人成本（含服务费）
   const { rate: commissionRate } = await getEffectiveCommissionRate(task.creator_id);
-  const costPerHerald = Math.round(task.payout_per_herald / (1 - commissionRate));
+  const costPerHerald = Math.round(task.payout_per_herald * (1 + commissionRate));
 
   const creditInfo  = await getBrandCreditInfo(task.creator_id);
 

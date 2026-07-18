@@ -28,6 +28,25 @@
   height: 80px;
 }
 
+// 小程序原生标题栏（navigationStyle:custom）里跟胶囊按钮同行的紧凑版，
+// 容器高度/内边距由 index.tsx 按 getMenuButtonBoundingClientRect() 实测值内联设置（真实设备px，非rpx）
+.weapp-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  padding-left: 24px;
+  background: var(--bg);
+}
+
+.logo-wide.compact {
+  width: 76px;
+  height: 32px;
+}
+
 .logo {
   font-size: 44px;
   font-weight: 800;

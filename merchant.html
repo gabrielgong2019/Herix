@@ -741,144 +741,144 @@ function partnerTaskPage() {
 
 /* ── Task Detail ── */
 function taskDetailPage() {
-  var t = state.currentTask;
-  if (!t || !t.id) return '<div class="empty" style="padding:60px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⏳</div>加载中...</div>';
-  var apps = t.applications || [];
+  var task = state.currentTask;
+  if (!task || !task.id) return '<div class="empty" style="padding:60px 20px;text-align:center"><div style="font-size:32px;margin-bottom:12px">⏳</div>'+t('common.loading','加载中...')+'</div>';
+  var apps = task.applications || [];
   var subs = state.taskSubs || [];
   var pendingApps = apps.filter(function(a){return a.status==='PENDING'});
   var pendingSubs = subs.filter(function(s){return s.status==='PENDING_REVIEW'});
 
   var left = '<div class="panel">'
-    +'<div class="panel-title">任务信息</div>'
-    + infoRow('状态', '<span class="tag tag-'+t.status.toLowerCase()+'">'+statusLabel(t.status)+'</span>'+(t.fast_payout?'&nbsp;<span style="font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px">⚡ 极速打款</span>':''))
-    + infoRow('类型', modeLabel(t.mode))
-    + infoRow('分类', catLabel(t.category))
-    + infoRow('内容形式', ctLabel(t.content_type))
-    + infoRow('赫使获得', '¥'+Number(t.payout_per_herald||0).toLocaleString()+'（单人成本 ¥'+Number(t.cost_per_herald||0).toLocaleString()+'，含'+(((t.commission_rate||0.15)*100).toFixed(0))+'%服务费）')
-    + infoRow('招募名额', t.max_heralds+' 人')
-    + infoRow('已报名', apps.length+' 人（'+apps.filter(function(a){return a.status==='APPROVED'}).length+' 通过）')
-    + infoRow('发布时间', t.published_at ? fmtLocal(t.published_at).slice(0,10) : '未发布')
-    + infoRow('发布范围', t.visibility==='INVITE' ? '🔒 定向' : '🌐 公开')
-    + (t.status === 'DRAFT'
-      ? '<div style="margin:8px 12px 4px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted)">🔗 任务发布后可获取分享链接与海报</div>'
+    +'<div class="panel-title">'+t('merchant.taskDetail.panelTitle','任务信息')+'</div>'
+    + infoRow(t('merchant.dash.perfTable.status','状态'), '<span class="tag tag-'+task.status.toLowerCase()+'">'+statusLabel(task.status)+'</span>'+(task.fast_payout?'&nbsp;<span style="font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px">⚡ '+t('merchant.tasks.fastPayout','极速打款')+'</span>':''))
+    + infoRow(t('merchant.tasks.colType','类型'), modeLabel(task.mode))
+    + infoRow(t('merchant.taskDetail.category','分类'), catLabel(task.category))
+    + infoRow(t('merchant.taskDetail.contentForm','内容形式'), ctLabel(task.content_type))
+    + infoRow(t('merchant.taskDetail.heraldGets','赫使获得'), t('merchant.taskDetail.heraldGetsDetail','¥{payout}（单人成本 ¥{cost}，含{pct}%服务费）',{payout:Number(task.payout_per_herald||0).toLocaleString(),cost:Number(task.cost_per_herald||0).toLocaleString(),pct:((task.commission_rate||0.15)*100).toFixed(0)}))
+    + infoRow(t('merchant.taskDetail.recruitQuota','招募名额'), task.max_heralds+' '+t('merchant.unit.person','人'))
+    + infoRow(t('merchant.taskDetail.applied','已报名'), t('merchant.taskDetail.appliedDetail','{n} 人（{approved} 通过）',{n:apps.length,approved:apps.filter(function(a){return a.status==='APPROVED'}).length}))
+    + infoRow(t('merchant.taskDetail.publishTime','发布时间'), task.published_at ? fmtLocal(task.published_at).slice(0,10) : t('merchant.taskDetail.notPublished','未发布'))
+    + infoRow(t('merchant.taskDetail.visibility','发布范围'), task.visibility==='INVITE' ? '🔒 '+t('merchant.taskDetail.visibilityPrivate','定向') : '🌐 '+t('merchant.taskDetail.visibilityPublic','公开'))
+    + (task.status === 'DRAFT'
+      ? '<div style="margin:8px 12px 4px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px dashed var(--border);font-size:12px;color:var(--muted)">🔗 '+t('merchant.taskDetail.draftShareHint','任务发布后可获取分享链接与海报')+'</div>'
       : '<div style="margin:8px 12px 4px;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #bfdbfe">'
     // 行1：H5 链接（浏览器/微信外社交平台，永久有效）
-    + '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">'+(t.visibility==='INVITE'?'🔒 赫使邀请链接（H5）':'🔗 H5 分享链接')+' <span style="font-weight:400">— 浏览器/社交平台通用</span></div>'
-    + '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:8px" id="invite-link-text">'+taskShareUrl(t.id)+'</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600">'+(task.visibility==='INVITE'?'🔒 '+t('merchant.taskDetail.inviteLinkTitle','赫使邀请链接（H5）'):'🔗 '+t('merchant.taskDetail.shareLinkTitle','H5 分享链接'))+' <span style="font-weight:400">— '+t('merchant.taskDetail.shareLinkSub','浏览器/社交平台通用')+'</span></div>'
+    + '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:8px" id="invite-link-text">'+taskShareUrl(task.id)+'</div>'
     + '<div style="display:flex;gap:8px;margin-bottom:12px">'
-    + '<button class="btn btn-outline btn-sm" onclick="copyInviteLink(\''+t.id+'\')">复制链接</button>'
-    + '<button class="btn btn-primary btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成分享海报</button>'
+    + '<button class="btn btn-outline btn-sm" onclick="copyInviteLink(\''+task.id+'\')">'+t('merchant.taskDetail.copyLink','复制链接')+'</button>'
+    + '<button class="btn btn-primary btn-sm" onclick="openSharePoster(\''+task.id+'\')">'+t('merchant.taskDetail.generatePoster','生成分享海报')+'</button>'
     + '</div>'
     // 行2：小程序 URL Link（短信/邮件引流进小程序，30天有效自动续期）
-    + '<div style="font-size:11px;color:var(--muted);margin:0 0 6px;font-weight:600;border-top:1px solid #dbeafe;padding-top:10px">📱 小程序链接 <span style="font-weight:400">— 点击直接拉起微信小程序（30天有效）</span></div>'
-    + '<div id="weapp-link-box" style="margin-bottom:12px"><button class="btn btn-outline btn-sm" onclick="loadWeappLink(\''+t.id+'\')">获取小程序链接</button></div>'
+    + '<div style="font-size:11px;color:var(--muted);margin:0 0 6px;font-weight:600;border-top:1px solid #dbeafe;padding-top:10px">📱 '+t('merchant.taskDetail.weappLinkTitle','小程序链接')+' <span style="font-weight:400">— '+t('merchant.taskDetail.weappLinkSub','点击直接拉起微信小程序（30天有效）')+'</span></div>'
+    + '<div id="weapp-link-box" style="margin-bottom:12px"><button class="btn btn-outline btn-sm" onclick="loadWeappLink(\''+task.id+'\')">'+t('merchant.taskDetail.getWeappLink','获取小程序链接')+'</button></div>'
     // 行3：小程序码（海报/线下物料，永久有效）
-    + '<div style="font-size:11px;color:var(--muted);margin:0 0 6px;font-weight:600;border-top:1px solid #dbeafe;padding-top:10px">▣ 小程序码 <span style="font-weight:400">— 扫码进小程序，适合海报/线下物料（永久）</span></div>'
-    + '<div id="weapp-qr-box"><button class="btn btn-outline btn-sm" onclick="loadWeappQr(\''+t.id+'\')">生成小程序码</button></div>'
+    + '<div style="font-size:11px;color:var(--muted);margin:0 0 6px;font-weight:600;border-top:1px solid #dbeafe;padding-top:10px">▣ '+t('merchant.taskDetail.weappQrTitle','小程序码')+' <span style="font-weight:400">— '+t('merchant.taskDetail.weappQrSub','扫码进小程序，适合海报/线下物料（永久）')+'</span></div>'
+    + '<div id="weapp-qr-box"><button class="btn btn-outline btn-sm" onclick="loadWeappQr(\''+task.id+'\')">'+t('merchant.taskDetail.genWeappQr','生成小程序码')+'</button></div>'
     + '</div>')
     +'</div>';
 
-  if (t.status === 'DRAFT') {
+  if (task.status === 'DRAFT') {
     var pool = state.codePool || { total: 0, assigned: 0, available: 0, samples: [] };
-    var isCustom = t.code_mode === 'custom';
+    var isCustom = task.code_mode === 'custom';
     var codeReady = pool.total > 0;
 
-    if (t.mode === 'PERFORMANCE') {
+    if (task.mode === 'PERFORMANCE') {
       left += '<div class="panel">';
-      left += '<div class="panel-title">推广码设置 '+(codeReady?'<span style="color:var(--success);font-weight:normal">✅ 就绪</span>':'<span style="color:var(--danger);font-weight:normal">⚠️ 待配置</span>')+'</div>';
+      left += '<div class="panel-title">'+t('merchant.taskDetail.codePanelTitle','推广码设置')+' '+(codeReady?'<span style="color:var(--success);font-weight:normal">✅ '+t('merchant.taskDetail.codeReady','就绪')+'</span>':'<span style="color:var(--danger);font-weight:normal">⚠️ '+t('merchant.taskDetail.codePending','待配置')+'</span>')+'</div>';
 
       if (isCustom) {
         // 自定义上传
         if (codeReady) {
           left += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:12px">';
-          left += '<div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:6px">✅ 已上传 '+pool.total+' 个推广码</div>';
+          left += '<div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:6px">✅ '+t('merchant.taskDetail.codesUploaded','已上传 {n} 个推广码',{n:pool.total})+'</div>';
           left += '<div style="font-family:monospace;font-size:12px;color:#555">'+pool.samples.map(function(c){return esc(c)}).join('<br>')+'...</div>';
           left += '</div>';
         } else {
-          left += '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--danger)">⚠️ 需要上传推广码才能发布，任务名额 <strong>'+t.max_heralds+' 个</strong>，需上传等量推广码</div>';
+          left += '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--danger)">⚠️ '+t('merchant.taskDetail.codeUploadWarning','需要上传推广码才能发布，任务名额 <strong>{n} 个</strong>，需上传等量推广码',{n:task.max_heralds})+'</div>';
         }
         left += '<div id="upload-result"></div>';
-        left += '<textarea id="custom-codes-input" rows="5" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:8px" placeholder="每行一个推广码，例如：&#10;REMITLY-ABC123&#10;REMITLY-DEF456&#10;..."></textarea>';
-        left += '<button class="btn btn-outline btn-sm" onclick="uploadCustomCodes(\''+t.id+'\')">上传推广码</button>';
+        left += '<textarea id="custom-codes-input" rows="5" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:monospace;font-size:12px;margin-bottom:8px" placeholder="'+t('merchant.taskDetail.customCodesPlaceholder','每行一个推广码，例如：\nREMITLY-ABC123\nREMITLY-DEF456\n...')+'"></textarea>';
+        left += '<button class="btn btn-outline btn-sm" onclick="uploadCustomCodes(\''+task.id+'\')">'+t('merchant.taskDetail.uploadCodes','上传推广码')+'</button>';
       } else {
         // 自动生成
         if (codeReady) {
           left += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:12px">';
-          left += '<div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px">✅ 已自动生成 '+pool.total+' 个推广码</div>';
-          left += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">示例（前5个）：</div>';
+          left += '<div style="font-size:12px;font-weight:600;color:var(--success);margin-bottom:8px">✅ '+t('merchant.taskDetail.codesGenerated','已自动生成 {n} 个推广码',{n:pool.total})+'</div>';
+          left += '<div style="font-size:11px;color:var(--muted);margin-bottom:6px">'+t('merchant.taskDetail.samplesLabel','示例（前5个）：')+'</div>';
           left += '<div style="font-family:monospace;font-size:13px;font-weight:600;color:#0369a1;line-height:1.8">'+pool.samples.map(function(c){return esc(c)}).join('<br>')+'</div>';
           left += '</div>';
           left += '<div style="margin-bottom:14px">';
-          left += '<button class="btn btn-outline btn-sm" onclick="downloadCodes(\''+t.id+'\')">⬇ 下载全部推广码 CSV</button>';
-          left += '<div style="font-size:11px;color:var(--warning);margin-top:6px">⚠️ 请将推广码上传到 Remitly 等第三方系统后再发布任务</div>';
+          left += '<button class="btn btn-outline btn-sm" onclick="downloadCodes(\''+task.id+'\')">⬇ '+t('merchant.taskDetail.downloadCodesCsv','下载全部推广码 CSV')+'</button>';
+          left += '<div style="font-size:11px;color:var(--warning);margin-top:6px">⚠️ '+t('merchant.taskDetail.uploadWarning','请将推广码上传到 Remitly 等第三方系统后再发布任务')+'</div>';
           left += '</div>';
         } else {
-          left += '<div style="font-size:12px;color:var(--danger);margin-bottom:12px">推广码生成异常，请重新创建任务</div>';
+          left += '<div style="font-size:12px;color:var(--danger);margin-bottom:12px">'+t('merchant.taskDetail.codeGenError','推广码生成异常，请重新创建任务')+'</div>';
         }
       }
 
       left += '<div style="display:flex;gap:8px;margin-top:4px">';
-      left += '<button class="btn btn-outline btn-sm" onclick="editTask()">编辑任务</button>';
+      left += '<button class="btn btn-outline btn-sm" onclick="editTask()">'+t('merchant.taskDetail.editTask','编辑任务')+'</button>';
       if (codeReady) {
-        left += '<button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button>';
+        left += '<button class="btn btn-primary btn-sm" onclick="publishTask(\''+task.id+'\')">'+t('merchant.taskDetail.publishTask','发布任务')+'</button>';
       } else {
-        left += '<button class="btn btn-sm" style="background:#e2e8f0;color:#94a3b8;cursor:not-allowed" disabled>'+(isCustom?'请先上传推广码':'推广码异常')+'</button>';
+        left += '<button class="btn btn-sm" style="background:#e2e8f0;color:#94a3b8;cursor:not-allowed" disabled>'+(isCustom?t('merchant.taskDetail.needUploadFirst','请先上传推广码'):t('merchant.taskDetail.codeAbnormal','推广码异常'))+'</button>';
       }
       left += '</div></div>';
 
     } else {
       left += '<div class="panel" style="background:#f0fdf4;border:1px solid #86efac">'
-        +'<div style="font-size:13px;color:#166534;margin-bottom:12px">✅ 草稿已保存。发布后赫使才能看到并报名。</div>'
-        +'<div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="editTask()">编辑</button>'
-        +'<button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button></div></div>';
+        +'<div style="font-size:13px;color:#166534;margin-bottom:12px">✅ '+t('merchant.taskDetail.draftSaved','草稿已保存。发布后赫使才能看到并报名。')+'</div>'
+        +'<div style="display:flex;gap:8px"><button class="btn btn-outline btn-sm" onclick="editTask()">'+t('merchant.taskDetail.edit','编辑')+'</button>'
+        +'<button class="btn btn-primary btn-sm" onclick="publishTask(\''+task.id+'\')">'+t('merchant.taskDetail.publishTask','发布任务')+'</button></div></div>';
     }
   }
 
   // 品牌专属上传链接（PERFORMANCE 任务已发布后显示）
-  if (t.mode === 'PERFORMANCE' && ['OPEN','IN_PROGRESS'].includes(t.status) && t.upload_token) {
-    var uploadUrl = window.location.origin + '/upload.html?task=' + t.id + '&token=' + t.upload_token;
+  if (task.mode === 'PERFORMANCE' && ['OPEN','IN_PROGRESS'].includes(task.status) && task.upload_token) {
+    var uploadUrl = window.location.origin + '/upload.html?task=' + task.id + '&token=' + task.upload_token;
     left += '<div class="panel" style="border:1px solid #e0e7ff;background:#f5f3ff">'
-      +'<div class="panel-title" style="color:#6d28d9">📤 品牌数据上传链接</div>'
-      +'<div style="font-size:12px;color:#6b7280;margin-bottom:10px">将此链接发送给品牌方，品牌方无需登录即可上传转化数据</div>'
+      +'<div class="panel-title" style="color:#6d28d9">📤 '+t('merchant.taskDetail.uploadLinkTitle','品牌数据上传链接')+'</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-bottom:10px">'+t('merchant.taskDetail.uploadLinkHint','将此链接发送给品牌方，品牌方无需登录即可上传转化数据')+'</div>'
       +'<div style="font-family:monospace;font-size:11px;word-break:break-all;background:#fff;border:1px solid #ddd6fe;border-radius:6px;padding:8px;margin-bottom:10px;color:#374151">'+uploadUrl+'</div>'
       +'<div style="display:flex;gap:8px">'
-      +'<button class="btn btn-outline btn-sm" onclick="copyUploadLink(\''+t.id+'\',\''+t.upload_token+'\')">复制链接</button>'
-      +'<button class="btn btn-outline btn-sm" onclick="openSharePoster(\''+t.id+'\')">生成海报</button>'
+      +'<button class="btn btn-outline btn-sm" onclick="copyUploadLink(\''+task.id+'\',\''+task.upload_token+'\')">'+t('merchant.taskDetail.copyLink','复制链接')+'</button>'
+      +'<button class="btn btn-outline btn-sm" onclick="openSharePoster(\''+task.id+'\')">'+t('merchant.taskDetail.generatePosterShort','生成海报')+'</button>'
       +'</div></div>';
   }
 
   // 品牌方绑定（2026-07-17 定稿：多账号，凭上传链接注册/登录自助绑定，代理逐个解绑；关闭+30天缓冲后失效）
-  if (t.status !== 'DRAFT') {
-    var parties = t.brand_parties || [];
+  if (task.status !== 'DRAFT') {
+    var parties = task.brand_parties || [];
     left += '<div class="panel" style="border:1px solid #d1fae5;background:#f0fdf4">'
-      +'<div class="panel-title" style="color:#047857">🤝 品牌方账号（'+parties.length+'）</div>'
+      +'<div class="panel-title" style="color:#047857">🤝 '+t('merchant.taskDetail.brandAccountsTitle','品牌方账号（{n}）',{n:parties.length})+'</div>'
       + (parties.length
         ? parties.map(function(bp) {
             return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:8px">'
-              +'<div style="flex:1;min-width:0"><b>'+esc(bp.nickname||'品牌方账号')+'</b> <span style="font-size:11px;color:#6b7280">'+esc(bp.email||'')+'</span></div>'
-              +'<button class="btn btn-outline btn-sm" onclick="unbindBrand(\''+t.id+'\',\''+esc(bp.user_id)+'\',\''+esc(bp.nickname||'')+'\')">解绑</button>'
+              +'<div style="flex:1;min-width:0"><b>'+esc(bp.nickname||t('merchant.taskDetail.defaultBrandName','品牌方账号'))+'</b> <span style="font-size:11px;color:#6b7280">'+esc(bp.email||'')+'</span></div>'
+              +'<button class="btn btn-outline btn-sm" onclick="unbindBrand(\''+task.id+'\',\''+esc(bp.user_id)+'\',\''+esc(bp.nickname||'')+'\')">'+t('merchant.taskDetail.unbind','解绑')+'</button>'
               +'</div>';
           }).join('')
-          +'<div style="font-size:11px;color:#6b7280;margin-top:4px">品牌方可在线查看推广进展与跟踪明细（不含结算金额）并直接上传数据；任务关闭 30 天后自动失效</div>'
-        : '<div style="font-size:12px;color:#6b7280">尚未绑定。把上方「品牌数据上传链接」发给品牌方，对方注册/登录后自动绑定本任务（支持多个账号；在线看进展、直接上传数据，看不到结算金额）。绑错了可在此解绑</div>')
+          +'<div style="font-size:11px;color:#6b7280;margin-top:4px">'+t('merchant.taskDetail.brandBoundHint','品牌方可在线查看推广进展与跟踪明细（不含结算金额）并直接上传数据；任务关闭 30 天后自动失效')+'</div>'
+        : '<div style="font-size:12px;color:#6b7280">'+t('merchant.taskDetail.brandUnboundHint','尚未绑定。把上方「品牌数据上传链接」发给品牌方，对方注册/登录后自动绑定本任务（支持多个账号；在线看进展、直接上传数据，看不到结算金额）。绑错了可在此解绑')+'</div>')
       +'</div>';
   }
 
   var tabs = '<div class="tabs">'
-    +'<div class="tab'+(state.taskTab==='applicants'?' active':'')+'" onclick="switchTab(\'applicants\')">报名审核 ('+apps.length+')'+(pendingApps.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingApps.length+'</span>':'')+'</div>'
-    +'<div class="tab'+(state.taskTab==='submissions'?' active':'')+'" onclick="switchTab(\'submissions\')">内容提交 ('+subs.length+')'+(pendingSubs.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingSubs.length+'</span>':'')+'</div>'
-    +(t.mode==='PERFORMANCE'?'<div class="tab'+(state.taskTab==='codes'?' active':'')+'" onclick="switchTab(\'codes\')">推广码</div>':'')
-    +(t.mode==='PERFORMANCE'&&t.data_mode==='DETAIL'?'<div class="tab'+(state.taskTab==='referrals'?' active':'')+'" onclick="switchTab(\'referrals\')">跟踪明细</div>':'')
+    +'<div class="tab'+(state.taskTab==='applicants'?' active':'')+'" onclick="switchTab(\'applicants\')">'+t('merchant.taskDetail.tabApplicants','报名审核 ({n})',{n:apps.length})+(pendingApps.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingApps.length+'</span>':'')+'</div>'
+    +'<div class="tab'+(state.taskTab==='submissions'?' active':'')+'" onclick="switchTab(\'submissions\')">'+t('merchant.taskDetail.tabSubmissions','内容提交 ({n})',{n:subs.length})+(pendingSubs.length?' <span style=\"background:#ef4444;color:#fff;font-size:10px;padding:1px 5px;border-radius:8px\">'+pendingSubs.length+'</span>':'')+'</div>'
+    +(task.mode==='PERFORMANCE'?'<div class="tab'+(state.taskTab==='codes'?' active':'')+'" onclick="switchTab(\'codes\')">'+t('merchant.taskDetail.tabCodes','推广码')+'</div>':'')
+    +(task.mode==='PERFORMANCE'&&task.data_mode==='DETAIL'?'<div class="tab'+(state.taskTab==='referrals'?' active':'')+'" onclick="switchTab(\'referrals\')">'+t('merchant.taskDetail.tabReferrals','跟踪明细')+'</div>':'')
     +'</div>';
 
   var tabContent = '';
   if (state.taskTab === 'applicants') tabContent = applicantsPanel(apps);
   else if (state.taskTab === 'submissions') tabContent = submissionsPanel(subs);
-  else if (state.taskTab === 'referrals') tabContent = referralsPanel(t);
-  else tabContent = codesPanel(t);
+  else if (state.taskTab === 'referrals') tabContent = referralsPanel(task);
+  else tabContent = codesPanel(task);
 
   var right = '<div>'
-    +'<div class="panel"><div class="panel-title">任务描述</div><div style="font-size:13px;line-height:1.7;color:#444">'+esc(t.description)+'</div></div>'
+    +'<div class="panel"><div class="panel-title">'+t('merchant.taskDetail.descTitle','任务描述')+'</div><div style="font-size:13px;line-height:1.7;color:#444">'+esc(task.description)+'</div></div>'
     + tabs + tabContent
     +'</div>';
 

@@ -1038,5 +1038,7 @@
   "merchant.publish.topupReminder": "任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。",
   "merchant.preview.caption": "赫使在小程序里看到的效果",
   "merchant.preview.exampleTitle": "新品体验官招募（示例）",
-  "merchant.preview.note": "空白字段以示例内容占位，开始填写后实时更新；实际展示以小程序端为准"
+  "merchant.preview.note": "空白字段以示例内容占位，开始填写后实时更新；实际展示以小程序端为准",
+  "merchant.wizard.previewCaption": "赫使每天刷到的探索页",
+  "merchant.wizard.previewNote": "完成入驻、发布任务后，你的任务就会出现在这里，被赫使发现并报名"
 }

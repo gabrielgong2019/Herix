@@ -118,6 +118,7 @@ tr:hover td { background:#f9fafb; cursor:pointer; }
 .pv-new { color:#f5a623; font-weight:700; font-size:11px; letter-spacing:0; }
 .pv-thumb { width:88px; height:88px; border-radius:12px; background:#f5f5f7 center/cover no-repeat; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:22px; }
 @media (max-width:900px) { .tf-layout { flex-direction:column-reverse; } .tf-preview { width:100%; position:static; } .pv-card { max-width:420px; } }
+.wiz-sample-img { width:100%; border-radius:16px; box-shadow:0 2px 8px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.06); display:block; }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .form-full { grid-column:1/-1; }
 .field { display:flex; flex-direction:column; gap:6px; }
@@ -477,10 +478,19 @@ function bindLogin() {
   });
 }
 
+function wizardPreviewPanel() {
+  return '<div class="tf-preview">'
+    +'<div class="pv-caption">📱 '+t('merchant.wizard.previewCaption','赫使每天刷到的探索页')+'</div>'
+    +'<img class="wiz-sample-img" src="Logo/samples/herix-app-sample.jpg" alt="Herix App">'
+    +'<div class="pv-note">'+t('merchant.wizard.previewNote','完成入驻、发布任务后，你的任务就会出现在这里，被赫使发现并报名')+'</div>'
+    +'</div>';
+}
+
 function activateBrandPage() {
   var step = state.activateStep || 1;
-  var h = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc">';
-  h += '<div style="background:#fff;border-radius:16px;padding:40px;width:440px;max-width:94vw;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
+  var h = '<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8fafc;padding:20px 0">';
+  h += '<div class="tf-layout" style="width:760px;max-width:94vw">';
+  h += '<div class="tf-form"><div style="background:#fff;border-radius:16px;padding:40px;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
 
   // 进度条（带步骤标签）
   var stepLabels = [t('merchant.wizard.step1','身份'), t('merchant.wizard.step2','公司信息'), t('merchant.wizard.step3','联系方式'), t('merchant.wizard.step4','协议')];
@@ -573,7 +583,9 @@ function activateBrandPage() {
     h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">'+t('merchant.agreement.version','协议版本 2026-07-18-v4')+'</div>';
   }
 
-  h += '</div></div>';
+  h += '</div></div>'
+    +wizardPreviewPanel()
+    +'</div></div>';
   return h;
 }
 

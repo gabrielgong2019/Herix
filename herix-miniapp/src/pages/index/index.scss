@@ -40,13 +40,15 @@
                           // 实际渲染高度变成 height+padding-top，logo 被挤到偏下、整体比胶囊按钮那行高一截
   display: flex;
   align-items: center;
+  justify-content: space-between; // logo 贴左，slogan 推到右边(胶囊按钮左侧，paddingRight已让开)
   padding-left: 24px;
   background: var(--bg);
 }
 
 .logo-wide.compact {
-  width: 76px;
-  height: 32px;
+  /* 素材已裁掉多余留白(2026-07-18)，按真实内容比例2.33放大，不再拉伸变形 */
+  width: 98px;
+  height: 42px;
 }
 
 .logo {
@@ -58,6 +60,12 @@
 .slogan {
   font-size: 24px;
   color: var(--text-muted);
+}
+
+.slogan.compact {
+  font-size: 20px;
+  white-space: nowrap;
+  margin-left: 12px; // space-between 已把它推到右侧，这里是跟 logo 的最小间距保底
 }
 
 .logo-accent {

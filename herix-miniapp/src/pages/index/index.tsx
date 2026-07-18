@@ -97,12 +97,13 @@ export default class Index extends Component<{}, State> {
       <View className='index-page'>
         {navMetrics ? (
           <>
-            {/* 小程序：接管原生标题栏，logo 跟胶囊按钮同一行；slogan 空间不够放不下，先省略 */}
+            {/* 小程序：接管原生标题栏，logo 跟胶囊按钮同一行，slogan 贴胶囊左侧 */}
             <View
               className='weapp-navbar'
               style={{ height: `${navMetrics.barHeight}px`, paddingTop: `${navMetrics.top}px`, paddingRight: `${navMetrics.paddingRight}px` }}
             >
               <Image className='logo-wide compact' src={logoWide} mode='aspectFit' />
+              <Text className='slogan compact'>{t('index.slogan')}</Text>
             </View>
             <View style={{ height: `${navMetrics.spacerHeight}px` }} />
           </>

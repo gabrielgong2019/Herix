@@ -110,7 +110,16 @@ var Auth = (function() {
   /** 发送注册验证码 + 60 秒倒计时（按钮复用） */
   function sendCode(emailId, btn) {
     var email = ((document.getElementById(emailId) || {}).value || '').trim();
-    if (!email) { alert(tr('auth.fillEmailFirst','请先填写邮箱')); return; }
+    // 提示改为表单内联（原生 alert 又糙又挡操作）；formId 从按钮所在 form 反查
+    var form = btn && btn.closest ? btn.closest('form') : null;
+    var formId = form ? form.id : null;
+    function fail(msg) { if (formId) showError(formId, msg); else alert(msg); }
+    function info(msg) {
+      var el = formId ? document.getElementById(formId + '-err') : null;
+      if (el) el.innerHTML = '<div style="color:#166534;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;font-size:12px;padding:8px 12px">' + msg + '</div>';
+      else alert(msg);
+    }
+    if (!email) { fail(tr('auth.fillEmailFirst','请先填写邮箱')); return; }
     var api = window.AUTH_API || '/api/auth';
     btn.disabled = true;
     var xhr = new XMLHttpRequest();
@@ -119,7 +128,11 @@ var Auth = (function() {
     xhr.onload = function() {
       try {
         var d = JSON.parse(xhr.responseText);
-        if (d.error) { alert(d.error); btn.disabled = false; return; }
+        if (d.error) {
+          // 邮箱已注册：宿主可接管（merchant 切登录并预填），与注册提交路径同一钩子
+          if (d.code === 'ACCOUNT_TAKEN' && window._authOnAccountTaken) { window._authOnAccountTaken(email); return; }
+          fail(d.error); btn.disabled = false; return;
+        }
         var left = 60;
         btn.textContent = tr('auth.resendIn','{s}s 后重发',{s:left});
         var timer = setInterval(function() {
@@ -127,10 +140,10 @@ var Auth = (function() {
           if (left <= 0) { clearInterval(timer); btn.disabled = false; btn.textContent = tr('auth.sendCode','获取验证码'); }
           else btn.textContent = tr('auth.resendIn','{s}s 后重发',{s:left});
         }, 1000);
-        alert(tr('auth.codeSent','验证码已发送，请查收邮箱（含垃圾箱）'));
-      } catch (e) { alert(tr('auth.sendFailed','发送失败')); btn.disabled = false; }
+        info(tr('auth.codeSent','验证码已发送，请查收邮箱（含垃圾箱）'));
+      } catch (e) { fail(tr('auth.sendFailed','发送失败')); btn.disabled = false; }
     };
-    xhr.onerror = function() { alert(tr('auth.netError','网络错误')); btn.disabled = false; };
+    xhr.onerror = function() { fail(tr('auth.netError','网络错误')); btn.disabled = false; };
     xhr.send(JSON.stringify({ email: email, purpose: 'REGISTER' }));
   }
 

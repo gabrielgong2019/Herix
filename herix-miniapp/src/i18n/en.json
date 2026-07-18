@@ -791,5 +791,14 @@
   "merchant.form.saveDraft": "Save Draft",
   "merchant.form.draftTitle": "Saves as a draft — ambassadors won't see it until you publish manually",
   "merchant.form.createPublish": "Create & Publish",
-  "merchant.form.draftHint": "Drafts aren't shown externally — publishing makes them visible for ambassadors to apply"
+  "merchant.form.draftHint": "Drafts aren't shown externally — publishing makes them visible for ambassadors to apply",
+  "merchant.metaEdit.noTask": "No task selected",
+  "merchant.metaEdit.lockedFieldsNote": "The following cannot be changed: <strong>payout amount, task type, referral code method</strong> (close the task and recreate it if you need to change these)",
+  "merchant.metaEdit.quotaLabel": "Quota ({n} currently — can only increase)",
+  "merchant.metaEdit.coverHint": "Optional · uploads automatically once selected",
+  "merchant.metaEdit.coverClick": "Tap to change the cover image",
+  "merchant.partnerTask.notFound": "Task not found",
+  "merchant.partnerTask.viewingAs": "Agency: {agency} · Viewing progress as the brand (settlement amounts are managed by the agency)",
+  "merchant.partnerTask.loadingReferrals": "Loading detail…",
+  "merchant.partnerTask.uploadTitle": "Upload Conversion Data"
 }

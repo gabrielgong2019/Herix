@@ -792,5 +792,14 @@
   "merchant.form.saveDraft": "商家后台任务创建/编辑表单 taskFormPage()/platformReqsFormHTML()，merchant.html 专用词条(2026-07-18)",
   "merchant.form.draftTitle": "商家后台任务创建/编辑表单 taskFormPage()/platformReqsFormHTML()，merchant.html 专用词条(2026-07-18)",
   "merchant.form.createPublish": "商家后台任务创建/编辑表单 taskFormPage()/platformReqsFormHTML()，merchant.html 专用词条(2026-07-18)",
-  "merchant.form.draftHint": "商家后台任务创建/编辑表单 taskFormPage()/platformReqsFormHTML()，merchant.html 专用词条(2026-07-18)"
+  "merchant.form.draftHint": "商家后台任务创建/编辑表单 taskFormPage()/platformReqsFormHTML()，merchant.html 专用词条(2026-07-18)",
+  "merchant.metaEdit.noTask": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.metaEdit.lockedFieldsNote": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.metaEdit.quotaLabel": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.metaEdit.coverHint": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.metaEdit.coverClick": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.partnerTask.notFound": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.partnerTask.viewingAs": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.partnerTask.loadingReferrals": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)",
+  "merchant.partnerTask.uploadTitle": "商家后台任务元信息编辑/品牌方关联任务页，merchant.html 专用词条(2026-07-18)"
 }

@@ -791,5 +791,14 @@
   "merchant.form.saveDraft": "保存草稿",
   "merchant.form.draftTitle": "保存为草稿，需手动发布后赫使才能看到",
   "merchant.form.createPublish": "创建并发布",
-  "merchant.form.draftHint": "草稿不会对外展示，发布后赫使才能看到并报名"
+  "merchant.form.draftHint": "草稿不会对外展示，发布后赫使才能看到并报名",
+  "merchant.metaEdit.noTask": "未选择任务",
+  "merchant.metaEdit.lockedFieldsNote": "以下字段不可修改：<strong>报酬金额、任务类型、推广码方式</strong>（如需修改请关闭任务重新创建）",
+  "merchant.metaEdit.quotaLabel": "招募名额（当前 {n} 人，只能增加）",
+  "merchant.metaEdit.coverHint": "选填 · 选择后自动上传",
+  "merchant.metaEdit.coverClick": "点击更换封面图",
+  "merchant.partnerTask.notFound": "任务不存在",
+  "merchant.partnerTask.viewingAs": "代理：{agency} · 你以品牌方身份查看进展（结算金额由代理管理）",
+  "merchant.partnerTask.loadingReferrals": "加载明细…",
+  "merchant.partnerTask.uploadTitle": "上传转化数据"
 }

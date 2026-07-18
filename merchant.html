@@ -774,30 +774,30 @@ function openPartnerTask(id) {
 }
 
 function partnerTaskPage() {
-  var t = state.currentPartnerTask;
-  if (!t) return '<div class="empty" style="padding:60px">任务不存在</div>';
-  var isDetail = t.data_mode === 'DETAIL';
+  var task = state.currentPartnerTask;
+  if (!task) return '<div class="empty" style="padding:60px">'+t('merchant.partnerTask.notFound','任务不存在')+'</div>';
+  var isDetail = task.data_mode === 'DETAIL';
   var html = '<div class="form-card"><div style="max-width:760px">'
-    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:18px;font-weight:700">'+esc(t.title)+'</div>'
-    +'<span class="tag tag-'+(t.status||'').toLowerCase()+'">'+statusLabel(t.status)+'</span></div>'
-    +'<div style="font-size:12px;color:var(--muted);margin-bottom:16px">代理：'+esc(t.agency_name||'')+' · 你以品牌方身份查看进展（结算金额由代理管理）</div>'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px"><div style="font-size:18px;font-weight:700">'+esc(task.title)+'</div>'
+    +'<span class="tag tag-'+(task.status||'').toLowerCase()+'">'+statusLabel(task.status)+'</span></div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:16px">'+t('merchant.partnerTask.viewingAs','代理：{agency} · 你以品牌方身份查看进展（结算金额由代理管理）',{agency:esc(task.agency_name||'')})+'</div>'
     +'<div style="display:flex;gap:12px;margin-bottom:20px">'
-    +[['推广赫使', t.code_holders||0], ['累计注册', t.total_registered||0], ['累计转化', t.total_converted||0]].map(function(s) {
+    +[[t('merchant.tasks.colCodeHolders','推广赫使'), task.code_holders||0], [t('merchant.tasks.colRegistered','累计注册'), task.total_registered||0], [t('merchant.tasks.colConverted','累计转化'), task.total_converted||0]].map(function(s) {
         return '<div style="flex:1;background:var(--bg);border-radius:10px;padding:14px;text-align:center"><div style="font-size:22px;font-weight:700">'+s[1]+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+s[0]+'</div></div>';
       }).join('')
     +'</div>';
   if (isDetail) {
-    html += '<div style="font-weight:600;margin-bottom:8px">跟踪明细</div>'
-      +'<div id="referrals-panel"><div style="font-size:12px;color:var(--muted);padding:12px">⏳ 加载明细…</div></div>';
-    setTimeout(function(){ loadTaskReferrals(t.id); }, 0);
+    html += '<div style="font-weight:600;margin-bottom:8px">'+t('merchant.taskDetail.tabReferrals','跟踪明细')+'</div>'
+      +'<div id="referrals-panel"><div style="font-size:12px;color:var(--muted);padding:12px">⏳ '+t('merchant.partnerTask.loadingReferrals','加载明细…')+'</div></div>';
+    setTimeout(function(){ loadTaskReferrals(task.id); }, 0);
   }
   // 数据上传（品牌方登录直传，与上传链接同一处理管道）
-  html += '<div style="font-weight:600;margin:20px 0 8px">上传转化数据</div>'
-    +'<input type="hidden" id="csv-task" value="'+esc(t.id)+'">'
-    +'<div id="csv-mode-block" style="margin-bottom:10px">'+csvModeBlockHTML(t)+'</div>'
-    +'<textarea id="csv-data" rows="6" style="width:100%" placeholder="粘贴 CSV 内容，格式见上方模板"></textarea>'
+  html += '<div style="font-weight:600;margin:20px 0 8px">'+t('merchant.partnerTask.uploadTitle','上传转化数据')+'</div>'
+    +'<input type="hidden" id="csv-task" value="'+esc(task.id)+'">'
+    +'<div id="csv-mode-block" style="margin-bottom:10px">'+csvModeBlockHTML(task)+'</div>'
+    +'<textarea id="csv-data" rows="6" style="width:100%" placeholder="'+t('merchant.csv.pastePlaceholder','粘贴 CSV 内容，格式见上方模板')+'"></textarea>'
     +'<div id="csv-result" style="margin-top:8px"></div>'
-    +'<div style="margin-top:10px"><button class="btn btn-primary" onclick="doCsvUpload()">上传数据</button></div>'
+    +'<div style="margin-top:10px"><button class="btn btn-primary" onclick="doCsvUpload()">'+t('merchant.csv.upload','上传数据')+'</button></div>'
     +'</div></div>';
   return html;
 }
@@ -2428,34 +2428,34 @@ function editTaskMeta() {
 }
 
 function taskMetaEditPage() {
-  var t = state.editingTask;
-  if (!t) return '<div class="empty">未选择任务</div>';
+  var task = state.editingTask;
+  if (!task) return '<div class="empty">'+t('merchant.metaEdit.noTask','未选择任务')+'</div>';
 
   // 初始化平台要求
-  if (t.platform_requirements && taskPlatformReqs.length === 0) {
-    try { taskPlatformReqs = JSON.parse(t.platform_requirements); } catch(e) {}
+  if (task.platform_requirements && taskPlatformReqs.length === 0) {
+    try { taskPlatformReqs = JSON.parse(task.platform_requirements); } catch(e) {}
   }
 
   var h = '<div class="form-card"><div class="form-grid">';
   h += '<div class="field form-full" style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e">';
-  h += '以下字段不可修改：<strong>报酬金额、任务类型、推广码方式</strong>（如需修改请关闭任务重新创建）</div>';
+  h += t('merchant.metaEdit.lockedFieldsNote','以下字段不可修改：<strong>报酬金额、任务类型、推广码方式</strong>（如需修改请关闭任务重新创建）')+'</div>';
 
-  h += '<div class="field form-full"><label>任务描述 *</label><textarea id="meta-description" rows="4">'+esc(t.description||'')+'</textarea></div>';
-  h += '<div class="field form-full"><label>具体要求</label><textarea id="meta-requirements" rows="3">'+esc(t.requirements||'')+'</textarea></div>';
-  h += '<div class="field"><label>截止日期</label><input id="meta-deadline" type="date" value="'+(t.deadline?t.deadline.slice(0,10):'')+'"></div>';
-  h += '<div class="field"><label>招募名额（当前 '+t.max_heralds+' 人，只能增加）</label><input id="meta-maxHeralds" type="number" min="'+t.max_heralds+'" value="'+t.max_heralds+'"></div>';
-  h += '<div class="field form-full"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 选择后自动上传</span></label>'
+  h += '<div class="field form-full"><label>'+t('merchant.form.description','任务描述 *')+'</label><textarea id="meta-description" rows="4">'+esc(task.description||'')+'</textarea></div>';
+  h += '<div class="field form-full"><label>'+t('merchant.form.requirements','具体要求')+'</label><textarea id="meta-requirements" rows="3">'+esc(task.requirements||'')+'</textarea></div>';
+  h += '<div class="field"><label>'+t('merchant.form.deadline','截止日期')+'</label><input id="meta-deadline" type="date" value="'+(task.deadline?task.deadline.slice(0,10):'')+'"></div>';
+  h += '<div class="field"><label>'+t('merchant.metaEdit.quotaLabel','招募名额（当前 {n} 人，只能增加）',{n:task.max_heralds})+'</label><input id="meta-maxHeralds" type="number" min="'+task.max_heralds+'" value="'+task.max_heralds+'"></div>';
+  h += '<div class="field form-full"><label>'+t('merchant.form.cover','任务封面图')+' <span style="font-weight:400;color:var(--muted);font-size:12px">'+t('merchant.metaEdit.coverHint','选填 · 选择后自动上传')+'</span></label>'
     + '<div style="width:100%;max-width:480px;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'meta-cover-file-input\').click()">'
-    + '<img id="meta-cover-preview-img" src="'+esc(t.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(t.cover_image?'':'display:none')+'">'
-    + '<div id="meta-cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(t.cover_image?'display:none':'')+'">'
-    + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">点击更换封面图</div></div>'
+    + '<img id="meta-cover-preview-img" src="'+esc(task.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(task.cover_image?'':'display:none')+'">'
+    + '<div id="meta-cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(task.cover_image?'display:none':'')+'">'
+    + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">'+t('merchant.metaEdit.coverClick','点击更换封面图')+'</div></div>'
     + '</div>'
     + '<input type="file" id="meta-cover-file-input" accept="image/*" style="display:none" onchange="onMetaCoverFileSelect(this)">'
     + '<div id="meta-cover-status" style="font-size:12px;color:var(--muted)"></div></div>';
-  h += platformReqsFormHTML(t);
+  h += platformReqsFormHTML(task);
   h += '<div class="form-actions">';
-  h += '<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>';
-  h += '<button class="btn btn-primary" onclick="saveTaskMeta()">保存</button>';
+  h += '<button class="btn btn-outline" onclick="go(\'task_detail\')">'+t('common.cancel','取消')+'</button>';
+  h += '<button class="btn btn-primary" onclick="saveTaskMeta()">'+t('merchant.settings.save','保存')+'</button>';
   h += '</div></div></div>';
   return h;
 }

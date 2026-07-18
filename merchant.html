@@ -1950,8 +1950,11 @@ function onTaskCostInput() {
   h += '</div>';
 
   // 额度占用（仅公开任务 + 有额度数据时显示）
-  if (capacity !== null && taskCap > 0) {
-    var pct = Math.min(100, Math.round(total / taskCap * 100));
+  // ⚠️ 此前引用了未定义的 taskCap（作用域属于另一个函数 taskCapacitySummary，
+  // 两者毫不相干）——ReferenceError 导致函数中断，h 从未真正赋值进 meter.innerHTML，
+  // 计算器长期"不显示"（用户截图反馈坐实）。改回本函数域内正确算出的 capacity
+  if (capacity !== null && capacity > 0) {
+    var pct = Math.min(100, Math.round(total / capacity * 100));
     h += '<div style="height:4px;background:#e5e7eb;border-radius:3px;overflow:hidden;margin-bottom:4px">'
       +'<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px;transition:width .25s"></div></div>';
     h += '<div style="display:flex;justify-content:space-between;align-items:center">';

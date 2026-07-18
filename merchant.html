@@ -1121,85 +1121,77 @@ var taskPlatformReqs = [];
 var taskReqMode = 'ALL';      // ALL=必须项全部满足 | ANY_N=任 N 项满足
 var taskReqMinCount = 1;
 
-function taskFormPage(t) {
-  var isEdit = !!t;
+function taskFormPage(task) {
+  var isEdit = !!task;
   return '<div class="form-card">'
     +'<div id="task-capacity-banner">'+taskCapacityBannerContent()+'</div>'
     +'<div id="task-cost-meter" style="margin-bottom:4px"></div>'
     +'<div class="form-grid">'
-    + field('任务标题 *', 'title', 'text', t&&t.title||'', '例：Herix 大使计划')
-    + '<div class="field"><label>任务模式 *</label><select id="mode" onchange="toggleCodeModeSection();onTaskCostInput()">'
-    + '<option value="STANDARD"'+(t&&t.mode==='STANDARD'?' selected':'')+'>类型B — 任务体验（提交内容审核）</option>'
-    + '<option value="PERFORMANCE"'+(t&&t.mode==='PERFORMANCE'?' selected':'')+'>类型A — 成果报酬（推广码转化）</option>'
+    + field(t('merchant.form.title','任务标题 *'), 'title', 'text', task&&task.title||'', t('merchant.form.titlePh','例：Herix 大使计划'))
+    + '<div class="field"><label>'+t('merchant.form.mode','任务模式 *')+'</label><select id="mode" onchange="toggleCodeModeSection();onTaskCostInput()">'
+    + '<option value="STANDARD"'+(task&&task.mode==='STANDARD'?' selected':'')+'>'+t('merchant.form.modeStandard','类型B — 任务体验（提交内容审核）')+'</option>'
+    + '<option value="PERFORMANCE"'+(task&&task.mode==='PERFORMANCE'?' selected':'')+'>'+t('merchant.form.modePerformance','类型A — 成果报酬（推广码转化）')+'</option>'
     + '</select></div>'
-    + '<div class="field"><label>分类 *</label><select id="category">'
-    + '<option value="" disabled'+(t&&t.category?'':' selected')+'>请选择分类</option>'
-    + CATEGORIES.map(function(c){return '<option value="'+c.id+'"'+(t&&t.category===c.id?' selected':'')+'>'+c.icon+' '+c.label+'</option>'}).join('')
+    + '<div class="field"><label>'+t('merchant.form.category','分类 *')+'</label><select id="category">'
+    + '<option value="" disabled'+(task&&task.category?'':' selected')+'>'+t('merchant.form.categoryPh','请选择分类')+'</option>'
+    + CATEGORIES.map(function(c){return '<option value="'+c.id+'"'+(task&&task.category===c.id?' selected':'')+'>'+c.icon+' '+tf('category.'+c.id,c.label)+'</option>'}).join('')
     + '</select></div>'
-    + '<div class="field"><label>发布范围</label><select id="visibility" onchange="onTaskCostInput()">'
-    + '<option value="PUBLIC"'+((!t||t.visibility==='PUBLIC'||!t.visibility)?' selected':'')+'>公开 — 出现在赫使探索列表</option>'
-    + '<option value="INVITE"'+(t&&t.visibility==='INVITE'?' selected':'')+'>定向 — 仅限链接访问，不公开</option>'
-    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">定向任务不出现在探索列表，只有持有链接的赫使可以看到并报名</div></div>'
-    + '<div class="field" id="contentType-field"><label>内容形式</label><select id="contentType" onchange="">'
-    + '<option value="photo"'+(t&&t.content_type==='photo'?' selected':'')+'>📷 图文</option>'
-    + '<option value="video"'+(t&&t.content_type==='video'?' selected':'')+'>🎬 视频</option>'
-    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">赫使需要提交的内容类型</div></div>'
-    + field('任务报酬 (¥) *', 'payout', 'number', t&&t.payout_per_herald||'', '赫使实际到手金额（已扣除平台服务费）', 'oninput="onTaskCostInput()"')
-    + field('招募人数 *', 'maxHeralds', 'number', t&&t.max_heralds||'3', '最多接受多少位赫使', 'oninput="onTaskCostInput()"')
-    + '<div class="field form-full"><label>任务描述 *</label><textarea id="description" rows="4" placeholder="详细说明任务要求、目标受众、品牌背景...">'+esc(t&&t.description||'')+'</textarea></div>'
+    + field(t('merchant.form.payout','任务报酬 (¥) *'), 'payout', 'number', task&&task.payout_per_herald||'', t('merchant.form.payoutPh','赫使实际到手金额（已扣除平台服务费）'), 'oninput="onTaskCostInput()"')
+    + field(t('merchant.form.maxHeralds','招募人数 *'), 'maxHeralds', 'number', task&&task.max_heralds||'3', t('merchant.form.maxHeraldsPh','最多接受多少位赫使'), 'oninput="onTaskCostInput()"')
+    + '<div class="field form-full"><label>'+t('merchant.form.description','任务描述 *')+'</label><textarea id="description" rows="4" placeholder="'+t('merchant.form.descriptionPh','详细说明任务要求、目标受众、品牌背景...')+'">'+esc(task&&task.description||'')+'</textarea></div>'
     +'</div>'  // close form-grid（核心必填区）
     // ── 高级选项：其余字段都有可用默认值，折叠减少首次创建时的信息量 ──
     +'<div style="margin:4px 0 14px">'
-    +'<span id="adv-toggle" style="font-size:13px;color:var(--primary);cursor:pointer;user-select:none" onclick="toggleAdvancedFields()">▾ 高级选项（截止日期、内容形式、封面图、推广码设置等）</span>'
+    +'<span id="adv-toggle" style="font-size:13px;color:var(--primary);cursor:pointer;user-select:none" onclick="toggleAdvancedFields()">▾ '+t('merchant.form.advancedToggle','高级选项（截止日期、内容形式、封面图、推广码设置等）')+'</span>'
     +'</div>'
     +'<div class="form-grid" id="advanced-fields" style="display:none">'
-    + '<div class="field"><label>任务难度</label><select id="difficulty">'
-    + '<option value="easy"'+(t&&t.difficulty==='easy'?' selected':'')+'>轻松</option>'
-    + '<option value="medium"'+(t&&t.difficulty==='medium'?' selected':'')+'>适中</option>'
-    + '<option value="hard"'+(t&&t.difficulty==='hard'?' selected':'')+'>挑战</option>'
+    + '<div class="field"><label>'+t('merchant.form.difficulty','任务难度')+'</label><select id="difficulty">'
+    + '<option value="easy"'+(task&&task.difficulty==='easy'?' selected':'')+'>'+t('merchant.form.difficultyEasy','轻松')+'</option>'
+    + '<option value="medium"'+(task&&task.difficulty==='medium'?' selected':'')+'>'+t('merchant.form.difficultyMedium','适中')+'</option>'
+    + '<option value="hard"'+(task&&task.difficulty==='hard'?' selected':'')+'>'+t('merchant.form.difficultyHard','挑战')+'</option>'
     + '</select></div>'
-    + field('截止日期', 'deadline', 'date', t&&t.deadline?t.deadline.slice(0,10):'', '')
-    + '<div class="field form-full"><label>具体要求</label><textarea id="requirements" rows="3" placeholder="可选：发布平台要求、内容关键词、存续时间等...">'+esc(t&&t.requirements||'')+'</textarea></div>'
-    + platformReqsFormHTML(t)
-    + '<div class="field form-full" id="cover-upload-wrap"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 16:9 场景图效果最佳</span></label>'
+    + field(t('merchant.form.deadline','截止日期'), 'deadline', 'date', task&&task.deadline?task.deadline.slice(0,10):'', '')
+    + '<div class="field form-full"><label>'+t('merchant.form.requirements','具体要求')+'</label><textarea id="requirements" rows="3" placeholder="'+t('merchant.form.requirementsPh','可选：发布平台要求、内容关键词、存续时间等...')+'">'+esc(task&&task.requirements||'')+'</textarea></div>'
+    + platformReqsFormHTML(task)
+    + '<div class="field form-full" id="cover-upload-wrap"><label>'+t('merchant.form.cover','任务封面图')+' <span style="font-weight:400;color:var(--muted);font-size:12px">'+t('merchant.form.coverHint','选填 · 16:9 场景图效果最佳')+'</span></label>'
     + '<div style="width:100%;max-width:480px;aspect-ratio:16/9;background:#f5f5f7;border-radius:10px;overflow:hidden;margin-bottom:8px;cursor:pointer;position:relative" onclick="document.getElementById(\'cover-file-input\').click()">'
-    + '<img id="cover-preview-img" src="'+(t&&t.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(t&&t.cover_image?'':'display:none')+'">'
-    + '<div id="cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(t&&t.cover_image?'display:none':'')+'">'
-    + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">点击选择图片</div><div style="font-size:11px;margin-top:4px">支持 JPG / PNG / HEIF，自动压缩</div></div>'
+    + '<img id="cover-preview-img" src="'+(task&&task.cover_image||'')+'" style="width:100%;height:100%;object-fit:cover;'+(task&&task.cover_image?'':'display:none')+'">'
+    + '<div id="cover-placeholder" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#aaa;'+(task&&task.cover_image?'display:none':'')+'">'
+    + '<div style="font-size:32px;margin-bottom:6px">📷</div><div style="font-size:13px">'+t('merchant.form.coverClick','点击选择图片')+'</div><div style="font-size:11px;margin-top:4px">'+t('merchant.form.coverFormats','支持 JPG / PNG / HEIF，自动压缩')+'</div></div>'
     + '</div>'
     + '<input type="file" id="cover-file-input" accept="image/*" style="display:none" onchange="onCoverFileSelect(this)">'
     + '<div id="cover-status" style="font-size:12px;color:var(--muted)"></div>'
     + '</div>'
-    + '<div class="field"><label>发布范围</label><select id="visibility" onchange="onTaskCostInput()">'
-    + '<option value="PUBLIC"'+((!t||t.visibility==='PUBLIC'||!t.visibility)?' selected':'')+'>公开 — 出现在赫使探索列表</option>'
-    + '<option value="INVITE"'+(t&&t.visibility==='INVITE'?' selected':'')+'>定向 — 仅限链接访问，不公开</option>'
-    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">定向任务不出现在探索列表，只有持有链接的赫使可以看到并报名</div></div>'
-    + '<div class="field" id="contentType-field"><label>内容形式</label><select id="contentType" onchange="">'
-    + '<option value="photo"'+(t&&t.content_type==='photo'?' selected':'')+'>📷 图文</option>'
-    + '<option value="video"'+(t&&t.content_type==='video'?' selected':'')+'>🎬 视频</option>'
-    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">赫使需要提交的内容类型</div></div>'
+    + '<div class="field"><label>'+t('merchant.form.visibility','发布范围')+'</label><select id="visibility" onchange="onTaskCostInput()">'
+    + '<option value="PUBLIC"'+((!task||task.visibility==='PUBLIC'||!task.visibility)?' selected':'')+'>'+t('merchant.form.visibilityPublic','公开 — 出现在赫使探索列表')+'</option>'
+    + '<option value="INVITE"'+(task&&task.visibility==='INVITE'?' selected':'')+'>'+t('merchant.form.visibilityInvite','定向 — 仅限链接访问，不公开')+'</option>'
+    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.form.visibilityHint','定向任务不出现在探索列表，只有持有链接的赫使可以看到并报名')+'</div></div>'
+    + '<div class="field" id="contentType-field"><label>'+t('merchant.form.contentType','内容形式')+'</label><select id="contentType" onchange="">'
+    + '<option value="photo"'+(task&&task.content_type==='photo'?' selected':'')+'>📷 '+t('merchant.contentType.photo','图文')+'</option>'
+    + '<option value="video"'+(task&&task.content_type==='video'?' selected':'')+'>🎬 '+t('merchant.contentType.video','视频')+'</option>'
+    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.form.contentTypeHint','赫使需要提交的内容类型')+'</div></div>'
     // 推广码模式（仅 PERFORMANCE 任务显示）
-    +'<div class="field form-full" id="code-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>推广码来源</label>'
+    +'<div class="field form-full" id="code-mode-section" style="'+(task&&task.mode!=='PERFORMANCE'?'display:none':'')+'"><label>'+t('merchant.form.codeSource','推广码来源')+'</label>'
     +'<div style="display:flex;gap:10px;margin-top:4px">'
-    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-auto" value="auto" '+((!t||t.code_mode!=='custom')?'checked':'')+' onchange="toggleCodeMode()"> 平台自动生成（HERIX-XXXXXX）</label>'
-    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-custom" value="custom" '+(t&&t.code_mode==='custom'?'checked':'')+' onchange="toggleCodeMode()"> 上传自定义推广码</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-auto" value="auto" '+((!task||task.code_mode!=='custom')?'checked':'')+' onchange="toggleCodeMode()"> '+t('merchant.form.codeAuto','平台自动生成（HERIX-XXXXXX）')+'</label>'
+    +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-custom" value="custom" '+(task&&task.code_mode==='custom'?'checked':'')+' onchange="toggleCodeMode()"> '+t('merchant.form.codeCustom','上传自定义推广码')+'</label>'
     +'</div>'
-    +'<div id="custom-code-hint" style="margin-top:8px;font-size:12px;color:var(--muted);'+(t&&t.code_mode==='custom'?'':'display:none')+'">任务创建后，在任务详情页上传推广码文件。</div>'
+    +'<div id="custom-code-hint" style="margin-top:8px;font-size:12px;color:var(--muted);'+(task&&task.code_mode==='custom'?'':'display:none')+'">'+t('merchant.form.codeCustomHint','任务创建后，在任务详情页上传推广码文件。')+'</div>'
     +'</div>'
     // 数据回传模式（仅 PERFORMANCE 任务显示，发布后锁定）
-    +'<div class="field form-full" id="data-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>数据回传模式 <span style="font-weight:400;font-size:11px;color:var(--muted)">发布后锁定，不可切换</span></label>'
+    +'<div class="field form-full" id="data-mode-section" style="'+(task&&task.mode!=='PERFORMANCE'?'display:none':'')+'"><label>'+t('merchant.form.dataMode','数据回传模式')+' <span style="font-weight:400;font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeLocked','发布后锁定，不可切换')+'</span></label>'
     +'<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">'
-    +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-agg" value="AGGREGATE" '+((!t||t.data_mode!=='DETAIL')?'checked':'')+' style="margin-top:2px"><span>汇总模式 — 每个码填累计注册数/使用数，最简单<br><span style="font-size:11px;color:var(--muted)">系统按增量结算，重复上传不重复打款</span></span></label>'
-    +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-detail" value="DETAIL" '+(t&&t.data_mode==='DETAIL'?'checked':'')+' style="margin-top:2px"><span>明细模式 — 逐用户上传（邮箱/ID + 是否成交），可对账可追溯<br><span style="font-size:11px;color:var(--muted)">按用户身份去重防误报多付；邮箱即刻哈希脱敏，平台不存原文</span></span></label>'
+    +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-agg" value="AGGREGATE" '+((!task||task.data_mode!=='DETAIL')?'checked':'')+' style="margin-top:2px"><span>'+t('merchant.form.dataModeAgg','汇总模式 — 每个码填累计注册数/使用数，最简单')+'<br><span style="font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeAggHint','系统按增量结算，重复上传不重复打款')+'</span></span></label>'
+    +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-detail" value="DETAIL" '+(task&&task.data_mode==='DETAIL'?'checked':'')+' style="margin-top:2px"><span>'+t('merchant.form.dataModeDetail','明细模式 — 逐用户上传（邮箱/ID + 是否成交），可对账可追溯')+'<br><span style="font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeDetailHint','按用户身份去重防误报多付；邮箱即刻哈希脱敏，平台不存原文')+'</span></span></label>'
     +'</div></div>'
     +'</div>'  // close advanced-fields
     +'<div id="task-form-error" style="display:none;margin-bottom:12px"></div>'
     +'<div class="form-actions">'
-    +(isEdit?'<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>':'')
-    +'<button class="btn btn-outline" onclick="saveTask(false)" title="保存为草稿，需手动发布后赫使才能看到">保存草稿</button>'
-    +'<button class="btn btn-primary" onclick="saveTask(true)">创建并发布</button>'
+    +(isEdit?'<button class="btn btn-outline" onclick="go(\'task_detail\')">'+t('common.cancel','取消')+'</button>':'')
+    +'<button class="btn btn-outline" onclick="saveTask(false)" title="'+t('merchant.form.draftTitle','保存为草稿，需手动发布后赫使才能看到')+'">'+t('merchant.form.saveDraft','保存草稿')+'</button>'
+    +'<button class="btn btn-primary" onclick="saveTask(true)">'+t('merchant.form.createPublish','创建并发布')+'</button>'
     +'</div>'
-    +'<div style="text-align:right;font-size:11px;color:var(--muted);margin-top:8px">草稿不会对外展示，发布后赫使才能看到并报名</div>'
+    +'<div style="text-align:right;font-size:11px;color:var(--muted);margin-top:8px">'+t('merchant.form.draftHint','草稿不会对外展示，发布后赫使才能看到并报名')+'</div>'
     +'</div>';
 }
 
@@ -1207,15 +1199,15 @@ function field(label, id, type, val, placeholder, attrs) {
   return '<div class="field"><label>'+label+'</label><input id="'+id+'" type="'+type+'" value="'+esc(String(val))+'" placeholder="'+esc(placeholder)+'"'+(attrs?' '+attrs:'')+' ></div>';
 }
 
-function platformReqsFormHTML(t) {
+function platformReqsFormHTML(task) {
   // 初始化：若是编辑模式，从任务数据加载
-  if(t && t.platform_requirements && taskPlatformReqs.length === 0){
-    try{ taskPlatformReqs = JSON.parse(t.platform_requirements); }catch(e){}
-    taskReqMode = t.req_mode === 'ANY_N' ? 'ANY_N' : 'ALL';
-    taskReqMinCount = Math.max(1, parseInt(t.req_min_count,10) || 1);
+  if(task && task.platform_requirements && taskPlatformReqs.length === 0){
+    try{ taskPlatformReqs = JSON.parse(task.platform_requirements); }catch(e){}
+    taskReqMode = task.req_mode === 'ANY_N' ? 'ANY_N' : 'ALL';
+    taskReqMinCount = Math.max(1, parseInt(task.req_min_count,10) || 1);
   }
-  var h = '<div class="field form-full" data-plat-reqs="1"><label>赫使社交平台要求 <span style="font-weight:400;font-size:11px;color:var(--muted)">（选填）</span></label>';
-  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">选择赫使必须拥有的社交账号及最低粉丝要求</div>';
+  var h = '<div class="field form-full" data-plat-reqs="1"><label>'+t('merchant.form.platformReqs','赫使社交平台要求')+' <span style="font-weight:400;font-size:11px;color:var(--muted)">'+t('merchant.form.optional','（选填）')+'</span></label>';
+  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'+t('merchant.form.platformReqsHint','选择赫使必须拥有的社交账号及最低粉丝要求')+'</div>';
   h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">';
   for(var i=0;i<PLATFORM_REGISTRY.length;i++){
     var p=PLATFORM_REGISTRY[i];
@@ -1229,21 +1221,21 @@ function platformReqsFormHTML(t) {
     var pInfo=PLATFORM_REGISTRY.find(function(p){return p.id===req.platformId})||{icon:'🔗',name:req.platformId};
     h += '<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#f9fafb;border-radius:8px;margin-bottom:6px">';
     h += '<span style="font-size:15px">'+pInfo.icon+'</span><span style="font-weight:500;font-size:12px;min-width:64px">'+pInfo.name+'</span>';
-    h += '<span style="font-size:11px;color:var(--muted)">最低粉丝数</span>';
-    h += '<input type="number" value="'+(req.minFollowers||'')+'" min="0" placeholder="不限" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="updatePlatformReqFollowers(\''+req.platformId+'\',this.value)">';
+    h += '<span style="font-size:11px;color:var(--muted)">'+t('merchant.form.minFollowers','最低粉丝数')+'</span>';
+    h += '<input type="number" value="'+(req.minFollowers||'')+'" min="0" placeholder="'+t('merchant.form.noLimit','不限')+'" style="width:80px;padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="updatePlatformReqFollowers(\''+req.platformId+'\',this.value)">';
     // ANY_N 模式下单项"必须"标志被忽略，不展示避免误导
     if(taskReqMode !== 'ANY_N'){
-      h += '<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto"><input type="checkbox"'+(req.required?' checked':'')+' onchange="updatePlatformReqRequired(\''+req.platformId+'\',this.checked)"> 必须</label>';
+      h += '<label style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px;margin-left:auto"><input type="checkbox"'+(req.required?' checked':'')+' onchange="updatePlatformReqRequired(\''+req.platformId+'\',this.checked)"> '+t('merchant.form.required','必须')+'</label>';
     }
     h += '</div>';
   }
   // 满足模式：≥2 项时才有意义
   if(taskPlatformReqs.length >= 2){
     h += '<div style="display:flex;align-items:center;gap:14px;padding:8px;background:#f0f7ff;border-radius:8px;margin-top:4px;font-size:12px">';
-    h += '<span style="font-weight:600;color:var(--text)">满足方式</span>';
-    h += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="req-mode"'+(taskReqMode==='ALL'?' checked':'')+' onchange="setReqMode(\'ALL\')"> 全部"必须"项都满足</label>';
-    h += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="req-mode"'+(taskReqMode==='ANY_N'?' checked':'')+' onchange="setReqMode(\'ANY_N\')"> 满足任意';
-    h += ' <input type="number" value="'+taskReqMinCount+'" min="1" max="'+taskPlatformReqs.length+'"'+(taskReqMode!=='ANY_N'?' disabled':'')+' style="width:44px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="setReqMinCount(this.value)"> 项即可</label>';
+    h += '<span style="font-weight:600;color:var(--text)">'+t('merchant.form.matchMode','满足方式')+'</span>';
+    h += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="req-mode"'+(taskReqMode==='ALL'?' checked':'')+' onchange="setReqMode(\'ALL\')"> '+t('merchant.form.matchAll','全部"必须"项都满足')+'</label>';
+    h += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="req-mode"'+(taskReqMode==='ANY_N'?' checked':'')+' onchange="setReqMode(\'ANY_N\')"> '+t('merchant.form.matchAny','满足任意')+'';
+    h += ' <input type="number" value="'+taskReqMinCount+'" min="1" max="'+taskPlatformReqs.length+'"'+(taskReqMode!=='ANY_N'?' disabled':'')+' style="width:44px;padding:2px 6px;border:1px solid var(--border);border-radius:6px;font-size:12px" onchange="setReqMinCount(this.value)"> '+t('merchant.form.matchAnySuffix','项即可')+'</label>';
     h += '</div>';
   }
   h += '</div>';

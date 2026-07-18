@@ -619,5 +619,18 @@
   "merchant.taskDetail.tabSubmissions": "内容提交 ({n})",
   "merchant.taskDetail.tabCodes": "推广码",
   "merchant.taskDetail.tabReferrals": "跟踪明细",
-  "merchant.taskDetail.descTitle": "任务描述"
+  "merchant.taskDetail.descTitle": "任务描述",
+  "merchant.wizard.identityTitle": "你是哪一种身份？",
+  "merchant.wizard.identitySub": "这会影响接下来的引导内容，之后仍可在设置中调整。",
+  "merchant.wizard.identityBrand": "品牌方",
+  "merchant.wizard.identityBrandDesc": "为自己的品牌发布任务，招募赫使",
+  "merchant.wizard.identityAgency": "广告代理",
+  "merchant.wizard.identityAgencyDesc": "受品牌客户委托，为其寻找并管理赫使",
+  "merchant.wizard.next": "下一步",
+  "merchant.wizard.back": "返回",
+  "merchant.wizard.pickIdentityFirst": "请先选择一个身份",
+  "merchant.wizard.firstTaskTitle": "创建你的第一个任务",
+  "merchant.wizard.firstTaskSub": "填写基本信息即可发布，其余设置可以先用默认值，之后随时调整。",
+  "merchant.wizard.agencyHint": "发布后可以把任务的分享链接发给你的客户品牌方，对方注册/登录即可在线查看推广进展（详见任务详情页）",
+  "merchant.wizard.skip": "跳过，稍后在任务管理页创建"
 }

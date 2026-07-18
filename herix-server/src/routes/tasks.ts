@@ -1006,7 +1006,7 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   res.json({
     ...updated,
     ...(isFirstPublish ? {
-      topupReminder: '为提升任务可信度、鼓励赫使积极报名，并在任务完成后自动打款，请尽快完成充值。充值后您的任务将获得「极速打款」标签，显著提升赫使报名意愿。',
+      topupReminder: '任务已经可以被赫使看到了。等有赫使报名或完成任务时，需要账户里有余额才能完成打款——可以现在充值，也可以晚点再来。提前充值后任务会带上「极速打款」标签，赫使报名会更积极一些。',
     } : {}),
   });
 });

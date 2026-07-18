@@ -125,7 +125,7 @@ const AGREEMENT_VERSION = '2026-07-17-v2'; // v2: 第五条扩充为数据处理
 
 /** POST /api/users/brand/onboard — 品牌入驻 */
 usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Response) => {
-  const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail, agreedToTerms, country } = req.body;
+  const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail, agreedToTerms, country, isAgency } = req.body;
   if (!companyName || !contactName) {
     return res.status(400).json({ error: '公司名称和联系人姓名为必填项' });
   }
@@ -150,6 +150,10 @@ usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Respon
     agreed_ip: clientIp,
     agreed_version: AGREEMENT_VERSION,
   };
+  // 入驻向导新增的自助选择入口（2026-07-18）：is_agency 字段本身早已存在，
+  // 此前只有 admin 后台手动开通一条路径（见 admin.ts agency 端点）；
+  // 这里只在用户勾选时写 true，不覆盖 admin 已经手动关闭的情况为 false
+  if (isAgency === true) data.is_agency = true;
 
   await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
   res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION });

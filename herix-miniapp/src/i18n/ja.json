@@ -619,5 +619,18 @@
   "merchant.taskDetail.tabSubmissions": "コンテンツ提出 ({n})",
   "merchant.taskDetail.tabCodes": "紹介コード",
   "merchant.taskDetail.tabReferrals": "トラッキング明細",
-  "merchant.taskDetail.descTitle": "案件詳細説明"
+  "merchant.taskDetail.descTitle": "案件詳細説明",
+  "merchant.wizard.identityTitle": "あなたの立場を選んでください",
+  "merchant.wizard.identitySub": "この選択は今後の案内内容に反映されます。後で設定から変更できます。",
+  "merchant.wizard.identityBrand": "ブランド",
+  "merchant.wizard.identityBrandDesc": "自社ブランドの案件を掲載し、アンバサダーを募集する",
+  "merchant.wizard.identityAgency": "広告代理店",
+  "merchant.wizard.identityAgencyDesc": "ブランドクライアントから委託を受け、アンバサダーを探して管理する",
+  "merchant.wizard.next": "次へ",
+  "merchant.wizard.back": "戻る",
+  "merchant.wizard.pickIdentityFirst": "先に立場を選択してください",
+  "merchant.wizard.firstTaskTitle": "最初の案件を作成しましょう",
+  "merchant.wizard.firstTaskSub": "基本情報を入力すれば公開できます。その他の設定はデフォルトのままでよく、後からいつでも変更できます。",
+  "merchant.wizard.agencyHint": "公開後、案件のシェアリンクをクライアントのブランドに送ることができます。登録/ログインするだけでオンラインで進捗を確認できます（詳細は案件詳細ページ）",
+  "merchant.wizard.skip": "スキップして、後で案件管理ページから作成する"
 }

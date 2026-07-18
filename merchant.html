@@ -255,6 +255,7 @@ function render() {
   var root = document.getElementById('root');
   if (!state.user) { root.innerHTML = loginPage(); bindLogin(); return; }
   if (state.showActivate) { root.innerHTML = activateBrandPage(); return; }
+  if (state.showOnboardFlow) { root.innerHTML = onboardFlowPage(); return; }
   root.innerHTML = layout(pageContent());
   bindNav();
   bindPage();
@@ -396,10 +397,26 @@ function activateBrandPage() {
 
   // 进度条
   h += '<div style="display:flex;gap:6px;margin-bottom:28px">';
-  for (var i = 1; i <= 3; i++) h += '<div style="flex:1;height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>';
+  for (var i = 1; i <= 4; i++) h += '<div style="flex:1;height:3px;border-radius:2px;background:'+(i<=step?'var(--primary)':'#e2e8f0')+'"></div>';
   h += '</div>';
 
   if (step === 1) {
+    var isAgencyPick = state.activateData?.isAgency;
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.identityTitle','你是哪一种身份？')+'</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">'+t('merchant.wizard.identitySub','这会影响接下来的引导内容，之后仍可在设置中调整。')+'</div>';
+    h += '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">';
+    h += '<div onclick="pickIdentity(false)" style="cursor:pointer;padding:16px;border-radius:10px;border:2px solid '+(isAgencyPick===false?'var(--primary)':'var(--border)')+';background:'+(isAgencyPick===false?'#eff6ff':'#fff')+'">'
+      +'<div style="font-weight:600;margin-bottom:4px">🏢 '+t('merchant.wizard.identityBrand','品牌方')+'</div>'
+      +'<div style="font-size:12px;color:var(--muted)">'+t('merchant.wizard.identityBrandDesc','为自己的品牌发布任务，招募赫使')+'</div></div>';
+    h += '<div onclick="pickIdentity(true)" style="cursor:pointer;padding:16px;border-radius:10px;border:2px solid '+(isAgencyPick===true?'var(--primary)':'var(--border)')+';background:'+(isAgencyPick===true?'#eff6ff':'#fff')+'">'
+      +'<div style="font-weight:600;margin-bottom:4px">📢 '+t('merchant.wizard.identityAgency','广告代理')+'</div>'
+      +'<div style="font-size:12px;color:var(--muted)">'+t('merchant.wizard.identityAgencyDesc','受品牌客户委托，为其寻找并管理赫使')+'</div></div>';
+    h += '</div>';
+    h += '<div style="display:flex;gap:10px">';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="cancelActivate()">'+t('common.cancel','取消')+'</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep1Next()">'+t('merchant.wizard.next','下一步')+'</button>';
+    h += '</div>';
+  } else if (step === 2) {
     var actCur = state.activateData?.currency;
     h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">开通品牌商家功能</div>';
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">你好，'+esc(state.user.nickname)+'！填写品牌信息后即可发布任务、招募赫使。</div>';
@@ -417,17 +434,17 @@ function activateBrandPage() {
     h += '</select></div>';
     h += '<div class="field" style="margin-top:12px"><label>官网（选填）</label><input id="act-website" placeholder="https://..." value="'+esc(state.activateData?.website||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
-    h += '<button class="btn btn-outline" style="flex:1" onclick="cancelActivate()">取消</button>';
-    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep2()">下一步</button>';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=1;render()">'+t('merchant.wizard.back','返回')+'</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep2Next()">'+t('merchant.wizard.next','下一步')+'</button>';
     h += '</div>';
-  } else if (step === 2) {
+  } else if (step === 3) {
     h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">联系方式</div>';
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">平台将通过此方式与你确认合作细节。</div>';
     h += '<div class="field"><label>联系人姓名 *</label><input id="act-contact" placeholder="你的姓名" value="'+esc(state.activateData?.contactName||'')+'"></div>';
     h += '<div class="field" style="margin-top:12px"><label>联系电话（选填）</label><input id="act-phone" placeholder="+81 ..." value="'+esc(state.activateData?.contactPhone||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
-    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=1;render()">返回</button>';
-    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep3()">下一步</button>';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=2;render()">'+t('merchant.wizard.back','返回')+'</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep3Next()">'+t('merchant.wizard.next','下一步')+'</button>';
     h += '</div>';
   } else {
     h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">服务协议</div>';
@@ -459,7 +476,7 @@ function activateBrandPage() {
 
     h += '<div id="act-err" style="margin-bottom:12px"></div>';
     h += '<div style="display:flex;gap:10px">';
-    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=2;render()">返回</button>';
+    h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=3;render()">'+t('merchant.wizard.back','返回')+'</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">确认签署并开通</button>';
     h += '</div>';
     h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">协议版本 2026-07-09-v1</div>';
@@ -469,7 +486,18 @@ function activateBrandPage() {
   return h;
 }
 
-function activateStep2() {
+function pickIdentity(isAgency) {
+  state.activateData = Object.assign({}, state.activateData, { isAgency: isAgency });
+  render();
+}
+
+function activateStep1Next() {
+  if (state.activateData?.isAgency === undefined) { alert(t('merchant.wizard.pickIdentityFirst','请先选择一个身份')); return; }
+  state.activateStep = 2;
+  render();
+}
+
+function activateStep2Next() {
   var company = (document.getElementById('act-company')||{}).value||'';
   if (!company.trim()) { alert('请填写品牌名称'); return; }
   state.activateData = Object.assign({}, state.activateData, {
@@ -479,18 +507,18 @@ function activateStep2() {
     industry: (document.getElementById('act-industry')||{}).value||'',
     website: (document.getElementById('act-website')||{}).value||'',
   });
-  state.activateStep = 2;
+  state.activateStep = 3;
   render();
 }
 
-function activateStep3() {
+function activateStep3Next() {
   var contact = (document.getElementById('act-contact')||{}).value||'';
   if (!contact.trim()) { alert('请填写联系人姓名'); return; }
   state.activateData = Object.assign({}, state.activateData, {
     contactName: contact.trim(),
     contactPhone: (document.getElementById('act-phone')||{}).value||'',
   });
-  state.activateStep = 3;
+  state.activateStep = 4;
   render();
 }
 
@@ -520,9 +548,14 @@ function doActivateBrand() {
       state.showActivate = false;
       state.activateStep = 1;
       state.activateData = null;
+      // 账号设置完成，紧接引导创建第一个任务（可跳过；见 onboardFlowPage）
+      state.showOnboardFlow = true;
       state.page = 'dashboard';
+      taskPlatformReqs = []; taskReqMode = 'ALL'; taskReqMinCount = 1; // 同 case 'task_create' 的初始化
+      if (!brandBalance) loadBrandWallet(); // saveTask() 的额度预检需要
       render();
       loadDashStats();
+      loadBrandProfile();
     });
   });
 }
@@ -531,6 +564,35 @@ function cancelActivate() {
   state.showActivate = false;
   state.token = null;
   state.user = null;
+  render();
+}
+
+/** 账号设置完成后的引导：创建第一个任务（可跳过，跳过即进入正常仪表盘）。
+ *  沿用 taskFormPage() 原表单（高级选项已默认折叠），套同一个向导卡片外壳。
+ *  提交走 saveTask(true)——saveTask 在 POST /tasks 成功后会自己清掉 state.showOnboardFlow，
+ *  之后无论是直接发布还是走推广码检查，都是已有的正常路径，充值引导复用已有的 showTopupReminder()。 */
+function onboardFlowPage() {
+  var isAgency = !!(state.brandProfile && state.brandProfile.is_agency);
+  var h = '<div style="min-height:100vh;padding:40px 20px;background:#f8fafc">';
+  h += '<div style="background:#fff;border-radius:16px;padding:40px;width:600px;max-width:94vw;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
+  h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.firstTaskTitle','创建你的第一个任务')+'</div>';
+  h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">'+t('merchant.wizard.firstTaskSub','填写基本信息即可发布，其余设置可以先用默认值，之后随时调整。')+'</div>';
+  if (isAgency) {
+    h += '<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;font-size:12px;color:#9a3412;margin-bottom:16px">📢 '
+      + t('merchant.wizard.agencyHint','发布后可以把任务的分享链接发给你的客户品牌方，对方注册/登录即可在线查看推广进展（详见任务详情页）')
+      + '</div>';
+  }
+  h += taskFormPage(null);
+  h += '<div style="text-align:center;margin-top:14px">'
+    + '<span style="font-size:13px;color:var(--muted);cursor:pointer;text-decoration:underline" onclick="skipOnboardFlow()">'+t('merchant.wizard.skip','跳过，稍后在任务管理页创建')+'</span>'
+    + '</div>';
+  h += '</div></div>';
+  return h;
+}
+
+function skipOnboardFlow() {
+  state.showOnboardFlow = false;
+  state.page = 'dashboard';
   render();
 }
 
@@ -968,6 +1030,15 @@ function codesPanel(t) {
   return dlBtn + '<div class="table-card"><table><thead><tr><th>赫使</th><th>推广码</th><th>合格</th><th>总引荐</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
+function toggleAdvancedFields() {
+  var box = document.getElementById('advanced-fields');
+  var label = document.getElementById('adv-toggle');
+  if (!box || !label) return;
+  var show = box.style.display === 'none';
+  box.style.display = show ? 'grid' : 'none';
+  label.textContent = (show?'▴':'▾') + label.textContent.slice(1);
+}
+
 function toggleCodeMode() {
   var isCustom = document.getElementById('codeMode-custom')?.checked;
   var hint = document.getElementById('custom-code-hint');
@@ -1074,13 +1145,19 @@ function taskFormPage(t) {
     + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">赫使需要提交的内容类型</div></div>'
     + field('任务报酬 (¥) *', 'payout', 'number', t&&t.payout_per_herald||'', '赫使实际到手金额（已扣除平台服务费）', 'oninput="onTaskCostInput()"')
     + field('招募人数 *', 'maxHeralds', 'number', t&&t.max_heralds||'3', '最多接受多少位赫使', 'oninput="onTaskCostInput()"')
+    + '<div class="field form-full"><label>任务描述 *</label><textarea id="description" rows="4" placeholder="详细说明任务要求、目标受众、品牌背景...">'+esc(t&&t.description||'')+'</textarea></div>'
+    +'</div>'  // close form-grid（核心必填区）
+    // ── 高级选项：其余字段都有可用默认值，折叠减少首次创建时的信息量 ──
+    +'<div style="margin:4px 0 14px">'
+    +'<span id="adv-toggle" style="font-size:13px;color:var(--primary);cursor:pointer;user-select:none" onclick="toggleAdvancedFields()">▾ 高级选项（截止日期、内容形式、封面图、推广码设置等）</span>'
+    +'</div>'
+    +'<div class="form-grid" id="advanced-fields" style="display:none">'
     + '<div class="field"><label>任务难度</label><select id="difficulty">'
     + '<option value="easy"'+(t&&t.difficulty==='easy'?' selected':'')+'>轻松</option>'
     + '<option value="medium"'+(t&&t.difficulty==='medium'?' selected':'')+'>适中</option>'
     + '<option value="hard"'+(t&&t.difficulty==='hard'?' selected':'')+'>挑战</option>'
     + '</select></div>'
     + field('截止日期', 'deadline', 'date', t&&t.deadline?t.deadline.slice(0,10):'', '')
-    + '<div class="field form-full"><label>任务描述 *</label><textarea id="description" rows="4" placeholder="详细说明任务要求、目标受众、品牌背景...">'+esc(t&&t.description||'')+'</textarea></div>'
     + '<div class="field form-full"><label>具体要求</label><textarea id="requirements" rows="3" placeholder="可选：发布平台要求、内容关键词、存续时间等...">'+esc(t&&t.requirements||'')+'</textarea></div>'
     + platformReqsFormHTML(t)
     + '<div class="field form-full" id="cover-upload-wrap"><label>任务封面图 <span style="font-weight:400;color:var(--muted);font-size:12px">选填 · 16:9 场景图效果最佳</span></label>'
@@ -1092,6 +1169,14 @@ function taskFormPage(t) {
     + '<input type="file" id="cover-file-input" accept="image/*" style="display:none" onchange="onCoverFileSelect(this)">'
     + '<div id="cover-status" style="font-size:12px;color:var(--muted)"></div>'
     + '</div>'
+    + '<div class="field"><label>发布范围</label><select id="visibility" onchange="onTaskCostInput()">'
+    + '<option value="PUBLIC"'+((!t||t.visibility==='PUBLIC'||!t.visibility)?' selected':'')+'>公开 — 出现在赫使探索列表</option>'
+    + '<option value="INVITE"'+(t&&t.visibility==='INVITE'?' selected':'')+'>定向 — 仅限链接访问，不公开</option>'
+    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">定向任务不出现在探索列表，只有持有链接的赫使可以看到并报名</div></div>'
+    + '<div class="field" id="contentType-field"><label>内容形式</label><select id="contentType" onchange="">'
+    + '<option value="photo"'+(t&&t.content_type==='photo'?' selected':'')+'>📷 图文</option>'
+    + '<option value="video"'+(t&&t.content_type==='video'?' selected':'')+'>🎬 视频</option>'
+    + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">赫使需要提交的内容类型</div></div>'
     // 推广码模式（仅 PERFORMANCE 任务显示）
     +'<div class="field form-full" id="code-mode-section" style="'+(t&&t.mode!=='PERFORMANCE'?'display:none':'')+'"><label>推广码来源</label>'
     +'<div style="display:flex;gap:10px;margin-top:4px">'
@@ -1106,7 +1191,7 @@ function taskFormPage(t) {
     +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-agg" value="AGGREGATE" '+((!t||t.data_mode!=='DETAIL')?'checked':'')+' style="margin-top:2px"><span>汇总模式 — 每个码填累计注册数/使用数，最简单<br><span style="font-size:11px;color:var(--muted)">系统按增量结算，重复上传不重复打款</span></span></label>'
     +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-detail" value="DETAIL" '+(t&&t.data_mode==='DETAIL'?'checked':'')+' style="margin-top:2px"><span>明细模式 — 逐用户上传（邮箱/ID + 是否成交），可对账可追溯<br><span style="font-size:11px;color:var(--muted)">按用户身份去重防误报多付；邮箱即刻哈希脱敏，平台不存原文</span></span></label>'
     +'</div></div>'
-    +'</div>'  // close form-grid
+    +'</div>'  // close advanced-fields
     +'<div id="task-form-error" style="display:none;margin-bottom:12px"></div>'
     +'<div class="form-actions">'
     +(isEdit?'<button class="btn btn-outline" onclick="go(\'task_detail\')">取消</button>':'')
@@ -2541,6 +2626,7 @@ function saveTask(publish) {
     }
     loadMyTasks();
     loadDashStats();
+    state.showOnboardFlow = false; // 引导流程内创建任务：无论接下来走直接发布还是推广码检查，都交还给正常路径
 
     if (publish && d.status === 'DRAFT') {
       if (body.mode === 'PERFORMANCE') {

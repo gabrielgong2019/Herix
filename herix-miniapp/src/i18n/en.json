@@ -619,5 +619,18 @@
   "merchant.taskDetail.tabSubmissions": "Submissions ({n})",
   "merchant.taskDetail.tabCodes": "Referral Codes",
   "merchant.taskDetail.tabReferrals": "Tracking Detail",
-  "merchant.taskDetail.descTitle": "Task Description"
+  "merchant.taskDetail.descTitle": "Task Description",
+  "merchant.wizard.identityTitle": "Which best describes you?",
+  "merchant.wizard.identitySub": "This shapes what comes next — you can change it later in settings.",
+  "merchant.wizard.identityBrand": "Brand",
+  "merchant.wizard.identityBrandDesc": "Publish tasks for your own brand and recruit ambassadors",
+  "merchant.wizard.identityAgency": "Agency",
+  "merchant.wizard.identityAgencyDesc": "Commissioned by brand clients to find and manage ambassadors for them",
+  "merchant.wizard.next": "Next",
+  "merchant.wizard.back": "Back",
+  "merchant.wizard.pickIdentityFirst": "Please choose one first",
+  "merchant.wizard.firstTaskTitle": "Create your first task",
+  "merchant.wizard.firstTaskSub": "Fill in the basics to publish — everything else can stay at its default and be adjusted anytime.",
+  "merchant.wizard.agencyHint": "After publishing, share the task link with your brand client — they can register/log in to track progress online (see the task detail page)",
+  "merchant.wizard.skip": "Skip — create one later from Task Management"
 }

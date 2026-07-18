@@ -619,5 +619,18 @@
   "merchant.taskDetail.tabSubmissions": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
   "merchant.taskDetail.tabCodes": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
   "merchant.taskDetail.tabReferrals": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
-  "merchant.taskDetail.descTitle": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)"
+  "merchant.taskDetail.descTitle": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identityTitle": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identitySub": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identityBrand": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identityBrandDesc": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identityAgency": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identityAgencyDesc": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.next": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.back": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.pickIdentityFirst": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.firstTaskTitle": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.firstTaskSub": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.agencyHint": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.skip": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)"
 }

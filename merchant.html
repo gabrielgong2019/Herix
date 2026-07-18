@@ -91,6 +91,33 @@ tr:hover td { background:#f9fafb; cursor:pointer; }
 
 /* ── Form ── */
 .form-card { background:#fff; border-radius:12px; padding:24px; }
+/* 任务卡实时预览（样式对齐 herix-miniapp/src/components/TaskCard.scss，改那边记得同步这边） */
+.tf-layout { display:flex; gap:20px; align-items:flex-start; }
+.tf-form { flex:1; min-width:0; }
+.tf-preview { width:300px; flex-shrink:0; position:sticky; top:20px; }
+.pv-caption { font-size:12px; font-weight:600; color:var(--muted); margin-bottom:8px; }
+.pv-note { font-size:11px; color:var(--muted); margin-top:8px; line-height:1.5; }
+.pv-card { background:#fff; border-radius:16px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,.05),0 4px 16px rgba(0,0,0,.06); }
+.pv-top { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.pv-tag { background:#f5f5f7; border-radius:12px; padding:4px 10px; font-size:11px; color:#555; font-weight:500; }
+.pv-mode { font-size:10px; padding:3px 8px; border-radius:4px; font-weight:600; }
+.pv-mode-std { background:rgba(212,59,39,.08); color:#D43B27; }
+.pv-mode-perf { background:rgba(245,166,35,.1); color:#b8860b; }
+.pv-diff { display:flex; align-items:center; gap:4px; font-size:10px; color:#999; margin-left:auto; }
+.pv-dot { width:5px; height:5px; border-radius:50%; display:inline-block; }
+.pv-d-easy { background:#16a34a; } .pv-d-medium { background:#f5a623; } .pv-d-hard { background:#D43B27; }
+.pv-fp { font-size:10px; font-weight:700; color:#0369a1; background:#e0f2fe; border-radius:4px; padding:1px 6px; }
+.pv-body { display:flex; gap:14px; }
+.pv-c { flex:1; min-width:0; }
+.pv-title { font-size:15px; font-weight:600; line-height:1.35; margin-bottom:6px; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; word-break:break-word; }
+.pv-brand { display:flex; align-items:center; gap:6px; margin-bottom:6px; }
+.pv-bicon { width:20px; height:20px; border-radius:6px; background:#f0f0f2; color:#666; font-size:11px; font-weight:600; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+.pv-bname { font-size:12px; color:#888; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pv-price { font-size:20px; font-weight:800; margin-bottom:4px; }
+.pv-rating { font-size:12px; color:#d4d4d8; letter-spacing:1px; }
+.pv-new { color:#f5a623; font-weight:700; font-size:11px; letter-spacing:0; }
+.pv-thumb { width:88px; height:88px; border-radius:12px; background:#f5f5f7 center/cover no-repeat; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:22px; }
+@media (max-width:900px) { .tf-layout { flex-direction:column-reverse; } .tf-preview { width:100%; position:static; } .pv-card { max-width:420px; } }
 .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .form-full { grid-column:1/-1; }
 .field { display:flex; flex-direction:column; gap:6px; }
@@ -634,7 +661,7 @@ function cancelActivate() {
 function onboardFlowPage() {
   var isAgency = !!(state.brandProfile && state.brandProfile.is_agency);
   var h = '<div style="min-height:100vh;padding:40px 20px;background:#f8fafc">';
-  h += '<div style="background:#fff;border-radius:16px;padding:40px;width:600px;max-width:94vw;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
+  h += '<div style="background:#fff;border-radius:16px;padding:40px;width:980px;max-width:94vw;margin:0 auto;box-shadow:0 4px 24px rgba(0,0,0,.08)">';
   h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.firstTaskTitle','创建你的第一个任务')+'</div>';
   h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">'+t('merchant.wizard.firstTaskSub','填写基本信息即可发布，其余设置可以先用默认值，之后随时调整。')+'</div>';
   if (isAgency) {
@@ -1203,27 +1230,87 @@ var taskPlatformReqs = [];
 var taskReqMode = 'ALL';      // ALL=必须项全部满足 | ANY_N=任 N 项满足
 var taskReqMinCount = 1;
 
+/* ── 任务卡实时预览：结构/字段对齐 miniapp TaskCard.tsx，词条直接复用 taskCard 与 category 前缀 ── */
+function previewCardHTML(d) {
+  var cat = CATEGORIES.find(function(x){return x.id===d.category});
+  var catText = cat ? ((cat.icon?cat.icon+' ':'')+t('category.'+cat.id,cat.label)) : '';
+  var isPerf = d.mode === 'PERFORMANCE';
+  var diffKey = d.difficulty==='hard'?'taskCard.diffHard':(d.difficulty==='medium'?'taskCard.diffMedium':'taskCard.diffEasy');
+  var diffFb = d.difficulty==='hard'?'挑战':(d.difficulty==='medium'?'刚好':'轻松');
+  var brand = (state.brandProfile&&state.brandProfile.company_name) || (state.user&&state.user.nickname) || 'Brand';
+  var fp = !!(brandBalance && !brandBalance.loadError && brandBalance.credit && brandBalance.credit.fastPayoutEligible);
+  var cover = String(d.cover||'').replace(/["'\\]/g,'');
+  return '<div class="pv-card">'
+    +'<div class="pv-top">'
+    +(catText?'<span class="pv-tag">'+esc(catText)+'</span>':'')
+    +'<span class="pv-mode '+(isPerf?'pv-mode-perf':'pv-mode-std')+'">'+(isPerf?t('taskCard.perf','成果报酬'):t('taskCard.std','任务体验'))+'</span>'
+    +'<span class="pv-diff"><span class="pv-dot pv-d-'+(d.difficulty||'easy')+'"></span>'+t(diffKey,diffFb)+'</span>'
+    +(fp?'<span class="pv-fp">'+t('taskCard.fastPayout','⚡ 极速打款')+'</span>':'')
+    +'</div>'
+    +'<div class="pv-body"><div class="pv-c">'
+    +'<div class="pv-title">'+esc(d.title)+'</div>'
+    +'<div class="pv-brand"><span class="pv-bicon">'+esc(String(brand||'B').charAt(0))+'</span><span class="pv-bname">'+esc(brand)+'</span></div>'
+    +'<div class="pv-price">¥'+Number(d.payout||0).toLocaleString()+'</div>'
+    +'<div class="pv-rating">☆☆☆☆☆ <span class="pv-new">'+t('taskCard.new','新')+'</span></div>'
+    +'</div>'
+    +'<div class="pv-thumb"'+(cover?' style="background-image:url(\''+cover+'\')"':'')+'>'+(cover?'':'📷')+'</div>'
+    +'</div></div>';
+}
+
+function collectPreviewData(task) {
+  function v(id){ var el=document.getElementById(id); return el?el.value:null; }
+  var title = v('title'); if (title===null) title = (task&&task.title)||'';
+  var mode = v('mode') || (task&&task.mode) || 'STANDARD';
+  var category = v('category') || (task&&task.category) || '';
+  var payoutRaw = v('payout'); if (payoutRaw===null) payoutRaw = task&&task.payout_per_herald;
+  var difficulty = v('difficulty') || (task&&task.difficulty) || 'easy';
+  var coverEl = document.getElementById('cover-preview-img');
+  var cover = (coverEl && coverEl.style.display!=='none' && coverEl.getAttribute('src')) || (task&&task.cover_image) || '';
+  // 空字段用示例数据占位：一进页面先看到"发布后长这样"的成品效果，开始输入后逐字段替换
+  return {
+    title: title || t('merchant.preview.exampleTitle','新品体验官招募（示例）'),
+    mode: mode,
+    category: category || 'experience',
+    payout: Number(payoutRaw) || 5000,
+    difficulty: difficulty,
+    cover: cover,
+  };
+}
+
+function updateTaskPreview() {
+  var el = document.getElementById('tf-preview-card');
+  if (el) el.innerHTML = previewCardHTML(collectPreviewData(state.editingTask));
+}
+
+function taskPreviewPanel(task) {
+  return '<div class="tf-preview">'
+    +'<div class="pv-caption">📱 '+t('merchant.preview.caption','赫使在小程序里看到的效果')+'</div>'
+    +'<div id="tf-preview-card">'+previewCardHTML(collectPreviewData(task))+'</div>'
+    +'<div class="pv-note">'+t('merchant.preview.note','空白字段以示例内容占位，开始填写后实时更新；实际展示以小程序端为准')+'</div>'
+    +'</div>';
+}
+
 function taskFormPage(task) {
   var isEdit = !!task;
-  return '<div class="form-card">'
+  return '<div class="tf-layout"><div class="tf-form"><div class="form-card">'
     +'<div id="task-capacity-banner">'+taskCapacityBannerContent()+'</div>'
     +'<div id="task-cost-meter" style="margin-bottom:4px"></div>'
     +'<div class="form-grid">'
-    + field(t('merchant.form.title','任务标题 *'), 'title', 'text', task&&task.title||'', t('merchant.form.titlePh','例：Herix 大使计划'))
-    + '<div class="field"><label>'+t('merchant.form.mode','任务模式 *')+'</label><select id="mode" onchange="toggleCodeModeSection();onTaskCostInput()">'
+    + field(t('merchant.form.title','任务标题 *'), 'title', 'text', task&&task.title||'', t('merchant.form.titlePh','例：Herix 大使计划'), 'oninput="updateTaskPreview()"')
+    + '<div class="field"><label>'+t('merchant.form.mode','任务模式 *')+'</label><select id="mode" onchange="toggleCodeModeSection();onTaskCostInput();updateTaskPreview()">'
     + '<option value="STANDARD"'+(task&&task.mode==='STANDARD'?' selected':'')+'>'+t('merchant.form.modeStandard','类型B — 任务体验（提交内容审核）')+'</option>'
     + '<option value="PERFORMANCE"'+(task&&task.mode==='PERFORMANCE'?' selected':'')+'>'+t('merchant.form.modePerformance','类型A — 成果报酬（推广码转化）')+'</option>'
     + '</select></div>'
-    + '<div class="field"><label>'+t('merchant.form.category','分类 *')+'</label><select id="category">'
+    + '<div class="field"><label>'+t('merchant.form.category','分类 *')+'</label><select id="category" onchange="updateTaskPreview()">'
     + '<option value="" disabled'+(task&&task.category?'':' selected')+'>'+t('merchant.form.categoryPh','请选择分类')+'</option>'
     + CATEGORIES.map(function(c){return '<option value="'+c.id+'"'+(task&&task.category===c.id?' selected':'')+'>'+c.icon+' '+t('category.'+c.id,c.label)+'</option>'}).join('')
     + '</select></div>'
-    + field(t('merchant.form.payout','任务报酬 (¥) *'), 'payout', 'number', task&&task.payout_per_herald||'', t('merchant.form.payoutPh','赫使实际到手金额（已扣除平台服务费）'), 'oninput="onTaskCostInput()"')
+    + field(t('merchant.form.payout','任务报酬 (¥) *'), 'payout', 'number', task&&task.payout_per_herald||'', t('merchant.form.payoutPh','赫使实际到手金额（已扣除平台服务费）'), 'oninput="onTaskCostInput();updateTaskPreview()"')
     + field(t('merchant.form.maxHeralds','招募人数 *'), 'maxHeralds', 'number', task&&task.max_heralds||'3', t('merchant.form.maxHeraldsPh','最多接受多少位赫使'), 'oninput="onTaskCostInput()"')
     + '<div class="field form-full"><label>'+t('merchant.form.description','任务描述 *')+'</label><textarea id="description" rows="4" placeholder="'+t('merchant.form.descriptionPh','详细说明任务要求、目标受众、品牌背景...')+'">'+esc(task&&task.description||'')+'</textarea></div>'
     +'</div>'  // close form-grid（核心必填区）
     +'<div class="form-grid" id="advanced-fields">'
-    + '<div class="field"><label>'+t('merchant.form.difficulty','任务难度')+'</label><select id="difficulty">'
+    + '<div class="field"><label>'+t('merchant.form.difficulty','任务难度')+'</label><select id="difficulty" onchange="updateTaskPreview()">'
     + '<option value="easy"'+(task&&task.difficulty==='easy'?' selected':'')+'>'+t('merchant.form.difficultyEasy','轻松')+'</option>'
     + '<option value="medium"'+(task&&task.difficulty==='medium'?' selected':'')+'>'+t('merchant.form.difficultyMedium','适中')+'</option>'
     + '<option value="hard"'+(task&&task.difficulty==='hard'?' selected':'')+'>'+t('merchant.form.difficultyHard','挑战')+'</option>'
@@ -1270,6 +1357,8 @@ function taskFormPage(task) {
     +'<button class="btn btn-primary" onclick="saveTask(true)">'+t('merchant.form.createPublish','创建并发布')+'</button>'
     +'</div>'
     +'<div style="text-align:right;font-size:11px;color:var(--muted);margin-top:8px">'+t('merchant.form.draftHint','草稿不会对外展示，发布后赫使才能看到并报名')+'</div>'
+    +'</div></div>'
+    +taskPreviewPanel(task)
     +'</div>';
 }
 
@@ -2684,6 +2773,7 @@ function onCoverFileSelect(input) {
     var ph = document.getElementById('cover-placeholder');
     if (ph) ph.style.display = 'none';
     if (status) status.textContent = t('merchant.upload.selected','已选择（{kb}KB），保存任务后上传',{kb:Math.round(blob.size/1024)});
+    updateTaskPreview();
   }).catch(function() { if (status) status.textContent = t('merchant.upload.readFailedRetry','图片读取失败，请重试'); });
 }
 

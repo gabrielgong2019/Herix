@@ -1035,5 +1035,8 @@
   "merchant.credit.loadFailed": "额度信息加载失败，请检查网络后重试",
   "merchant.credit.retry": "重试",
   "merchant.dash.arrears": "进行中任务已承诺报酬 ¥{used}，钱包余额 ¥{bal}——请及时充值，以免赫使打款延迟",
-  "merchant.publish.topupReminder": "任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。"
+  "merchant.publish.topupReminder": "任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。",
+  "merchant.preview.caption": "赫使在小程序里看到的效果",
+  "merchant.preview.exampleTitle": "新品体验官招募（示例）",
+  "merchant.preview.note": "空白字段以示例内容占位，开始填写后实时更新；实际展示以小程序端为准"
 }

@@ -1036,5 +1036,8 @@
   "merchant.credit.loadFailed": "额度接口请求失败时的错误提示(不再伪装成¥0)，旁边有重试按钮",
   "merchant.credit.retry": "重试按钮",
   "merchant.dash.arrears": "仪表盘催充值黄条：进行中任务承诺报酬>钱包余额时显示。{used}=已承诺 {bal}=余额",
-  "merchant.publish.topupReminder": "发布成功后的充值提醒弹窗正文(首次发布且余额为0时触发)——语气积极但把'打款需要真实余额'说清楚"
+  "merchant.publish.topupReminder": "发布成功后的充值提醒弹窗正文(首次发布且余额为0时触发)——语气积极但把'打款需要真实余额'说清楚",
+  "merchant.preview.caption": "任务表单右侧实时预览卡的标题——预览卡结构/样式对齐 miniapp TaskCard 组件，词条复用 taskCard.*/category.*",
+  "merchant.preview.exampleTitle": "预览卡占位示例的任务标题(表单还没填时展示)，需明示是示例",
+  "merchant.preview.note": "预览卡下方免责小字"
 }

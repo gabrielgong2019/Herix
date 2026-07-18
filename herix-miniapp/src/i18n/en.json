@@ -1035,5 +1035,8 @@
   "merchant.credit.loadFailed": "Failed to load balance info. Check your connection and retry",
   "merchant.credit.retry": "Retry",
   "merchant.dash.arrears": "Committed rewards on active tasks: ¥{used}; wallet balance: ¥{bal}. Please top up soon to avoid delaying ambassador payouts",
-  "merchant.publish.topupReminder": "Your task is now live. Paying ambassadors after they complete work requires a real wallet balance - please top up before deliveries come in to avoid payout delays. Pre-funded tasks also get a Fast Payout badge, which attracts more applicants."
+  "merchant.publish.topupReminder": "Your task is now live. Paying ambassadors after they complete work requires a real wallet balance - please top up before deliveries come in to avoid payout delays. Pre-funded tasks also get a Fast Payout badge, which attracts more applicants.",
+  "merchant.preview.caption": "How ambassadors will see it in the app",
+  "merchant.preview.exampleTitle": "New Product Tester Wanted (sample)",
+  "merchant.preview.note": "Empty fields show sample content and update live as you type; the actual app display is authoritative"
 }

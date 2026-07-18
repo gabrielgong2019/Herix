@@ -1038,7 +1038,5 @@
   "merchant.publish.topupReminder": "Your task is now live. Paying ambassadors after they complete work requires a real wallet balance - please top up before deliveries come in to avoid payout delays. Pre-funded tasks also get a Fast Payout badge, which attracts more applicants.",
   "merchant.preview.caption": "How ambassadors will see it in the app",
   "merchant.preview.exampleTitle": "New Product Tester Wanted (sample)",
-  "merchant.preview.note": "Empty fields show sample content and update live as you type; the actual app display is authoritative",
-  "merchant.wizard.previewCaption": "The discovery feed ambassadors browse every day",
-  "merchant.wizard.previewNote": "Once you're onboarded and publish a task, it will appear here for ambassadors to discover and apply"
+  "merchant.preview.note": "Empty fields show sample content and update live as you type; the actual app display is authoritative"
 }

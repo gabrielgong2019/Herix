@@ -3,7 +3,7 @@ import { requireAuth, requireRole } from '../middleware/auth';
 import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo, processCover } from '../utils/image';
 import { saveBrandAsset, saveTaskCover } from '../utils/uploads';
-import { update } from '../utils/db';
+import { update, insert } from '../utils/db';
 
 export const uploadsRouter = Router();
 
@@ -41,9 +41,14 @@ uploadsRouter.post('/brand/kyb-doc', requireAuth, requireRole('BRAND'), imageUpl
   try {
     const processed = await processPromo(req.file.buffer); // 文档照片沿用宣传图压缩参数（长边保留较大，文字可读）
     const url = saveBrandAsset(req.user!.userId, 'kyb', processed);
+    const submittedAt = new Date().toISOString();
+    // 写业务发生源：每次提交一行审计记录（write-once，永久保留），
+    // brand_profiles.kyb_* 只是"当前状态"快照，两者不冲突（快照给审核页筛选用，
+    // 审计表给"这是第几次提交/历史拒绝原因"用）
+    await insert('kyb_submissions', { user_id: req.user!.userId, doc_url: url, status: 'pending', submitted_at: submittedAt });
     await update('brand_profiles', {
       kyb_doc_url: url, kyb_status: 'pending', kyb_note: null,
-      kyb_submitted_at: new Date().toISOString(),
+      kyb_submitted_at: submittedAt,
     }, 'user_id = ?', [req.user!.userId]);
     res.json({ success: true, url, kybStatus: 'pending' });
   } catch (err) {

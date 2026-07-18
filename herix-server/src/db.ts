@@ -42,7 +42,6 @@ export async function initDatabase() {
       industry TEXT,
       contact_name TEXT NOT NULL DEFAULT '',
       contact_phone TEXT,
-      is_enterprise_verified INTEGER NOT NULL DEFAULT 0,
       is_onboarded INTEGER NOT NULL DEFAULT 0
     );
 
@@ -620,6 +619,24 @@ export async function initDatabase() {
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_doc_url TEXT`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_note TEXT`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_submitted_at TEXT`,
+    // KYB 审计留痕（2026-07-19）：brand_profiles.kyb_* 是当前状态快照（单行覆盖），
+    // 商家被拒重传后旧拒绝原因/旧证件/旧时间全部丢失——本表按提交事件写一行，永久保留。
+    // 同时把 is_enterprise_verified 合并进 kyb_status：两者是同一事实的重复字段，
+    // 原子写入所以当前无分歧，但架构上就该只有一个来源——直接删列，
+    // 网关判断/gate 改读 kyb_status='approved'（见 tasks.ts/auth.ts 改动）
+    `ALTER TABLE brand_profiles DROP COLUMN IF EXISTS is_enterprise_verified`,
+    `CREATE TABLE IF NOT EXISTS kyb_submissions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id),
+      doc_url TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      note TEXT,
+      submitted_at TEXT NOT NULL,
+      reviewed_at TEXT,
+      reviewed_by TEXT REFERENCES users(id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_kyb_submissions_user ON kyb_submissions(user_id, submitted_at DESC)`,
+    `CREATE INDEX IF NOT EXISTS idx_brand_profiles_kyb_status ON brand_profiles(kyb_status)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

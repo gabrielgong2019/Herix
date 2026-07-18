@@ -1029,11 +1029,12 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   const fast_payout = creditInfo.availableBalance >= fpThreshold;
   const uploadToken = crypto.randomBytes(16).toString('hex');
 
-  // 首任务审核门（2026-07-18，PRD §29）：未通过 KYB（is_enterprise_verified=0）的商家，
-  // 发布的任务须平台审核后才进公开列表——防恶意注册用任务做钓鱼/违规内容载体。
-  // 状态仍置 OPEN（额度照常占用、商家可正常查看），只是公开可见性由 platform_review 闸住
-  const bpRow = await findOne<any>('SELECT is_enterprise_verified FROM brand_profiles WHERE user_id = ?', [task.creator_id]);
-  const needsReview = req.user!.role !== 'ADMIN' && !(bpRow && Number(bpRow.is_enterprise_verified) === 1);
+  // 首任务审核门（2026-07-18，PRD §29；2026-07-19 gate 从 is_enterprise_verified 合并进 kyb_status）：
+  // 未通过 KYB(kyb_status!=='approved') 的商家，发布的任务须平台审核后才进公开列表——
+  // 防恶意注册用任务做钓鱼/违规内容载体。状态仍置 OPEN（额度照常占用、商家可正常查看），
+  // 只是公开可见性由 platform_review 闸住
+  const bpRow = await findOne<any>('SELECT kyb_status FROM brand_profiles WHERE user_id = ?', [task.creator_id]);
+  const needsReview = req.user!.role !== 'ADMIN' && bpRow?.kyb_status !== 'approved';
 
   await update('tasks', {
     status:          'OPEN',

@@ -80,22 +80,39 @@ adminRouter.patch('/kyb/trial-credit', async (req: Request, res: Response) => {
   res.json({ success: true, amount: Math.round(amount) });
 });
 
-/** GET /api/admin/kyb-reviews — 待审核的商家认证申请 */
+/** GET /api/admin/kyb-reviews — 待审核的商家认证申请（含历史提交次数，供 admin 判断"这是第几次提交"） */
 adminRouter.get('/kyb-reviews', async (_req: Request, res: Response) => {
   const rows = await findMany<any>(
     `SELECT bp.user_id, bp.company_name, bp.industry, bp.website, bp.country, bp.is_agency,
-            bp.kyb_doc_url, bp.kyb_submitted_at, u.nickname, u.email
+            bp.kyb_doc_url, bp.kyb_submitted_at, u.nickname, u.email,
+            (SELECT COUNT(*) FROM kyb_submissions ks WHERE ks.user_id = bp.user_id) AS submission_count
      FROM brand_profiles bp JOIN users u ON u.id = bp.user_id
      WHERE bp.kyb_status = 'pending' ORDER BY bp.kyb_submitted_at ASC`
   );
   res.json(rows);
 });
 
-/** POST /api/admin/kyb/:userId/approve — 商家认证通过（is_enterprise_verified=1，任务免审+可申请提额） */
+/** GET /api/admin/kyb/:userId/history — 该商家全部历史提交记录（审计留痕：拒绝原因/证件/时间均不覆盖） */
+adminRouter.get('/kyb/:userId/history', async (req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    'SELECT id, doc_url, status, note, submitted_at, reviewed_at, reviewed_by FROM kyb_submissions WHERE user_id = ? ORDER BY submitted_at DESC',
+    [req.params.userId]
+  );
+  res.json(rows);
+});
+
+/** POST /api/admin/kyb/:userId/approve — 商家认证通过（kyb_status='approved'，任务免审+可申请提额） */
 adminRouter.post('/kyb/:userId/approve', async (req: Request, res: Response) => {
   const row = await findOne<any>("SELECT user_id, company_name FROM brand_profiles WHERE user_id = ? AND kyb_status = 'pending'", [req.params.userId]);
   if (!row) return res.status(404).json({ error: '无待审核的认证申请' });
-  await update('brand_profiles', { kyb_status: 'approved', kyb_note: null, is_enterprise_verified: 1 }, 'user_id = ?', [row.user_id]);
+  const reviewedAt = new Date().toISOString();
+  await update('brand_profiles', { kyb_status: 'approved', kyb_note: null }, 'user_id = ?', [row.user_id]);
+  // 审计表：更新本次提交对应的那一行（而非覆盖 brand_profiles 快照），历史提交永久可查
+  await pool.query(
+    `UPDATE kyb_submissions SET status = 'approved', reviewed_at = $1, reviewed_by = $2
+     WHERE user_id = $3 AND status = 'pending'`,
+    [reviewedAt, req.user!.userId, row.user_id]
+  );
   await createNotification({
     userId: row.user_id, type: 'KYB_APPROVED', targetRole: 'BRAND',
     title: '企业认证通过',
@@ -110,7 +127,13 @@ adminRouter.post('/kyb/:userId/reject', async (req: Request, res: Response) => {
   if (!reason) return res.status(400).json({ error: '请填写拒绝原因（会展示给商家）' });
   const row = await findOne<any>("SELECT user_id FROM brand_profiles WHERE user_id = ? AND kyb_status = 'pending'", [req.params.userId]);
   if (!row) return res.status(404).json({ error: '无待审核的认证申请' });
+  const reviewedAt = new Date().toISOString();
   await update('brand_profiles', { kyb_status: 'rejected', kyb_note: reason }, 'user_id = ?', [row.user_id]);
+  await pool.query(
+    `UPDATE kyb_submissions SET status = 'rejected', note = $1, reviewed_at = $2, reviewed_by = $3
+     WHERE user_id = $4 AND status = 'pending'`,
+    [reason, reviewedAt, req.user!.userId, row.user_id]
+  );
   await createNotification({
     userId: row.user_id, type: 'KYB_REJECTED', targetRole: 'BRAND',
     title: '企业认证未通过',

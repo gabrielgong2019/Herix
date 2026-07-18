@@ -2408,7 +2408,7 @@ function settingsPage() {
 
   // ── 企业认证（KYB，2026-07-18 PRD §29）：任务免审上线 + 可申请提升信用额度 ──
   var kyb = p.kyb_status || 'none';
-  var verified = Number(p.is_enterprise_verified) === 1;
+  var verified = kyb === 'approved'; // is_enterprise_verified 已合并进 kyb_status（2026-07-19）
   h += '<div class="form-card" style="max-width:600px;margin-top:16px"><div class="panel-title">'+t('merchant.kyb.title','企业认证')+'</div>';
   if (verified) {
     h += '<div style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 14px;font-size:13px;color:#166534;font-weight:600">✅ '+t('merchant.kyb.approved','已认证')+'</div>'

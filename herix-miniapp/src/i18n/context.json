@@ -620,7 +620,7 @@
   "merchant.taskDetail.tabCodes": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
   "merchant.taskDetail.tabReferrals": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
   "merchant.taskDetail.descTitle": "商家后台任务详情 taskDetailPage()，merchant.html 专用词条(2026-07-18)",
-  "merchant.wizard.identityTitle": "商家入驻向导剩余步骤(公司信息/联系方式/协议)，merchant.html 专用词条(2026-07-18)",
+  "merchant.wizard.identityTitle": "入驻向导第1步标题。日文定稿「ご利用形態」(2026-07-18)：役割有'个人岗位'误读风险，ご利用形態是日本B2B SaaS注册标准问法——改译文时勿回退到 立場/役割",
   "merchant.wizard.identitySub": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
   "merchant.wizard.identityBrand": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",
   "merchant.wizard.identityBrandDesc": "商家入驻向导 activateBrandPage()/onboardFlowPage()，merchant.html 专用词条(2026-07-18)",

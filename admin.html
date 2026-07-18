@@ -277,10 +277,10 @@ function reviewsPage(){
   if(tab==='kyb'){
     var tc=st.data.trialCredit;
     h+='<div class="card" style="padding:14px 18px;margin-bottom:16px">'
-      +'<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">新商家首单体验额度（JPY）</div>'
+      +'<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">首单体验额度 · 站点级默认值（当前：日本站 JPY）</div>'
       +'<div style="display:flex;gap:8px;align-items:center"><input id="kyb-trial-credit" type="number" value="'+(tc!=null?tc:'')+'" style="width:140px">'
       +'<button class="btn btn-primary btn-sm" onclick="saveTrialCredit()">保存</button></div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:4px">首个任务发布时按 min(此值, 任务总成本) 自动发放，绑定该任务、任务关闭后随之失效；已发放的不受改动影响</div></div>';
+      +'<div style="font-size:11px;color:var(--muted);margin-top:4px">首个任务发布时按 min(此值, 任务总成本) 自动发放，绑定该任务、任务关闭后随之失效；已发放的不受改动影响。站点为单位配置，无商家维度；多站点上线后按站点分别设置。商户端不展示此概念，只感知首单可发布</div></div>';
     if(!kybRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审认证</div>';
     return h+kybRv.map(function(r){
       return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.company_name||r.nickname||'')+(r.is_agency?' <span style="font-size:11px;color:#c2410c">[广告代理]</span>':'')+'</span>'

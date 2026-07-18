@@ -1030,7 +1030,7 @@
   "merchant.kyb.rejectedPrefix": "上次提交未通过：",
   "merchant.kyb.benefit": "上传企业证件（日本：登記簿謄本／中国：营业执照）完成认证后：①发布任务免平台审核直接上线 ②可申请提升信用额度。",
   "merchant.kyb.submitted": "认证材料已提交，审核结果将站内信通知",
-  "merchant.credit.trialSub": "🎁 新商家体验额度 ¥{trial} + 钱包 ¥{wallet}，可直接发布第一个任务；赫使报酬打款需要钱包真实余额，请提前充值",
+  "merchant.credit.trialSub": "首个任务可直接发布；赫使报酬打款需要钱包真实余额，请提前充值",
   "merchant.credit.walletOnlySub": "钱包 ¥{wallet} · 发布任务与报酬打款需要钱包余额，请先充值",
   "merchant.credit.loadFailed": "额度信息加载失败，请检查网络后重试",
   "merchant.credit.retry": "重试",

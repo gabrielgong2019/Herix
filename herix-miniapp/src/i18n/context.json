@@ -1031,7 +1031,7 @@
   "merchant.kyb.rejectedPrefix": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
   "merchant.kyb.benefit": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
   "merchant.kyb.submitted": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
-  "merchant.credit.trialSub": "任务表单额度banner——新商家首单体验额度提示。机制上额度绑定首单任务，但文案刻意不提'绑定'(产品决策2026-07-18)：商户只需知道①能发第一单②有个额度③打款要提前充值",
+  "merchant.credit.trialSub": "任务表单额度banner——新商家首单提示。产品决策(2026-07-18)：'体验额度'是内部概念，商户端不展示、不出现金额来源解释，只传达①首单可直接发布②打款要提前充值；banner大数字本身已含首单可发额度",
   "merchant.credit.walletOnlySub": "任务表单额度banner——体验额度已用完/无提额时的兜底文案，引导充值",
   "merchant.credit.loadFailed": "额度接口请求失败时的错误提示(不再伪装成¥0)，旁边有重试按钮",
   "merchant.credit.retry": "重试按钮",

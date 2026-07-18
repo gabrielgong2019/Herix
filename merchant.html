@@ -1801,7 +1801,7 @@ function taskCapacityBannerContent() {
   if (hasToppedUp) {
     sub = t('merchant.credit.realBalanceSub','真实余额，充值后发布自动获得极速打款');
   } else if (trial > 0) {
-    sub = t('merchant.credit.trialSub','🎁 新商家体验额度 ¥{trial} + 钱包 ¥{wallet}，可直接发布第一个任务；赫使报酬打款需要钱包真实余额，请提前充值',{trial:trial.toLocaleString(),wallet:wallet.toLocaleString()});
+    sub = t('merchant.credit.trialSub','首个任务可直接发布；赫使报酬打款需要钱包真实余额，请提前充值');
   } else if ((c.initialCredit || 0) > 0) {
     sub = t('merchant.credit.capacityFormula','信用剩余 ¥{credit} + 钱包 ¥{wallet} = 可发 ¥{cap}',{credit:(c.creditRemaining||0).toLocaleString(),wallet:wallet.toLocaleString(),cap:capacity.toLocaleString()});
   } else {

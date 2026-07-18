@@ -1030,7 +1030,7 @@
   "merchant.kyb.rejectedPrefix": "前回の提出は承認されませんでした：",
   "merchant.kyb.benefit": "企業証明書類（日本：登記簿謄本／中国：営業許可証）をアップロードして認証を完了すると：①案件が審査なしで即時公開 ②与信枠の引き上げを申請できます。",
   "merchant.kyb.submitted": "認証書類を提出しました。結果はお知らせでご連絡します",
-  "merchant.credit.trialSub": "🎁 新規ビジネス向けお試し枠 ¥{trial} + ウォレット ¥{wallet}。最初の案件はそのまま公開できます。アンバサダーへの報酬支払いにはウォレットの実残高が必要ですので、事前のチャージをお願いします",
+  "merchant.credit.trialSub": "最初の案件はそのまま公開できます。アンバサダーへの報酬支払いにはウォレットの実残高が必要ですので、事前のチャージをお願いします",
   "merchant.credit.walletOnlySub": "ウォレット ¥{wallet} · 案件の公開と報酬支払いにはウォレット残高が必要です。先にチャージしてください",
   "merchant.credit.loadFailed": "利用可能枠の読み込みに失敗しました。通信環境をご確認のうえ再試行してください",
   "merchant.credit.retry": "再試行",

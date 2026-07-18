@@ -280,6 +280,8 @@ export default class Withdraw extends Component<{}, State> {
         )}
         {valid && <Text className='eta-line'>{t('withdraw.eta', { eta })}</Text>}
 
+        <Text className='tax-notice'>{t('withdraw.taxNotice')}</Text>
+
         <View
           className={`btn-primary submit ${!valid || submitting ? 'disabled' : ''}`}
           onClick={valid && !submitting ? this.submit : undefined}

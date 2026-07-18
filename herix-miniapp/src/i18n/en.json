@@ -1030,7 +1030,7 @@
   "merchant.kyb.rejectedPrefix": "Previous submission was rejected: ",
   "merchant.kyb.benefit": "Upload your business registration document (Japan: certified registry copy / China: business license). Once verified: ① your tasks go live without review ② you can apply for a higher credit limit.",
   "merchant.kyb.submitted": "Verification submitted — we'll notify you of the result",
-  "merchant.credit.trialSub": "🎁 New-merchant trial allowance ¥{trial} + wallet ¥{wallet} - you can publish your first task right away. Ambassador payouts require a real wallet balance, so please top up in advance",
+  "merchant.credit.trialSub": "You can publish your first task right away. Ambassador payouts require a real wallet balance, so please top up in advance",
   "merchant.credit.walletOnlySub": "Wallet ¥{wallet} - publishing tasks and paying rewards require a wallet balance; please top up first",
   "merchant.credit.loadFailed": "Failed to load balance info. Check your connection and retry",
   "merchant.credit.retry": "Retry",

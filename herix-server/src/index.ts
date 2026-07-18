@@ -51,7 +51,7 @@ app.get('/api/health', (_req, res) => {
 // 平台公开信息（运营主体等，服务协议渲染用；值在 platform_settings 维护）
 app.get('/api/platform-info', async (_req, res) => {
   const { getSetting } = await import('./utils/settings');
-  res.json({ operatorEntity: (await getSetting('operator_entity')) || 'HUAXUE 合同会社' });
+  res.json({ operatorEntity: (await getSetting('operator_entity')) || 'AfterWork株式会社' });
 });
 
 app.use('/api/auth', authRouter);

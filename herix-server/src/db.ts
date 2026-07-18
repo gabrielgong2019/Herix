@@ -405,7 +405,7 @@ export async function initDatabase() {
     `INSERT INTO platform_settings (key, value, note) VALUES
       ('fx_mid_JPY_CNY', '0.0490', 'JPY→CNY 中间价（fx-sync 每6小时自动同步 ECB；此值仅为首启种子）'),
       ('ops_alert_email', 'gabrielgong2019@outlook.com', '运营告警收件邮箱（汇率过期等系统告警）'),
-      ('operator_entity', 'HUAXUE 合同会社', '平台运营主体（法定登记名称，服务协议等法律文本引用；admin 定价页可改）')
+      ('operator_entity', 'AfterWork株式会社', '平台运营主体（法定登记名称，服务协议等法律文本引用；admin 定价页可改）')
      ON CONFLICT (key) DO NOTHING`,
     // 商家归属国（转出实体，V1 默认日本）
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'JP'`,

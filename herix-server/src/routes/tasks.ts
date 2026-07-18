@@ -126,7 +126,13 @@ tasksRouter.get('/:id/codes', requireAuth, requireRole('BRAND', 'ADMIN'), async 
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
 
   const all = await findMany<any>(
-    'SELECT code, herald_id, assigned_at FROM task_promo_codes WHERE task_id = ? ORDER BY created_at ASC',
+    `SELECT pc.code, pc.herald_id, pc.assigned_at,
+            u.nickname AS herald_name,
+            amb.registered_count, amb.used_count, amb.status AS herald_status
+     FROM task_promo_codes pc
+     LEFT JOIN users u ON u.id = pc.herald_id
+     LEFT JOIN ambassador_tasks amb ON amb.task_id = pc.task_id AND amb.herald_id = pc.herald_id
+     WHERE pc.task_id = ? ORDER BY pc.created_at ASC`,
     [req.params.id]
   );
   res.json({
@@ -134,6 +140,16 @@ tasksRouter.get('/:id/codes', requireAuth, requireRole('BRAND', 'ADMIN'), async 
     assigned: all.filter((c: any) => c.herald_id).length,
     available: all.filter((c: any) => !c.herald_id).length,
     samples: all.slice(0, 5).map((c: any) => c.code),
+    // 逐条明细（2026-07-18 补）：codesPanel 需要按赫使展示每个码的转化情况，
+    // 此前该数据从未返回过，前端 state.taskCodes 一直是 undefined（详情页推广码 tab 恒空）
+    codes: all.map((c: any) => ({
+      unique_code: c.code,
+      herald_id: c.herald_id,
+      herald_name: c.herald_name,
+      total_referrals: c.registered_count || 0,
+      qualified_count: c.used_count || 0,
+      status: c.herald_id ? (c.herald_status || 'active') : 'available',
+    })),
   });
 });
 

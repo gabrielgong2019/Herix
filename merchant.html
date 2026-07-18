@@ -326,18 +326,18 @@ function getPageTitle() {
 }
 
 function topbarActions() {
-  if (state.page === 'tasks') return '<button class="btn btn-primary btn-sm" onclick="go(\'task_create\')">+ 创建任务</button>';
+  if (state.page === 'tasks') return '<button class="btn btn-primary btn-sm" onclick="go(\'task_create\')">+ '+t('merchant.tasks.create','创建任务')+'</button>';
   if (state.page === 'task_detail' && state.currentTask) {
-    var t = state.currentTask;
-    var btns = '<button class="btn btn-outline btn-sm" onclick="go(\'tasks\')">← 返回</button>';
-    if (t.status === 'DRAFT') btns += ' <button class="btn btn-primary btn-sm" onclick="publishTask(\''+t.id+'\')">发布任务</button>';
-    if (t.status === 'OPEN' || t.status === 'IN_PROGRESS') {
-      btns += ' <button class="btn btn-outline btn-sm" onclick="editTaskMeta()">编辑</button>';
-      if (t.status === 'OPEN') btns += ' <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="closeTask(\''+t.id+'\')">关闭任务</button>';
+    var task = state.currentTask;
+    var btns = '<button class="btn btn-outline btn-sm" onclick="go(\'tasks\')">← '+t('common.back','返回')+'</button>';
+    if (task.status === 'DRAFT') btns += ' <button class="btn btn-primary btn-sm" onclick="publishTask(\''+task.id+'\')">'+t('merchant.taskDetail.publishTask','发布任务')+'</button>';
+    if (task.status === 'OPEN' || task.status === 'IN_PROGRESS') {
+      btns += ' <button class="btn btn-outline btn-sm" onclick="editTaskMeta()">'+t('merchant.taskDetail.edit','编辑')+'</button>';
+      if (task.status === 'OPEN') btns += ' <button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="closeTask(\''+task.id+'\')">'+t('merchant.topbar.closeTask','关闭任务')+'</button>';
     }
     return btns;
   }
-  if (state.page === 'task_create' || state.page === 'task_edit' || state.page === 'task_meta_edit') return '<button class="btn btn-outline btn-sm" onclick="go(\'task_detail\')">取消</button>';
+  if (state.page === 'task_create' || state.page === 'task_edit' || state.page === 'task_meta_edit') return '<button class="btn btn-outline btn-sm" onclick="go(\'task_detail\')">'+t('common.cancel','取消')+'</button>';
   return '';
 }
 
@@ -390,11 +390,11 @@ function bindLogin() {
     onLogin: function(d) {
       var uRoles=d.user.roles||[d.user.role];
       if(!uRoles.includes('BRAND')){
-        document.getElementById('auth-form-err').innerHTML='<div class="alert alert-error">此页面仅限商家用户</div>';
+        document.getElementById('auth-form-err').innerHTML='<div class="alert alert-error">'+t('merchant.login.merchantOnly','此页面仅限商家用户')+'</div>';
         return;
       }
       state.token=d.token;state.user=d.user;
-      state.msg='登录成功';state.msgType='success';
+      state.msg=t('merchant.login.success','登录成功');state.msgType='success';
       loadDashStats();loadMyTasks();loadBrandProfile();
       handleBrandBindFromUrl();  // 品牌方绑定邀请链接（?bind_task=&bind_token=）
       loadNotifications();
@@ -515,7 +515,7 @@ function activateStep1Next() {
 
 function activateStep2Next() {
   var company = (document.getElementById('act-company')||{}).value||'';
-  if (!company.trim()) { alert('请填写品牌名称'); return; }
+  if (!company.trim()) { alert(t('merchant.wizard.errCompanyRequired','请填写品牌名称')); return; }
   state.activateData = Object.assign({}, state.activateData, {
     currency: 'JPY',
     country: (document.getElementById('act-country')||{}).value || 'JP',
@@ -529,7 +529,7 @@ function activateStep2Next() {
 
 function activateStep3Next() {
   var contact = (document.getElementById('act-contact')||{}).value||'';
-  if (!contact.trim()) { alert('请填写联系人姓名'); return; }
+  if (!contact.trim()) { alert(t('merchant.wizard.errContactRequired','请填写联系人姓名')); return; }
   state.activateData = Object.assign({}, state.activateData, {
     contactName: contact.trim(),
     contactPhone: (document.getElementById('act-phone')||{}).value||'',
@@ -542,7 +542,7 @@ function doActivateBrand() {
   var checked = (document.getElementById('agree-checkbox')||{}).checked;
   var errEl = document.getElementById('act-err');
   if (!checked) {
-    if (errEl) errEl.innerHTML = '<div class="alert alert-error">请先勾选同意服务协议</div>';
+    if (errEl) errEl.innerHTML = '<div class="alert alert-error">'+t('merchant.wizard.errAgreeRequired','请先勾选同意服务协议')+'</div>';
     return;
   }
   var data = Object.assign({}, state.activateData||{}, { agreedToTerms: true });
@@ -760,10 +760,10 @@ function tasksPage() {
 
 /* ── 品牌方绑定：品牌凭上传链接 token 自助绑定（多账号）；代理逐个解绑 ── */
 function unbindBrand(taskId, userId, name) {
-  if (!confirm('确认解绑品牌账号「'+(name||'')+'」？解绑后该账号将无法查看任务进展，可重新绑定')) return;
+  if (!confirm(t('merchant.taskDetail.unbindConfirm','确认解绑品牌账号「{name}」？解绑后该账号将无法查看任务进展，可重新绑定',{name:name||''}))) return;
   post('/tasks/'+taskId+'/brand-unbind', { userId: userId }, function(d) {
     if (d.error) { alert(d.error); return; }
-    showMsg('已解绑', 'success');
+    showMsg(t('merchant.taskDetail.unbound','已解绑'), 'success');
     openTask(taskId);
   });
 }
@@ -776,8 +776,8 @@ function handleBrandBindFromUrl() {
   post('/tasks/'+bt+'/brand-bind', { token: tk }, function(d) {
     // 无论成败都清掉 URL 参数，防止重复触发
     window.history.replaceState({}, '', window.location.pathname);
-    if (d.error) { alert('绑定失败：'+d.error); return; }
-    showMsg('已绑定任务「'+(d.title||'')+'」，可在任务列表查看进展', 'success');
+    if (d.error) { alert(t('merchant.bind.failed','绑定失败：')+d.error); return; }
+    showMsg(t('merchant.bind.success','已绑定任务「{title}」，可在任务列表查看进展',{title:d.title||''}), 'success');
     loadMyTasks();
   });
 }
@@ -984,11 +984,11 @@ function ratingBadge(completedTasks, goodRate) {
   else if (completedTasks >= 10 && rate >= 0.75) level = 'Silver';
   var colors = {Bronze:'#cd7f32',Silver:'#9ca3af',Gold:'#f59e0b',Platinum:'#7c3aed'};
   return '<span style="font-size:10px;font-weight:600;color:'+colors[level]+'">⭐ '+level+'</span>'
-    + '<span style="font-size:10px;color:var(--muted);margin-left:4px">'+completedTasks+'单 好评'+Math.round(rate*100)+'%</span>';
+    + '<span style="font-size:10px;color:var(--muted);margin-left:4px">'+t('merchant.panel.ratingStats','{n}单 好评{pct}%',{n:completedTasks,pct:Math.round(rate*100)})+'</span>';
 }
 
 function applicantsPanel(apps) {
-  if (!apps.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">👤</div>暂无报名</div>';
+  if (!apps.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">👤</div>'+t('merchant.panel.emptyApps','暂无报名')+'</div>';
   return apps.map(function(a) {
     var color = a.status==='APPROVED'?'var(--success)':a.status==='REJECTED'?'var(--danger)':'var(--warning)';
     var country = a.country ? ' · '+esc(a.country) : '';
@@ -1002,13 +1002,13 @@ function applicantsPanel(apps) {
       +(tiers ? '<div style="margin-bottom:6px">'+tiers+'</div>' : '')
       +'<div style="margin-bottom:8px">'+rating+'</div>'
       +(a.message?'<div style="font-size:12px;color:#555;margin-bottom:8px;padding:8px;background:#f9fafb;border-radius:6px">'+esc(a.message)+'</div>':'')
-      +(a.status==='PENDING'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewApp(\''+a.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewApp(\''+a.id+'\',\'REJECTED\')">✗ 拒绝</button></div>':'')
+      +(a.status==='PENDING'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewApp(\''+a.id+'\',\'APPROVED\')">✓ '+t('merchant.reviews.approve','通过')+'</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewApp(\''+a.id+'\',\'REJECTED\')">✗ '+t('merchant.reviews.reject','拒绝')+'</button></div>':'')
       +'</div>';
   }).join('');
 }
 
 function submissionsPanel(subs) {
-  if (!subs.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">📄</div>暂无提交</div>';
+  if (!subs.length) return '<div class="empty" style="padding:30px"><div class="empty-icon">📄</div>'+t('merchant.panel.emptySubs','暂无提交')+'</div>';
   return subs.map(function(s) {
     var color = s.status==='APPROVED'?'var(--success)':s.status==='REJECTED'?'var(--danger)':'var(--warning)';
     var screenshots = s.screenshot_urls ? JSON.parse(s.screenshot_urls||'[]') : [];
@@ -1018,24 +1018,24 @@ function submissionsPanel(subs) {
       +'<span style="font-size:12px;font-weight:600;color:'+color+'">'+subStatusLabel(s.status)+'</span></div>'
       +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:6px;word-break:break-all">🔗 '+esc(s.content_url)+'</a>':'')
       +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
-      +(screenshots.length?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+screenshots.length+' 张截图</div>':'')
-      +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交于 '+fmtLocal(s.submitted_at)+'</div>'
-      +(s.status==='PENDING_REVIEW'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\')">✓ 通过</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\')">✗ 拒绝</button></div>':'')
-      +(s.status==='APPROVED'&&s.rating_score?'<div style="font-size:12px;color:var(--muted);margin-top:6px">已评价 '+'★'.repeat(s.rating_score)+'☆'.repeat(5-s.rating_score)+(s.rating_comment?' · '+esc(s.rating_comment):'')+'</div>':'')
-      +(s.status==='APPROVED'&&!s.rating_score?'<button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="showRatingModal(\''+s.id+'\')">★ 评价赫使</button>':'')
-      +(s.status==='REJECTED'&&s.review_note?'<div style="font-size:11px;color:var(--danger);margin-top:8px">拒绝原因：'+esc(s.review_note)+'</div>':'')
+      +(screenshots.length?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+t('merchant.panel.screenshots','{n} 张截图',{n:screenshots.length})+'</div>':'')
+      +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">'+t('merchant.panel.submittedAt','提交于 {time}',{time:fmtLocal(s.submitted_at)})+'</div>'
+      +(s.status==='PENDING_REVIEW'?'<div style="display:flex;gap:8px"><button class="btn btn-success btn-sm" onclick="reviewSub(\''+s.id+'\',\'APPROVED\')">✓ '+t('merchant.reviews.approve','通过')+'</button><button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="reviewSubReject(\''+s.id+'\')">✗ '+t('merchant.reviews.reject','拒绝')+'</button></div>':'')
+      +(s.status==='APPROVED'&&s.rating_score?'<div style="font-size:12px;color:var(--muted);margin-top:6px">'+t('merchant.panel.rated','已评价')+' '+'★'.repeat(s.rating_score)+'☆'.repeat(5-s.rating_score)+(s.rating_comment?' · '+esc(s.rating_comment):'')+'</div>':'')
+      +(s.status==='APPROVED'&&!s.rating_score?'<button class="btn btn-outline btn-sm" style="margin-top:6px" onclick="showRatingModal(\''+s.id+'\')">★ '+t('merchant.panel.rateHerald','评价赫使')+'</button>':'')
+      +(s.status==='REJECTED'&&s.review_note?'<div style="font-size:11px;color:var(--danger);margin-top:8px">'+t('merchant.panel.rejectReason','拒绝原因：')+esc(s.review_note)+'</div>':'')
       +'</div>';
   }).join('');
 }
 
-function codesPanel(t) {
+function codesPanel(task) {
   var codes = state.taskCodes || [];
-  var exportUrl = API + '/tasks/' + t.id + '/codes/export';
+  var exportUrl = API + '/tasks/' + task.id + '/codes/export';
   var dlBtn = '<div style="margin-bottom:12px;display:flex;align-items:center;justify-content:space-between">'
-    + '<div style="font-size:12px;color:var(--muted)">赫使审核通过后自动分配推广码</div>'
-    + '<a href="'+exportUrl+'" target="_blank" id="csv-dl-btn" class="btn btn-outline btn-sm" onclick="attachAuthHeader(this,\''+exportUrl+'\')">⬇ 下载 CSV</a>'
+    + '<div style="font-size:12px;color:var(--muted)">'+t('merchant.codes.autoAssignHint','赫使审核通过后自动分配推广码')+'</div>'
+    + '<a href="'+exportUrl+'" target="_blank" id="csv-dl-btn" class="btn btn-outline btn-sm" onclick="attachAuthHeader(this,\''+exportUrl+'\')">⬇ '+t('merchant.codes.downloadCsv','下载 CSV')+'</a>'
     + '</div>';
-  if (!codes.length) return dlBtn + '<div class="empty" style="padding:20px"><div class="empty-icon">🔗</div>暂无推广码（审核通过赫使后自动生成）</div>';
+  if (!codes.length) return dlBtn + '<div class="empty" style="padding:20px"><div class="empty-icon">🔗</div>'+t('merchant.codes.empty','暂无推广码（审核通过赫使后自动生成）')+'</div>';
   var rows = codes.map(function(c) {
     return '<tr><td>'+esc(c.herald_name)+'</td>'
       +'<td style="font-family:monospace;font-size:13px;font-weight:700;letter-spacing:1px">'+esc(c.unique_code)+'</td>'
@@ -1043,7 +1043,7 @@ function codesPanel(t) {
       +'<td style="color:var(--muted)">'+(c.total_referrals||0)+'</td>'
       +'<td><span class="tag tag-'+(c.status==='active'?'open':'completed')+'">'+c.status+'</span></td></tr>';
   }).join('');
-  return dlBtn + '<div class="table-card"><table><thead><tr><th>赫使</th><th>推广码</th><th>合格</th><th>总引荐</th><th>状态</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  return dlBtn + '<div class="table-card"><table><thead><tr><th>'+t('merchant.role.herald','赫使')+'</th><th>'+t('merchant.contentType.referral','推广码')+'</th><th>'+t('merchant.codes.qualified','合格')+'</th><th>'+t('merchant.codes.totalReferrals','总引荐')+'</th><th>'+t('merchant.dash.perfTable.status','状态')+'</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 
 function toggleAdvancedFields() {
@@ -1075,14 +1075,14 @@ function toggleCodeModeSection() {
 function uploadCustomCodes(taskId) {
   var raw = (document.getElementById('custom-codes-input') || {}).value || '';
   var codes = raw.split('\n').map(function(l) { return l.trim(); }).filter(Boolean);
-  if (!codes.length) { alert('请输入至少一个推广码'); return; }
+  if (!codes.length) { alert(t('merchant.codes.errAtLeastOne','请输入至少一个推广码')); return; }
   var resultEl = document.getElementById('upload-result');
   patch('POST', '/tasks/' + taskId + '/codes/upload', { codes: codes }, function(d) {
     if (d.error) {
       if (resultEl) resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>';
       return;
     }
-    if (resultEl) resultEl.innerHTML = '<div class="alert alert-success">已上传 '+d.added+' 个推广码'+(d.skipped?' （'+d.skipped+' 个重复跳过）':'')+'</div>';
+    if (resultEl) resultEl.innerHTML = '<div class="alert alert-success">'+t('merchant.codes.uploaded','已上传 {n} 个推广码',{n:d.added})+(d.skipped?' '+t('merchant.codes.skipped','（{n} 个重复跳过）',{n:d.skipped}):'')+'</div>';
     var input = document.getElementById('custom-codes-input');
     if (input) input.value = '';
     // 刷新码池
@@ -1149,17 +1149,13 @@ function taskFormPage(task) {
     + '</select></div>'
     + '<div class="field"><label>'+t('merchant.form.category','分类 *')+'</label><select id="category">'
     + '<option value="" disabled'+(task&&task.category?'':' selected')+'>'+t('merchant.form.categoryPh','请选择分类')+'</option>'
-    + CATEGORIES.map(function(c){return '<option value="'+c.id+'"'+(task&&task.category===c.id?' selected':'')+'>'+c.icon+' '+tf('category.'+c.id,c.label)+'</option>'}).join('')
+    + CATEGORIES.map(function(c){return '<option value="'+c.id+'"'+(task&&task.category===c.id?' selected':'')+'>'+c.icon+' '+t('category.'+c.id,c.label)+'</option>'}).join('')
     + '</select></div>'
     + field(t('merchant.form.payout','任务报酬 (¥) *'), 'payout', 'number', task&&task.payout_per_herald||'', t('merchant.form.payoutPh','赫使实际到手金额（已扣除平台服务费）'), 'oninput="onTaskCostInput()"')
     + field(t('merchant.form.maxHeralds','招募人数 *'), 'maxHeralds', 'number', task&&task.max_heralds||'3', t('merchant.form.maxHeraldsPh','最多接受多少位赫使'), 'oninput="onTaskCostInput()"')
     + '<div class="field form-full"><label>'+t('merchant.form.description','任务描述 *')+'</label><textarea id="description" rows="4" placeholder="'+t('merchant.form.descriptionPh','详细说明任务要求、目标受众、品牌背景...')+'">'+esc(task&&task.description||'')+'</textarea></div>'
     +'</div>'  // close form-grid（核心必填区）
-    // ── 高级选项：其余字段都有可用默认值，折叠减少首次创建时的信息量 ──
-    +'<div style="margin:4px 0 14px">'
-    +'<span id="adv-toggle" style="font-size:13px;color:var(--primary);cursor:pointer;user-select:none" onclick="toggleAdvancedFields()">▾ '+t('merchant.form.advancedToggle','高级选项（截止日期、内容形式、封面图、推广码设置等）')+'</span>'
-    +'</div>'
-    +'<div class="form-grid" id="advanced-fields" style="display:none">'
+    +'<div class="form-grid" id="advanced-fields">'
     + '<div class="field"><label>'+t('merchant.form.difficulty','任务难度')+'</label><select id="difficulty">'
     + '<option value="easy"'+(task&&task.difficulty==='easy'?' selected':'')+'>'+t('merchant.form.difficultyEasy','轻松')+'</option>'
     + '<option value="medium"'+(task&&task.difficulty==='medium'?' selected':'')+'>'+t('merchant.form.difficultyMedium','适中')+'</option>'
@@ -1387,7 +1383,7 @@ function submitReview(id, type, action) {
     if (ta) {
       ta.style.borderColor = '#dc2626';
       ta.rows = 3;
-      ta.placeholder = '请填写原因，帮助赫使了解如何改进内容';
+      ta.placeholder = t('merchant.panel.rejectNotePh','请填写原因，帮助赫使了解如何改进内容');
       ta.focus();
     }
     return;
@@ -1521,11 +1517,11 @@ function toggleNotifPanel() {
           +'</div>'
           +'</div>';
       }).join('')
-    : '<div style="padding:40px 16px;text-align:center;color:var(--muted,#9ca3af);font-size:13px">暂无通知</div>';
+    : '<div style="padding:40px 16px;text-align:center;color:var(--muted,#9ca3af);font-size:13px">'+t('merchant.notif.empty','暂无通知')+'</div>';
 
   el.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border,#e5e7eb)">'
-    +'<div style="font-weight:600;font-size:14px">站内信</div>'
-    +(notifData&&notifData.unread>0?'<button class="btn btn-outline btn-sm" style="font-size:11px" onclick="markAllRead()">全部已读</button>':'')
+    +'<div style="font-weight:600;font-size:14px">'+t('merchant.notif.title','站内信')+'</div>'
+    +(notifData&&notifData.unread>0?'<button class="btn btn-outline btn-sm" style="font-size:11px" onclick="markAllRead()">'+t('merchant.notif.markAllRead','全部已读')+'</button>':'')
     +'</div>'
     +'<div style="overflow-y:auto;flex:1">'+list+'</div>';
   document.body.appendChild(el);
@@ -1576,10 +1572,10 @@ function fmtLocal(s) {
 
 function timeAgo(iso) {
   var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-  if (diff < 60) return '刚刚';
-  if (diff < 3600) return Math.floor(diff/60)+'分钟前';
-  if (diff < 86400) return Math.floor(diff/3600)+'小时前';
-  return Math.floor(diff/86400)+'天前';
+  if (diff < 60) return t('merchant.time.justNow','刚刚');
+  if (diff < 3600) return t('merchant.time.minAgo','{n}分钟前',{n:Math.floor(diff/60)});
+  if (diff < 86400) return t('merchant.time.hourAgo','{n}小时前',{n:Math.floor(diff/3600)});
+  return t('merchant.time.dayAgo','{n}天前',{n:Math.floor(diff/86400)});
 }
 
 /* ── Settings ── */
@@ -1657,11 +1653,11 @@ function genTopupRef() {
 
 function copyText(text) {
   navigator.clipboard.writeText(text).then(function() {
-    var t = document.createElement('div');
-    t.textContent = '已复制';
-    t.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none';
-    document.body.appendChild(t);
-    setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);}, 1500);
+    var toast = document.createElement('div');
+    toast.textContent = t('common.copied','已复制');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:8px 20px;border-radius:20px;font-size:13px;z-index:9999;pointer-events:none';
+    document.body.appendChild(toast);
+    setTimeout(function(){if(toast.parentNode)toast.parentNode.removeChild(toast);}, 1500);
   });
 }
 
@@ -1715,23 +1711,23 @@ function wStatCard(label, value, color, sub) {
 /** 任务表单顶部：可创建额度一览 */
 function taskCapacityBannerContent() {
   if (!brandBalance) {
-    return '<div style="padding:10px 14px;margin-bottom:16px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted)">加载额度信息...</div>';
+    return '<div style="padding:10px 14px;margin-bottom:16px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted)">'+t('merchant.credit.loading','加载额度信息...')+'</div>';
   }
   var c = brandBalance.credit || {};
   var capacity = c.totalCapacity != null ? c.totalCapacity : (brandBalance.available || 0);
   var hasToppedUp = !!c.hasToppedUp;
   var sub = hasToppedUp
-    ? '真实余额，充值后发布自动获得极速打款'
-    : '信用剩余 ¥'+(c.creditRemaining||0).toLocaleString()+' + 钱包 ¥'+(brandBalance.available||0).toLocaleString()+' = 可发 ¥'+capacity.toLocaleString();
+    ? t('merchant.credit.realBalanceSub','真实余额，充值后发布自动获得极速打款')
+    : t('merchant.credit.capacityFormula','信用剩余 ¥{credit} + 钱包 ¥{wallet} = 可发 ¥{cap}',{credit:(c.creditRemaining||0).toLocaleString(),wallet:(brandBalance.available||0).toLocaleString(),cap:capacity.toLocaleString()});
 
   return '<div style="background:'+(hasToppedUp?'#f0fdf4':'#eff6ff')+';border:1px solid '+(hasToppedUp?'#bbf7d0':'#bfdbfe')+';border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">'
     +'<div>'
-    +'<span style="font-size:12px;color:var(--muted)">当前可创建额度</span>'
+    +'<span style="font-size:12px;color:var(--muted)">'+t('merchant.credit.currentCapacity','当前可创建额度')+'</span>'
     +'<span style="font-size:20px;font-weight:700;color:'+(hasToppedUp?'#16a34a':'#1d4ed8')+';margin-left:10px">¥'+Math.round(capacity).toLocaleString()+'</span>'
-    +(hasToppedUp?'<span style="font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:8px">⚡ 极速打款</span>':'')
+    +(hasToppedUp?'<span style="font-size:10px;font-weight:700;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:8px">⚡ '+t('merchant.tasks.fastPayout','极速打款')+'</span>':'')
     +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+sub+'</div>'
     +'</div>'
-    +(hasToppedUp?'':'<button class="btn btn-sm" style="background:#3b82f6;color:#fff;white-space:nowrap;flex-shrink:0" onclick="nav(\'wallet\')">充值 →</button>')
+    +(hasToppedUp?'':'<button class="btn btn-sm" style="background:#3b82f6;color:#fff;white-space:nowrap;flex-shrink:0" onclick="nav(\'wallet\')">'+t('merchant.credit.topupShort','充值')+' →</button>')
     +'</div>';
 }
 
@@ -1761,15 +1757,15 @@ function onTaskCostInput() {
 
   // 三栏：任务报酬 / 平台服务费 / 任务总支出
   h += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:'+(capacity!==null?'10px':'0')+';">';
-  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">任务报酬</div>'
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+t('merchant.form.costPayout','任务报酬')+'</div>'
     +'<div style="font-size:18px;font-weight:700;color:#16a34a">¥'+Number(payout).toLocaleString()+'</div>'
-    +'<div style="font-size:10px;color:var(--muted)">赫使到手 / 人</div></div>';
-  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">平台服务费</div>'
+    +'<div style="font-size:10px;color:var(--muted)">'+t('merchant.form.costPayoutSub','赫使到手 / 人')+'</div></div>';
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+t('merchant.form.costFee','平台服务费')+'</div>'
     +'<div style="font-size:18px;font-weight:700;color:#6b7280">¥'+Number(fee).toLocaleString()+'</div>'
     +'<div style="font-size:10px;color:var(--muted)">'+(rate*100).toFixed(0)+'% / 人</div></div>';
-  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">任务总支出</div>'
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:2px">'+t('merchant.form.costTotal','任务总支出')+'</div>'
     +'<div style="font-size:18px;font-weight:700;color:'+(over?'#dc2626':'var(--text)')+'">¥'+Number(total).toLocaleString()+'</div>'
-    +'<div style="font-size:10px;color:var(--muted)">¥'+Number(cost).toLocaleString()+' × '+mh+' 人</div></div>';
+    +'<div style="font-size:10px;color:var(--muted)">¥'+Number(cost).toLocaleString()+' × '+mh+' '+t('merchant.unit.person','人')+'</div></div>';
   h += '</div>';
 
   // 额度占用（仅公开任务 + 有额度数据时显示）
@@ -1779,11 +1775,11 @@ function onTaskCostInput() {
       +'<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:3px;transition:width .25s"></div></div>';
     h += '<div style="display:flex;justify-content:space-between;align-items:center">';
     if (over) {
-      h += '<span style="font-size:11px;color:#dc2626;font-weight:500">⚠ 超出可发额度，需充值 ¥'+Math.round(total-capacity).toLocaleString()+'</span>'
-        +'<span onclick="nav(\'wallet\')" style="font-size:11px;font-weight:600;color:#dc2626;cursor:pointer;text-decoration:underline">去充值 →</span>';
+      h += '<span style="font-size:11px;color:#dc2626;font-weight:500">⚠ '+t('merchant.form.overCapacity','超出可发额度，需充值 ¥{n}',{n:Math.round(total-capacity).toLocaleString()})+'</span>'
+        +'<span onclick="nav(\'wallet\')" style="font-size:11px;font-weight:600;color:#dc2626;cursor:pointer;text-decoration:underline">'+t('merchant.form.goTopup','去充值')+' →</span>';
     } else {
-      h += '<span style="font-size:11px;color:var(--muted)">额度占用 '+pct+'%</span>'
-        +'<span style="font-size:11px;color:var(--muted)">发布后剩余 ¥'+Math.round(capacity-total).toLocaleString()+'</span>';
+      h += '<span style="font-size:11px;color:var(--muted)">'+t('merchant.form.capacityUsage','额度占用 {pct}%',{pct:pct})+'</span>'
+        +'<span style="font-size:11px;color:var(--muted)">'+t('merchant.form.remainAfterPublish','发布后剩余 ¥{n}',{n:Math.round(capacity-total).toLocaleString()})+'</span>';
     }
     h += '</div>';
   }
@@ -1808,7 +1804,7 @@ function showFormError(msg) {
 
 /** 任务管理页顶部额度汇总 */
 function taskCapacitySummary() {
-  if (!brandBalance) return '<div style="height:72px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">加载额度信息...</div>';
+  if (!brandBalance) return '<div style="height:72px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:16px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px">'+t('merchant.credit.loading','加载额度信息...')+'</div>';
   var b      = brandBalance;
   var c      = b.credit || {};
   var avail  = b.available || 0;
@@ -1839,28 +1835,28 @@ function taskCapacitySummary() {
 
   var leftStats = '<div style="display:flex;align-items:stretch;gap:10px;flex-wrap:wrap;flex:1">';
   if (credit > 0) {
-    leftStats += stat('钱包余额', avail, 'var(--text)');
+    leftStats += stat(t('merchant.credit.walletBalance','钱包余额'), avail, 'var(--text)');
     leftStats += vline();
-    leftStats += stat('信用剩余', cRemaining, cRemaining <= 0 ? '#dc2626' : '#1d4ed8');
+    leftStats += stat(t('merchant.credit.creditRemaining','信用剩余'), cRemaining, cRemaining <= 0 ? '#dc2626' : '#1d4ed8');
     leftStats += sep('→');
-    leftStats += stat('单笔最高可发', remaining, remaining <= 0 ? '#dc2626' : '#16a34a');
-    if (frozen > 0) { leftStats += vline(); leftStats += stat('任务冻结', frozen, '#f59e0b'); }
+    leftStats += stat(t('merchant.credit.maxSingle','单笔最高可发'), remaining, remaining <= 0 ? '#dc2626' : '#16a34a');
+    if (frozen > 0) { leftStats += vline(); leftStats += stat(t('merchant.credit.frozenByTasks','任务冻结'), frozen, '#f59e0b'); }
   } else {
-    leftStats += stat('可用余额', avail, avail < 0 ? '#dc2626' : 'var(--text)');
-    if (frozen > 0) { leftStats += vline(); leftStats += stat('任务冻结', frozen, '#f59e0b'); }
+    leftStats += stat(t('merchant.wallet.available','可用余额'), avail, avail < 0 ? '#dc2626' : 'var(--text)');
+    if (frozen > 0) { leftStats += vline(); leftStats += stat(t('merchant.credit.frozenByTasks','任务冻结'), frozen, '#f59e0b'); }
     leftStats += sep('=');
-    leftStats += stat('可发任务额度', Math.max(0, avail), avail <= 0 ? '#dc2626' : '#1d4ed8');
+    leftStats += stat(t('merchant.credit.taskCapacity','可发任务额度'), Math.max(0, avail), avail <= 0 ? '#dc2626' : '#1d4ed8');
   }
   leftStats += '</div>';
 
   var rightEl = isFastPayout
     ? '<div style="align-self:center;text-align:center">'
-        +'<span style="display:block;font-size:12px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:6px;padding:4px 10px;white-space:nowrap;margin-bottom:4px">⚡ 极速打款</span>'
-        +'<button class="btn btn-outline btn-sm" onclick="nav(\'wallet\')">充值</button>'
+        +'<span style="display:block;font-size:12px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:6px;padding:4px 10px;white-space:nowrap;margin-bottom:4px">⚡ '+t('merchant.tasks.fastPayout','极速打款')+'</span>'
+        +'<button class="btn btn-outline btn-sm" onclick="nav(\'wallet\')">'+t('merchant.credit.topupShort','充值')+'</button>'
       +'</div>'
     : '<div style="align-self:center;text-align:center">'
-        +'<button class="btn btn-primary btn-sm" style="white-space:nowrap;display:block;margin-bottom:4px" onclick="nav(\'wallet\')">充值 →</button>'
-        +'<div style="font-size:10px;color:var(--muted)">余额≥¥'+Number(fpThresh).toLocaleString()+'开启⚡</div>'
+        +'<button class="btn btn-primary btn-sm" style="white-space:nowrap;display:block;margin-bottom:4px" onclick="nav(\'wallet\')">'+t('merchant.credit.topupShort','充值')+' →</button>'
+        +'<div style="font-size:10px;color:var(--muted)">'+t('merchant.credit.fpThreshold','余额≥¥{n}开启⚡',{n:Number(fpThresh).toLocaleString()})+'</div>'
       +'</div>';
 
   var border = remaining <= 0 ? '#fecaca' : credit > 0 ? '#bfdbfe' : 'var(--border)';
@@ -1872,8 +1868,8 @@ function taskCapacitySummary() {
     html += '<div style="display:flex;align-items:center;gap:10px;margin-top:10px">'
       +'<div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden">'
       +'<div style="height:100%;width:'+pct+'%;background:'+barColor+';border-radius:2px;transition:width .4s"></div></div>'
-      +'<div style="font-size:11px;color:var(--muted);white-space:nowrap">信用额度 ¥'+Number(credit).toLocaleString()+' · 已占用 '+pct+'%'
-      +(remaining<=0?' · <span style="color:#dc2626;font-weight:600">额度已耗尽，请充值</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);white-space:nowrap">'+t('merchant.credit.limitUsage','信用额度 ¥{limit} · 已占用 {pct}%',{limit:Number(credit).toLocaleString(),pct:pct})
+      +(remaining<=0?' · <span style="color:#dc2626;font-weight:600">'+t('merchant.credit.exhausted','额度已耗尽，请充值')+'</span>':'')+'</div>'
       +'</div>';
   }
 
@@ -1896,29 +1892,29 @@ function creditStatusBanner() {
   var h = '<div style="background:linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%);border:1px solid #bfdbfe;border-radius:14px;padding:18px 20px;margin-bottom:20px">';
   h += '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px">';
   h += '<div>';
-  h += '<div style="font-weight:600;font-size:14px;color:#1e40af;margin-bottom:3px">任务额度'+(hasToppedUp ? '' : ' · 体验版')+'</div>';
-  h += '<div style="font-size:12px;color:#3b82f6;line-height:1.5">信用额度 + 充值金额 = 可发布任务总上限。充值后任务获得 <strong>⚡ 极速打款</strong> 标签，赫使报名意愿更强。</div>';
+  h += '<div style="font-weight:600;font-size:14px;color:#1e40af;margin-bottom:3px">'+t('merchant.credit.bannerTitle','任务额度')+(hasToppedUp ? '' : ' · '+t('merchant.credit.trialTag','体验版'))+'</div>';
+  h += '<div style="font-size:12px;color:#3b82f6;line-height:1.5">'+t('merchant.credit.bannerSub','信用额度 + 充值金额 = 可发布任务总上限。充值后任务获得 <strong>⚡ 极速打款</strong> 标签，赫使报名意愿更强。')+'</div>';
   h += '</div>';
-  if (!hasToppedUp) h += '<button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-left:12px" onclick="nav(\'wallet\')">立即充值 →</button>';
+  if (!hasToppedUp) h += '<button class="btn btn-primary btn-sm" style="flex-shrink:0;margin-left:12px" onclick="nav(\'wallet\')">'+t('merchant.credit.topupNow','立即充值')+' →</button>';
   h += '</div>';
   h += '<div style="display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:center;margin-bottom:14px">';
-  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">信用额度</div>'
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">'+t('merchant.credit.creditLimit','信用额度')+'</div>'
     +'<div style="font-size:20px;font-weight:700;color:#1d4ed8">¥'+Number(creditLimit).toLocaleString()+'</div></div>';
   h += '<div style="font-size:18px;color:var(--muted);padding:0 4px;padding-top:14px">+</div>';
-  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">充值金额</div>'
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">'+t('merchant.topup.amountLabelShort','充值金额')+'</div>'
     +'<div style="font-size:20px;font-weight:700;color:'+(walletAmt>0?'#16a34a':'var(--muted)')+'">¥'+Number(walletAmt).toLocaleString()+'</div></div>';
   h += '<div style="font-size:18px;color:var(--muted);padding:0 4px;padding-top:14px">=</div>';
-  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">任务额度</div>'
+  h += '<div><div style="font-size:11px;color:var(--muted);margin-bottom:3px">'+t('merchant.credit.bannerTitle','任务额度')+'</div>'
     +'<div style="font-size:20px;font-weight:700;color:#7c3aed">¥'+Number(taskCapacity).toLocaleString()+'</div></div>';
   h += '</div>';
   if (used > 0) {
     h += '<div style="height:6px;background:#e0e7ff;border-radius:3px;overflow:hidden;margin-bottom:8px">'
       +'<div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,#3b82f6,#7c3aed);border-radius:3px;transition:width .4s"></div></div>';
-    h += '<div style="font-size:11px;color:var(--muted)">已承诺 ¥'+Number(used).toLocaleString()+' · 剩余可承诺 ¥'+Number(Math.max(0,taskCapacity-used)).toLocaleString()+'</div>';
+    h += '<div style="font-size:11px;color:var(--muted)">'+t('merchant.credit.committed','已承诺 ¥{used} · 剩余可承诺 ¥{left}',{used:Number(used).toLocaleString(),left:Number(Math.max(0,taskCapacity-used)).toLocaleString()})+'</div>';
   }
   if (!hasToppedUp) {
     h += '<div style="font-size:12px;color:#4338ca;line-height:1.6;margin-top:10px">'
-      +'充值后任务将获得 <strong>⚡ 极速打款</strong> 标签，显著提升赫使报名意愿，任务完成后自动打款无需等待。'
+      +t('merchant.credit.topupBenefit','充值后任务将获得 <strong>⚡ 极速打款</strong> 标签，显著提升赫使报名意愿，任务完成后自动打款无需等待。')
       +'</div>';
   }
   h += '</div>';
@@ -2236,7 +2232,7 @@ function uploadBrandAsset(type, input) {
   var file = input.files && input.files[0];
   if (!file) return;
   var msgEl = document.getElementById('assetUploadMsg');
-  if (msgEl) msgEl.textContent = '上传中...';
+  if (msgEl) msgEl.textContent = t('merchant.upload.uploading','上传中...');
   var fd = new FormData();
   fd.append('file', file);
   var xhr = new XMLHttpRequest();
@@ -2248,10 +2244,10 @@ function uploadBrandAsset(type, input) {
     state.brandProfile = state.brandProfile || {};
     if (type === 'logo') state.brandProfile.logo_url = d.url;
     else state.brandProfile.promo_image_url = d.url;
-    if (msgEl) msgEl.textContent = '上传成功';
+    if (msgEl) msgEl.textContent = t('merchant.upload.success','上传成功');
     render();
   };
-  xhr.onerror = function() { if (msgEl) msgEl.textContent = '上传失败'; };
+  xhr.onerror = function() { if (msgEl) msgEl.textContent = t('merchant.upload.failed','上传失败'); };
   xhr.send(fd);
 }
 
@@ -2411,14 +2407,12 @@ function openTask(id) {
       });
       // load codes if PERFORMANCE
       if (t.mode === 'PERFORMANCE') {
-        // 加载已分配的推广码（赫使维度）
-        get('/tasks/'+id+'/codes', function(pool) {
-          state.taskCodes = codes || [];
-          render();
-        });
-        // 加载码池概览（含未分配）
+        // 一次请求两用：码池概览 + 逐条明细（原来这里发两次同一请求，且第一处引用了
+        // 不存在的变量 codes（应为 pool）——初始 commit 就有的 bug，推广码 tab 恒空；
+        // 后端 /codes 现已返回 codes 数组，见 tasks.ts）
         get('/tasks/'+id+'/codes', function(pool) {
           state.codePool = pool;
+          state.taskCodes = (pool.codes || []).filter(function(c){ return c.herald_id; });
           render();
         });
       } else {
@@ -2475,14 +2469,14 @@ function taskMetaEditPage() {
 }
 
 function saveTaskMeta() {
-  var t = state.editingTask;
-  if (!t) return;
+  var task = state.editingTask;
+  if (!task) return;
   var desc = (document.getElementById('meta-description')||{}).value || '';
   var req  = (document.getElementById('meta-requirements')||{}).value || '';
   var dl   = (document.getElementById('meta-deadline')||{}).value || '';
-  var mh   = Number((document.getElementById('meta-maxHeralds')||{}).value || t.max_heralds);
-  if (!desc.trim()) { alert('描述不能为空'); return; }
-  if (mh < t.max_heralds) { alert('名额不能减少'); return; }
+  var mh   = Number((document.getElementById('meta-maxHeralds')||{}).value || task.max_heralds);
+  if (!desc.trim()) { alert(t('merchant.metaEdit.errDescRequired','描述不能为空')); return; }
+  if (mh < task.max_heralds) { alert(t('merchant.metaEdit.errQuotaDecrease','名额不能减少')); return; }
   var body = {
     description: desc,
     requirements: req || undefined,
@@ -2492,12 +2486,12 @@ function saveTaskMeta() {
     reqMode: taskReqMode,
     reqMinCount: taskReqMode === 'ANY_N' ? taskReqMinCount : undefined,
   };
-  patch('PATCH', '/tasks/'+t.id+'/meta', body, function(d) {
+  patch('PATCH', '/tasks/'+task.id+'/meta', body, function(d) {
     if (d.error) { alert(d.error); return; }
     state.currentTask = Object.assign(state.currentTask, d);
     state.editingTask = null;
     taskPlatformReqs = [];
-    showMsg('保存成功');
+    showMsg(t('merchant.toast.saved','保存成功'));
     go('task_detail');
     loadMyTasks();
   });
@@ -2536,9 +2530,9 @@ function uploadCoverToTask(taskId, blob, onDone) {
   xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
   xhr.onload = function() {
     try { var d = JSON.parse(xhr.responseText); onDone(d.error || null, d.url); }
-    catch(e) { onDone('上传失败'); }
+    catch(e) { onDone(t('merchant.upload.failed','上传失败')); }
   };
-  xhr.onerror = function() { onDone('网络错误'); };
+  xhr.onerror = function() { onDone(t('merchant.upload.netError','网络错误')); };
   xhr.send(form);
 }
 
@@ -2547,7 +2541,7 @@ function onCoverFileSelect(input) {
   if (!input.files || !input.files[0]) return;
   var wrap = document.getElementById('cover-upload-wrap');
   var status = document.getElementById('cover-status');
-  if (status) status.textContent = '压缩中…';
+  if (status) status.textContent = t('merchant.upload.compressing','压缩中…');
   compressImage(input.files[0], 1200, 0.82).then(function(blob) {
     _pendingCoverBlob = blob;
     var url = URL.createObjectURL(blob);
@@ -2555,8 +2549,8 @@ function onCoverFileSelect(input) {
     if (preview) { preview.src = url; preview.style.display = 'block'; }
     var ph = document.getElementById('cover-placeholder');
     if (ph) ph.style.display = 'none';
-    if (status) status.textContent = '已选择（' + Math.round(blob.size/1024) + 'KB），保存任务后上传';
-  }).catch(function() { if (status) status.textContent = '图片读取失败，请重试'; });
+    if (status) status.textContent = t('merchant.upload.selected','已选择（{kb}KB），保存任务后上传',{kb:Math.round(blob.size/1024)});
+  }).catch(function() { if (status) status.textContent = t('merchant.upload.readFailedRetry','图片读取失败，请重试'); });
 }
 
 // 编辑表单：选文件后直接上传
@@ -2565,19 +2559,19 @@ function onMetaCoverFileSelect(input) {
   var taskId = state.editingTask && state.editingTask.id;
   if (!taskId) return;
   var status = document.getElementById('meta-cover-status');
-  if (status) status.textContent = '压缩中…';
+  if (status) status.textContent = t('merchant.upload.compressing','压缩中…');
   compressImage(input.files[0], 1200, 0.82).then(function(blob) {
-    if (status) status.textContent = '上传中（' + Math.round(blob.size/1024) + 'KB）…';
+    if (status) status.textContent = t('merchant.upload.uploadingKb','上传中（{kb}KB）…',{kb:Math.round(blob.size/1024)});
     uploadCoverToTask(taskId, blob, function(err, url) {
-      if (err) { if (status) status.textContent = '上传失败：' + err; return; }
+      if (err) { if (status) status.textContent = t('merchant.upload.failedWith','上传失败：')+err; return; }
       var preview = document.getElementById('meta-cover-preview-img');
       if (preview) { preview.src = url; preview.style.display = 'block'; }
       var ph = document.getElementById('meta-cover-placeholder');
       if (ph) ph.style.display = 'none';
-      if (status) status.textContent = '上传成功 ✓';
+      if (status) status.textContent = t('merchant.upload.success','上传成功')+' ✓';
       if (state.currentTask) state.currentTask.cover_image = url;
     });
-  }).catch(function() { if (status) status.textContent = '图片读取失败'; });
+  }).catch(function() { if (status) status.textContent = t('merchant.upload.readFailed','图片读取失败'); });
 }
 
 function saveTask(publish) {
@@ -2601,7 +2595,7 @@ function saveTask(publish) {
   };
   showFormError('');  // 清除旧错误
   if (!body.title || !body.description || !body.payoutPerHerald || !body.category) {
-    showFormError('请填写任务标题、描述、分类和报酬金额'); return;
+    showFormError(t('merchant.form.errRequired','请填写任务标题、描述、分类和报酬金额')); return;
   }
 
   // 发布前客户端额度预检（减少不必要的服务器往返）
@@ -2614,9 +2608,7 @@ function saveTask(publish) {
     var creditLeft = c ? (c.creditRemaining || 0) : 0;
     var maxSingle = Math.max(wallet, creditLeft);
     if (maxSingle > 0 && total > maxSingle) {
-      showFormError('额度不足，本任务需 ¥'+Number(total).toLocaleString()
-        +'，当前最大可发 ¥'+Math.round(maxSingle).toLocaleString()
-        +'（钱包 ¥'+Math.round(wallet).toLocaleString()+' / 信用剩余 ¥'+Math.round(creditLeft).toLocaleString()+'）。');
+      showFormError(t('merchant.form.errInsufficient','额度不足，本任务需 ¥{total}，当前最大可发 ¥{max}（钱包 ¥{wallet} / 信用剩余 ¥{credit}）。',{total:Number(total).toLocaleString(),max:Math.round(maxSingle).toLocaleString(),wallet:Math.round(wallet).toLocaleString(),credit:Math.round(creditLeft).toLocaleString()}));
       return;
     }
   }
@@ -2653,20 +2645,18 @@ function saveTask(publish) {
           if (p.error) {
             var errMsg = p.error;
             if (p.code === 'INSUFFICIENT_CREDIT') {
-              errMsg = '额度不足，本任务需 ¥'+(p.needed||0).toLocaleString()
-                +'，当前剩余 ¥'+Math.round((p.creditInfo||{}).totalCapacity||0).toLocaleString()
-                +'。请充值后再发布。';
+              errMsg = t('merchant.form.errInsufficientPublish','额度不足，本任务需 ¥{needed}，当前剩余 ¥{cap}。请充值后再发布。',{needed:(p.needed||0).toLocaleString(),cap:Math.round((p.creditInfo||{}).totalCapacity||0).toLocaleString()});
             }
             showFormError(errMsg); return;
           }
-          state.msg = '任务已发布！'; state.msgType = 'success';
+          state.msg = t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
           if (p.topupReminder) setTimeout(function(){ showTopupReminder(p.topupReminder); }, 400);
           loadMyTasks(); loadDashStats();
           openTask(d.id);
         });
       }
     } else {
-      state.msg = isEdit ? '任务已更新' : '草稿已保存，请检查推广码后点击「发布任务」使其生效';
+      state.msg = isEdit ? t('merchant.toast.taskUpdated','任务已更新') : t('merchant.toast.draftSavedCheckCodes','草稿已保存，请检查推广码后点击「发布任务」使其生效');
       state.msgType = 'success';
       openTask(d.id);
     }
@@ -2675,37 +2665,37 @@ function saveTask(publish) {
 
 function doPublishWithCodeCheck(id) {
   // 问题2+4：检查邀请码是否存在，并提示确认
-  get('/tasks/'+id, function(t) {
+  get('/tasks/'+id, function(taskData) {
     get('/tasks/'+id+'/codes', function(pool) {
       var codeCount = pool ? pool.total : 0;
-      var isCustom = t.code_mode === 'custom';
+      var isCustom = taskData.code_mode === 'custom';
 
       if (codeCount === 0) {
         openTask(id);
         showMsg(isCustom
-          ? '请先上传推广码再发布：任务详情 → 上传推广码 → 发布任务'
-          : '推广码生成异常，请重新创建任务',
+          ? t('merchant.publish.needCodesFirst','请先上传推广码再发布：任务详情 → 上传推广码 → 发布任务')
+          : t('merchant.taskDetail.codeGenError','推广码生成异常，请重新创建任务'),
           'error'
         );
         return;
       }
 
       // 问题4：确认邀请码有效性
-      var msg = '确认发布任务？\n\n'
-        + '📋 任务共有 ' + codeCount + ' 个推广码\n'
-        + (isCustom ? '⚠️ 请确认这些推广码已在 Remitly 等第三方系统中配置完成，发布后赫使将立即收到推广码。'
-                    : '⚠️ 系统已自动生成推广码，请确认已下载 CSV 并上传到第三方系统，否则赫使拿到的码将无法使用。')
-        + '\n\n推广码未配置到第三方系统将导致赫使推广无效。';
+      var msg = t('merchant.publish.confirmIntro','确认发布任务？')+'\n\n'
+        + t('merchant.publish.codeCount','📋 任务共有 {n} 个推广码',{n:codeCount})+'\n'
+        + (isCustom ? t('merchant.publish.customCodeWarn','⚠️ 请确认这些推广码已在 Remitly 等第三方系统中配置完成，发布后赫使将立即收到推广码。')
+                    : t('merchant.publish.autoCodeWarn','⚠️ 系统已自动生成推广码，请确认已下载 CSV 并上传到第三方系统，否则赫使拿到的码将无法使用。'))
+        + '\n\n'+t('merchant.publish.codeNotConfigured','推广码未配置到第三方系统将导致赫使推广无效。');
 
       showConfirmModal({
-        title: '发布前确认推广码',
+        title: t('merchant.publish.confirmCodesTitle','发布前确认推广码'),
         body: msg,
-        confirmText: '已确认，发布',
-        cancelText: '返回检查',
+        confirmText: t('merchant.publish.confirmedGo','已确认，发布'),
+        cancelText: t('merchant.publish.backToCheck','返回检查'),
         onConfirm: function() {
           patch('PATCH', '/tasks/'+id+'/publish', {}, function(p) {
             if (p.error) { showMsg(p.error, 'error'); return; }
-            state.msg = '任务已发布！赫使现在可以看到并报名。'; state.msgType = 'success';
+            state.msg = t('merchant.publish.doneVisible','任务已发布！赫使现在可以看到并报名。'); state.msgType = 'success';
             loadMyTasks(); loadDashStats();
             openTask(id);
           });
@@ -2716,35 +2706,33 @@ function doPublishWithCodeCheck(id) {
 }
 
 function publishTask(id) {
-  var t = state.currentTask;
-  if (t && t.mode === 'PERFORMANCE') {
+  var task = state.currentTask;
+  if (task && task.mode === 'PERFORMANCE') {
     doPublishWithCodeCheck(id);
   } else {
-    var payout = t ? Number(t.payout_per_herald || 0) : 0;
-    var mh     = t ? Number(t.max_heralds || 1) : 1;
+    var payout = task ? Number(task.payout_per_herald || 0) : 0;
+    var mh     = task ? Number(task.max_heralds || 1) : 1;
     var rate   = (state.brandProfile && state.brandProfile.commission_rate) || 0.15;
     var cost   = Math.round(payout / (1 - rate));
     var fee    = cost - payout;
     var total  = cost * mh;
     var confirmBody = payout
-      ? '任务报酬 ¥' + Number(payout).toLocaleString() + ' / 人（赫使到手）\n平台服务费 ¥' + Number(fee).toLocaleString() + ' / 人（' + (rate*100).toFixed(0) + '%）\n任务总支出 ¥' + Number(cost).toLocaleString() + ' × ' + mh + ' 人 = ¥' + Number(total).toLocaleString() + '\n\n发布后赫使即可在探索列表看到并报名。'
-      : '发布后赫使可在探索列表看到此任务并报名，确认信息无误后再发布。';
+      ? t('merchant.publish.costSummary','任务报酬 ¥{payout} / 人（赫使到手）\n平台服务费 ¥{fee} / 人（{pct}%）\n任务总支出 ¥{cost} × {n} 人 = ¥{total}\n\n发布后赫使即可在探索列表看到并报名。',{payout:Number(payout).toLocaleString(),fee:Number(fee).toLocaleString(),pct:(rate*100).toFixed(0),cost:Number(cost).toLocaleString(),n:mh,total:Number(total).toLocaleString()})
+      : t('merchant.publish.publicHint','发布后赫使可在探索列表看到此任务并报名，确认信息无误后再发布。');
     showConfirmModal({
-      title: '确认发布任务',
+      title: t('merchant.publish.confirmTitle','确认发布任务'),
       body: confirmBody,
-      confirmText: '确认发布',
+      confirmText: t('merchant.publish.confirmGo','确认发布'),
       onConfirm: function() {
         patch('PATCH', '/tasks/'+id+'/publish', {}, function(d) {
           if (d.error) {
             if (d.code === 'INSUFFICIENT_CREDIT') {
               var ci = d.creditInfo || {};
               showConfirmModal({
-                title: '额度不足，需充值后发布',
-                body: '本任务需 ¥'+Number(d.needed||0).toLocaleString()
-                  +'，当前剩余 ¥'+Math.round(ci.totalCapacity||0).toLocaleString()
-                  +'（可发额度 ¥'+Math.round(ci.taskCapacity||0).toLocaleString()+' - 已占用 ¥'+Math.round(ci.creditUsed||0).toLocaleString()+'）',
-                confirmText: '去充值',
-                cancelText: '稍后再说',
+                title: t('merchant.publish.insufficientTitle','额度不足，需充值后发布'),
+                body: t('merchant.publish.insufficientBody','本任务需 ¥{needed}，当前剩余 ¥{left}（可发额度 ¥{cap} - 已占用 ¥{used}）',{needed:Number(d.needed||0).toLocaleString(),left:Math.round(ci.totalCapacity||0).toLocaleString(),cap:Math.round(ci.taskCapacity||0).toLocaleString(),used:Math.round(ci.creditUsed||0).toLocaleString()}),
+                confirmText: t('merchant.form.goTopup','去充值'),
+                cancelText: t('merchant.publish.later','稍后再说'),
                 onConfirm: function() { nav('wallet'); },
               });
             } else {
@@ -2752,7 +2740,7 @@ function publishTask(id) {
             }
             return;
           }
-          state.msg = '任务已发布'; state.msgType = 'success';
+          state.msg = t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
           if (state.currentTask) state.currentTask.status = 'OPEN';
           loadMyTasks(); loadDashStats();
           if (d.topupReminder) setTimeout(function(){ showTopupReminder(d.topupReminder); }, 400);
@@ -2765,15 +2753,15 @@ function publishTask(id) {
 
 function closeTask(id) {
   showConfirmModal({
-    title: '关闭任务',
-    body: '关闭后赫使无法继续报名，进行中的内容审核不受影响，未使用的锁定余额将退回。',
-    confirmText: '确认关闭',
+    title: t('merchant.topbar.closeTask','关闭任务'),
+    body: t('merchant.close.body','关闭后赫使无法继续报名，进行中的内容审核不受影响，未使用的锁定余额将退回。'),
+    confirmText: t('merchant.close.confirm','确认关闭'),
     cancelText: '取消',
     danger: true,
     onConfirm: function() {
       patch('PATCH', '/tasks/'+id+'/complete', {}, function(d) {
         if (d.error) { showMsg(d.error, 'error'); return; }
-        state.msg = '任务已关闭，锁定余额已退回'; state.msgType = 'success';
+        state.msg = t('merchant.close.done','任务已关闭，锁定余额已退回'); state.msgType = 'success';
         loadMyTasks(); render();
       });
     },
@@ -2789,11 +2777,11 @@ function showReviewModal(opts) {
 
   var title = document.createElement('div');
   title.style.cssText = 'font-size:15px;font-weight:700;margin-bottom:14px';
-  title.textContent = opts.title || '确认';
+  title.textContent = opts.title || t('common.confirm','确认');
 
   var labelEl = document.createElement('div');
   labelEl.style.cssText = 'font-size:12px;color:#6b7280;margin-bottom:6px';
-  labelEl.textContent = opts.noteLabel || '备注（可选）';
+  labelEl.textContent = opts.noteLabel || t('merchant.modal.noteOptional','备注（可选）');
 
   var ta = document.createElement('textarea');
   ta.rows = 3;
@@ -2810,11 +2798,11 @@ function showReviewModal(opts) {
 
   var cancelBtn = document.createElement('button');
   cancelBtn.className = 'btn btn-outline';
-  cancelBtn.textContent = '取消';
+  cancelBtn.textContent = t('common.cancel','取消');
 
   var confirmBtn = document.createElement('button');
   confirmBtn.className = 'btn';
-  confirmBtn.textContent = opts.confirmText || '确认';
+  confirmBtn.textContent = opts.confirmText || t('common.confirm','确认');
   if (opts.danger) { confirmBtn.style.background='#dc2626'; confirmBtn.style.color='#fff'; }
   else { confirmBtn.style.background='#16a34a'; confirmBtn.style.color='#fff'; }
 
@@ -2873,10 +2861,10 @@ function showConfirmModal(opts) {
   var ov = document.createElement('div');
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:9100;display:flex;align-items:center;justify-content:center';
   ov.innerHTML = '<div style="background:#fff;border-radius:14px;padding:24px;width:360px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.2)">'
-    +'<div style="font-size:15px;font-weight:700;margin-bottom:10px">'+esc(opts.title||'确认')+'</div>'
+    +'<div style="font-size:15px;font-weight:700;margin-bottom:10px">'+esc(opts.title||t('common.confirm','确认'))+'</div>'
     +(opts.body?'<div style="font-size:13px;color:#4b5563;line-height:1.65;margin-bottom:18px;white-space:pre-wrap">'+esc(opts.body)+'</div>':'<div style="margin-bottom:18px"></div>')
     +'<div style="display:flex;gap:10px;justify-content:flex-end">'
-    +'<button id="cm-cancel" class="btn btn-outline">'+esc(opts.cancelText||'取消')+'</button>'
+    +'<button id="cm-cancel" class="btn btn-outline">'+esc(opts.cancelText||t('common.cancel','取消'))+'</button>'
     +'<button id="cm-confirm" class="btn '+(opts.danger?'':'btn-primary')+'" style="'+(opts.danger?'background:#dc2626;color:#fff':'')+'">'+esc(opts.confirmText||'确认')+'</button>'
     +'</div></div>';
   document.body.appendChild(ov);
@@ -2891,11 +2879,11 @@ function showTopupReminder(msg) {
   ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9000;display:flex;align-items:center;justify-content:center';
   ov.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px 24px;width:360px;max-width:92vw">'
     +'<div style="font-size:22px;text-align:center;margin-bottom:10px">💡</div>'
-    +'<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:10px">任务已发布！</div>'
+    +'<div style="font-size:15px;font-weight:700;text-align:center;margin-bottom:10px">'+t('merchant.publish.done','任务已发布！')+'</div>'
     +'<div style="font-size:13px;color:#374151;line-height:1.7;margin-bottom:20px">'+esc(msg)+'</div>'
     +'<div style="display:flex;gap:10px">'
-    +'<button id="remind-later" class="btn btn-outline" style="flex:1">稍后再说</button>'
-    +'<button id="remind-topup" class="btn btn-primary" style="flex:1">立即充值</button>'
+    +'<button id="remind-later" class="btn btn-outline" style="flex:1">'+t('merchant.publish.later','稍后再说')+'</button>'
+    +'<button id="remind-topup" class="btn btn-primary" style="flex:1">'+t('merchant.credit.topupNow','立即充值')+'</button>'
     +'</div></div>';
   document.body.appendChild(ov);
   ov.querySelector('#remind-later').addEventListener('click', function() { document.body.removeChild(ov); });
@@ -2907,15 +2895,15 @@ function showRatingModal(submissionId, fromAll) {
   var overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = '<div style="background:#fff;border-radius:16px;padding:28px;width:320px;max-width:90vw">'
-    +'<div style="font-size:16px;font-weight:700;margin-bottom:6px;text-align:center">为这次合作打分</div>'
-    +'<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">帮助其他品牌了解赫使质量（可选）</div>'
+    +'<div style="font-size:16px;font-weight:700;margin-bottom:6px;text-align:center">'+t('merchant.rate.title','为这次合作打分')+'</div>'
+    +'<div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:18px">'+t('merchant.rate.sub','帮助其他品牌了解赫使质量（可选）')+'</div>'
     +'<div id="stars" style="display:flex;justify-content:center;gap:8px;font-size:32px;margin-bottom:16px;cursor:pointer">'
     +'<span data-v="1">☆</span><span data-v="2">☆</span><span data-v="3">☆</span><span data-v="4">☆</span><span data-v="5">☆</span>'
     +'</div>'
-    +'<textarea id="rate-comment" placeholder="写点评语（可选）" style="width:100%;height:64px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;resize:none;box-sizing:border-box;margin-bottom:14px"></textarea>'
+    +'<textarea id="rate-comment" placeholder="'+t('merchant.rate.commentPh','写点评语（可选）')+'" style="width:100%;height:64px;border:1px solid var(--border);border-radius:8px;padding:8px;font-size:13px;resize:none;box-sizing:border-box;margin-bottom:14px"></textarea>'
     +'<div style="display:flex;gap:8px">'
-    +'<button id="skip-rate" class="btn btn-outline" style="flex:1">跳过</button>'
-    +'<button id="submit-rate" class="btn btn-primary" style="flex:1" disabled>提交评分</button>'
+    +'<button id="skip-rate" class="btn btn-outline" style="flex:1">'+t('merchant.rate.skip','跳过')+'</button>'
+    +'<button id="submit-rate" class="btn btn-primary" style="flex:1" disabled>'+t('merchant.rate.submit','提交评分')+'</button>'
     +'</div></div>';
 
   document.body.appendChild(overlay);
@@ -2961,10 +2949,10 @@ function doCsvUpload() {
   var isDetail = task && task.data_mode === 'DETAIL';
   var raw = (document.getElementById('csv-data')||{}).value;
   var resultEl = document.getElementById('csv-result');
-  if (!raw.trim()) { resultEl.innerHTML='<div class="alert alert-error">请粘贴数据或选择CSV文件</div>'; return; }
+  if (!raw.trim()) { resultEl.innerHTML='<div class="alert alert-error">'+t('merchant.csv.errNoData','请粘贴数据或选择CSV文件')+'</div>'; return; }
 
   var lines = raw.trim().split('\n').map(function(l){return l.trim()}).filter(Boolean);
-  if (lines.length < 2) { resultEl.innerHTML='<div class="alert alert-error">数据至少需要2行（表头+数据）</div>'; return; }
+  if (lines.length < 2) { resultEl.innerHTML='<div class="alert alert-error">'+t('merchant.csv.errMinRows','数据至少需要2行（表头+数据）')+'</div>'; return; }
 
   // 解析第一行表头。列名支持中/日/英同义词（模板按界面语言生成，其他语言回落英文模板）
   var headers = lines[0].split(',').map(function(h){return h.trim().toLowerCase()});
@@ -3008,7 +2996,7 @@ function doCsvUpload() {
     }
   }
 
-  if (!records.length) { resultEl.innerHTML='<div class="alert alert-error">没有有效的数据行</div>'; return; }
+  if (!records.length) { resultEl.innerHTML='<div class="alert alert-error">'+t('merchant.csv.errNoValidRows','没有有效的数据行')+'</div>'; return; }
 
   post('/tasks/' + taskId + '/csv', { records: records }, function(d) {
     if (d.error) { resultEl.innerHTML = '<div class="alert alert-error">'+esc(d.error)+'</div>'; return; }
@@ -3016,21 +3004,21 @@ function doCsvUpload() {
     if (d.processed > 0) {
       // 品牌方视角响应不含金额字段（totalPaid undefined），只展示数量
       html += d.totalPaid !== undefined
-        ? '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次，结算 ¥'+Number(d.totalPaid||0).toLocaleString()+'（单价 ¥'+Number(d.commissionPerConversion||0).toLocaleString()+'/次）</div>'
-        : '<div class="alert alert-success">生效 '+d.processed+' 条，新增转化 '+(d.newConversions||0)+' 次（结算由代理方处理）</div>';
+        ? '<div class="alert alert-success">'+t('merchant.csv.resultPaid','生效 {n} 条，新增转化 {conv} 次，结算 ¥{paid}（单价 ¥{unit}/次）',{n:d.processed,conv:d.newConversions||0,paid:Number(d.totalPaid||0).toLocaleString(),unit:Number(d.commissionPerConversion||0).toLocaleString()})+'</div>'
+        : '<div class="alert alert-success">'+t('merchant.csv.resultUnpaid','生效 {n} 条，新增转化 {conv} 次（结算由代理方处理）',{n:d.processed,conv:d.newConversions||0})+'</div>';
     }
     if (d.skippedCodes && d.skippedCodes.length) {
       var hints = {};
       (d.skippedHints || []).forEach(function(h) { hints[h.code] = h.belongsTo; });
-      html += '<div class="alert alert-error">⚠️ '+d.skippedCodes.length+' 条未生效：<br>'
+      html += '<div class="alert alert-error">⚠️ '+t('merchant.csv.resultSkipped','{n} 条未生效：',{n:d.skippedCodes.length})+'<br>'
         + d.skippedCodes.map(function(c) {
             return '<span style="font-family:monospace">'+esc(c)+'</span>'
-              + (hints[c] ? ' — 该码属于任务《'+esc(hints[c])+'》，请在上方选择该任务后重新上传' : ' — 该码在所选任务下不存在，请检查拼写');
+              + (hints[c] ? ' — '+t('merchant.csv.codeBelongsTo','该码属于任务《{title}》，请在上方选择该任务后重新上传',{title:esc(hints[c])}) : ' — '+t('merchant.csv.codeNotFound','该码在所选任务下不存在，请检查拼写'));
           }).join('<br>')
         + '</div>';
     }
     if (d.blockedCodes && d.blockedCodes.length) {
-      html += '<div class="alert alert-error">💰 '+esc(d.message||'部分推广码因余额不足未结算')+'：<span style="font-family:monospace">'+esc(d.blockedCodes.join(', '))+'</span></div>';
+      html += '<div class="alert alert-error">💰 '+esc(d.message||t('merchant.csv.partialUnsettled','部分推广码因余额不足未结算'))+'：<span style="font-family:monospace">'+esc(d.blockedCodes.join(', '))+'</span></div>';
     }
     if (d.multiCodeUsers && d.multiCodeUsers.length) {
       // 一人多码：不拦截，分别计费，透明提示（2026-07-17 定稿）
@@ -3038,17 +3026,17 @@ function doCsvUpload() {
         + d.multiCodeUsers.map(function(m) {
             return '<div style="font-family:monospace;font-size:12px;margin-bottom:4px">'+esc(m.user)+' → '+esc((m.codes||[]).join(' + '))+'</div>';
           }).join('')
-        +'<div style="font-size:12px;margin-top:6px">如不希望同一用户产生多份报酬，请在你的系统侧限制一人只能使用一个推广码。</div></div>';
+        +'<div style="font-size:12px;margin-top:6px">'+t('merchant.csv.multiCodeHint','如不希望同一用户产生多份报酬，请在你的系统侧限制一人只能使用一个推广码。')+'</div></div>';
     }
-    if (!html) html = '<div class="alert alert-error">没有任何记录被处理，请检查数据格式</div>';
+    if (!html) html = '<div class="alert alert-error">'+t('merchant.csv.errNoneProcessed','没有任何记录被处理，请检查数据格式')+'</div>';
     resultEl.innerHTML = html;
   });
 }
 
 /* ── 明细模式：任务详情「跟踪明细」面板（返回占位，异步填充） ── */
-function referralsPanel(t) {
-  setTimeout(function() { loadTaskReferrals(t.id); }, 0);
-  return '<div class="table-card" id="referrals-panel"><div class="empty" style="padding:24px"><div style="font-size:13px;color:var(--muted)">⏳ 加载明细…</div></div></div>';
+function referralsPanel(task) {
+  setTimeout(function() { loadTaskReferrals(task.id); }, 0);
+  return '<div class="table-card" id="referrals-panel"><div class="empty" style="padding:24px"><div style="font-size:13px;color:var(--muted)">⏳ '+t('merchant.partnerTask.loadingReferrals','加载明细…')+'</div></div></div>';
 }
 
 function loadTaskReferrals(taskId) {
@@ -3058,12 +3046,12 @@ function loadTaskReferrals(taskId) {
     if (d.error) { el.innerHTML = '<div class="empty" style="padding:24px">'+esc(d.error)+'</div>'; return; }
     var rows = d.records || [];
     if (!rows.length) {
-      el.innerHTML = '<div class="empty" style="padding:32px"><div class="empty-icon">👥</div><div>还没有邀请明细</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">上传明细数据后，每位被邀请用户在此逐行可见</div></div>';
+      el.innerHTML = '<div class="empty" style="padding:32px"><div class="empty-icon">👥</div><div>'+t('merchant.referrals.empty','还没有邀请明细')+'</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">'+t('merchant.referrals.emptyHint','上传明细数据后，每位被邀请用户在此逐行可见')+'</div></div>';
       return;
     }
     var fmtD = function(s){ return s ? fmtLocal(s).slice(0,10) : '—'; };
     el.innerHTML = '<table class="table"><thead><tr>'
-      +'<th>用户</th><th>推广码</th><th>赫使</th><th>注册</th><th>转化</th><th>结算</th></tr></thead><tbody>'
+      +'<th>'+t('merchant.referrals.colUser','用户')+'</th><th>'+t('merchant.contentType.referral','推广码')+'</th><th>'+t('merchant.role.herald','赫使')+'</th><th>'+t('merchant.referrals.colRegistered','注册')+'</th><th>'+t('merchant.referrals.colConverted','转化')+'</th><th>'+t('merchant.referrals.colSettled','结算')+'</th></tr></thead><tbody>'
       + rows.map(function(r) {
           return '<tr>'
             +'<td style="font-family:monospace">'+esc(r.user_masked||'—')+'</td>'
@@ -3071,7 +3059,7 @@ function loadTaskReferrals(taskId) {
             +'<td>'+esc(r.herald_name||'')+'</td>'
             +'<td>'+fmtD(r.registered_at)+'</td>'
             +'<td>'+(r.converted_at?'<span style="color:#16a34a">✓ '+fmtD(r.converted_at)+'</span>':'<span style="color:var(--muted)">—</span>')+'</td>'
-            +'<td>'+(r.settled?'<span style="color:#16a34a">已入账</span>':(r.converted_at?'<span style="color:#d97706">待结算</span>':'<span style="color:var(--muted)">—</span>'))+'</td>'
+            +'<td>'+(r.settled?'<span style="color:#16a34a">'+t('merchant.referrals.settled','已入账')+'</span>':(r.converted_at?'<span style="color:#d97706">待结算</span>':'<span style="color:var(--muted)">—</span>'))+'</td>'
             +'</tr>';
         }).join('')
       +'</tbody></table><div style="font-size:11px;color:var(--muted);padding:8px 12px">共 '+rows.length+' 条 · 用户标识已脱敏，平台不存储原文</div>';
@@ -3137,11 +3125,11 @@ function switchAccount() {
 function copyUploadLink(taskId, token) {
   var url = window.location.origin + '/upload.html?task=' + taskId + '&token=' + token;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function() { showMsg('上传链接已复制', 'success'); });
+    navigator.clipboard.writeText(url).then(function() { showMsg(t('merchant.toast.uploadLinkCopied','上传链接已复制'), 'success'); });
   } else {
     var ta = document.createElement('textarea');
     ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-    showMsg('上传链接已复制', 'success');
+    showMsg(t('merchant.toast.uploadLinkCopied','上传链接已复制'), 'success');
   }
 }
 
@@ -3153,7 +3141,7 @@ function taskShareUrl(taskId) {
 function copyInviteLink(taskId) {
   var url = taskShareUrl(taskId);
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function() { showMsg('链接已复制', 'success'); });
+    navigator.clipboard.writeText(url).then(function() { showMsg(t('merchant.toast.linkCopied','链接已复制'), 'success'); });
   } else {
     var el = document.getElementById('invite-link-text');
     if (el) { var r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy'); showMsg('链接已复制', 'success'); }
@@ -3163,15 +3151,15 @@ function copyInviteLink(taskId) {
 /* ── 小程序分享入口（URL Link + 小程序码） ── */
 function loadWeappLink(taskId) {
   var box = document.getElementById('weapp-link-box');
-  if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">获取中…</span>';
+  if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">'+t('merchant.weapp.fetching','获取中…')+'</span>';
   get('/tasks/'+taskId+'/weapp-link', function(d) {
     if (!box) return;
     if (d.available && d.link) {
       box.innerHTML = '<div style="font-size:12px;word-break:break-all;font-family:monospace;color:var(--text);margin-bottom:6px" id="weapp-link-text">'+esc(d.link)+'</div>'
-        +'<button class="btn btn-outline btn-sm" onclick="copyWeappLink()">复制小程序链接</button>'
-        +'<span style="font-size:11px;color:var(--muted);margin-left:8px">有效期至 '+fmtLocal(d.expiresAt).slice(0,10)+'（过期自动续）</span>';
+        +'<button class="btn btn-outline btn-sm" onclick="copyWeappLink()">'+t('merchant.weapp.copyLink','复制小程序链接')+'</button>'
+        +'<span style="font-size:11px;color:var(--muted);margin-left:8px">'+t('merchant.weapp.validUntil','有效期至 {time}（过期自动续）',{time:fmtLocal(d.expiresAt).slice(0,10)})+'</span>';
     } else {
-      box.innerHTML = '<span style="font-size:12px;color:var(--muted)">⏳ '+esc(d.reason||'小程序发布后可用')+'</span>';
+      box.innerHTML = '<span style="font-size:12px;color:var(--muted)">⏳ '+esc(d.reason||t('merchant.weapp.availableAfterPublish','小程序发布后可用'))+'</span>';
     }
   });
 }
@@ -3181,26 +3169,26 @@ function copyWeappLink() {
   if (!el) return;
   var url = el.textContent;
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(url).then(function() { showMsg('小程序链接已复制', 'success'); });
+    navigator.clipboard.writeText(url).then(function() { showMsg(t('merchant.weapp.linkCopied','小程序链接已复制'), 'success'); });
   } else {
-    var r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy'); showMsg('小程序链接已复制', 'success');
+    var r = document.createRange(); r.selectNode(el); window.getSelection().removeAllRanges(); window.getSelection().addRange(r); document.execCommand('copy'); showMsg(t('merchant.weapp.linkCopied','小程序链接已复制'), 'success');
   }
 }
 
 function loadWeappQr(taskId) {
   var box = document.getElementById('weapp-qr-box');
-  if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">生成中…</span>';
+  if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">'+t('merchant.weapp.generating','生成中…')+'</span>';
   // img 标签带不了 Authorization 头，用 fetch blob → objectURL
   fetch(API+'/tasks/'+taskId+'/weapp-qrcode', { headers: state.token ? { 'Authorization': 'Bearer '+state.token } : {} })
     .then(function(r) {
-      if (!r.ok) return r.json().then(function(d) { throw new Error(d.reason || '小程序发布后可用'); });
+      if (!r.ok) return r.json().then(function(d) { throw new Error(d.reason || t('merchant.weapp.availableAfterPublish','小程序发布后可用')); });
       return r.blob();
     })
     .then(function(blob) {
       if (!box) return;
       var url = URL.createObjectURL(blob);
       box.innerHTML = '<img src="'+url+'" style="width:160px;height:160px;border:1px solid #dbeafe;border-radius:8px;background:#fff;padding:6px" alt="小程序码">'
-        +'<div style="font-size:11px;color:var(--muted);margin-top:4px">右键/长按保存图片，可放进海报或线下物料</div>';
+        +'<div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.weapp.qrSaveHint','右键/长按保存图片，可放进海报或线下物料')+'</div>';
     })
     .catch(function(e) {
       if (box) box.innerHTML = '<span style="font-size:12px;color:var(--muted)">⏳ '+esc(e.message)+'</span>';
@@ -3274,8 +3262,8 @@ function bindPage() {
 
 /* ── 分享海报 ── */
 function openSharePoster(taskId) {
-  var t = state.currentTask;
-  if (!t) return;
+  var task = state.currentTask;
+  if (!task) return;
 
   var inviteUrl = taskShareUrl(taskId);
 
@@ -3285,23 +3273,23 @@ function openSharePoster(taskId) {
   ov.innerHTML =
     '<div style="background:#fff;border-radius:20px;padding:24px;width:360px;max-width:100%;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;gap:16px">'
     +'<div style="display:flex;align-items:center;justify-content:space-between">'
-    +'<span style="font-weight:700;font-size:15px">分享海报</span>'
+    +'<span style="font-weight:700;font-size:15px">'+t('merchant.poster.title','分享海报')+'</span>'
     +'<button onclick="document.getElementById(\'poster-overlay\').remove()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#888;line-height:1">✕</button>'
     +'</div>'
     +'<canvas id="share-canvas" style="width:100%;border-radius:12px;display:block"></canvas>'
     +'<div style="display:flex;gap:10px">'
-    +'<button class="btn btn-primary" style="flex:1" onclick="downloadPoster()">下载图片</button>'
-    +'<button class="btn btn-outline" style="flex:1" onclick="copyInviteLink(\''+taskId+'\')">复制链接</button>'
+    +'<button class="btn btn-primary" style="flex:1" onclick="downloadPoster()">'+t('merchant.poster.download','下载图片')+'</button>'
+    +'<button class="btn btn-outline" style="flex:1" onclick="copyInviteLink(\''+taskId+'\')">'+t('merchant.taskDetail.copyLink','复制链接')+'</button>'
     +'</div>'
-    +'<div style="font-size:11px;color:#888;text-align:center">长按或右键图片保存，或点击「下载图片」</div>'
+    +'<div style="font-size:11px;color:#888;text-align:center">'+t('merchant.poster.saveHint','长按或右键图片保存，或点击「下载图片」')+'</div>'
     +'</div>';
   document.body.appendChild(ov);
   ov.addEventListener('click', function(e){ if(e.target===ov) ov.remove(); });
 
-  drawPoster(t, inviteUrl);
+  drawPoster(task, inviteUrl);
 }
 
-function drawPoster(t, inviteUrl) {
+function drawPoster(task, inviteUrl) {
   var canvas = document.getElementById('share-canvas');
   if (!canvas) return;
 
@@ -3332,10 +3320,10 @@ function drawPoster(t, inviteUrl) {
   // Herix wordmark
   ctx.font = 'bold 18px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.fillText('Herix · 赫使平台', 36, 48);
+  ctx.fillText(t('merchant.poster.brand','Herix · 赫使平台'), 36, 48);
 
   // 品牌名
-  var brandName = (t.creator_name || '品牌商家');
+  var brandName = (task.creator_name || t('merchant.sidebar.brandLabel','品牌商家'));
   ctx.font = 'bold 28px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = '#fff';
   ctx.fillText(brandName, 36, 100);
@@ -3343,10 +3331,10 @@ function drawPoster(t, inviteUrl) {
   // 任务标签
   ctx.font = '13px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = 'rgba(255,255,255,0.65)';
-  ctx.fillText('正在招募赫使', 36, 130);
+  ctx.fillText(t('merchant.poster.recruiting','正在招募赫使'), 36, 130);
 
   // 任务标题
-  var title = t.title || '';
+  var title = task.title || '';
   ctx.font = 'bold 36px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = '#fff';
   wrapText(ctx, title, 36, 175, W-72, 42);
@@ -3355,11 +3343,11 @@ function drawPoster(t, inviteUrl) {
   var yBase = 285;
 
   // 报酬 + 名额
-  drawInfoCard(ctx, 36, yBase, 270, 90, '赫使获得', '¥' + Number(t.payout_per_herald||0).toLocaleString(), '#D43B27');
-  drawInfoCard(ctx, 334, yBase, 270, 90, '招募名额', t.max_heralds + ' 人', '#16a34a');
+  drawInfoCard(ctx, 36, yBase, 270, 90, t('merchant.taskDetail.heraldGets','赫使获得'), '¥' + Number(task.payout_per_herald||0).toLocaleString(), '#D43B27');
+  drawInfoCard(ctx, 334, yBase, 270, 90, t('merchant.taskDetail.recruitQuota','招募名额'), task.max_heralds + ' ' + t('merchant.unit.person','人'), '#16a34a');
 
   // 任务描述
-  var desc = t.description || '';
+  var desc = task.description || '';
   if (desc.length > 120) desc = desc.slice(0, 117) + '…';
   ctx.font = '15px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = '#374151';
@@ -3374,11 +3362,11 @@ function drawPoster(t, inviteUrl) {
   var qrY = yBase + 240;
   ctx.font = 'bold 16px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = '#111827';
-  ctx.fillText('扫码注册，立即领取任务', 36, qrY);
+  ctx.fillText(t('merchant.poster.scanCta','扫码注册，立即领取任务'), 36, qrY);
 
   ctx.font = '13px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = '#6b7280';
-  ctx.fillText('新用户注册 · 免费加入 · 完成任务即获报酬', 36, qrY + 24);
+  ctx.fillText(t('merchant.poster.scanSub','新用户注册 · 免费加入 · 完成任务即获报酬'), 36, qrY + 24);
 
   // QR 码图像（异步加载 SVG）
   var qrSize = 200;
@@ -3437,7 +3425,7 @@ function drawPosterFooter(ctx, W, H, url) {
 
   ctx.font = '12px -apple-system,BlinkMacSystemFont,sans-serif';
   ctx.fillStyle = '#9ca3af';
-  ctx.fillText('herix.jp · 赫使大使平台', 36, H-16);
+  ctx.fillText(t('merchant.poster.footer','herix.jp · 赫使大使平台'), 36, H-16);
 
   // 短链（截断）
   var shortUrl = url.replace('https://', '').replace('http://', '');

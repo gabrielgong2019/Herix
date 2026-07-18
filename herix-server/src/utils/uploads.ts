@@ -4,7 +4,7 @@ import path from 'path';
 const UPLOADS_ROOT = path.join(__dirname, '../../uploads');
 
 /** 保存品牌素材到磁盘，固定文件名覆盖更新，返回可直接用于 <img src> 的URL路径 */
-export function saveBrandAsset(userId: string, type: 'logo' | 'promo', buffer: Buffer): string {
+export function saveBrandAsset(userId: string, type: 'logo' | 'promo' | 'kyb', buffer: Buffer): string {
   const dir = path.join(UPLOADS_ROOT, 'brands', userId);
   fs.mkdirSync(dir, { recursive: true });
   const ext = type === 'logo' ? 'png' : 'webp';

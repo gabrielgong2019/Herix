@@ -21,6 +21,89 @@ adminRouter.use('/i18n', i18nAdminRouter);
 import { pricingAdminRouter } from './pricing';
 adminRouter.use('/pricing', pricingAdminRouter);
 
+/* ── 首任务审核 + 商家 KYB（2026-07-18，PRD §29 合规控制）── */
+import { createNotification } from './notifications';
+
+/** GET /api/admin/task-reviews — 待审核任务（未KYB商家发布的） */
+adminRouter.get('/task-reviews', async (_req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT t.id, t.title, t.description, t.mode, t.payout_per_herald, t.max_heralds, t.published_at,
+            u.nickname as creator_name, u.email as creator_email, bp.company_name, bp.is_agency
+     FROM tasks t JOIN users u ON u.id = t.creator_id
+     LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
+     WHERE t.platform_review = 'pending' ORDER BY t.published_at ASC`
+  );
+  res.json(rows);
+});
+
+/** POST /api/admin/task-reviews/:id/approve — 任务审核通过（进公开列表） */
+adminRouter.post('/task-reviews/:id/approve', async (req: Request, res: Response) => {
+  const task = await findOne<any>("SELECT id, title, creator_id FROM tasks WHERE id = ? AND platform_review = 'pending'", [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在或不在审核中' });
+  await update('tasks', { platform_review: 'approved', platform_review_note: null }, 'id = ?', [task.id]);
+  await createNotification({
+    userId: task.creator_id, type: 'TASK_REVIEW_APPROVED', targetRole: 'BRAND',
+    title: '任务审核通过',
+    body: `你的任务《${task.title}》已通过平台审核，现已对赫使公开可见。`,
+  });
+  res.json({ success: true });
+});
+
+/** POST /api/admin/task-reviews/:id/reject — 任务审核拒绝（退回草稿，可改后重新发布） */
+adminRouter.post('/task-reviews/:id/reject', async (req: Request, res: Response) => {
+  const reason = String(req.body?.reason || '').trim();
+  if (!reason) return res.status(400).json({ error: '请填写拒绝原因（会展示给商家）' });
+  const task = await findOne<any>("SELECT id, title, creator_id FROM tasks WHERE id = ? AND platform_review = 'pending'", [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在或不在审核中' });
+  // 退回草稿零资金副作用：额度占用从 OPEN 状态动态计算，无发布时点的硬锁
+  await update('tasks', { platform_review: 'rejected', platform_review_note: reason, status: 'DRAFT' }, 'id = ?', [task.id]);
+  await createNotification({
+    userId: task.creator_id, type: 'TASK_REVIEW_REJECTED', targetRole: 'BRAND',
+    title: '任务审核未通过',
+    body: `你的任务《${task.title}》未通过平台审核：${reason}。任务已退回草稿，修改后可重新发布。`,
+  });
+  res.json({ success: true });
+});
+
+/** GET /api/admin/kyb-reviews — 待审核的商家认证申请 */
+adminRouter.get('/kyb-reviews', async (_req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT bp.user_id, bp.company_name, bp.industry, bp.website, bp.country, bp.is_agency,
+            bp.kyb_doc_url, bp.kyb_submitted_at, u.nickname, u.email
+     FROM brand_profiles bp JOIN users u ON u.id = bp.user_id
+     WHERE bp.kyb_status = 'pending' ORDER BY bp.kyb_submitted_at ASC`
+  );
+  res.json(rows);
+});
+
+/** POST /api/admin/kyb/:userId/approve — 商家认证通过（is_enterprise_verified=1，任务免审+可申请提额） */
+adminRouter.post('/kyb/:userId/approve', async (req: Request, res: Response) => {
+  const row = await findOne<any>("SELECT user_id, company_name FROM brand_profiles WHERE user_id = ? AND kyb_status = 'pending'", [req.params.userId]);
+  if (!row) return res.status(404).json({ error: '无待审核的认证申请' });
+  await update('brand_profiles', { kyb_status: 'approved', kyb_note: null, is_enterprise_verified: 1 }, 'user_id = ?', [row.user_id]);
+  await createNotification({
+    userId: row.user_id, type: 'KYB_APPROVED', targetRole: 'BRAND',
+    title: '企业认证通过',
+    body: '你的企业认证已通过。此后发布的任务免平台审核直接上线，并可联系运营申请提升信用额度。',
+  });
+  res.json({ success: true });
+});
+
+/** POST /api/admin/kyb/:userId/reject — 商家认证拒绝 */
+adminRouter.post('/kyb/:userId/reject', async (req: Request, res: Response) => {
+  const reason = String(req.body?.reason || '').trim();
+  if (!reason) return res.status(400).json({ error: '请填写拒绝原因（会展示给商家）' });
+  const row = await findOne<any>("SELECT user_id FROM brand_profiles WHERE user_id = ? AND kyb_status = 'pending'", [req.params.userId]);
+  if (!row) return res.status(404).json({ error: '无待审核的认证申请' });
+  await update('brand_profiles', { kyb_status: 'rejected', kyb_note: reason }, 'user_id = ?', [row.user_id]);
+  await createNotification({
+    userId: row.user_id, type: 'KYB_REJECTED', targetRole: 'BRAND',
+    title: '企业认证未通过',
+    body: `你的企业认证未通过：${reason}。可在账户设置中重新提交。`,
+  });
+  res.json({ success: true });
+});
+
 /* ── Stats & Dashboard ── */
 
 adminRouter.get('/stats', async (_req: Request, res: Response) => {

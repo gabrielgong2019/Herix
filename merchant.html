@@ -758,7 +758,7 @@ function tasksPage() {
     return '<tr data-task-id="'+esc(t3.id)+'" style="cursor:pointer">'
       +'<td><div style="font-weight:500">'+esc(t3.title)+fpBadge+'</div>'
       +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+catLabel(t3.category)+'</div></td>'
-      +'<td><span class="tag tag-'+st.toLowerCase()+'">'+statusLabel(st)+'</span></td>'
+      +'<td><span class="tag tag-'+st.toLowerCase()+'">'+statusLabel(st)+'</span>'+reviewBadge(t3)+'</td>'
       +'<td><span style="font-size:12px">'+modeLabel(t3.mode)+'</span></td>'
       +'<td>¥'+Number(t3.payout_per_herald||0).toLocaleString()+'</td>'
       +'<td>'+(t3.max_heralds||'-')+'</td>'
@@ -863,7 +863,7 @@ function taskDetailPage() {
 
   var left = '<div class="panel">'
     +'<div class="panel-title">'+t('merchant.taskDetail.panelTitle','任务信息')+'</div>'
-    + infoRow(t('merchant.dash.perfTable.status','状态'), '<span class="tag tag-'+task.status.toLowerCase()+'">'+statusLabel(task.status)+'</span>'+(task.fast_payout?'&nbsp;<span style="font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px">⚡ '+t('merchant.tasks.fastPayout','极速打款')+'</span>':''))
+    + infoRow(t('merchant.dash.perfTable.status','状态'), '<span class="tag tag-'+task.status.toLowerCase()+'">'+statusLabel(task.status)+'</span>'+reviewBadge(task)+(task.fast_payout?'&nbsp;<span style="font-size:11px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px">⚡ '+t('merchant.tasks.fastPayout','极速打款')+'</span>':''))
     + infoRow(t('merchant.tasks.colType','类型'), modeLabel(task.mode))
     + infoRow(t('merchant.taskDetail.category','分类'), catLabel(task.category))
     + infoRow(t('merchant.taskDetail.contentForm','内容形式'), ctLabel(task.content_type))
@@ -891,6 +891,12 @@ function taskDetailPage() {
     + '</div>')
     +'</div>';
 
+  if (task.status === 'DRAFT' && task.platform_review === 'rejected' && task.platform_review_note) {
+    left += '<div class="panel" style="background:#fef2f2;border:1px solid #fca5a5">'
+      +'<div style="font-size:13px;font-weight:600;color:#dc2626;margin-bottom:6px">'+t('merchant.review.rejectedTitle','任务审核未通过')+'</div>'
+      +'<div style="font-size:12px;color:#7f1d1d;line-height:1.6">'+esc(task.platform_review_note)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:6px">'+t('merchant.review.rejectedHint','修改任务内容后可重新发布，重新发布将再次进入审核')+'</div></div>';
+  }
   if (task.status === 'DRAFT') {
     var pool = state.codePool || { total: 0, assigned: 0, available: 0, samples: [] };
     var isCustom = task.code_mode === 'custom';
@@ -2260,7 +2266,48 @@ function settingsPage() {
     + '<div id="assetUploadMsg" style="font-size:12px;color:var(--muted);margin-top:10px"></div>'
     + '</div>';
 
+  // ── 企业认证（KYB，2026-07-18 PRD §29）：任务免审上线 + 可申请提升信用额度 ──
+  var kyb = p.kyb_status || 'none';
+  var verified = Number(p.is_enterprise_verified) === 1;
+  h += '<div class="form-card" style="max-width:600px;margin-top:16px"><div class="panel-title">'+t('merchant.kyb.title','企业认证')+'</div>';
+  if (verified) {
+    h += '<div style="display:inline-flex;align-items:center;gap:6px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 14px;font-size:13px;color:#166534;font-weight:600">✅ '+t('merchant.kyb.approved','已认证')+'</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-top:10px">'+t('merchant.kyb.approvedHint','你发布的任务免平台审核直接上线；如需提升信用额度请联系运营。')+'</div>';
+  } else if (kyb === 'pending') {
+    h += '<div style="display:inline-flex;align-items:center;gap:6px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 14px;font-size:13px;color:#b45309;font-weight:600">⏳ '+t('merchant.kyb.pending','审核中')+'</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-top:10px">'+t('merchant.kyb.pendingHint','已提交，运营审核后会站内信通知你。')+'</div>';
+  } else {
+    if (kyb === 'rejected' && p.kyb_note) {
+      h += '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;font-size:12px;color:#7f1d1d;margin-bottom:12px">'+t('merchant.kyb.rejectedPrefix','上次提交未通过：')+esc(p.kyb_note)+'</div>';
+    }
+    h += '<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:12px">'+t('merchant.kyb.benefit','上传企业证件（日本：登記簿謄本／中国：营业执照）完成认证后：①发布任务免平台审核直接上线 ②可申请提升信用额度。')+'</div>'
+      + '<input type="file" accept="image/*" onchange="uploadKybDoc(this)" style="font-size:12px">'
+      + '<div id="kybUploadMsg" style="font-size:12px;color:var(--muted);margin-top:8px"></div>';
+  }
+  h += '</div>';
+
   return h;
+}
+
+function uploadKybDoc(input) {
+  if (!input.files || !input.files[0]) return;
+  var msgEl = document.getElementById('kybUploadMsg');
+  if (msgEl) msgEl.textContent = t('merchant.upload.uploading','上传中...');
+  var fd = new FormData();
+  fd.append('file', input.files[0]);
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', API + '/uploads/brand/kyb-doc', true);
+  xhr.setRequestHeader('Authorization', 'Bearer ' + state.token);
+  xhr.onload = function() {
+    try {
+      var d = JSON.parse(xhr.responseText);
+      if (d.error) { if (msgEl) msgEl.textContent = t('merchant.upload.failedWith','上传失败：')+d.error; return; }
+      showMsg(t('merchant.kyb.submitted','认证材料已提交，审核结果将站内信通知'), 'success');
+      loadBrandProfile(); // 刷新 kyb_status → 卡片切到"审核中"
+    } catch(e) { if (msgEl) msgEl.textContent = t('merchant.upload.failed','上传失败'); }
+  };
+  xhr.onerror = function() { if (msgEl) msgEl.textContent = t('merchant.upload.netError','网络错误'); };
+  xhr.send(fd);
 }
 
 function uploadBrandAsset(type, input) {
@@ -2296,6 +2343,11 @@ function statusLabel(s) { return {
   IN_PROGRESS: t('merchant.status.IN_PROGRESS','进行中'), COMPLETED: t('merchant.status.COMPLETED','已完成'),
   CANCELLED: t('merchant.status.CANCELLED','已取消'),
 }[s]||s; }
+function reviewBadge(task) {
+  if (task.platform_review === 'pending') return ' <span style="font-size:10px;font-weight:600;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;padding:1px 6px;vertical-align:middle">'+t('merchant.review.pendingTag','平台审核中')+'</span>';
+  if (task.platform_review === 'rejected') return ' <span style="font-size:10px;font-weight:600;color:#dc2626;background:#fef2f2;border:1px solid #fca5a5;border-radius:4px;padding:1px 6px;vertical-align:middle">'+t('merchant.review.rejectedTag','审核未通过')+'</span>';
+  return '';
+}
 function modeLabel(m) { return m==='PERFORMANCE' ? t('merchant.mode.performance','类型A · 成果报酬') : t('merchant.mode.task','类型B · 任务体验'); }
 function ctLabel(c) { return {
   photo: '📷 '+t('merchant.contentType.photo','图文'), video: '🎬 '+t('merchant.contentType.video','视频'),
@@ -2684,7 +2736,7 @@ function saveTask(publish) {
             }
             showFormError(errMsg); return;
           }
-          state.msg = t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
+          state.msg = p.reviewPending ? t('merchant.publish.pendingReview','已提交平台审核，通过后自动上线并通知你') : t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
           if (p.topupReminder) setTimeout(function(){ showTopupReminder(p.topupReminder); }, 400);
           loadMyTasks(); loadDashStats();
           openTask(d.id);
@@ -2730,7 +2782,7 @@ function doPublishWithCodeCheck(id) {
         onConfirm: function() {
           patch('PATCH', '/tasks/'+id+'/publish', {}, function(p) {
             if (p.error) { showMsg(p.error, 'error'); return; }
-            state.msg = t('merchant.publish.doneVisible','任务已发布！赫使现在可以看到并报名。'); state.msgType = 'success';
+            state.msg = p.reviewPending ? t('merchant.publish.pendingReview','已提交平台审核，通过后自动上线并通知你') : t('merchant.publish.doneVisible','任务已发布！赫使现在可以看到并报名。'); state.msgType = 'success';
             loadMyTasks(); loadDashStats();
             openTask(id);
           });
@@ -2775,7 +2827,7 @@ function publishTask(id) {
             }
             return;
           }
-          state.msg = t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
+          state.msg = d.reviewPending ? t('merchant.publish.pendingReview','已提交平台审核，通过后自动上线并通知你') : t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
           if (state.currentTask) state.currentTask.status = 'OPEN';
           loadMyTasks(); loadDashStats();
           if (d.topupReminder) setTimeout(function(){ showTopupReminder(d.topupReminder); }, 400);

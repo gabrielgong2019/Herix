@@ -607,6 +607,13 @@ export async function initDatabase() {
        WHEN '永住者' THEN 'permanent' WHEN '就労' THEN 'work'
        WHEN '留学' THEN 'student' WHEN '其他' THEN 'other' ELSE visa_type END
      WHERE visa_type IN ('永住者','就労','留学','其他')`,
+    // 首任务审核门 + 商家 KYB（2026-07-18，PRD §29）：未验证商家发布的任务须平台审核后才公开可见
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS platform_review TEXT NOT NULL DEFAULT 'approved'`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS platform_review_note TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_status TEXT NOT NULL DEFAULT 'none'`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_doc_url TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_note TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS kyb_submitted_at TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

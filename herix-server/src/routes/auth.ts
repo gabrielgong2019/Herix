@@ -319,6 +319,7 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
     `SELECT u.id, u.phone, u.email, u.nickname, u.avatar_url, u.role, u.roles, u.is_verified, u.created_at,
             bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded,
             bp.website, bp.company_desc, bp.contact_phone, bp.is_agency, bp.country as brand_country,
+            bp.is_enterprise_verified, bp.kyb_status, bp.kyb_note,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email,
             hp.display_name, hp.country, hp.diaspora_group, hp.social_platforms, hp.specialties,
             hp.is_onboarded, hp.residence, hp.residence_country, hp.kyc_status,

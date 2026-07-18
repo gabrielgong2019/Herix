@@ -244,14 +244,67 @@ function statCard(label,val,color,icon,unit){
 /* ── Reviews ── */
 function reviewsPage(){
   var decls=st.data.decls||[];
-  if(!decls.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';
-  return '<div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px">在留声明审核（'+decls.length+'条待处理）</div>'
-    +decls.map(function(d){
+  var taskRv=st.data.taskReviews||[];
+  var kybRv=st.data.kybReviews||[];
+  var tab=st.subPage||'decls';
+  var h='<div class="tabs">'
+    +'<div class="tab'+(tab==='decls'?' active':'')+'" onclick="switchTab(\'decls\')">在留声明 ('+decls.length+')</div>'
+    +'<div class="tab'+(tab==='taskrv'?' active':'')+'" onclick="switchTab(\'taskrv\')">任务审核 ('+taskRv.length+')</div>'
+    +'<div class="tab'+(tab==='kyb'?' active':'')+'" onclick="switchTab(\'kyb\')">商家认证 ('+kybRv.length+')</div>'
+    +'</div>';
+
+  if(tab==='taskrv'){
+    if(!taskRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审任务</div>';
+    return h+taskRv.map(function(r){
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.title)+'</span>'
+        +'<span style="font-size:11px;color:var(--muted)">'+(r.published_at?fmtLocal(r.published_at):'')+'</span></div>'
+        +'<div class="acard-sub">'+esc(r.company_name||r.creator_name||'')+(r.is_agency?' <span style="color:#c2410c">[广告代理]</span>':'')+' · '+esc(r.creator_email||'')
+        +' · '+(r.mode==='PERFORMANCE'?'类A·推广码':'类B·内容')+' · ¥'+Number(r.payout_per_herald||0).toLocaleString()+'/人 × '+(r.max_heralds||0)+'</div>'
+        +'<div style="font-size:12px;color:#555;margin:8px 0;line-height:1.6;max-height:120px;overflow-y:auto;background:#f9fafb;border-radius:8px;padding:8px 10px">'+esc(r.description||'')+'</div>'
+        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doTaskReview(\''+r.id+'\',true)">✓ 通过上线</button>'
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doTaskReview(\''+r.id+'\',false)">✗ 拒绝</button></div></div>';
+    }).join('');
+  }
+  if(tab==='kyb'){
+    if(!kybRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审认证</div>';
+    return h+kybRv.map(function(r){
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.company_name||r.nickname||'')+(r.is_agency?' <span style="font-size:11px;color:#c2410c">[广告代理]</span>':'')+'</span>'
+        +'<span style="font-size:11px;color:var(--muted)">'+(r.kyb_submitted_at?fmtLocal(r.kyb_submitted_at):'')+'</span></div>'
+        +'<div class="acard-sub">'+esc(r.email||'')+' · 注册地：'+esc(r.country||'')+(r.website?' · '+esc(r.website):'')+'</div>'
+        +(r.kyb_doc_url?'<a href="'+esc(r.kyb_doc_url)+'" target="_blank"><img src="'+esc(r.kyb_doc_url)+'" style="max-width:260px;max-height:180px;border:1px solid var(--border);border-radius:8px;margin:8px 0;object-fit:contain"></a>':'<div style="font-size:12px;color:var(--danger);margin:8px 0">⚠️ 无证件图</div>')
+        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doKyb(\''+r.user_id+'\',true)">✓ 通过认证</button>'
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doKyb(\''+r.user_id+'\',false)">✗ 拒绝</button></div></div>';
+    }).join('');
+  }
+  if(!decls.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';
+  return h+decls.map(function(d){
       return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(d.nickname)+'</span><span style="font-size:11px;color:var(--muted)">'+fmtLocal(d.submitted_at).slice(0,10)+'</span></div>'
         +'<div class="acard-sub">在留资格：'+esc(({permanent:'永住者',work:'就労',student:'留学',other:'其他'})[d.visa_type]||d.visa_type)+' · '+esc(d.email||'')+'</div>'
         +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doDecl(\''+d.id+'\',true)">✓ 通过</button>'
         +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doDecl(\''+d.id+'\',false)">✗ 拒绝</button></div></div>';
     }).join('');
+}
+
+function switchTab(t){st.subPage=t;render()}
+
+function doTaskReview(id,approve){
+  var reason=approve?null:prompt('拒绝原因（必填，会展示给商家）');
+  if(!approve&&(reason===null||!reason.trim()))return;
+  post('/admin/task-reviews/'+id+'/'+(approve?'approve':'reject'),{reason:reason},function(d){
+    if(d.error){alert(d.error);return}
+    st.data.taskReviews=(st.data.taskReviews||[]).filter(function(x){return x.id!==id});
+    st.msg=approve?'任务已通过审核并上线':'已拒绝，任务退回商家草稿';st.msgType='success';render();
+  });
+}
+
+function doKyb(userId,approve){
+  var reason=approve?null:prompt('拒绝原因（必填，会展示给商家）');
+  if(!approve&&(reason===null||!reason.trim()))return;
+  post('/admin/kyb/'+userId+'/'+(approve?'approve':'reject'),{reason:reason},function(d){
+    if(d.error){alert(d.error);return}
+    st.data.kybReviews=(st.data.kybReviews||[]).filter(function(x){return x.user_id!==userId});
+    st.msg=approve?'认证已通过':'已拒绝';st.msgType='success';render();
+  });
 }
 
 /* ── Payouts ── */
@@ -971,7 +1024,10 @@ function load(page){
   } else if(page==='dashboard'){
     apiGet('/admin/stats',function(d){st.data.stats=d;render()});
   } else if(page==='reviews'){
+    st.subPage=st.subPage||'decls';
     apiGet('/admin/declarations',function(d){st.data.decls=d;render()});
+    apiGet('/admin/task-reviews',function(d){st.data.taskReviews=Array.isArray(d)?d:[];render()});
+    apiGet('/admin/kyb-reviews',function(d){st.data.kybReviews=Array.isArray(d)?d:[];render()});
   } else if(page==='topups'){
     apiGet('/admin/topup-requests',function(d){st.data.topups=Array.isArray(d)?d:[];render()});
   } else if(page==='withdrawals'){

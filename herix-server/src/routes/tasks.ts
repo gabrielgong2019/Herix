@@ -42,15 +42,15 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   // 非创建者只看已发布（OPEN）任务；INVITE 任务不出现在公开列表
   const uid = req.user?.userId;
   if (!uid) {
-    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC'";
+    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'";
   } else if (creator) {
     // 商家查自己的任务：显示全部状态和 visibility
     if (creator !== uid) {
-      where += " AND t.visibility = 'PUBLIC'"; // 不能看别人的 INVITE 任务
+      where += " AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'"; // 不能看别人的 INVITE/审核中任务
     }
   } else {
-    // 赫使浏览探索列表：只显示 OPEN 且 PUBLIC
-    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC'";
+    // 赫使浏览探索列表：只显示 OPEN 且 PUBLIC 且已过平台审核
+    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'";
   }
 
   const totalRow = await findOne<{ cnt: number }>(
@@ -822,6 +822,12 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
+  // 审核门（2026-07-18）：审核中/被拒的任务对非创建者一律 404，防直链绕过列表过滤
+  if (task.platform_review && task.platform_review !== 'approved') {
+    const isOwnerOrAdmin = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
+    if (!isOwnerOrAdmin) return res.status(404).json({ error: '任务不存在' });
+  }
+
   // 敏感凭证只给创建者/管理员：upload_token 可直接触发结算上传/绑定品牌方
   // （修复：此前 t.* 泄露给任何访问者）
   const isOwner = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
@@ -995,6 +1001,12 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   const fast_payout = creditInfo.availableBalance >= fpThreshold;
   const uploadToken = crypto.randomBytes(16).toString('hex');
 
+  // 首任务审核门（2026-07-18，PRD §29）：未通过 KYB（is_enterprise_verified=0）的商家，
+  // 发布的任务须平台审核后才进公开列表——防恶意注册用任务做钓鱼/违规内容载体。
+  // 状态仍置 OPEN（额度照常占用、商家可正常查看），只是公开可见性由 platform_review 闸住
+  const bpRow = await findOne<any>('SELECT is_enterprise_verified FROM brand_profiles WHERE user_id = ?', [task.creator_id]);
+  const needsReview = req.user!.role !== 'ADMIN' && !(bpRow && Number(bpRow.is_enterprise_verified) === 1);
+
   await update('tasks', {
     status:          'OPEN',
     published_at:    new Date().toISOString(),
@@ -1002,6 +1014,8 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     commission_rate: commissionRate,
     fast_payout,
     upload_token:    uploadToken,
+    platform_review: needsReview ? 'pending' : 'approved',
+    platform_review_note: null,
   }, 'id = ?', [req.params.id]);
 
   // 首次发布且未充值 → 响应中附带充值引导提醒
@@ -1021,6 +1035,7 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   const updated = await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json({
     ...updated,
+    reviewPending: needsReview,
     ...(isFirstPublish ? {
       topupReminder: '任务已经可以被赫使看到了。等有赫使报名或完成任务时，需要账户里有余额才能完成打款——可以现在充值，也可以晚点再来。提前充值后任务会带上「极速打款」标签，赫使报名会更积极一些。',
     } : {}),

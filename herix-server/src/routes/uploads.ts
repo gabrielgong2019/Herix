@@ -35,6 +35,23 @@ uploadsRouter.post('/brand/promo', requireAuth, requireRole('BRAND'), imageUploa
   }
 });
 
+/** POST /api/uploads/brand/kyb-doc — 商家认证证件上传（登記簿謄本/营业执照，上传即提交审核） */
+uploadsRouter.post('/brand/kyb-doc', requireAuth, requireRole('BRAND'), imageUpload.single('file'), async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: '未提供文件' });
+  try {
+    const processed = await processPromo(req.file.buffer); // 文档照片沿用宣传图压缩参数（长边保留较大，文字可读）
+    const url = saveBrandAsset(req.user!.userId, 'kyb', processed);
+    await update('brand_profiles', {
+      kyb_doc_url: url, kyb_status: 'pending', kyb_note: null,
+      kyb_submitted_at: new Date().toISOString(),
+    }, 'user_id = ?', [req.user!.userId]);
+    res.json({ success: true, url, kybStatus: 'pending' });
+  } catch (err) {
+    console.error('KYB doc upload error:', err);
+    res.status(500).json({ error: '图片处理失败' });
+  }
+});
+
 /** POST /api/uploads/task/:taskId/cover — 任务封面图上传 */
 uploadsRouter.post('/task/:taskId/cover', requireAuth, requireRole('BRAND', 'ADMIN'), imageUpload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: '未提供文件' });

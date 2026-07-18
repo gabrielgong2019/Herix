@@ -1017,5 +1017,18 @@
   "merchant.login.accountTaken": "注册时邮箱已存在→自动切登录模式的提示条(2026-07-18)",
   "merchant.agreement.h7": "协议第七条标题——反社会势力排除(暴排条款)，2026-07-18-v3 新增，⚠️待法务审阅",
   "merchant.agreement.s7": "协议第七条正文——日本B2B合同标配的暴排条款，自拟草稿，⚠️正式使用前必须经日本律师审阅",
-  "hd.unsettledHint": "赫使任务卡欠结算披露(2026-07-18)：used_count>paid_conversions 时显示，商家余额不足导致结算跳过的诚实告知"
+  "hd.unsettledHint": "赫使任务卡欠结算披露(2026-07-18)：used_count>paid_conversions 时显示，商家余额不足导致结算跳过的诚实告知",
+  "merchant.publish.pendingReview": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.review.pendingTag": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.review.rejectedTag": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.review.rejectedTitle": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.review.rejectedHint": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.title": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.approved": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.approvedHint": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.pending": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.pendingHint": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.rejectedPrefix": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.benefit": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.kyb.submitted": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片"
 }

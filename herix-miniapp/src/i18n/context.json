@@ -1014,5 +1014,7 @@
   "merchant.wizard.regCountry": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
   "merchant.wizard.regCountryHint": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
   "merchant.settings.industryPh": "商家入驻向导UX修复(2026-07-18)：步骤标签/身份分支文案/站点说明条(术语见PRD§27站点)/公司注册地",
-  "merchant.login.accountTaken": "注册时邮箱已存在→自动切登录模式的提示条(2026-07-18)"
+  "merchant.login.accountTaken": "注册时邮箱已存在→自动切登录模式的提示条(2026-07-18)",
+  "merchant.agreement.h7": "协议第七条标题——反社会势力排除(暴排条款)，2026-07-18-v3 新增，⚠️待法务审阅",
+  "merchant.agreement.s7": "协议第七条正文——日本B2B合同标配的暴排条款，自拟草稿，⚠️正式使用前必须经日本律师审阅"
 }

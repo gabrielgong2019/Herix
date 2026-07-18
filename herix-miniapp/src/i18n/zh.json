@@ -811,11 +811,11 @@
   "merchant.wizard.agreementTitle": "服务协议",
   "merchant.wizard.agreementSub": "请仔细阅读以下协议，确认后完成入驻。",
   "merchant.wizard.signAndActivate": "确认签署并开通",
-  "merchant.agreement.docTitle": "Herix 品牌商家服务协议（版本 2026-07-17-v2）",
+  "merchant.agreement.docTitle": "Herix 商家服务协议（版本 2026-07-18-v3）",
   "merchant.agreement.h1": "一、服务内容",
   "merchant.agreement.s1": "Herix（以下简称“平台”）由 HUAXUE 合同会社运营，提供海外生活社群赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称“您”）通过平台发布任务，招募赫使完成推广或体验工作。",
   "merchant.agreement.h2": "二、资金与结算",
-  "merchant.agreement.s2": "1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，到账时间为 3 个工作日内。",
+  "merchant.agreement.s2": "1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，退款仅退回至原汇款账户（原路退回），到账时间为 3 个工作日内。",
   "merchant.agreement.h3": "三、您的义务",
   "merchant.agreement.s3": "1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。",
   "merchant.agreement.h4": "四、争议处理",
@@ -826,7 +826,7 @@
   "merchant.agreement.s6": "平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。",
   "merchant.agreement.confirm": "我已阅读并理解上述服务协议，代表 <strong>{company}</strong> 接受协议全部条款。本次确认将记录签署时间及 IP 地址作为电子证据。",
   "merchant.agreement.thisCompany": "本公司",
-  "merchant.agreement.version": "协议版本 2026-07-17-v2",
+  "merchant.agreement.version": "协议版本 2026-07-18-v3",
   "merchant.industry.finance": "金融服务",
   "merchant.industry.beauty": "美妆",
   "merchant.industry.fashion": "时尚",
@@ -1013,5 +1013,7 @@
   "merchant.wizard.regCountry": "公司注册地 *",
   "merchant.wizard.regCountryHint": "以贵司注册实体所在国为准；与站点不同国时为跨境合同，不影响正常使用",
   "merchant.settings.industryPh": "请选择",
-  "merchant.login.accountTaken": "该邮箱已注册，请直接登录"
+  "merchant.login.accountTaken": "该邮箱已注册，请直接登录",
+  "merchant.agreement.h7": "七、反社会势力的排除",
+  "merchant.agreement.s7": "双方保证自身及其董事、实际控制人均不属于暴力团、暴力团成员、暴力团关联企业、总会屋或其他同类反社会势力（以下合称“反社会势力”），与反社会势力不存在资金提供、提供便利等任何关系，且不自行或利用第三方实施暴力性要求、超越法律责任的不当要求、胁迫性言行、损害对方信用或妨碍对方业务的行为。一方违反前述保证的，另一方可不经催告立即终止本协议，且无须就由此给违约方造成的损害承担任何赔偿责任。"
 }

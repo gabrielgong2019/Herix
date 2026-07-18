@@ -499,11 +499,11 @@ function activateBrandPage() {
     h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">'+t('merchant.wizard.agreementSub','请仔细阅读以下协议，确认后完成入驻。')+'</div>';
 
     h += '<div style="height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:16px">';
-    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">'+t('merchant.agreement.docTitle','Herix 品牌商家服务协议（版本 2026-07-17-v2）')+'</p>';
+    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">'+t('merchant.agreement.docTitle','Herix 商家服务协议（版本 2026-07-18-v3）')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h1','一、服务内容')+'</p>';
     h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s1','Herix（以下简称"平台"）由 HUAXUE 合同会社运营，提供海外生活社群赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h2','二、资金与结算')+'</p>';
-    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s2','1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，到账时间为 3 个工作日内。')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s2','1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，退款仅退回至原汇款账户（原路退回），到账时间为 3 个工作日内。')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h3','三、您的义务')+'</p>';
     h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s3','1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h4','四、争议处理')+'</p>';
@@ -515,7 +515,9 @@ function activateBrandPage() {
       + '3. 所有界面展示（含平台内部后台）仅保留脱敏形式；任务结束后您可申请清除全部明细记录（结算凭证按法定财务要求另行保留）。<br>'
       + '4. 您应确保向平台提供上述数据已获得合法授权（含您的隐私政策对该等委托处理的覆盖）；如发生数据安全事件，平台将在知悉后 72 小时内通知您。')+'</p>';
     h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h6','六、协议变更')+'</p>';
-    h += '<p>'+t('merchant.agreement.s6','平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s6','平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h7','七、反社会势力的排除')+'</p>';
+    h += '<p>'+t('merchant.agreement.s7','双方保证自身及其董事、实际控制人均不属于暴力团、暴力团成员、暴力团关联企业、总会屋或其他同类反社会势力（以下合称"反社会势力"），与反社会势力不存在资金提供、提供便利等任何关系，且不自行或利用第三方实施暴力性要求、超越法律责任的不当要求、胁迫性言行、损害对方信用或妨碍对方业务的行为。一方违反前述保证的，另一方可不经催告立即终止本协议，且无须就由此给违约方造成的损害承担任何赔偿责任。')+'</p>';
     h += '</div>';
 
     h += '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:#374151;margin-bottom:20px">';
@@ -528,7 +530,7 @@ function activateBrandPage() {
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=3;render()">'+t('merchant.wizard.back','返回')+'</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">'+t('merchant.wizard.signAndActivate','确认签署并开通')+'</button>';
     h += '</div>';
-    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">'+t('merchant.agreement.version','协议版本 2026-07-17-v2')+'</div>';
+    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">'+t('merchant.agreement.version','协议版本 2026-07-18-v3')+'</div>';
   }
 
   h += '</div></div>';

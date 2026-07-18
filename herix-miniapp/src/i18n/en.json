@@ -811,11 +811,11 @@
   "merchant.wizard.agreementTitle": "Service Agreement",
   "merchant.wizard.agreementSub": "Please read the agreement below carefully, then confirm to complete activation.",
   "merchant.wizard.signAndActivate": "Confirm & Activate",
-  "merchant.agreement.docTitle": "Herix Brand Merchant Service Agreement (Version 2026-07-17-v2)",
+  "merchant.agreement.docTitle": "Herix Business Service Agreement (Version 2026-07-18-v3)",
   "merchant.agreement.h1": "1. Scope of Service",
   "merchant.agreement.s1": "Herix (the “Platform”) is operated by HUAXUE GK, providing recruitment of diaspora-community ambassadors (KOLs), task publishing, and payout settlement services. Brand merchants (“you”) use the Platform to publish tasks and recruit ambassadors to complete promotional or experiential work.",
   "merchant.agreement.h2": "2. Funds & Settlement",
-  "merchant.agreement.s2": "1. You must fund your Platform account before publishing a task; an equal amount is locked as a deposit when the task is published.<br>2. Once an ambassador completes a task and passes review, the Platform automatically settles payment - this cannot be reversed.<br>3. The Platform charges a <strong>15%</strong> service fee (including payment processing) on each settlement.<br>4. Unused locked funds may be requested back after a task closes, arriving within 3 business days.",
+  "merchant.agreement.s2": "1. You must fund your Platform account before publishing a task; an equal amount is locked as a deposit when the task is published.<br>2. Once an ambassador completes a task and passes review, the Platform automatically settles payment - this cannot be reversed.<br>3. The Platform charges a <strong>15%</strong> service fee (including payment processing) on each settlement.<br>4. Unused locked funds may be requested back after a task closes; refunds are made <strong>only to the originating bank account</strong>, arriving within 3 business days.",
   "merchant.agreement.h3": "3. Your Obligations",
   "merchant.agreement.s3": "1. Ensure the company information you provide is true and accurate, and update it promptly if it changes.<br>2. Task content must comply with applicable Japanese laws and Platform rules, and must not contain illegal, false, or misleading content.<br>3. For approved ambassador applications, review and make a determination promptly after the task ends.<br>4. You must not bypass the Platform to transact directly with ambassadors.",
   "merchant.agreement.h4": "4. Dispute Resolution",
@@ -826,7 +826,7 @@
   "merchant.agreement.s6": "The Platform may update this Agreement, with the version number changing accordingly. Material changes will be notified 14 days in advance; continued use of the Platform constitutes acceptance of the updated Agreement.",
   "merchant.agreement.confirm": "I have read and understood the Service Agreement above and accept all its terms on behalf of <strong>{company}</strong>. This confirmation records the signing time and IP address as electronic evidence.",
   "merchant.agreement.thisCompany": "this company",
-  "merchant.agreement.version": "Agreement Version 2026-07-17-v2",
+  "merchant.agreement.version": "Agreement Version 2026-07-18-v3",
   "merchant.industry.finance": "Financial Services",
   "merchant.industry.beauty": "Beauty",
   "merchant.industry.fashion": "Fashion",
@@ -1013,5 +1013,7 @@
   "merchant.wizard.regCountry": "Company Registration Country *",
   "merchant.wizard.regCountryHint": "Use your registered entity's country; if it differs from the marketplace country the contract is cross-border — this doesn't affect your use of the platform",
   "merchant.settings.industryPh": "Select…",
-  "merchant.login.accountTaken": "This email is already registered — please log in"
+  "merchant.login.accountTaken": "This email is already registered — please log in",
+  "merchant.agreement.h7": "7. Exclusion of Anti-Social Forces",
+  "merchant.agreement.s7": "Each party represents and warrants that neither it nor its officers or beneficial owners belongs to organized crime groups, their members, affiliated enterprises, corporate racketeers, or other equivalent anti-social forces (\"Anti-Social Forces\"), and that it has no relationship with Anti-Social Forces including funding or providing benefits. Each party further undertakes not to engage, directly or through third parties, in violent demands, unreasonable demands beyond legal responsibility, threatening conduct, or acts that damage the other party's credit or obstruct its business. If a party breaches the foregoing, the other party may terminate this Agreement immediately without notice and bears no liability for any resulting damages to the breaching party."
 }

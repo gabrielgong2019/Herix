@@ -52,6 +52,10 @@ export async function update(
   whereParams: any[] = []
 ) {
   const keys = Object.keys(data);
+  // 空对象直接 no-op：PATCH 类接口按需拼 data，一个字段都没带时曾生成
+  // `UPDATE x SET WHERE ...` 非法 SQL 打崩请求（2026-07-18 生产日志坐实，
+  // 触发点 ambassador.ts /profile）。PATCH 语义下"没有要改的"就是成功
+  if (!keys.length) return;
   const setClause = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
   const allValues = [...Object.values(data), ...whereParams];
 

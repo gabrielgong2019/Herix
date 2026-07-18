@@ -419,68 +419,69 @@ function activateBrandPage() {
     h += '</div>';
   } else if (step === 2) {
     var actCur = state.activateData?.currency;
-    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">开通品牌商家功能</div>';
-    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">你好，'+esc(state.user.nickname)+'！填写品牌信息后即可发布任务、招募赫使。</div>';
-    h += '<div class="field"><label>业务市场 *</label><div style="display:flex;gap:10px;margin-top:6px">';
-    h += '<div class="btn btn-outline btn-sm" style="flex:1;border-color:var(--primary);color:var(--primary)">🇯🇵 日本市场（JPY）</div>';
-    h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.activateTitle','开通品牌商家功能')+'</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">'+t('merchant.wizard.activateGreeting','你好，{name}！填写品牌信息后即可发布任务、招募赫使。',{name:esc(state.user.nickname)})+'</div>';
+    h += '<div class="field"><label>'+t('merchant.wizard.market','业务市场 *')+'</label><div style="display:flex;gap:10px;margin-top:6px">';
+    h += '<div class="btn btn-outline btn-sm" style="flex:1;border-color:var(--primary);color:var(--primary)">🇯🇵 '+t('merchant.wizard.marketJP','日本市场（JPY）')+'</div>';
+    h += '</div><div style="font-size:12px;color:var(--muted);margin-top:6px">'+t('merchant.wizard.marketHint','入驻后业务市场和结算币种不可更改，请谨慎选择')+'</div></div>';
     // 商家归属国（打款费率的转出实体，V1 默认日本）
-    h += '<div class="field" style="margin-top:12px"><label>公司归属国家 *</label><select id="act-country">';
-    h += '<option value="JP"'+((state.activateData?.country||'JP')==='JP'?' selected':'')+'>🇯🇵 日本</option>';
-    h += '<option value="CN"'+(state.activateData?.country==='CN'?' selected':'')+'>🇨🇳 中国</option>';
-    h += '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">以贵司注册实体所在国为准，影响结算与打款费率</div></div>';
-    h += '<div class="field" style="margin-top:12px"><label>公司 / 品牌名称 *</label><input id="act-company" placeholder="例：Herix" value="'+esc(state.activateData?.companyName||'')+'"></div>';
-    h += '<div class="field" style="margin-top:12px"><label>所属行业</label><select id="act-industry">';
+    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.wizard.country','公司归属国家 *')+'</label><select id="act-country">';
+    h += '<option value="JP"'+((state.activateData?.country||'JP')==='JP'?' selected':'')+'>🇯🇵 '+t('merchant.wizard.countryJP','日本')+'</option>';
+    h += '<option value="CN"'+(state.activateData?.country==='CN'?' selected':'')+'>🇨🇳 '+t('merchant.wizard.countryCN','中国')+'</option>';
+    h += '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.wizard.countryHint','以贵司注册实体所在国为准，影响结算与打款费率')+'</div></div>';
+    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.companyName','公司/品牌名称')+' *</label><input id="act-company" placeholder="例：Herix" value="'+esc(state.activateData?.companyName||'')+'"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.industry','行业')+'</label><select id="act-industry">';
     ['金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他'].forEach(function(i){h+='<option>'+i+'</option>'});
     h += '</select></div>';
-    h += '<div class="field" style="margin-top:12px"><label>官网（选填）</label><input id="act-website" placeholder="https://..." value="'+esc(state.activateData?.website||'')+'"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.wizard.websiteOptional','官网（选填）')+'</label><input id="act-website" placeholder="https://..." value="'+esc(state.activateData?.website||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=1;render()">'+t('merchant.wizard.back','返回')+'</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep2Next()">'+t('merchant.wizard.next','下一步')+'</button>';
     h += '</div>';
   } else if (step === 3) {
-    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">联系方式</div>';
-    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">平台将通过此方式与你确认合作细节。</div>';
-    h += '<div class="field"><label>联系人姓名 *</label><input id="act-contact" placeholder="你的姓名" value="'+esc(state.activateData?.contactName||'')+'"></div>';
-    h += '<div class="field" style="margin-top:12px"><label>联系电话（选填）</label><input id="act-phone" placeholder="+81 ..." value="'+esc(state.activateData?.contactPhone||'')+'"></div>';
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.contactTitle','联系方式')+'</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:24px">'+t('merchant.wizard.contactSub','平台将通过此方式与你确认合作细节。')+'</div>';
+    h += '<div class="field"><label>'+t('merchant.settings.contactName','联系人姓名')+' *</label><input id="act-contact" placeholder="'+t('merchant.wizard.yourName','你的姓名')+'" value="'+esc(state.activateData?.contactName||'')+'"></div>';
+    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.wizard.contactPhoneOptional','联系电话（选填）')+'</label><input id="act-phone" placeholder="+81 ..." value="'+esc(state.activateData?.contactPhone||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=2;render()">'+t('merchant.wizard.back','返回')+'</button>';
     h += '<button class="btn btn-primary" style="flex:1" onclick="activateStep3Next()">'+t('merchant.wizard.next','下一步')+'</button>';
     h += '</div>';
   } else {
-    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">服务协议</div>';
-    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">请仔细阅读以下协议，确认后完成入驻。</div>';
+    h += '<div style="font-size:20px;font-weight:700;margin-bottom:6px">'+t('merchant.wizard.agreementTitle','服务协议')+'</div>';
+    h += '<div style="font-size:13px;color:var(--muted);margin-bottom:16px">'+t('merchant.wizard.agreementSub','请仔细阅读以下协议，确认后完成入驻。')+'</div>';
 
     h += '<div style="height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:16px;font-size:12px;line-height:1.9;color:#374151;background:#fafafa;margin-bottom:16px">';
-    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">Herix 品牌商家服务协议（版本 2026-07-17-v2）</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">一、服务内容</p>';
-    h += '<p style="margin-bottom:10px">Herix（以下简称"平台"）由 HUAXUE 合同会社运营，提供海外生活社群赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">二、资金与结算</p>';
-    h += '<p style="margin-bottom:10px">1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，到账时间为 3 个工作日内。</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">三、您的义务</p>';
-    h += '<p style="margin-bottom:10px">1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">四、争议处理</p>';
-    h += '<p style="margin-bottom:10px">平台对赫使提交内容的质量判断有最终解释权。如您对结算结果有异议，须在结算后 7 日内通过平台客服提出，逾期视为认可。</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">五、隐私与数据处理（委托处理条款）</p>';
-    h += '<p style="margin-bottom:10px">1. 平台将按照隐私政策处理您的业务数据。赫使的个人信息仅用于任务匹配，不会向第三方出售。<br>'
+    h += '<p style="font-weight:700;font-size:13px;margin-bottom:10px">'+t('merchant.agreement.docTitle','Herix 品牌商家服务协议（版本 2026-07-17-v2）')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h1','一、服务内容')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s1','Herix（以下简称"平台"）由 HUAXUE 合同会社运营，提供海外生活社群赫使（KOL/大使）招募、任务发布及报酬结算服务。品牌商家（以下简称"您"）通过平台发布任务，招募赫使完成推广或体验工作。')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h2','二、资金与结算')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s2','1. 发布任务前须预充足额资金至平台账户，任务发布时等额锁定为保证金。<br>2. 赫使完成任务并经审核通过后，平台将自动结算报酬，不可撤销。<br>3. 平台就每笔结算收取 <strong>15%</strong> 服务费（含支付处理费）。<br>4. 未使用的锁定资金可在任务关闭后申请退回，到账时间为 3 个工作日内。')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h3','三、您的义务')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s3','1. 确保提供的公司信息真实、准确，如有变更应及时更新。<br>2. 任务内容须符合日本相关法律法规及平台规范，不得包含违法、虚假或误导性内容。<br>3. 对于已批准的赫使报名，须在任务结束后及时审核并作出判定。<br>4. 不得绕过平台直接与赫使进行私下交易。')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h4','四、争议处理')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s4','平台对赫使提交内容的质量判断有最终解释权。如您对结算结果有异议，须在结算后 7 日内通过平台客服提出，逾期视为认可。')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h5','五、隐私与数据处理（委托处理条款）')+'</p>';
+    h += '<p style="margin-bottom:10px">'+t('merchant.agreement.s5',
+      '1. 平台将按照隐私政策处理您的业务数据。赫使的个人信息仅用于任务匹配，不会向第三方出售。<br>'
       + '2. 您为核对推广归属与结算向平台上传的最终用户标识（邮箱/用户ID 等），属于您<strong>委托平台处理</strong>的数据：平台<strong>不保存明文</strong>（接收后立即以 SHA-256 加盐单向哈希处理并丢弃原文，数据库与日志均不留存），仅用于推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉。<br>'
       + '3. 所有界面展示（含平台内部后台）仅保留脱敏形式；任务结束后您可申请清除全部明细记录（结算凭证按法定财务要求另行保留）。<br>'
-      + '4. 您应确保向平台提供上述数据已获得合法授权（含您的隐私政策对该等委托处理的覆盖）；如发生数据安全事件，平台将在知悉后 72 小时内通知您。</p>';
-    h += '<p style="font-weight:600;margin-bottom:4px">六、协议变更</p>';
-    h += '<p>平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。</p>';
+      + '4. 您应确保向平台提供上述数据已获得合法授权（含您的隐私政策对该等委托处理的覆盖）；如发生数据安全事件，平台将在知悉后 72 小时内通知您。')+'</p>';
+    h += '<p style="font-weight:600;margin-bottom:4px">'+t('merchant.agreement.h6','六、协议变更')+'</p>';
+    h += '<p>'+t('merchant.agreement.s6','平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。')+'</p>';
     h += '</div>';
 
     h += '<label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:#374151;margin-bottom:20px">';
     h += '<input type="checkbox" id="agree-checkbox" style="margin-top:2px;width:16px;height:16px;flex-shrink:0">';
-    h += '<span>我已阅读并理解上述服务协议，代表 <strong>'+esc(state.activateData?.companyName||'本公司')+'</strong> 接受协议全部条款。本次确认将记录签署时间及 IP 地址作为电子证据。</span>';
+    h += '<span>'+t('merchant.agreement.confirm','我已阅读并理解上述服务协议，代表 <strong>{company}</strong> 接受协议全部条款。本次确认将记录签署时间及 IP 地址作为电子证据。',{company:esc(state.activateData?.companyName||t('merchant.agreement.thisCompany','本公司'))})+'</span>';
     h += '</label>';
 
     h += '<div id="act-err" style="margin-bottom:12px"></div>';
     h += '<div style="display:flex;gap:10px">';
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=3;render()">'+t('merchant.wizard.back','返回')+'</button>';
-    h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">确认签署并开通</button>';
+    h += '<button class="btn btn-primary" style="flex:1" onclick="doActivateBrand()">'+t('merchant.wizard.signAndActivate','确认签署并开通')+'</button>';
     h += '</div>';
-    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">协议版本 2026-07-09-v1</div>';
+    h += '<div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">'+t('merchant.agreement.version','协议版本 2026-07-09-v1')+'</div>';
   }
 
   h += '</div></div>';

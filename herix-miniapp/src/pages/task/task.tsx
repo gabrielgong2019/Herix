@@ -20,6 +20,7 @@ interface TaskDetailData {
   platform_requirements?: string | null;
   budget: number;
   commission: number;
+  payout_per_herald?: number; // 当前真实生效字段（到手报酬）；commission 是重构前废弃字段，仅老数据兜底
   max_heralds: number;
   mode: string;
   status: string;

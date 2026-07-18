@@ -321,7 +321,13 @@ function brandEditPage(){
   h+='<div class="panel" style="max-width:640px">';
   h+='<div class="panel-title">品牌资料 — '+esc(p.nickname||'')+'</div>';
   h+='<div class="field"><label>公司/品牌名称</label><input id="be_company_name" value="'+esc(p.company_name||'')+'"></div>';
-  h+='<div class="field"><label>行业</label><input id="be_industry" value="'+esc(p.industry||'')+'"></div>';
+  // 行业已 id 化（2026-07-18，与 merchant.html industrySelectHTML 同一套 id）；admin 纯中文界面，标签硬编码即可
+  var INDUSTRY_OPTS = [['finance','金融服务'],['beauty','美妆'],['fashion','时尚'],['food','食品饮料'],['travel','旅游'],['baby','母婴'],['ecommerce','电商'],['other','其他']];
+  var curInd = ({'金融服务':'finance','美妆':'beauty','时尚':'fashion','食品饮料':'food','旅游':'travel','母婴':'baby','电商':'ecommerce','其他':'other'})[p.industry] || p.industry || '';
+  h+='<div class="field"><label>行业</label><select id="be_industry">'
+    +'<option value=""'+(curInd?'':' selected')+'>未设置</option>'
+    +INDUSTRY_OPTS.map(function(o){return '<option value="'+o[0]+'"'+(curInd===o[0]?' selected':'')+'>'+o[1]+'</option>'}).join('')
+    +'</select></div>';
   h+='<div class="field"><label>官网</label><input id="be_website" value="'+esc(p.website||'')+'"></div>';
   h+='<div class="field"><label>联系人姓名</label><input id="be_contact_name" value="'+esc(p.contact_name||'')+'"></div>';
   h+='<div class="field"><label>联系电话</label><input id="be_contact_phone" value="'+esc(p.contact_phone||'')+'"></div>';

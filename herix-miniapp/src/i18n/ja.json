@@ -833,5 +833,20 @@
   "merchant.agreement.s6": "本プラットフォームは本規約を更新する権利を有し、その際バージョン番号も変更されます。重要な変更については14日前に通知し、引き続き本プラットフォームをご利用いただいた場合、新規約に同意したものとみなされます。",
   "merchant.agreement.confirm": "私は上記の利用規約を読み、理解しました。<strong>{company}</strong>を代表して本規約の全条項に同意します。本確認の署名日時とIPアドレスは電子的証拠として記録されます。",
   "merchant.agreement.thisCompany": "当社",
-  "merchant.agreement.version": "規約バージョン 2026-07-09-v1"
+  "merchant.agreement.version": "規約バージョン 2026-07-09-v1",
+  "merchant.industry.finance": "金融サービス",
+  "merchant.industry.beauty": "美容・コスメ",
+  "merchant.industry.fashion": "ファッション",
+  "merchant.industry.food": "食品・飲料",
+  "merchant.industry.travel": "旅行",
+  "merchant.industry.baby": "ベビー・マタニティ",
+  "merchant.industry.ecommerce": "Eコマース",
+  "merchant.industry.other": "その他",
+  "merchant.csv.hdrUser": "ユーザーのメールまたはID",
+  "merchant.csv.hdrConverted": "取引完了",
+  "merchant.csv.hdrRegistered": "登録数",
+  "merchant.csv.hdrUsed": "利用数",
+  "merchant.csv.errNoCodeCol": "ヘッダーに「code」列が必要です",
+  "merchant.csv.errNoUserCol": "この案件は<b>明細モード</b>です。ヘッダーにユーザー列（例：「ユーザーのメールまたはID」）が必要です。対応するテンプレートをダウンロードしてください",
+  "merchant.csv.errNoAggCols": "この案件は<b>集計モード</b>です。ヘッダーに「登録数」「利用数」列が必要です。対応するテンプレートをダウンロードしてください"
 }

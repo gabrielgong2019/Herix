@@ -833,5 +833,20 @@
   "merchant.agreement.s6": "The Platform may update this Agreement, with the version number changing accordingly. Material changes will be notified 14 days in advance; continued use of the Platform constitutes acceptance of the updated Agreement.",
   "merchant.agreement.confirm": "I have read and understood the Service Agreement above and accept all its terms on behalf of <strong>{company}</strong>. This confirmation records the signing time and IP address as electronic evidence.",
   "merchant.agreement.thisCompany": "this company",
-  "merchant.agreement.version": "Agreement Version 2026-07-09-v1"
+  "merchant.agreement.version": "Agreement Version 2026-07-09-v1",
+  "merchant.industry.finance": "Financial Services",
+  "merchant.industry.beauty": "Beauty",
+  "merchant.industry.fashion": "Fashion",
+  "merchant.industry.food": "Food & Beverage",
+  "merchant.industry.travel": "Travel",
+  "merchant.industry.baby": "Baby & Maternity",
+  "merchant.industry.ecommerce": "E-commerce",
+  "merchant.industry.other": "Other",
+  "merchant.csv.hdrUser": "user email or ID",
+  "merchant.csv.hdrConverted": "converted",
+  "merchant.csv.hdrRegistered": "registered",
+  "merchant.csv.hdrUsed": "used",
+  "merchant.csv.errNoCodeCol": "The header must include a \"code\" column",
+  "merchant.csv.errNoUserCol": "This task uses <b>detail mode</b> — the header needs a user column (e.g. \"user email or ID\"). Please download the matching template",
+  "merchant.csv.errNoAggCols": "This task uses <b>aggregate mode</b> — the header needs \"registered\" and \"used\" columns. Please download the matching template"
 }

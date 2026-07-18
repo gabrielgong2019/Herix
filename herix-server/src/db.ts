@@ -396,9 +396,9 @@ export async function initDatabase() {
       updated_at TEXT,
       UNIQUE(from_country, to_country, currency)
     )`,
-    // 种子（2026-07-17 用户拍板）：JP→JP ≤5万¥300/以上¥500；JP→CN ≤1万¥500/≤5万¥800/以上¥1200 + 150bps
+    // 种子（2026-07-18 用户拍板）：JP→JP 统一¥200；JP→CN ≤1万¥500/≤5万¥800/以上¥1200 + 150bps
     `INSERT INTO payout_fee_rules (id, from_country, to_country, currency, tiers, fx_markup_bps, updated_by, updated_at) VALUES
-      ('rule_jp_jp_jpy', 'JP', 'JP', 'JPY', '[{"upTo":50000,"fee":300},{"upTo":null,"fee":500}]', 0, 'seed', now()::text),
+      ('rule_jp_jp_jpy', 'JP', 'JP', 'JPY', '[{"upTo":50000,"fee":200},{"upTo":null,"fee":200}]', 0, 'seed', now()::text),
       ('rule_jp_cn_jpy', 'JP', 'CN', 'JPY', '[{"upTo":10000,"fee":500},{"upTo":50000,"fee":800},{"upTo":null,"fee":1200}]', 150, 'seed', now()::text)
      ON CONFLICT (from_country, to_country, currency) DO NOTHING`,
     // 汇率中间价（申请时锁定用；接行情 API 前由运营在设置里维护）
@@ -591,6 +591,13 @@ export async function initDatabase() {
       synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )`,
     `CREATE INDEX IF NOT EXISTS idx_fx_rate_history_pair ON fx_rate_history(pair, synced_at DESC)`,
+    // 行业字段 id 化（2026-07-18）：历史数据存的是中文标签，归一成稳定 id，
+    // 显示层从此走 i18n 词条（merchant.industry.*）。幂等：已是 id 的行不受影响
+    `UPDATE brand_profiles SET industry = CASE industry
+       WHEN '金融服务' THEN 'finance' WHEN '美妆' THEN 'beauty' WHEN '时尚' THEN 'fashion'
+       WHEN '食品饮料' THEN 'food' WHEN '旅游' THEN 'travel' WHEN '母婴' THEN 'baby'
+       WHEN '电商' THEN 'ecommerce' WHEN '其他' THEN 'other' ELSE industry END
+     WHERE industry IN ('金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他')`,
   ];
   for (const m of migrations) {
     await pool.query(m);

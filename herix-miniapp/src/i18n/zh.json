@@ -833,5 +833,20 @@
   "merchant.agreement.s6": "平台有权更新本协议，版本号将同步变更。重大变更将提前 14 天通知，继续使用平台即视为接受新版协议。",
   "merchant.agreement.confirm": "我已阅读并理解上述服务协议，代表 <strong>{company}</strong> 接受协议全部条款。本次确认将记录签署时间及 IP 地址作为电子证据。",
   "merchant.agreement.thisCompany": "本公司",
-  "merchant.agreement.version": "协议版本 2026-07-09-v1"
+  "merchant.agreement.version": "协议版本 2026-07-09-v1",
+  "merchant.industry.finance": "金融服务",
+  "merchant.industry.beauty": "美妆",
+  "merchant.industry.fashion": "时尚",
+  "merchant.industry.food": "食品饮料",
+  "merchant.industry.travel": "旅游",
+  "merchant.industry.baby": "母婴",
+  "merchant.industry.ecommerce": "电商",
+  "merchant.industry.other": "其他",
+  "merchant.csv.hdrUser": "用户邮箱或ID",
+  "merchant.csv.hdrConverted": "是否完成交易",
+  "merchant.csv.hdrRegistered": "注册数",
+  "merchant.csv.hdrUsed": "使用数",
+  "merchant.csv.errNoCodeCol": "表头需要包含 \"code\" 列",
+  "merchant.csv.errNoUserCol": "该任务为<b>明细模式</b>，表头需要包含用户列（如「用户邮箱或ID」）——请下载对应模板",
+  "merchant.csv.errNoAggCols": "该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板"
 }

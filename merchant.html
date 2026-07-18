@@ -239,6 +239,19 @@ function langSwitcherHTML() {
   }).join('') + '</div>';
 }
 
+/* ── 行业注册表（2026-07-18 id 化，仿 category 模式）──
+ * DB 存稳定 id，显示层走词条翻译；历史数据存的是中文原文，
+ * industryToId() 做读取兼容（db.ts 迁移会归一存量，兼容层防漏网/防迁移前的旧缓存） */
+var INDUSTRIES = ['finance','beauty','fashion','food','travel','baby','ecommerce','other'];
+var INDUSTRY_LEGACY = {'金融服务':'finance','美妆':'beauty','时尚':'fashion','食品饮料':'food','旅游':'travel','母婴':'baby','电商':'ecommerce','其他':'other'};
+function industryToId(v) { return INDUSTRY_LEGACY[v] || v || ''; }
+function industrySelectHTML(domId, currentRaw) {
+  var cur = industryToId(currentRaw);
+  return '<select id="'+domId+'">'
+    + INDUSTRIES.map(function(id){ return '<option value="'+id+'"'+(cur===id?' selected':'')+'>'+t('merchant.industry.'+id, id)+'</option>'; }).join('')
+    + '</select>';
+}
+
 /* ── Routing ── */
 function go(page, data) {
   state.page = page;
@@ -430,9 +443,7 @@ function activateBrandPage() {
     h += '<option value="CN"'+(state.activateData?.country==='CN'?' selected':'')+'>🇨🇳 '+t('merchant.wizard.countryCN','中国')+'</option>';
     h += '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.wizard.countryHint','以贵司注册实体所在国为准，影响结算与打款费率')+'</div></div>';
     h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.companyName','公司/品牌名称')+' *</label><input id="act-company" placeholder="例：Herix" value="'+esc(state.activateData?.companyName||'')+'"></div>';
-    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.industry','行业')+'</label><select id="act-industry">';
-    ['金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他'].forEach(function(i){h+='<option>'+i+'</option>'});
-    h += '</select></div>';
+    h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.settings.industry','行业')+'</label>'+industrySelectHTML('act-industry', state.activateData?.industry)+'</div>';
     h += '<div class="field" style="margin-top:12px"><label>'+t('merchant.wizard.websiteOptional','官网（选填）')+'</label><input id="act-website" placeholder="https://..." value="'+esc(state.activateData?.website||'')+'"></div>';
     h += '<div style="display:flex;gap:10px;margin-top:24px">';
     h += '<button class="btn btn-outline" style="flex:1" onclick="state.activateStep=1;render()">'+t('merchant.wizard.back','返回')+'</button>';
@@ -1391,11 +1402,12 @@ function csvSelectedTask() {
 }
 
 /* 按任务的数据回传模式渲染：模板示例 + 注意事项 */
-function csvModeBlockHTML(t) {
-  var isDetail = t && t.data_mode === 'DETAIL';
+function csvModeBlockHTML(task) {
+  var isDetail = task && task.data_mode === 'DETAIL';
+  // 表头随界面语言本地化——doCsvUpload() 解析器已支持中/日/英列名同义词识别
   var sample = isDetail
-    ? 'code,用户邮箱或ID,是否完成交易\nHERIX-A3K9Z2,alice@gmail.com,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,0'
-    : 'code,注册数,使用数\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3';
+    ? 'code,'+t('merchant.csv.hdrUser','用户邮箱或ID')+','+t('merchant.csv.hdrConverted','是否完成交易')+'\nHERIX-A3K9Z2,alice@gmail.com,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,0'
+    : 'code,'+t('merchant.csv.hdrRegistered','注册数')+','+t('merchant.csv.hdrUsed','使用数')+'\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3';
   var notes = isDetail ? [
     t('merchant.csv.noteUseExistingId','<b>直接使用你系统里现成的用户标识</b>（邮箱/用户名均可）——上传后立即加盐单向加密，平台不保存明文（见下方数据处理承诺）；同一用户请始终使用同一标识'),
     t('merchant.csv.noteIncrementalOk','<b>增量或全量上传均可</b>——系统按推广码+用户自动去重，重传、重叠都不会重复计费'),
@@ -1447,7 +1459,7 @@ function csvPage() {
   var perfTasks = state.tasks.filter(function(t){return t.mode==='PERFORMANCE' && t.status==='OPEN'});
   if (!perfTasks.length) return '<div class="table-card"><div class="empty"><div class="empty-icon">📤</div><div>'+t('merchant.csv.noTasks','没有进行中的成果报酬任务')+'</div><div style="margin-top:8px;font-size:12px;color:var(--muted)">'+t('merchant.csv.noTasksHint','创建类型A任务后可在此上传转化数据')+'</div></div></div>';
 
-  var opts = perfTasks.map(function(t){return '<option value="'+t.id+'">'+esc(t.title)+(t.data_mode==='DETAIL'?' ['+t('merchant.csv.tagDetail','明细')+']':' ['+t('merchant.csv.tagAggregate','汇总')+']')+'</option>'}).join('');
+  var opts = perfTasks.map(function(pt){return '<option value="'+pt.id+'">'+esc(pt.title)+(pt.data_mode==='DETAIL'?' ['+t('merchant.csv.tagDetail','明细')+']':' ['+t('merchant.csv.tagAggregate','汇总')+']')+'</option>'}).join('');
   return '<div class="form-card"><div style="max-width:600px">'
     +'<div style="margin-bottom:20px"><div style="font-weight:600;margin-bottom:6px">'+t('merchant.csv.selectTask','选择任务')+'</div><select id="csv-task" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px" onchange="renderCsvModeUI()">'+opts+'</select></div>'
     +'<div style="margin-bottom:12px" id="csv-mode-block">'+csvModeBlockHTML(perfTasks[0])+'</div>'
@@ -2186,9 +2198,7 @@ function settingsPage() {
   }
   h += '<div class="form-grid">'
     + field(t('merchant.settings.companyName','公司/品牌名称'), 'company_name', 'text', p.company_name||'', '')
-    + '<div class="field"><label>'+t('merchant.settings.industry','行业')+'</label><select id="industry">'
-    + ['美妆','时尚','食品饮料','金融服务','旅游','母婴','电商','其他'].map(function(i){return '<option value="'+i+'"'+(p.industry===i?' selected':'')+'>'+i+'</option>'}).join('')
-    + '</select></div>'
+    + '<div class="field"><label>'+t('merchant.settings.industry','行业')+'</label>'+industrySelectHTML('industry', p.industry)+'</div>'
     + field(t('merchant.settings.website','官网'), 'website', 'text', p.website||'', 'https://...')
     + field(t('merchant.settings.contactName','联系人姓名'), 'contact_name', 'text', p.contact_name||'', '')
     + field(t('merchant.settings.contactPhone','联系电话'), 'contact_phone', 'text', p.contact_phone||'', '')
@@ -2953,21 +2963,27 @@ function doCsvUpload() {
   var lines = raw.trim().split('\n').map(function(l){return l.trim()}).filter(Boolean);
   if (lines.length < 2) { resultEl.innerHTML='<div class="alert alert-error">数据至少需要2行（表头+数据）</div>'; return; }
 
-  // 解析第一行表头
+  // 解析第一行表头。列名支持中/日/英同义词（模板按界面语言生成，其他语言回落英文模板）
   var headers = lines[0].split(',').map(function(h){return h.trim().toLowerCase()});
+  function findHeader(synonyms) {
+    for (var hi = 0; hi < headers.length; hi++) {
+      for (var si = 0; si < synonyms.length; si++) {
+        if (headers[hi].indexOf(synonyms[si]) >= 0) return hi;
+      }
+    }
+    return -1;
+  }
   var codeIdx = headers.indexOf('code');
-  if (codeIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">表头需要包含 "code" 列</div>'; return; }
+  if (codeIdx === -1) codeIdx = findHeader(['推广码','紹介コード','referral']);
+  if (codeIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">'+t('merchant.csv.errNoCodeCol','表头需要包含 "code" 列')+'</div>'; return; }
 
   var records = [];
   var i, cols, code;
   if (isDetail) {
     // 明细模式：code + 用户标识 + 是否完成交易
-    var userIdx = -1, convIdx = -1;
-    headers.forEach(function(h, idx) {
-      if (userIdx === -1 && (h.indexOf('邮箱') >= 0 || h.indexOf('用户') >= 0 || h.indexOf('email') >= 0 || h.indexOf('user') >= 0)) userIdx = idx;
-      if (convIdx === -1 && (h.indexOf('交易') >= 0 || h.indexOf('转化') >= 0 || h.indexOf('convert') >= 0 || h.indexOf('txn') >= 0)) convIdx = idx;
-    });
-    if (userIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">该任务为<b>明细模式</b>，表头需要包含用户列（如「用户邮箱或ID」）——请下载对应模板</div>'; return; }
+    var userIdx = findHeader(['邮箱','用户','メール','ユーザー','email','user']);
+    var convIdx = findHeader(['交易','转化','取引','成約','コンバージョン','convert','txn']);
+    if (userIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">'+t('merchant.csv.errNoUserCol','该任务为<b>明细模式</b>，表头需要包含用户列（如「用户邮箱或ID」）——请下载对应模板')+'</div>'; return; }
     for (i = 1; i < lines.length; i++) {
       cols = lines[i].split(',');
       code = (cols[codeIdx]||'').trim();
@@ -2976,9 +2992,9 @@ function doCsvUpload() {
       records.push({ code: code, user: user, converted: convIdx >= 0 ? (cols[convIdx]||'').trim() : '0' });
     }
   } else {
-    var regIdx = headers.indexOf('注册数');
-    var usedIdx = headers.indexOf('使用数');
-    if (regIdx === -1 && usedIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板</div>'; return; }
+    var regIdx = findHeader(['注册数','登録数','registered','registrations','signups']);
+    var usedIdx = findHeader(['使用数','利用数','used','usage']);
+    if (regIdx === -1 && usedIdx === -1) { resultEl.innerHTML='<div class="alert alert-error">'+t('merchant.csv.errNoAggCols','该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板')+'</div>'; return; }
     for (i = 1; i < lines.length; i++) {
       cols = lines[i].split(',');
       code = (cols[codeIdx]||'').trim();
@@ -3070,11 +3086,12 @@ function loadCsvFile(event) {
 }
 
 function downloadCsvTemplate() {
-  var t = csvSelectedTask();
-  var isDetail = t && t.data_mode === 'DETAIL';
+  var task = csvSelectedTask();
+  var isDetail = task && task.data_mode === 'DETAIL';
+  // 表头随界面语言本地化，与 doCsvUpload() 的同义词解析器配套
   var csv = isDetail
-    ? 'code,用户邮箱或ID,是否完成交易\nHERIX-EXAMPLE1,alice@gmail.com,1\nHERIX-EXAMPLE1,bob@yahoo.co.jp,0'
-    : 'code,注册数,使用数\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0';
+    ? 'code,'+t('merchant.csv.hdrUser','用户邮箱或ID')+','+t('merchant.csv.hdrConverted','是否完成交易')+'\nHERIX-EXAMPLE1,alice@gmail.com,1\nHERIX-EXAMPLE1,bob@yahoo.co.jp,0'
+    : 'code,'+t('merchant.csv.hdrRegistered','注册数')+','+t('merchant.csv.hdrUsed','使用数')+'\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0';
   var blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);

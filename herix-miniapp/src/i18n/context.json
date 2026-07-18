@@ -834,5 +834,20 @@
   "merchant.agreement.s6": "商家服务协议正文——法律文本，翻译需保持法律语义准确，建议正式使用前经专业法务审阅，merchant.html 专用词条(2026-07-18)",
   "merchant.agreement.confirm": "商家服务协议正文——法律文本，翻译需保持法律语义准确，建议正式使用前经专业法务审阅，merchant.html 专用词条(2026-07-18)",
   "merchant.agreement.thisCompany": "商家服务协议正文——法律文本，翻译需保持法律语义准确，建议正式使用前经专业法务审阅，merchant.html 专用词条(2026-07-18)",
-  "merchant.agreement.version": "商家服务协议正文——法律文本，翻译需保持法律语义准确，建议正式使用前经专业法务审阅，merchant.html 专用词条(2026-07-18)"
+  "merchant.agreement.version": "商家服务协议正文——法律文本，翻译需保持法律语义准确，建议正式使用前经专业法务审阅，merchant.html 专用词条(2026-07-18)",
+  "merchant.industry.finance": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.beauty": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.fashion": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.food": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.travel": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.baby": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.ecommerce": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.industry.other": "行业下拉选项(DB存id，2026-07-18从中文标签迁移)，merchant.html settingsPage/入驻向导共用",
+  "merchant.csv.hdrUser": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)",
+  "merchant.csv.hdrConverted": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)",
+  "merchant.csv.hdrRegistered": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)",
+  "merchant.csv.hdrUsed": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)",
+  "merchant.csv.errNoCodeCol": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)",
+  "merchant.csv.errNoUserCol": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)",
+  "merchant.csv.errNoAggCols": "CSV上传表头/解析错误提示——⚠️hdr*词条的译文必须命中doCsvUpload()同义词表(注册数/登録数/registered等)，改动前先看解析器，merchant.html(2026-07-18)"
 }

@@ -132,7 +132,7 @@ function render(){
 function shell(inner){
   var nav=[
     {id:'dashboard',icon:'📊',label:'数据看板'},
-    {id:'reviews',icon:'✅',label:'审核中心',badge:(st.data.stats?.pendingDeclarations||0)+(st.data.stats?.pendingSubmissions||0)+(st.data.stats?.pendingApplications||0)},
+    {id:'reviews',icon:'✅',label:'审核中心',badge:(st.data.stats?.pendingDeclarations||0)},
     {id:'topups',icon:'🏦',label:'充值确认',badge:Array.isArray(st.data.topups)?st.data.topups.filter(function(r){return r.status==='pending'}).length:0},
     {id:'withdrawals',icon:'💸',label:'提现打款',badge:Array.isArray(st.data.withdrawals)?st.data.withdrawals.filter(function(r){return r.status==='pending'}).length:0},
     {id:'users',icon:'👥',label:'用户管理'},
@@ -224,19 +224,16 @@ function dashPage(){
     +statCard('本月完成',s.monthCompletions||0,'var(--primary)','📦','单')
     +statCard('在线任务',s.openTasks||0,'#0891b2','📋','个')
     +statCard('赫使总数',s.heralds||0,'#7c3aed','🌟','人')
-    +statCard('待处理',((s.pendingDeclarations||0)+(s.pendingSubmissions||0)+(s.pendingApplications||0)),'var(--danger)','⚠️','项')
+    +statCard('待审声明 (KYC)',(s.pendingDeclarations||0),'var(--danger)','⚠️','条')
     +'</div>'
     +'<div class="stats-grid" style="grid-template-columns:1fr 1fr 1fr 1fr">'
     +statCard('品牌商家',s.brands||0,'#059669','🏢','家')
-    +statCard('待审声明',s.pendingDeclarations||0,'#d97706','📄','条')
-    +statCard('待审内容',s.pendingSubmissions||0,'#7c3aed','✅','条')
+    +statCard('本月完成',s.monthCompletions||0,'#7c3aed','✅','条')
     +statCard('本月已结算','¥'+(Number(s.monthPayout||0).toLocaleString()),'#059669','💰','')
     +'</div>'
     +'<div class="chart-card"><div class="chart-title">近7日 — 内容审核通过数</div><div class="bar-chart">'+bars+'</div></div>'
-    +(s.pendingDeclarations||s.pendingSubmissions||s.pendingApplications?'<div class="acard" style="background:#fffbeb;border-color:#fbbf24"><div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:6px">⚠️ 待处理事项</div><div style="font-size:12px;color:#78350f">'
-    +(s.pendingDeclarations?'• '+s.pendingDeclarations+'条 在留声明待审核<br>':'')
-    +(s.pendingSubmissions?'• '+s.pendingSubmissions+'条 内容提交待审核<br>':'')
-    +(s.pendingApplications?'• '+s.pendingApplications+'条 任务报名待审核<br>':'')
+    +(s.pendingDeclarations?'<div class="acard" style="background:#fffbeb;border-color:#fbbf24"><div style="font-size:13px;font-weight:600;color:#92400e;margin-bottom:6px">⚠️ 待处理事项</div><div style="font-size:12px;color:#78350f">'
+    +'• '+s.pendingDeclarations+'条 在留声明待审核<br>'
     +'</div><button class="btn btn-sm btn-primary" style="margin-top:10px" onclick="go(\'reviews\')">前往审核</button></div>':'');
 }
 
@@ -247,43 +244,15 @@ function statCard(label,val,color,icon,unit){
 /* ── Reviews ── */
 function reviewsPage(){
   var decls=st.data.decls||[];
-  var subs=st.data.subs||[];
-  var apps=st.data.apps||[];
-  var tab=st.subPage||'decls';
-  var tabs='<div class="tabs">'
-    +'<div class="tab'+(tab==='decls'?' active':'')+'" onclick="switchTab(\'decls\')">在留声明 ('+decls.length+')</div>'
-    +'<div class="tab'+(tab==='subs'?' active':'')+'" onclick="switchTab(\'subs\')">内容审核 ('+subs.length+')</div>'
-    +'<div class="tab'+(tab==='apps'?' active':'')+'" onclick="switchTab(\'apps\')">报名审核 ('+apps.length+')</div>'
-    +'</div>';
-
-  var content='';
-  if(tab==='decls'){
-    if(!decls.length) content='<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';
-    else content=decls.map(function(d){
+  if(!decls.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';
+  return '<div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px">在留声明审核（'+decls.length+'条待处理）</div>'
+    +decls.map(function(d){
       return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(d.nickname)+'</span><span style="font-size:11px;color:var(--muted)">'+fmtLocal(d.submitted_at).slice(0,10)+'</span></div>'
         +'<div class="acard-sub">在留资格：'+esc(d.visa_type)+' · '+esc(d.email||'')+'</div>'
         +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doDecl(\''+d.id+'\',true)">✓ 通过</button>'
         +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doDecl(\''+d.id+'\',false)">✗ 拒绝</button></div></div>';
     }).join('');
-  } else if(tab==='subs'){
-    if(!subs.length) content='<div class="empty"><div class="empty-icon">✅</div>暂无待审内容</div>';
-    else content=subs.map(function(s){
-      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(s.herald_name)+'</span><span class="tag tag-pending">待审核</span></div>'
-        +'<div class="acard-sub" style="color:var(--primary);margin-bottom:4px">'+esc(s.task_title)+'</div>'
-        +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:6px">🔗 查看内容</a>':'')
-        +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
-        +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">提交：'+fmtLocal(s.submitted_at)+'</div>'
-        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doSub(\''+s.id+'\',true)">✓ 通过</button>'
-        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doSub(\''+s.id+'\',false)">✗ 拒绝</button></div></div>';
-    }).join('');
-  } else {
-    if(!apps.length) content='<div class="empty"><div class="empty-icon">✅</div>暂无待审报名</div>';
-    else content='<div class="empty"><div class="empty-icon">👤</div>报名审核请在商户后台操作（按任务维度）</div>';
-  }
-  return tabs+content;
 }
-
-function switchTab(t){st.subPage=t;render()}
 
 /* ── Payouts ── */
 // payouts 相关函数已删除，提现管理统一走「💸 提现打款」页面
@@ -784,17 +753,6 @@ function doDecl(id,approve){
   });
 }
 
-function doSub(id,approve){
-  var reason=approve?null:prompt('拒绝原因（可选）');
-  if(reason===null&&!approve) return;
-  post('/admin/submissions/'+id+'/'+(approve?'approve':'reject'),{reason:reason},function(d){
-    if(d.error){alert(d.error);return}
-    st.data.subs=(st.data.subs||[]).filter(function(x){return x.id!==id});
-    if(st.data.stats) st.data.stats.pendingSubmissions=Math.max(0,(st.data.stats.pendingSubmissions||1)-1);
-    render();
-  });
-}
-
 /* ── Data Loading ── */
 
 
@@ -885,11 +843,25 @@ function pricingPage(){
       +'<button class="btn btn-primary btn-sm" onclick="saveFxRate(\''+pair+'\')">保存</button>'
       +'<span style="font-size:11px;color:var(--muted)">更新于 '+esc(fmtLocal(f.updated_at))+'</span></div>';
   }).join('');
-  h+='</div>';
+  // 汇率历史
+  var fxh=st.data.fxHistory||[];
+  h+='<div style="margin-top:14px"><div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">最近同步记录</div>';
+  if(!fxh.length){h+='<div style="font-size:12px;color:var(--muted)">暂无记录</div>';}
+  else{
+    h+='<table style="font-size:12px;width:100%"><thead><tr><th>币对</th><th>汇率</th><th>来源</th><th>时间</th></tr></thead><tbody>';
+    h+=fxh.map(function(r){
+      return '<tr><td style="font-family:monospace">'+esc(r.pair)+'</td>'
+        +'<td style="font-family:monospace">'+r.rate+'</td>'
+        +'<td style="color:var(--muted)">'+(r.source==='manual'?'<span style="color:#d97706">手动</span>':esc(r.source))+'</td>'
+        +'<td style="color:var(--muted)">'+fmtLocal(r.synced_at)+'</td></tr>';
+    }).join('');
+    h+='</tbody></table>';
+  }
+  h+='</div></div>';
 
   return h;
 }
-function _prReload(msg){st.msg=msg;st.msgType='success';apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});apiGet('/admin/pricing/payout-rules',function(d){st.data.payout=d;render()})}
+function _prReload(msg){st.msg=msg;st.msgType='success';apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});apiGet('/admin/pricing/payout-rules',function(d){st.data.payout=d;render()});apiGet('/admin/pricing/fx-history',function(d){st.data.fxHistory=Array.isArray(d)?d:[];render()})}
 function loadPayoutRules(){apiGet('/admin/pricing/payout-rules',function(d){st.data.payout=d;render()})}
 function savePayoutRule(from,to,cur){
   var tiersRaw=(document.getElementById('po-t-'+from+to)||{}).value||'';
@@ -905,7 +877,7 @@ function addPayoutRule(){
 function saveFxRate(pair){
   var v=Number((document.getElementById('po-fx-'+pair)||{}).value);
   if(!(v>0)){alert('汇率须为正数');return}
-  apiPatch('/admin/pricing/payout-fx',{pair:pair,rate:v},function(d){if(d.error){alert(d.error);return}st.msg='汇率已更新';st.msgType='success';loadPayoutRules()});
+  apiPatch('/admin/pricing/payout-fx',{pair:pair,rate:v},function(d){if(d.error){alert(d.error);return}st.msg='汇率已更新';st.msgType='success';loadPayoutRules();apiGet('/admin/pricing/fx-history',function(h){st.data.fxHistory=Array.isArray(h)?h:[];render()});});
 }
 function _prErr(d){st.msg=d.error||'操作失败';st.msgType='danger';render()}
 function savePricingGlobal(){
@@ -987,15 +959,13 @@ function load(page){
   if(page==='pricing'){
     apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});
     loadPayoutRules();
+    apiGet('/admin/pricing/fx-history',function(d){st.data.fxHistory=Array.isArray(d)?d:[];render()});
   } else if(page==='i18n'){
     apiGet('/admin/i18n',function(d){st.data.i18n=d.rows||[];render()});
   } else if(page==='dashboard'){
     apiGet('/admin/stats',function(d){st.data.stats=d;render()});
   } else if(page==='reviews'){
-    st.subPage=st.subPage||'decls';
-    apiGet('/admin/declarations',function(d){st.data.decls=d});
-    apiGet('/admin/submissions',function(d){st.data.subs=d});
-    apiGet('/admin/applications',function(d){st.data.apps=d;render()});
+    apiGet('/admin/declarations',function(d){st.data.decls=d;render()});
   } else if(page==='topups'){
     apiGet('/admin/topup-requests',function(d){st.data.topups=Array.isArray(d)?d:[];render()});
   } else if(page==='withdrawals'){

@@ -140,7 +140,19 @@ pricingAdminRouter.patch('/payout-fx', async (req: Request, res: Response) => {
   const r = Number(rate);
   if (!(r > 0)) return res.status(400).json({ error: '汇率须为正数', code: 'INVALID_RATE' });
   await setSetting(`fx_mid_${pair}`, String(r), (req as any).user?.userId || 'admin', '打款锁价中间价');
+  await pool.query(
+    `INSERT INTO fx_rate_history (id, pair, rate, source, synced_at) VALUES ($1, $2, $3, $4, NOW())`,
+    [genId(), pair, r, 'manual']
+  );
   res.json({ pair, rate: r });
+});
+
+/** GET /api/admin/pricing/fx-history — 最近 30 条汇率变动记录 */
+pricingAdminRouter.get('/fx-history', async (_req: Request, res: Response) => {
+  const rows = await pool.query(
+    `SELECT pair, rate, source, synced_at FROM fx_rate_history ORDER BY synced_at DESC LIMIT 30`
+  );
+  res.json(rows.rows);
 });
 
 /** PATCH /api/admin/pricing/promotions/:id/cancel — 提前终止（软删） */

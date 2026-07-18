@@ -7,6 +7,7 @@
  */
 import pool from '../db';
 import { setSetting, getSetting } from './settings';
+import { genId } from './db';
 
 const COUNTRY_CURRENCY: Record<string, string> = { JP: 'JPY', CN: 'CNY' };
 const BASE = 'JPY';
@@ -47,6 +48,10 @@ export async function syncFxRates(): Promise<void> {
         continue;
       }
       await setSetting(key, String(fetched.rate), 'fx-sync', `自动同步自 ${fetched.source}`);
+      await pool.query(
+        `INSERT INTO fx_rate_history (id, pair, rate, source, synced_at) VALUES ($1, $2, $3, $4, NOW())`,
+        [genId(), `${BASE}_${target}`, fetched.rate, fetched.source]
+      );
       console.log(`[fx-sync] ${key} = ${fetched.rate} (${fetched.source})`);
     }
     // 静默过期告警：任何 fx_mid_* 超过 48 小时未更新（两源连挂/被墙/服务停摆），邮件通知运营

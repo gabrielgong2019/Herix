@@ -583,6 +583,14 @@ export async function initDatabase() {
       ('baby',       '母婴', '🍼', 8)
      ON CONFLICT (id) DO NOTHING`,
     `ALTER TABLE task_ratings ADD COLUMN IF NOT EXISTS brand_id TEXT`,
+    `CREATE TABLE IF NOT EXISTS fx_rate_history (
+      id        TEXT PRIMARY KEY,
+      pair      TEXT NOT NULL,
+      rate      DOUBLE PRECISION NOT NULL,
+      source    TEXT NOT NULL DEFAULT 'manual',
+      synced_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_fx_rate_history_pair ON fx_rate_history(pair, synced_at DESC)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

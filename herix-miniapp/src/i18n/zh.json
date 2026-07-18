@@ -848,5 +848,6 @@
   "merchant.csv.hdrUsed": "使用数",
   "merchant.csv.errNoCodeCol": "表头需要包含 \"code\" 列",
   "merchant.csv.errNoUserCol": "该任务为<b>明细模式</b>，表头需要包含用户列（如「用户邮箱或ID」）——请下载对应模板",
-  "merchant.csv.errNoAggCols": "该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板"
+  "merchant.csv.errNoAggCols": "该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板",
+  "merchant.login.email": "邮箱"
 }

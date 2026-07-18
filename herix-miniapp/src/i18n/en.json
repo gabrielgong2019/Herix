@@ -848,5 +848,6 @@
   "merchant.csv.hdrUsed": "used",
   "merchant.csv.errNoCodeCol": "The header must include a \"code\" column",
   "merchant.csv.errNoUserCol": "This task uses <b>detail mode</b> — the header needs a user column (e.g. \"user email or ID\"). Please download the matching template",
-  "merchant.csv.errNoAggCols": "This task uses <b>aggregate mode</b> — the header needs \"registered\" and \"used\" columns. Please download the matching template"
+  "merchant.csv.errNoAggCols": "This task uses <b>aggregate mode</b> — the header needs \"registered\" and \"used\" columns. Please download the matching template",
+  "merchant.login.email": "Email"
 }

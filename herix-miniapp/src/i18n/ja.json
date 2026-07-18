@@ -848,5 +848,6 @@
   "merchant.csv.hdrUsed": "利用数",
   "merchant.csv.errNoCodeCol": "ヘッダーに「code」列が必要です",
   "merchant.csv.errNoUserCol": "この案件は<b>明細モード</b>です。ヘッダーにユーザー列（例：「ユーザーのメールまたはID」）が必要です。対応するテンプレートをダウンロードしてください",
-  "merchant.csv.errNoAggCols": "この案件は<b>集計モード</b>です。ヘッダーに「登録数」「利用数」列が必要です。対応するテンプレートをダウンロードしてください"
+  "merchant.csv.errNoAggCols": "この案件は<b>集計モード</b>です。ヘッダーに「登録数」「利用数」列が必要です。対応するテンプレートをダウンロードしてください",
+  "merchant.login.email": "メールアドレス"
 }

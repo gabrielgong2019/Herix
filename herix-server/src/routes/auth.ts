@@ -289,23 +289,10 @@ authRouter.post('/login', async (req: Request, res: Response) => {
       await update('users', { roles: JSON.stringify(userRoles) }, 'id = ?', [user.id]);
     }
 
-    const profile = await findOne<any>(
-      `SELECT COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded
-       FROM users u
-       LEFT JOIN herald_profiles hp ON hp.user_id = u.id
-       LEFT JOIN brand_profiles bp ON bp.user_id = u.id
-       WHERE u.id = ?`, [user.id]
-    );
-
-    const token = signToken({ userId: user.id, role: user.role, roles: userRoles });
-
-    res.json({
-      token,
-      user: {
-        id: user.id, nickname: user.nickname, role: user.role,
-        roles: userRoles, isVerified: !!user.is_verified, is_onboarded: !!(profile?.is_onboarded),
-      },
-    });
+    // 响应统一走 issueLogin：此前这里手拼响应、漏了 brand_onboarded 字段，
+    // 导致 merchant.html 登录后 !brand_onboarded 恒为真——已入驻商家每次登录都被赶进向导
+    //（2026-07-18 用户实测：向导完成后二次登录仍进向导）
+    res.json(await issueLogin(user.id));
   } catch (err) {
     if (err instanceof ZodError) return res.status(400).json({ error: '参数错误', code: 'INVALID_PARAMS', details: err.errors });
     console.error('Login error:', err);

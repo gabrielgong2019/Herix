@@ -727,5 +727,14 @@
   "merchant.csv.privacy1": "Under our Terms of Service's data-processing clause, the platform <b>never stores plaintext emails or user IDs</b>: they're SHA-256 salted-hashed the instant they arrive, the original is discarded immediately, and nothing is retained in any database or log",
   "merchant.csv.privacy2": "The hash is used <b>only</b> for referral-attribution deduplication and settlement reconciliation — never for anything else, and never cross-referenced with other merchants' data",
   "merchant.csv.privacy3": "Every display surface (including internal admin tools) shows only the masked form (e.g. a**@gmail.com) — the one-way hash <b>cannot be reversed</b> back to the original",
-  "merchant.csv.privacy4": "After a task ends, you can contact staff to purge all detail records (settlement receipts are retained separately per accounting requirements)"
+  "merchant.csv.privacy4": "After a task ends, you can contact staff to purge all detail records (settlement receipts are retained separately per accounting requirements)",
+  "merchant.reviews.tabApps": "Pending Applications ({n})",
+  "merchant.reviews.tabSubs": "Pending Submissions ({n})",
+  "merchant.reviews.emptySubs": "No content pending review",
+  "merchant.reviews.emptyApps": "No applications pending review",
+  "merchant.reviews.viewContent": "View Content",
+  "merchant.reviews.notePlaceholder": "Note — if rejecting, explain why so the ambassador knows what to improve",
+  "merchant.reviews.approve": "Approve",
+  "merchant.reviews.reject": "Reject",
+  "merchant.reviews.unrated": "Unrated"
 }

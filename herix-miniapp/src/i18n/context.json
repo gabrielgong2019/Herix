@@ -728,5 +728,14 @@
   "merchant.csv.privacy1": "商家后台CSV数据上传 csvPage()/csvModeBlockHTML()/privacyCommitmentHTML()，涉及隐私承诺条款，翻译需保持准确，merchant.html 专用词条(2026-07-18)",
   "merchant.csv.privacy2": "商家后台CSV数据上传 csvPage()/csvModeBlockHTML()/privacyCommitmentHTML()，涉及隐私承诺条款，翻译需保持准确，merchant.html 专用词条(2026-07-18)",
   "merchant.csv.privacy3": "商家后台CSV数据上传 csvPage()/csvModeBlockHTML()/privacyCommitmentHTML()，涉及隐私承诺条款，翻译需保持准确，merchant.html 专用词条(2026-07-18)",
-  "merchant.csv.privacy4": "商家后台CSV数据上传 csvPage()/csvModeBlockHTML()/privacyCommitmentHTML()，涉及隐私承诺条款，翻译需保持准确，merchant.html 专用词条(2026-07-18)"
+  "merchant.csv.privacy4": "商家后台CSV数据上传 csvPage()/csvModeBlockHTML()/privacyCommitmentHTML()，涉及隐私承诺条款，翻译需保持准确，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.tabApps": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.tabSubs": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.emptySubs": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.emptyApps": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.viewContent": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.notePlaceholder": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.approve": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.reject": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)",
+  "merchant.reviews.unrated": "商家后台审核中心 reviewsPage()及relatedPanel/reviewRow，merchant.html 专用词条(2026-07-18)"
 }

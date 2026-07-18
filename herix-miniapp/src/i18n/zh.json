@@ -727,5 +727,14 @@
   "merchant.csv.privacy1": "依据《服务协议》数据处理条款，平台<b>不保存明文邮箱/用户ID</b>：接收后立即以 SHA-256 加盐单向哈希处理，原文即刻丢弃，任何数据库、日志中均不留存",
   "merchant.csv.privacy2": "哈希值<b>仅用于</b>推广归属去重与结算对账，不用于任何其他用途，不与其他商家数据交叉",
   "merchant.csv.privacy3": "所有展示（含平台内部后台）仅保留脱敏形式（如 a**@gmail.com），单向哈希<b>不可还原</b>出原文",
-  "merchant.csv.privacy4": "任务结束后可联系运营清除全部明细记录（结算凭证按财务要求另行保留）"
+  "merchant.csv.privacy4": "任务结束后可联系运营清除全部明细记录（结算凭证按财务要求另行保留）",
+  "merchant.reviews.tabApps": "待审报名 ({n})",
+  "merchant.reviews.tabSubs": "待审内容 ({n})",
+  "merchant.reviews.emptySubs": "暂无待审内容",
+  "merchant.reviews.emptyApps": "暂无待审报名",
+  "merchant.reviews.viewContent": "查看内容",
+  "merchant.reviews.notePlaceholder": "备注 · 拒绝时请说明原因，帮助赫使了解改进方向",
+  "merchant.reviews.approve": "通过",
+  "merchant.reviews.reject": "拒绝",
+  "merchant.reviews.unrated": "未评级"
 }

@@ -961,7 +961,7 @@ function tierBadge(tierSnapshot) {
 }
 
 function ratingBadge(completedTasks, goodRate) {
-  if (!completedTasks || completedTasks < 3) return '<span style="font-size:10px;color:var(--muted)">未评级</span>';
+  if (!completedTasks || completedTasks < 3) return '<span style="font-size:10px;color:var(--muted)">'+t('merchant.reviews.unrated','未评级')+'</span>';
   var rate = Number(goodRate) || 0;
   var level = 'Bronze';
   if (completedTasks >= 50 && rate >= 0.95) level = 'Platinum';
@@ -1297,8 +1297,8 @@ function updatePlatformReqRequired(platformId, checked){
 function reviewsPage() {
   var apps = state.allPendingApps || [];
   var subs = state.allPendingSubs || [];
-  return '<div class="tabs"><div class="tab'+(state.reviewTab!=='subs'?' active':'')+'" onclick="switchReviewTab(\'apps\')">待审报名 ('+apps.length+')</div>'
-    +'<div class="tab'+(state.reviewTab==='subs'?' active':'')+'" onclick="switchReviewTab(\'subs\')">待审内容 ('+subs.length+')</div></div>'
+  return '<div class="tabs"><div class="tab'+(state.reviewTab!=='subs'?' active':'')+'" onclick="switchReviewTab(\'apps\')">'+t('merchant.reviews.tabApps','待审报名 ({n})',{n:apps.length})+'</div>'
+    +'<div class="tab'+(state.reviewTab==='subs'?' active':'')+'" onclick="switchReviewTab(\'subs\')">'+t('merchant.reviews.tabSubs','待审内容 ({n})',{n:subs.length})+'</div></div>'
     +(state.reviewTab==='subs' ? allSubsPanel(subs) : allAppsPanel(apps));
 }
 
@@ -1309,7 +1309,7 @@ function reviewRow(id, type, info) {
   if (info.rating) meta.push(info.rating);
   if (info.sub) meta.push('<span style="color:#9ca3af;font-size:11px">'+esc(info.sub)+'</span>');
   if (info.preview) meta.push('<span style="color:#6b7280;font-size:11px">'+esc(info.preview.slice(0,50))+(info.preview.length>50?'…':'')+'</span>');
-  if (info.contentUrl) meta.push('<a href="'+esc(info.contentUrl)+'" target="_blank" style="color:#6366f1;font-size:11px;text-decoration:none">🔗 查看内容</a>');
+  if (info.contentUrl) meta.push('<a href="'+esc(info.contentUrl)+'" target="_blank" style="color:#6366f1;font-size:11px;text-decoration:none">🔗 '+t('merchant.reviews.viewContent','查看内容')+'</a>');
 
   var taskLabel = info.taskTitle
     ? ' <span style="font-weight:400;color:#9ca3af;font-size:13px">· '+esc(info.taskTitle)+(info.taskId?'<button onclick="event.stopPropagation();openTask(\''+info.taskId+'\')" style="font-size:10px;color:#c4b5fd;background:none;border:none;cursor:pointer;padding:0 2px;vertical-align:middle">↗</button>':'')+'</span>'
@@ -1324,19 +1324,19 @@ function reviewRow(id, type, info) {
     // Meta chips
     +(meta.length ? '<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:3px">'+meta.join('<span style="color:#e5e7eb;font-size:10px;margin:0 1px">|</span>')+'</div>' : '')
     // Note textarea (always visible)
-    +'<textarea id="rv-note-'+id+'" rows="1" placeholder="备注 · 拒绝时请说明原因，帮助赫使了解改进方向" style="width:100%;margin-top:10px;border:1.5px solid #e5e7eb;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.5;box-sizing:border-box;resize:none;display:block;font-family:inherit;outline:none;color:#374151;transition:border-color 0.15s" onfocus="this.rows=3;this.style.borderColor=\'#818cf8\'" onblur="if(!this.value)this.rows=1;this.style.borderColor=\'#e5e7eb\'"></textarea>'
+    +'<textarea id="rv-note-'+id+'" rows="1" placeholder="'+t('merchant.reviews.notePlaceholder','备注 · 拒绝时请说明原因，帮助赫使了解改进方向')+'" style="width:100%;margin-top:10px;border:1.5px solid #e5e7eb;border-radius:8px;padding:7px 10px;font-size:12px;line-height:1.5;box-sizing:border-box;resize:none;display:block;font-family:inherit;outline:none;color:#374151;transition:border-color 0.15s" onfocus="this.rows=3;this.style.borderColor=\'#818cf8\'" onblur="if(!this.value)this.rows=1;this.style.borderColor=\'#e5e7eb\'"></textarea>'
     +'</div>'
     // Action buttons
     +'<div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;margin-left:10px">'
-    +'<button onclick="submitReview(\''+id+'\',\''+type+'\',\'APPROVED\')" style="padding:6px 16px;border:none;border-radius:7px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">通过</button>'
-    +'<button onclick="submitReview(\''+id+'\',\''+type+'\',\'REJECTED\')" style="padding:6px 14px;border:1.5px solid #fca5a5;border-radius:7px;background:transparent;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">拒绝</button>'
+    +'<button onclick="submitReview(\''+id+'\',\''+type+'\',\'APPROVED\')" style="padding:6px 16px;border:none;border-radius:7px;background:#16a34a;color:#fff;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'+t('merchant.reviews.approve','通过')+'</button>'
+    +'<button onclick="submitReview(\''+id+'\',\''+type+'\',\'REJECTED\')" style="padding:6px 14px;border:1.5px solid #fca5a5;border-radius:7px;background:transparent;color:#dc2626;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap">'+t('merchant.reviews.reject','拒绝')+'</button>'
     +'</div>'
     +'</div>'
     +'</div>';
 }
 
 function allAppsPanel(apps) {
-  if (!apps.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审报名</div>';
+  if (!apps.length) return '<div class="empty"><div class="empty-icon">✅</div>'+t('merchant.reviews.emptyApps','暂无待审报名')+'</div>';
   return '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">'
     + apps.map(function(a) {
     var sub = [];
@@ -1356,7 +1356,7 @@ function allAppsPanel(apps) {
 }
 
 function allSubsPanel(subs) {
-  if (!subs.length) return '<div class="empty"><div class="empty-icon">✅</div>暂无待审内容</div>';
+  if (!subs.length) return '<div class="empty"><div class="empty-icon">✅</div>'+t('merchant.reviews.emptySubs','暂无待审内容')+'</div>';
   return '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden">'
     + subs.map(function(s) {
     var name = s.nickname || s.display_name || (s.herald_id||'').slice(0,8) || '—';

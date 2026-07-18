@@ -727,5 +727,14 @@
   "merchant.csv.privacy1": "《利用規約》のデータ処理条項に基づき、当プラットフォームは<b>メールアドレス・ユーザーIDを平文で保存しません</b>：受信後直ちにSHA-256によるソルト付き一方向ハッシュ化を行い、元のデータは即座に破棄され、いかなるデータベース・ログにも残りません",
   "merchant.csv.privacy2": "ハッシュ値は<b>紹介の帰属判定における重複排除および精算照合のためだけに</b>使用され、他のいかなる目的にも使用されず、他の商家のデータと突き合わされることもありません",
   "merchant.csv.privacy3": "すべての画面表示（プラットフォーム内部の管理画面を含む）はマスキングされた形式（例：a**@gmail.com）でのみ表示され、一方向ハッシュから元のデータを<b>復元することはできません</b>",
-  "merchant.csv.privacy4": "案件終了後は、運営に連絡することですべての明細記録を削除できます（決済証憑は会計上の要件により別途保管されます）"
+  "merchant.csv.privacy4": "案件終了後は、運営に連絡することですべての明細記録を削除できます（決済証憑は会計上の要件により別途保管されます）",
+  "merchant.reviews.tabApps": "審査待ち応募 ({n})",
+  "merchant.reviews.tabSubs": "審査待ちコンテンツ ({n})",
+  "merchant.reviews.emptySubs": "審査待ちのコンテンツはありません",
+  "merchant.reviews.emptyApps": "審査待ちの応募はありません",
+  "merchant.reviews.viewContent": "コンテンツを見る",
+  "merchant.reviews.notePlaceholder": "備考・却下する場合は理由を記載し、アンバサダーの改善に役立ててください",
+  "merchant.reviews.approve": "承認",
+  "merchant.reviews.reject": "却下",
+  "merchant.reviews.unrated": "未評価"
 }

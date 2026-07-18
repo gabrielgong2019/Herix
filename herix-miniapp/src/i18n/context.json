@@ -480,5 +480,21 @@
   "category.referral": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
   "category.baby": "任务分类名(胶囊/卡片标签),id对应categories表;运营新建分类无词条时兜底显示后端中文label",
   "common.back": "次级页顶部返回条(仅H5显示,小程序有原生返回),短词",
-  "common.copied": "复制成功toast(仅H5,weapp有自带提示)"
+  "common.copied": "复制成功toast(仅H5,weapp有自带提示)",
+  "merchant.nav.dashboard": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.nav.tasks": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.nav.reviews": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.nav.wallet": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.nav.csv": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.nav.settings": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.sidebar.subtitle": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.sidebar.brandLabel": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.sidebar.switchTo": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.sidebar.switchHerald": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.sidebar.logout": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.role.herald": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.role.brand": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.pageTitle.taskDetail": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.pageTitle.taskCreate": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)",
+  "merchant.pageTitle.taskEdit": "商家后台侧边栏/顶栏，merchant.html 专用词条(2026-07-18新增i18n框架)"
 }

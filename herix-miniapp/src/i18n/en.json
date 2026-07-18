@@ -480,5 +480,21 @@
   "category.referral": "Referral",
   "category.baby": "Baby & Mom",
   "common.back": "Back",
-  "common.copied": "Copied"
+  "common.copied": "Copied",
+  "merchant.nav.dashboard": "Overview",
+  "merchant.nav.tasks": "Tasks",
+  "merchant.nav.reviews": "Reviews",
+  "merchant.nav.wallet": "Wallet",
+  "merchant.nav.csv": "Data Upload",
+  "merchant.nav.settings": "Settings",
+  "merchant.sidebar.subtitle": "Merchant Console",
+  "merchant.sidebar.brandLabel": "Brand",
+  "merchant.sidebar.switchTo": "Switch to {name} ({role})",
+  "merchant.sidebar.switchHerald": "Switch to Ambassador mode",
+  "merchant.sidebar.logout": "Log out",
+  "merchant.role.herald": "Ambassador",
+  "merchant.role.brand": "Brand",
+  "merchant.pageTitle.taskDetail": "Task Details",
+  "merchant.pageTitle.taskCreate": "Create Task",
+  "merchant.pageTitle.taskEdit": "Edit Task"
 }

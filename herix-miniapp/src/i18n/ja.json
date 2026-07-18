@@ -480,5 +480,21 @@
   "category.referral": "紹介",
   "category.baby": "ベビー・ママ",
   "common.back": "戻る",
-  "common.copied": "コピーしました"
+  "common.copied": "コピーしました",
+  "merchant.nav.dashboard": "概要",
+  "merchant.nav.tasks": "案件管理",
+  "merchant.nav.reviews": "審査センター",
+  "merchant.nav.wallet": "ウォレット・入金",
+  "merchant.nav.csv": "データアップロード",
+  "merchant.nav.settings": "アカウント設定",
+  "merchant.sidebar.subtitle": "商家管理画面",
+  "merchant.sidebar.brandLabel": "ブランド",
+  "merchant.sidebar.switchTo": "{name}（{role}）に切り替え",
+  "merchant.sidebar.switchHerald": "アンバサダーモードに切替",
+  "merchant.sidebar.logout": "ログアウト",
+  "merchant.role.herald": "アンバサダー",
+  "merchant.role.brand": "ブランド",
+  "merchant.pageTitle.taskDetail": "案件詳細",
+  "merchant.pageTitle.taskCreate": "案件を作成",
+  "merchant.pageTitle.taskEdit": "案件を編集"
 }

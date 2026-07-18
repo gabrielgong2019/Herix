@@ -52,6 +52,10 @@ body { font-family: -apple-system,BlinkMacSystemFont,'PingFang SC',sans-serif; b
 /* ── Topbar ── */
 .page-title { font-size:18px; font-weight:700; }
 .topbar-right { display:flex; align-items:center; gap:12px; }
+.lang-switcher { display:flex; border:1px solid var(--border); border-radius:6px; overflow:hidden; }
+.lang-btn { padding:5px 10px; font-size:11px; font-weight:600; border:none; background:#fff; color:var(--muted); cursor:pointer; }
+.lang-btn+.lang-btn { border-left:1px solid var(--border); }
+.lang-btn.active { background:var(--text); color:#fff; }
 .btn { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; transition:all .15s; }
 .btn-primary { background:var(--primary); color:#fff; }
 .btn-primary:hover { background:#005bb5; }
@@ -170,6 +174,71 @@ var state = {
   editingTask: null, showActivate: false, tasksLoading: false, taskFilter: '',
 };
 
+/* ── i18n runtime（轻量版，无构建步骤，语义对齐 herix-miniapp/src/utils/i18n.ts）──
+ * 取值：远端词典(/api/i18n/:locale，运营在 admin「本地化」矩阵改的) → fallback(调用点内联的中文原文)
+ * 没有打包词典这一层——merchant.html 不过 webpack，fallback 参数本身就是"永远可用的兜底"
+ * key 统一 merchant.* 前缀，和 herix-miniapp 共用同一张 i18n_entries 表/同一套 seed 管线 */
+var MI18N_LOCALE = 'zh';
+var MI18N_DICT = {};
+var MI18N_LOCALES = [{ id: 'zh', label: '中' }, { id: 'ja', label: '日' }, { id: 'en', label: 'EN' }];
+
+function detectLocale() {
+  try {
+    var stored = localStorage.getItem('herix_merchant_locale');
+    if (stored && MI18N_LOCALES.some(function(l){return l.id===stored})) return stored;
+    var nav = (navigator.language || 'zh').toLowerCase();
+    if (nav.indexOf('ja') === 0) return 'ja';
+    if (nav.indexOf('en') === 0) return 'en';
+  } catch (e) { /* 检测失败走默认 */ }
+  return 'zh';
+}
+
+/** key 没有对应词条(远端未就绪/字段缺失)时用 fallback；fallback 缺省则显示 key 本身 */
+function t(key, fallback, params) {
+  var v = MI18N_DICT[key] || fallback || key;
+  if (params) {
+    for (var k in params) if (params.hasOwnProperty(k)) v = v.split('{'+k+'}').join(params[k]);
+  }
+  return v;
+}
+
+function loadI18nDict(locale) {
+  fetch(API + '/i18n/' + locale)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      MI18N_DICT = (d && d.entries) || {};
+      try { localStorage.setItem('herix_merchant_i18n_'+locale, JSON.stringify(MI18N_DICT)); } catch (e) {}
+      render();
+    })
+    .catch(function(){ /* 拉取失败：留着调用点的中文 fallback，不阻断页面 */ });
+}
+
+function setLocale(locale) {
+  MI18N_LOCALE = locale;
+  try { localStorage.setItem('herix_merchant_locale', locale); } catch (e) {}
+  try {
+    var cached = localStorage.getItem('herix_merchant_i18n_'+locale);
+    if (cached) MI18N_DICT = JSON.parse(cached);
+  } catch (e) {}
+  render();
+  loadI18nDict(locale);
+}
+
+MI18N_LOCALE = detectLocale();
+(function(){
+  try {
+    var cached = localStorage.getItem('herix_merchant_i18n_'+MI18N_LOCALE);
+    if (cached) MI18N_DICT = JSON.parse(cached);
+  } catch (e) {}
+})();
+
+/* ── 语言切换器 UI（跟 topbar 其它按钮同一批 helper） ── */
+function langSwitcherHTML() {
+  return '<div class="lang-switcher">' + MI18N_LOCALES.map(function(l) {
+    return '<button class="lang-btn'+(MI18N_LOCALE===l.id?' active':'')+'" onclick="setLocale(\''+l.id+'\')">'+l.label+'</button>';
+  }).join('') + '</div>';
+}
+
 /* ── Routing ── */
 function go(page, data) {
   state.page = page;
@@ -194,32 +263,32 @@ function render() {
 function layout(inner) {
   var sm = state.dashStats?.summary||{}; var pending = (sm.pendingApplicants||0)+(sm.pendingSubmissions||0);
   var nav = [
-    { id:'dashboard', icon:'📊', label:'概览' },
-    { id:'tasks', icon:'📋', label:'任务管理' },
-    { id:'reviews', icon:'✅', label:'审核中心', badge: pending },
-    { id:'wallet', icon:'💰', label:'钱包充值' },
-    { id:'csv', icon:'📤', label:'数据上传' },
-    { id:'settings', icon:'⚙️', label:'账户设置' },
+    { id:'dashboard', icon:'📊', label:t('merchant.nav.dashboard','概览') },
+    { id:'tasks', icon:'📋', label:t('merchant.nav.tasks','任务管理') },
+    { id:'reviews', icon:'✅', label:t('merchant.nav.reviews','审核中心'), badge: pending },
+    { id:'wallet', icon:'💰', label:t('merchant.nav.wallet','钱包充值') },
+    { id:'csv', icon:'📤', label:t('merchant.nav.csv','数据上传') },
+    { id:'settings', icon:'⚙️', label:t('merchant.nav.settings','账户设置') },
   ];
   var sb = '<div class="sidebar" id="sidebar">';
-  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">商户后台</div></div></div></div>';
+  sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">'+t('merchant.sidebar.subtitle','商户后台')+'</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
-  sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">品牌商家</span></div>';
+  sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">'+t('merchant.sidebar.brandLabel','品牌商家')+'</span></div>';
   var linked = state.brandProfile?.linkedAccount;
   if (linked) {
-    var linkedRoleLabel = (linked.roles||[]).includes('HERALD') ? '赫使' : '商家';
-    sb += '<div class="sb-logout" onclick="switchAccount()" style="margin-bottom:4px">🔁 切换到'+esc(linked.nickname)+'（'+linkedRoleLabel+'）</div>';
+    var linkedRoleLabel = (linked.roles||[]).includes('HERALD') ? t('merchant.role.herald','赫使') : t('merchant.role.brand','商家');
+    sb += '<div class="sb-logout" onclick="switchAccount()" style="margin-bottom:4px">🔁 '+t('merchant.sidebar.switchTo','切换到{name}（{role}）',{name:esc(linked.nickname),role:linkedRoleLabel})+'</div>';
   }
   var userRoles = (state.user && state.user.roles) || [state.user && state.user.role];
   if (userRoles.includes('HERALD')) {
-    sb += '<div class="sb-logout" onclick="switchToHerald()" style="margin-bottom:4px">⇄ 切换赫使模式</div>';
+    sb += '<div class="sb-logout" onclick="switchToHerald()" style="margin-bottom:4px">⇄ '+t('merchant.sidebar.switchHerald','切换赫使模式')+'</div>';
   }
-  sb += '<div class="sb-logout" onclick="logout()">退出登录</div></div></div>';
+  sb += '<div class="sb-logout" onclick="logout()">'+t('merchant.sidebar.logout','退出登录')+'</div></div></div>';
 
   var main = '<div class="main"><div class="topbar">';
   main += '<div style="display:flex;align-items:center;gap:12px"><button class="hamburger" onclick="toggleSidebar()">☰</button>';
   main += '<div class="page-title" id="page-title">'+getPageTitle()+'</div></div>';
-  main += '<div class="topbar-right" style="display:flex;align-items:center;gap:8px">'+notifBellHTML()+topbarActions()+'</div></div>';
+  main += '<div class="topbar-right" style="display:flex;align-items:center;gap:8px">'+langSwitcherHTML()+notifBellHTML()+topbarActions()+'</div></div>';
   if (state.msg) main += '<div style="padding:0 28px;margin-top:16px"><div class="alert alert-'+state.msgType+'">'+esc(state.msg)+'</div></div>';
   main += '<div class="content">'+inner+'</div></div>';
 
@@ -227,7 +296,18 @@ function layout(inner) {
 }
 
 function getPageTitle() {
-  var m = {dashboard:'概览', tasks:'任务管理', reviews:'审核中心', wallet:'钱包充值', csv:'数据上传', settings:'账户设置', task_detail:'任务详情', task_create:'创建任务', task_edit:'编辑任务', task_meta_edit:'编辑任务'};
+  var m = {
+    dashboard: t('merchant.nav.dashboard','概览'),
+    tasks: t('merchant.nav.tasks','任务管理'),
+    reviews: t('merchant.nav.reviews','审核中心'),
+    wallet: t('merchant.nav.wallet','钱包充值'),
+    csv: t('merchant.nav.csv','数据上传'),
+    settings: t('merchant.nav.settings','账户设置'),
+    task_detail: t('merchant.pageTitle.taskDetail','任务详情'),
+    task_create: t('merchant.pageTitle.taskCreate','创建任务'),
+    task_edit: t('merchant.pageTitle.taskEdit','编辑任务'),
+    task_meta_edit: t('merchant.pageTitle.taskEdit','编辑任务'),
+  };
   return m[state.page] || '';
 }
 
@@ -3292,6 +3372,7 @@ function downloadPoster() {
 
 // Init
 loadCategories();
+loadI18nDict(MI18N_LOCALE); // 缓存词典先渲染(可能为空,fallback顶上)，这次异步拉到最新覆盖
 if (!tryResumeSwitchedSession()) loadDashStats();
 </script>
 </body>

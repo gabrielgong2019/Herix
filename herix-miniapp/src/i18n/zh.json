@@ -480,5 +480,21 @@
   "category.referral": "推荐",
   "category.baby": "母婴",
   "common.back": "返回",
-  "common.copied": "已复制"
+  "common.copied": "已复制",
+  "merchant.nav.dashboard": "概览",
+  "merchant.nav.tasks": "任务管理",
+  "merchant.nav.reviews": "审核中心",
+  "merchant.nav.wallet": "钱包充值",
+  "merchant.nav.csv": "数据上传",
+  "merchant.nav.settings": "账户设置",
+  "merchant.sidebar.subtitle": "商户后台",
+  "merchant.sidebar.brandLabel": "品牌商家",
+  "merchant.sidebar.switchTo": "切换到{name}（{role}）",
+  "merchant.sidebar.switchHerald": "切换赫使模式",
+  "merchant.sidebar.logout": "退出登录",
+  "merchant.role.herald": "赫使",
+  "merchant.role.brand": "商家",
+  "merchant.pageTitle.taskDetail": "任务详情",
+  "merchant.pageTitle.taskCreate": "创建任务",
+  "merchant.pageTitle.taskEdit": "编辑任务"
 }

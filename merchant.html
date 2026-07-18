@@ -287,7 +287,7 @@ function layout(inner) {
   var sb = '<div class="sidebar" id="sidebar">';
   sb += '<div class="sb-logo"><div style="display:flex;align-items:center;gap:9px"><img src="Logo/herix-orig-icon.png" style="width:30px;height:30px;border-radius:7px;flex-shrink:0"><div>Herix<div style="font-size:10px;color:rgba(255,255,255,.4);font-weight:400;margin-top:1px;letter-spacing:0">'+t('merchant.sidebar.subtitle','商家后台')+'</div></div></div></div>';
   sb += Sidebar.navItems(nav, { activeId: state.page, onclick: "nav('%s')" });
-  sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">'+t('merchant.sidebar.brandLabel','品牌商家')+'</span></div>';
+  sb += '<div class="sb-bottom"><div class="sb-user">'+esc(state.user.nickname)+'<br><span style="font-size:10px">'+(state.brandProfile&&state.brandProfile.is_agency?'📢 '+t('merchant.wizard.identityAgency','广告代理'):t('merchant.wizard.identityBrand','品牌方'))+'</span></div>';
   var linked = state.brandProfile?.linkedAccount;
   if (linked) {
     var linkedRoleLabel = (linked.roles||[]).includes('HERALD') ? t('merchant.role.herald','赫使') : t('merchant.role.brand','商家');
@@ -360,46 +360,66 @@ function pageContent() {
 
 /* ── Login ── */
 function loginPage() {
+  var isReg = state.authMode === 'register';
   return '<div class="login-wrap"><div class="login-card">'
     +'<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'+langSwitcherHTML()+'</div>'
     +'<div class="login-logo"><img src="Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
     +'<div class="login-sub">'+t('merchant.login.subtitle','商家后台')+'</div>'
     +Auth.loginForm({
+      // mode 'both' 渲染注册表单（含邮箱验证码+昵称），'login' 渲染登录表单
+      mode: isReg ? 'both' : 'login',
       title: '',
       subtitle: '',
+      registerTitle: '',
+      registerSubtitle: '',
       emailId: 'email',
       passwordId: 'password',
       emailPlaceholder: 'brand@company.com',
       emailLabel: t('merchant.login.email','邮箱'),
+      vcodeLabel: t('merchant.login.vcode','邮箱验证码'),
+      nicknameLabel: isReg ? t('merchant.login.nickname','昵称 / 负责人姓名') : null,
       passwordLabel: t('merchant.login.password','密码'),
       passwordPlaceholder: t('merchant.login.password','密码'),
       submitText: t('merchant.login.submit','登录'),
+      registerSubmitText: t('merchant.login.registerSubmit','注册并开始入驻'),
       fieldClass: 'field field-lg',
       titleClass: '',
       subtitleClass: '',
       submitStyle: 'width:100%;padding:12px',
       submitBtnClass: '',
     })
-    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">'+t('merchant.login.noAccount','还没有账号？')+'<a href="herix.html" style="color:var(--primary)">'+t('merchant.login.goRegister','前往注册')+'</a></div>'
+    +'<div style="text-align:center;margin-top:16px;font-size:12px;color:var(--muted)">'
+    +(isReg
+      ? t('merchant.login.hasAccount','已有账号？')+'<a href="javascript:void(0)" onclick="state.authMode=\'login\';render()" style="color:var(--primary)">'+t('merchant.login.goLogin','去登录')+'</a>'
+      : t('merchant.login.noAccount','还没有账号？')+'<a href="javascript:void(0)" onclick="state.authMode=\'register\';render()" style="color:var(--primary)">'+t('merchant.login.goRegister','前往注册')+'</a>')
+    +'</div>'
     +'</div></div>';
 }
 
 function bindLogin() {
+  // 登录/注册共用的入口处理：没有 BRAND 角色的账号（新注册的、或赫使账号）
+  // 不再拒之门外，而是直接进入入驻向导（向导内部会 add-role BRAND + 品牌入驻）——
+  // 这是 HP「品牌/广告代理入驻」按钮和本页注册的统一归宿（2026-07-18 打通，
+  // 此前 showActivate 从未被置 true，整个向导是不可达代码）
+  function handleAuthed(d) {
+    state.token = d.token; state.user = d.user;
+    var uRoles = d.user.roles || [d.user.role];
+    if (!uRoles.includes('BRAND') || !d.user.brand_onboarded) {
+      state.showActivate = true;
+      state.activateStep = 1;
+      render();
+      return;
+    }
+    state.msg = t('merchant.login.success','登录成功'); state.msgType = 'success';
+    loadDashStats(); loadMyTasks(); loadBrandProfile();
+    handleBrandBindFromUrl();  // 品牌方绑定邀请链接（?bind_task=&bind_token=）
+    loadNotifications();
+    setInterval(loadNotifications, 60000);  // 每分钟轮询一次
+  }
   Auth.init({
     api: API + '/auth',
-    onLogin: function(d) {
-      var uRoles=d.user.roles||[d.user.role];
-      if(!uRoles.includes('BRAND')){
-        document.getElementById('auth-form-err').innerHTML='<div class="alert alert-error">'+t('merchant.login.merchantOnly','此页面仅限商家用户')+'</div>';
-        return;
-      }
-      state.token=d.token;state.user=d.user;
-      state.msg=t('merchant.login.success','登录成功');state.msgType='success';
-      loadDashStats();loadMyTasks();loadBrandProfile();
-      handleBrandBindFromUrl();  // 品牌方绑定邀请链接（?bind_task=&bind_token=）
-      loadNotifications();
-      setInterval(loadNotifications, 60000);  // 每分钟轮询一次
-    },
+    onLogin: handleAuthed,
+    onRegister: handleAuthed,
     onError: function(msg) {
       var el=document.getElementById('auth-form-err');
       if(el)el.innerHTML='<div class="alert alert-error">'+esc(msg)+'</div>';

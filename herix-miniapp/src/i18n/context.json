@@ -992,5 +992,10 @@
   "merchant.poster.recruiting": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.poster.scanCta": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.poster.scanSub": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
-  "merchant.poster.footer": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)"
+  "merchant.poster.footer": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
+  "merchant.login.vcode": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
+  "merchant.login.nickname": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
+  "merchant.login.registerSubmit": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
+  "merchant.login.hasAccount": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)",
+  "merchant.login.goLogin": "商家后台登录页注册模式(2026-07-18 注册链路打通：注册/无BRAND角色登录→入驻向导)"
 }

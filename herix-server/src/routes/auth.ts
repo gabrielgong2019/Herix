@@ -86,7 +86,8 @@ function parseRoles(rolesJson: string | null, primaryRole: string): string[] {
 async function issueLogin(userId: string) {
   const user = await findOne<any>(
     `SELECT u.id, u.email, u.nickname, u.role, u.roles, u.is_verified,
-            COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded
+            COALESCE(hp.is_onboarded, bp.is_onboarded, 0) as is_onboarded,
+            bp.is_onboarded as brand_onboarded
      FROM users u
      LEFT JOIN herald_profiles hp ON hp.user_id = u.id
      LEFT JOIN brand_profiles bp ON bp.user_id = u.id
@@ -100,6 +101,9 @@ async function issueLogin(userId: string) {
     user: {
       id: user.id, nickname: user.nickname, role: user.role,
       roles: userRoles, isVerified: !!user.is_verified, is_onboarded: !!user.is_onboarded,
+      // 品牌入驻完成标记（2026-07-18）：merchant.html 登录后据此决定是否进入驻向导；
+      // 旧的合并 is_onboarded 是 herald 优先的 COALESCE，双角色账号下不可用
+      brand_onboarded: !!user.brand_onboarded,
       email: user.email || null,
     },
   };
@@ -314,6 +318,7 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
   const user = await findOne<any>(
     `SELECT u.id, u.phone, u.email, u.nickname, u.avatar_url, u.role, u.roles, u.is_verified, u.created_at,
             bp.company_name, bp.industry, bp.contact_name, bp.is_onboarded as brand_onboarded,
+            bp.website, bp.company_desc, bp.contact_phone, bp.is_agency, bp.country as brand_country,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email,
             hp.display_name, hp.country, hp.diaspora_group, hp.social_platforms, hp.specialties,
             hp.is_onboarded, hp.residence, hp.residence_country, hp.kyc_status,

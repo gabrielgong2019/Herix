@@ -991,5 +991,10 @@
   "merchant.poster.recruiting": "Recruiting Ambassadors",
   "merchant.poster.scanCta": "Scan to register and claim the task",
   "merchant.poster.scanSub": "New users · Free to join · Get paid on completion",
-  "merchant.poster.footer": "herix.jp · Ambassador Platform"
+  "merchant.poster.footer": "herix.jp · Ambassador Platform",
+  "merchant.login.vcode": "Email Verification Code",
+  "merchant.login.nickname": "Nickname / Contact Name",
+  "merchant.login.registerSubmit": "Register & Start Onboarding",
+  "merchant.login.hasAccount": "Already have an account? ",
+  "merchant.login.goLogin": "Log In"
 }

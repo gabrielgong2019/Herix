@@ -991,5 +991,10 @@
   "merchant.poster.recruiting": "アンバサダー募集中",
   "merchant.poster.scanCta": "スキャンして登録、すぐに案件を受け取ろう",
   "merchant.poster.scanSub": "新規登録 · 参加無料 · 案件完了で報酬獲得",
-  "merchant.poster.footer": "herix.jp · アンバサダープラットフォーム"
+  "merchant.poster.footer": "herix.jp · アンバサダープラットフォーム",
+  "merchant.login.vcode": "メール認証コード",
+  "merchant.login.nickname": "ニックネーム / ご担当者名",
+  "merchant.login.registerSubmit": "登録してオンボーディングを開始",
+  "merchant.login.hasAccount": "アカウントをお持ちの方は",
+  "merchant.login.goLogin": "ログインへ"
 }

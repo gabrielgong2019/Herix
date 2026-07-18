@@ -991,5 +991,10 @@
   "merchant.poster.recruiting": "正在招募赫使",
   "merchant.poster.scanCta": "扫码注册，立即领取任务",
   "merchant.poster.scanSub": "新用户注册 · 免费加入 · 完成任务即获报酬",
-  "merchant.poster.footer": "herix.jp · 赫使大使平台"
+  "merchant.poster.footer": "herix.jp · 赫使大使平台",
+  "merchant.login.vcode": "邮箱验证码",
+  "merchant.login.nickname": "昵称 / 负责人姓名",
+  "merchant.login.registerSubmit": "注册并开始入驻",
+  "merchant.login.hasAccount": "已有账号？",
+  "merchant.login.goLogin": "去登录"
 }

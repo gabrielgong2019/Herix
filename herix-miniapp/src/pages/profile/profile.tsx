@@ -54,7 +54,6 @@ interface State {
   password: string;
   email: string;
   nickname: string;
-  roleIndex: number;
   loading: boolean;
   showRegister: boolean;
   balance: any;
@@ -84,7 +83,6 @@ export default class Profile extends Component<{}, State> {
     password: '',
     email: '',
     nickname: '',
-    roleIndex: 1,
     loading: false,
     showRegister: false,
     balance: {},
@@ -272,7 +270,7 @@ export default class Profile extends Component<{}, State> {
   };
 
   handleRegister = async () => {
-    const { email, password, nickname, roleIndex, vcode } = this.state;
+    const { email, password, nickname, vcode } = this.state;
     if (!email || !password) {
       Taro.showToast({ title: t('profile.errEmailPass'), icon: 'none' });
       return;
@@ -283,7 +281,8 @@ export default class Profile extends Component<{}, State> {
     }
     this.setState({ loading: true });
     try {
-      const role = roleIndex === 0 ? 'BRAND' : 'HERALD';
+      // 注册恒定赫使：商家/广告代理走 merchant.html 入驻向导（2026-07-19 移除身份切换）
+      const role = 'HERALD';
       const res = await authApi.register({ email, password, nickname, role, code: vcode.trim() });
       setToken(res.token);
       Taro.setStorageSync('herix_user', res.user);
@@ -448,7 +447,7 @@ export default class Profile extends Component<{}, State> {
   );
 
   render() {
-    const { user, isLogin, account, password, email, nickname, roleIndex, loading, showRegister } = this.state;
+    const { user, isLogin, account, password, email, nickname, loading, showRegister } = this.state;
 
     if (!isLogin) {
       return (
@@ -481,10 +480,6 @@ export default class Profile extends Component<{}, State> {
                 </View>
                 <Input className='input' placeholder={t('profile.nickname')} value={nickname} onInput={e => this.setState({ nickname: e.detail.value })} />
                 <Input className='input' placeholder={t('profile.passwordMin')} password value={password} onInput={e => this.setState({ password: e.detail.value })} />
-                <View className='role-select'>
-                  <Text className={roleIndex === 1 ? 'role-active' : 'role'} onClick={() => this.setState({ roleIndex: 1 })}>{t('profile.iAmHerald')}</Text>
-                  <Text className={roleIndex === 0 ? 'role-active' : 'role'} onClick={() => this.setState({ roleIndex: 0 })}>{t('profile.iAmBrand')}</Text>
-                </View>
                 <Button className='btn-primary' onClick={this.handleRegister} loading={loading}>{t('profile.register')}</Button>
                 <Text className='switch-auth' onClick={() => this.setState({ showRegister: false })}>{t('profile.toLogin')}</Text>
               </>

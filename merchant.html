@@ -445,6 +445,10 @@ function bindLogin() {
     if (!uRoles.includes('BRAND') || !d.user.brand_onboarded) {
       state.showActivate = true;
       state.activateStep = 1;
+      // HP 入口已声明身份 → 第一步预选(可改)，商家确认即下一步
+      if (state.intentIsAgency !== undefined && !(state.activateData && state.activateData.isAgency !== undefined)) {
+        state.activateData = Object.assign({}, state.activateData, { isAgency: state.intentIsAgency });
+      }
       render();
       return;
     }
@@ -3718,6 +3722,14 @@ function downloadPoster() {
 }
 
 // Init
+// HP 入驻 CTA 带 ?intent=agency|brand：未登录直接落在注册页，注册后向导第一步预选对应身份
+(function(){
+  var intent = new URLSearchParams(location.search).get('intent');
+  if (intent === 'agency' || intent === 'brand') {
+    state.authMode = 'register';
+    state.intentIsAgency = (intent === 'agency');
+  }
+})();
 loadCategories();
 var PLATFORM_INFO = { operatorEntity: 'AfterWork株式会社' };
 fetch(API + '/platform-info').then(function(r){return r.json()}).then(function(d){ if (d && d.operatorEntity) PLATFORM_INFO = d; }).catch(function(){});

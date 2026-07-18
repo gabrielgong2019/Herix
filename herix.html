@@ -2293,15 +2293,12 @@ function loginHTML(){
     registerTitle: '加入赫使',
     registerSubtitle: '成为品牌与社区的桥梁',
     registerSubmitText: '注册',
-    showRoleToggle: !l,
     nicknameLabel: '昵称',
-    roleToggleScript: "window._r='HERALD';qsa('.role-btn').forEach(function(b){b.classList.remove('active')});this.classList.add('active')",
-    otherRoleScript: "window._r='BRAND';qsa('.role-btn').forEach(function(b){b.classList.remove('active')});this.classList.add('active')",
-    roleToggleClass: 'role-toggle',
-    roleBtnClass: 'role-btn',
+    // 身份切换已移除（2026-07-19）：本站注册恒定赫使，商家/广告代理走 merchant.html 入驻向导
   };
   h+=Auth.loginForm(opts);
   h+='<div class="link" onclick="toggleLoginTab()">'+(l?'没有账号？去注册':'已有账号？去登录')+'</div>';
+  if(!l) h+='<div class="link" style="margin-top:4px" onclick="window.location.href=\'/merchant.html?intent=brand\'">商家 / 广告代理入驻 →</div>';
   return h;
 }
 

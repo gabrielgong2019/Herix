@@ -620,52 +620,59 @@ function tasksPage() {
 
   var creditBanner = creditStatusBanner();
   var filterBar = '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">';
-  var statuses = [{v:'',l:'全部'},{v:'DRAFT',l:'草稿'},{v:'OPEN',l:'招募中'},{v:'COMPLETED',l:'已完成'},{v:'CANCELLED',l:'已取消'}];
+  var statuses = [
+    {v:'',l:t('merchant.filter.all','全部')}, {v:'DRAFT',l:t('merchant.status.DRAFT','草稿')},
+    {v:'OPEN',l:t('merchant.status.OPEN','招募中')}, {v:'COMPLETED',l:t('merchant.status.COMPLETED','已完成')},
+    {v:'CANCELLED',l:t('merchant.status.CANCELLED','已取消')},
+  ];
   statuses.forEach(function(s){
     filterBar += '<button class="btn btn-sm '+(status===s.v?'btn-primary':'btn-outline')+'" onclick="state.taskFilter=\''+s.v+'\';render()">'+s.l+'</button>';
   });
-  filterBar += '<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go(\'task_create\')">+ 创建任务</button></div>';
+  filterBar += '<button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="go(\'task_create\')">+ '+t('merchant.tasks.create','创建任务')+'</button></div>';
 
-  if (!tasks.length && state.tasksLoading) return creditBanner+filterBar+'<div class="empty" style="padding:40px">加载中...</div>';
+  if (!tasks.length && state.tasksLoading) return creditBanner+filterBar+'<div class="empty" style="padding:40px">'+t('common.loading','加载中...')+'</div>';
 
   if (!filtered.length) {
     return creditBanner+filterBar+'<div class="table-card"><div class="empty"><div class="empty-icon">📋</div>'
-      +(tasks.length ? '该状态下没有任务' : '<div style="margin-bottom:16px">还没有任务</div><button class="btn btn-primary" onclick="go(\'task_create\')">+ 创建第一个任务</button>')
+      +(tasks.length ? t('merchant.tasks.emptyFiltered','该状态下没有任务') : '<div style="margin-bottom:16px">'+t('merchant.dash.emptyTasks','还没有任务')+'</div><button class="btn btn-primary" onclick="go(\'task_create\')">+ '+t('merchant.dash.createFirst','创建第一个任务')+'</button>')
       +'</div></div>';
   }
 
-  var rows = filtered.map(function(t) {
-    var st = t.status || 'DRAFT';
-    var created = t.created_at ? fmtLocal(t.created_at).slice(0,10) : '-';
-    var fpBadge = t.fast_payout ? '<span style="display:inline-block;font-size:10px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:5px;vertical-align:middle">⚡ 极速打款</span>' : '';
-    return '<tr data-task-id="'+esc(t.id)+'" style="cursor:pointer">'
-      +'<td><div style="font-weight:500">'+esc(t.title)+fpBadge+'</div>'
-      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+catLabel(t.category)+'</div></td>'
+  var rows = filtered.map(function(t3) {
+    var st = t3.status || 'DRAFT';
+    var created = t3.created_at ? fmtLocal(t3.created_at).slice(0,10) : '-';
+    var fpBadge = t3.fast_payout ? '<span style="display:inline-block;font-size:10px;font-weight:600;color:#0369a1;background:#e0f2fe;border-radius:4px;padding:1px 6px;margin-left:5px;vertical-align:middle">⚡ '+t('merchant.tasks.fastPayout','极速打款')+'</span>' : '';
+    return '<tr data-task-id="'+esc(t3.id)+'" style="cursor:pointer">'
+      +'<td><div style="font-weight:500">'+esc(t3.title)+fpBadge+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+catLabel(t3.category)+'</div></td>'
       +'<td><span class="tag tag-'+st.toLowerCase()+'">'+statusLabel(st)+'</span></td>'
-      +'<td><span style="font-size:12px">'+modeLabel(t.mode)+'</span></td>'
-      +'<td>¥'+Number(t.payout_per_herald||0).toLocaleString()+'</td>'
-      +'<td>'+(t.max_heralds||'-')+'</td>'
-      +'<td>'+(t.application_count||t.app_total||0)+'</td>'
+      +'<td><span style="font-size:12px">'+modeLabel(t3.mode)+'</span></td>'
+      +'<td>¥'+Number(t3.payout_per_herald||0).toLocaleString()+'</td>'
+      +'<td>'+(t3.max_heralds||'-')+'</td>'
+      +'<td>'+(t3.application_count||t3.app_total||0)+'</td>'
       +'<td>'+created+'</td>'
-      +'<td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openTask(\''+esc(t.id)+'\')">查看</button></td>'
+      +'<td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();openTask(\''+esc(t3.id)+'\')">'+t('merchant.tasks.view','查看')+'</button></td>'
       +'</tr>';
   }).join('');
-  var html = creditBanner+filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>任务</th><th>状态</th><th>类型</th><th>报酬/人</th><th>名额</th><th>报名数</th><th>创建</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+  var html = creditBanner+filterBar+'<div class="table-card" id="tasks-table"><table><thead><tr><th>'+t('merchant.tasks.colTask','任务')+'</th><th>'+t('merchant.dash.perfTable.status','状态')
+    +'</th><th>'+t('merchant.tasks.colType','类型')+'</th><th>'+t('merchant.tasks.colPayout','报酬/人')+'</th><th>'+t('merchant.tasks.colQuota','名额')
+    +'</th><th>'+t('merchant.tasks.colApps','报名数')+'</th><th>'+t('merchant.tasks.colCreated','创建')+'</th><th></th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 
   // 品牌方关联任务（代理创建、绑定给我看进展的任务；无金额视角）
   var pts = state.partnerTasks || [];
   if (pts.length) {
-    html += '<div style="font-weight:600;margin:24px 0 10px">🤝 品牌方关联任务 <span style="font-weight:400;font-size:11px;color:var(--muted)">由代理创建并邀请你查看进展</span></div>'
-      +'<div class="table-card"><table><thead><tr><th>任务</th><th>代理</th><th>状态</th><th>推广赫使</th><th>累计注册</th><th>累计转化</th><th></th></tr></thead><tbody>'
-      + pts.map(function(t) {
+    html += '<div style="font-weight:600;margin:24px 0 10px">🤝 '+t('merchant.tasks.partnerTitle','品牌方关联任务')+' <span style="font-weight:400;font-size:11px;color:var(--muted)">'+t('merchant.tasks.partnerHint','由代理创建并邀请你查看进展')+'</span></div>'
+      +'<div class="table-card"><table><thead><tr><th>'+t('merchant.tasks.colTask','任务')+'</th><th>'+t('merchant.tasks.colAgency','代理')+'</th><th>'+t('merchant.dash.perfTable.status','状态')
+      +'</th><th>'+t('merchant.tasks.colCodeHolders','推广赫使')+'</th><th>'+t('merchant.tasks.colRegistered','累计注册')+'</th><th>'+t('merchant.tasks.colConverted','累计转化')+'</th><th></th></tr></thead><tbody>'
+      + pts.map(function(t4) {
           return '<tr>'
-            +'<td style="font-weight:500">'+esc(t.title)+(t.data_mode==='DETAIL'?' <span style="font-size:10px;color:#6d28d9;background:#ede9fe;border-radius:4px;padding:1px 5px">明细</span>':'')+'</td>'
-            +'<td>'+esc(t.agency_name||'')+'</td>'
-            +'<td><span class="tag tag-'+(t.status||'').toLowerCase()+'">'+statusLabel(t.status)+'</span></td>'
-            +'<td>'+(t.code_holders||0)+'</td>'
-            +'<td>'+(t.total_registered||0)+'</td>'
-            +'<td>'+(t.total_converted||0)+'</td>'
-            +'<td><button class="btn btn-outline btn-sm" onclick="openPartnerTask(\''+esc(t.id)+'\')">查看进展</button></td>'
+            +'<td style="font-weight:500">'+esc(t4.title)+(t4.data_mode==='DETAIL'?' <span style="font-size:10px;color:#6d28d9;background:#ede9fe;border-radius:4px;padding:1px 5px">'+t('merchant.tasks.detailTag','明细')+'</span>':'')+'</td>'
+            +'<td>'+esc(t4.agency_name||'')+'</td>'
+            +'<td><span class="tag tag-'+(t4.status||'').toLowerCase()+'">'+statusLabel(t4.status)+'</span></td>'
+            +'<td>'+(t4.code_holders||0)+'</td>'
+            +'<td>'+(t4.total_registered||0)+'</td>'
+            +'<td>'+(t4.total_converted||0)+'</td>'
+            +'<td><button class="btn btn-outline btn-sm" onclick="openPartnerTask(\''+esc(t4.id)+'\')">'+t('merchant.tasks.viewProgress','查看进展')+'</button></td>'
             +'</tr>';
         }).join('')
       +'</tbody></table></div>';
@@ -1032,7 +1039,8 @@ var CATEGORIES = [
   {id:'referral',  label:'推荐',icon:'🔗'},
   {id:'baby',      label:'母婴',icon:'🍼'},
 ];
-function catLabel(id){ var c=CATEGORIES.find(function(x){return x.id===id}); return c?c.label:(id||'-'); }
+// category.<id> 词条跟 herix-miniapp 共用(已有 category.referral/category.baby 等)，免费复用
+function catLabel(id){ var c=CATEGORIES.find(function(x){return x.id===id}); return t('category.'+id, c?c.label:(id||'-')); }
 function loadCategories(){ var x=new XMLHttpRequest(); x.open('GET',API+'/categories',true); x.onload=function(){try{var d=JSON.parse(x.responseText);if(Array.isArray(d)&&d.length)CATEGORIES=d;}catch(e){}}; x.send(); }
 
 // PLATFORM_REGISTRY, calcTier, platformById 均来自 /shared/platforms.js

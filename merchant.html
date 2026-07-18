@@ -441,6 +441,8 @@ function bindLogin() {
   // 此前 showActivate 从未被置 true，整个向导是不可达代码）
   function handleAuthed(d) {
     state.token = d.token; state.user = d.user;
+    // 清除登录前残留的钱包错误态（防御：任何登录前误触发的 401 污染都在此归零重拉）
+    if (brandBalance && brandBalance.loadError) brandBalance = null;
     var uRoles = d.user.roles || [d.user.role];
     if (!uRoles.includes('BRAND') || !d.user.brand_onboarded) {
       state.showActivate = true;
@@ -1791,6 +1793,12 @@ function retryBrandWallet() {
 }
 
 function loadBrandWallet(_isRetry) {
+  // 无 token 的调用一律不发（Init 阶段 loadDashStats 会在登录页就触发到这里，
+  // 401 后 brandBalance 被写成 loadError 错误态；登录成功后所有 if(!brandBalance)
+  // 守卫把 truthy 的错误对象当"已加载"永不重拉——首次进入必现"加载失败"、
+  // 手动重试才好。2026-07-19 浏览器抓包坐实：登录前 brand-balance 401 在先，
+  // POST /auth/login 200 在后，之后再无重拉）
+  if (!state.token) return;
   var r = walletPeriodRange(walletPeriod);
   var qs = '?from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to);
   api('GET', '/wallet/brand-balance'+qs, null, function(d) {

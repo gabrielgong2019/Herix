@@ -142,6 +142,7 @@ function shell(inner){
   var nav=[
     {id:'dashboard',icon:'📊',label:'数据看板'},
     {id:'reviews',icon:'✅',label:'审核中心',badge:(st.data.stats?.pendingDeclarations||0)},
+    {id:'kyb',icon:'🏢',label:'商家认证',badge:Array.isArray(st.data.kybReviews)?st.data.kybReviews.length:0},
     {id:'topups',icon:'🏦',label:'充值确认',badge:Array.isArray(st.data.topups)?st.data.topups.filter(function(r){return r.status==='pending'}).length:0},
     {id:'withdrawals',icon:'💸',label:'提现打款',badge:Array.isArray(st.data.withdrawals)?st.data.withdrawals.filter(function(r){return r.status==='pending'}).length:0},
     {id:'users',icon:'👥',label:'用户管理'},
@@ -170,6 +171,7 @@ function pageCont(){
   switch(st.page){
     case 'dashboard': return dashPage();
     case 'reviews': return reviewsPage();
+    case 'kyb': return kybPage();
     case 'topups': return topupsPage();
     case 'withdrawals': return withdrawalsPage();
     case 'users': return usersPage();
@@ -251,31 +253,10 @@ function statCard(label,val,color,icon,unit){
 }
 
 /* ── Reviews ── */
-function reviewsPage(){
-  var decls=st.data.decls||[];
-  var taskRv=st.data.taskReviews||[];
+function kybPage(){
   var kybRv=st.data.kybReviews||[];
-  var tab=st.subPage||'decls';
-  var h='<div class="tabs">'
-    +'<div class="tab'+(tab==='decls'?' active':'')+'" onclick="switchTab(\'decls\')">在留声明 ('+decls.length+')</div>'
-    +'<div class="tab'+(tab==='taskrv'?' active':'')+'" onclick="switchTab(\'taskrv\')">任务审核 ('+taskRv.length+')</div>'
-    +'<div class="tab'+(tab==='kyb'?' active':'')+'" onclick="switchTab(\'kyb\')">商家认证 ('+kybRv.length+')</div>'
-    +'</div>';
-
-  if(tab==='taskrv'){
-    if(!taskRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审任务</div>';
-    return h+taskRv.map(function(r){
-      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.title)+'</span>'
-        +'<span style="font-size:11px;color:var(--muted)">'+(r.published_at?fmtLocal(r.published_at):'')+'</span></div>'
-        +'<div class="acard-sub">'+esc(r.company_name||r.creator_name||'')+(r.is_agency?' <span style="color:#c2410c">[广告代理]</span>':'')+' · '+esc(r.creator_email||'')
-        +' · '+(r.mode==='PERFORMANCE'?'类A·推广码':'类B·内容')+' · ¥'+Number(r.payout_per_herald||0).toLocaleString()+'/人 × '+(r.max_heralds||0)+'</div>'
-        +'<div style="font-size:12px;color:#555;margin:8px 0;line-height:1.6;max-height:120px;overflow-y:auto;background:#f9fafb;border-radius:8px;padding:8px 10px">'+esc(r.description||'')+'</div>'
-        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doTaskReview(\''+r.id+'\',true)">✓ 通过上线</button>'
-        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doTaskReview(\''+r.id+'\',false)">✗ 拒绝</button></div></div>';
-    }).join('');
-  }
-  if(tab==='kyb'){
-    var tc=st.data.trialCredit;
+  var h='<div style="font-size:13px;color:var(--muted);margin-bottom:14px">商家企业认证（KYB）审核与首单体验额度配置。认证通过后该商家发布任务免平台审核，并可申请信用提额。</div>';
+      var tc=st.data.trialCredit;
     h+='<div class="card" style="padding:14px 18px;margin-bottom:16px">'
       +'<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">首单体验额度 · 站点级默认值（当前：日本站 JPY）</div>'
       +'<div style="display:flex;gap:8px;align-items:center"><input id="kyb-trial-credit" type="number" value="'+(tc!=null?tc:'')+'" style="width:140px">'
@@ -289,6 +270,29 @@ function reviewsPage(){
         +(r.kyb_doc_url?'<a href="'+esc(r.kyb_doc_url)+'" target="_blank"><img src="'+esc(r.kyb_doc_url)+'" style="max-width:260px;max-height:180px;border:1px solid var(--border);border-radius:8px;margin:8px 0;object-fit:contain"></a>':'<div style="font-size:12px;color:var(--danger);margin:8px 0">⚠️ 无证件图</div>')
         +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doKyb(\''+r.user_id+'\',true)">✓ 通过认证</button>'
         +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doKyb(\''+r.user_id+'\',false)">✗ 拒绝</button></div></div>';
+    }).join('');
+  return h;
+}
+
+function reviewsPage(){
+  var decls=st.data.decls||[];
+  var taskRv=st.data.taskReviews||[];
+  var tab=st.subPage||'decls';
+  var h='<div class="tabs">'
+    +'<div class="tab'+(tab==='decls'?' active':'')+'" onclick="switchTab(\'decls\')">在留声明 ('+decls.length+')</div>'
+    +'<div class="tab'+(tab==='taskrv'?' active':'')+'" onclick="switchTab(\'taskrv\')">任务审核 ('+taskRv.length+')</div>'
+    +'</div>';
+
+  if(tab==='taskrv'){
+    if(!taskRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审任务</div>';
+    return h+taskRv.map(function(r){
+      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.title)+'</span>'
+        +'<span style="font-size:11px;color:var(--muted)">'+(r.published_at?fmtLocal(r.published_at):'')+'</span></div>'
+        +'<div class="acard-sub">'+esc(r.company_name||r.creator_name||'')+(r.is_agency?' <span style="color:#c2410c">[广告代理]</span>':'')+' · '+esc(r.creator_email||'')
+        +' · '+(r.mode==='PERFORMANCE'?'类A·推广码':'类B·内容')+' · ¥'+Number(r.payout_per_herald||0).toLocaleString()+'/人 × '+(r.max_heralds||0)+'</div>'
+        +'<div style="font-size:12px;color:#555;margin:8px 0;line-height:1.6;max-height:120px;overflow-y:auto;background:#f9fafb;border-radius:8px;padding:8px 10px">'+esc(r.description||'')+'</div>'
+        +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doTaskReview(\''+r.id+'\',true)">✓ 通过上线</button>'
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doTaskReview(\''+r.id+'\',false)">✗ 拒绝</button></div></div>';
     }).join('');
   }
   if(!decls.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';
@@ -1057,6 +1061,7 @@ function load(page){
     st.subPage=st.subPage||'decls';
     apiGet('/admin/declarations',function(d){st.data.decls=d;render()});
     apiGet('/admin/task-reviews',function(d){st.data.taskReviews=Array.isArray(d)?d:[];render()});
+  } else if(page==='kyb'){
     apiGet('/admin/kyb-reviews',function(d){st.data.kybReviews=Array.isArray(d)?d:[];render()});
     apiGet('/admin/kyb/trial-credit',function(d){if(d&&d.amount!=null){st.data.trialCredit=d.amount;render()}});
   } else if(page==='topups'){

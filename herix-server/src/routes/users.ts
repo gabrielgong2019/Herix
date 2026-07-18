@@ -157,6 +157,13 @@ usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Respon
   // 这里只在用户勾选时写 true，不覆盖 admin 已经手动关闭的情况为 false
   if (isAgency === true) data.is_agency = true;
 
+  // upsert：bp 行不存在时 UPDATE 会零行生效但静默返回 success，
+  // 协议同意记录（click-wrap 证据）会丢——2026-07-18 实测踩到，改为显式建行
+  const existingBp = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+  if (!existingBp) {
+    await insert('brand_profiles', { user_id: req.user!.userId, ...data });
+    return res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION });
+  }
   await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
   res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION });
 });

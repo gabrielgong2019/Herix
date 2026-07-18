@@ -548,10 +548,15 @@ export async function initDatabase() {
     `CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read, created_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_promotions_active ON pricing_promotions(scope, starts_at, ends_at)`,
     // platform_settings：信用系统参数
+    // merchant_initial_credit（人人 5000 的通用信用池）已于 2026-07-18 退役，
+    // 由 merchant_trial_credit（首单体验额度，盖戳在任务行上）取代；旧行留在库里无害
     `INSERT INTO platform_settings (key, value, note) VALUES
-      ('merchant_initial_credit', '5000', '商户信用额度默认值（JPY，可被 credit_limit_override 覆盖）'),
+      ('merchant_trial_credit',   '3000', '新商家首单体验额度（JPY）：首个任务发布时按 min(此值, 任务总成本) 盖戳发放，admin 审核中心-商家认证可改'),
       ('fast_payout_threshold',   '100000', '极速打款余额门槛（JPY，发布时余额达到此值则标记极速打款）')
      ON CONFLICT (key) DO NOTHING`,
+    // 首单体验额度（2026-07-18）：戳在任务行上 write-once，生命周期随任务状态派生
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS trial_credit_amount DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS trial_task_id TEXT`,
     `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS review_note TEXT`,
     `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_role TEXT`,
     // 任务报酬字段语义重构（commission 废弃，拆分为三个明确字段）

@@ -667,6 +667,16 @@ function dashPage() {
 
   var html = '';
 
+  // 未注资承诺提醒：进行中任务已承诺的报酬 > 钱包余额（结算只认真金白银，缺口会拖延打款）
+  if (!brandBalance) loadBrandWallet();
+  var bb = brandBalance && !brandBalance.loadError ? brandBalance : null;
+  var bc = bb && bb.credit;
+  if (bc && (bc.creditUsed||0) > (bb.available||0)) {
+    html += '<div style="background:#fffbeb;border:1px solid #fbbf24;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px">'
+      + '<div style="font-size:13px;color:#92400e">💰 '+t('merchant.dash.arrears','进行中任务已承诺报酬 ¥{used}，钱包余额 ¥{bal}——请及时充值，以免赫使打款延迟',{used:Math.round(bc.creditUsed).toLocaleString(),bal:Math.round(bb.available||0).toLocaleString()})+'</div>'
+      + '<button class="btn btn-sm" style="background:#f59e0b;color:#fff;white-space:nowrap;flex-shrink:0" onclick="nav(\'wallet\')">'+t('merchant.credit.topupShort','充值')+' →</button></div>';
+  }
+
   // 核心指标 — 第一行
   html += '<div class="stats-grid">'
     + statCard(t('merchant.dash.totalSpend','累计支出'), '¥'+Number(sm.totalSpend||0).toLocaleString(), '#D43B27', '💰')
@@ -1239,7 +1249,7 @@ function taskFormPage(task) {
     + '<option value="video"'+(task&&task.content_type==='video'?' selected':'')+'>🎬 '+t('merchant.contentType.video','视频')+'</option>'
     + '</select><div style="font-size:11px;color:var(--muted);margin-top:4px">'+t('merchant.form.contentTypeHint','赫使需要提交的内容类型')+'</div></div>'
     // 推广码模式（仅 PERFORMANCE 任务显示）
-    +'<div class="field form-full" id="code-mode-section" style="'+(task&&task.mode!=='PERFORMANCE'?'display:none':'')+'"><label>'+t('merchant.form.codeSource','推广码来源')+'</label>'
+    +'<div class="field form-full" id="code-mode-section" style="'+(!task||task.mode!=='PERFORMANCE'?'display:none':'')+'"><label>'+t('merchant.form.codeSource','推广码来源')+'</label>'
     +'<div style="display:flex;gap:10px;margin-top:4px">'
     +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-auto" value="auto" '+((!task||task.code_mode!=='custom')?'checked':'')+' onchange="toggleCodeMode()"> '+t('merchant.form.codeAuto','平台自动生成（HERIX-XXXXXX）')+'</label>'
     +'<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="codeMode" id="codeMode-custom" value="custom" '+(task&&task.code_mode==='custom'?'checked':'')+' onchange="toggleCodeMode()"> '+t('merchant.form.codeCustom','上传自定义推广码')+'</label>'
@@ -1247,7 +1257,7 @@ function taskFormPage(task) {
     +'<div id="custom-code-hint" style="margin-top:8px;font-size:12px;color:var(--muted);'+(task&&task.code_mode==='custom'?'':'display:none')+'">'+t('merchant.form.codeCustomHint','任务创建后，在任务详情页上传推广码文件。')+'</div>'
     +'</div>'
     // 数据回传模式（仅 PERFORMANCE 任务显示，发布后锁定）
-    +'<div class="field form-full" id="data-mode-section" style="'+(task&&task.mode!=='PERFORMANCE'?'display:none':'')+'"><label>'+t('merchant.form.dataMode','数据回传模式')+' <span style="font-weight:400;font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeLocked','发布后锁定，不可切换')+'</span></label>'
+    +'<div class="field form-full" id="data-mode-section" style="'+(!task||task.mode!=='PERFORMANCE'?'display:none':'')+'"><label>'+t('merchant.form.dataMode','数据回传模式')+' <span style="font-weight:400;font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeLocked','发布后锁定，不可切换')+'</span></label>'
     +'<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">'
     +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-agg" value="AGGREGATE" '+((!task||task.data_mode!=='DETAIL')?'checked':'')+' style="margin-top:2px"><span>'+t('merchant.form.dataModeAgg','汇总模式 — 每个码填累计注册数/使用数，最简单')+'<br><span style="font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeAggHint','系统按增量结算，重复上传不重复打款')+'</span></span></label>'
     +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-detail" value="DETAIL" '+(task&&task.data_mode==='DETAIL'?'checked':'')+' style="margin-top:2px"><span>'+t('merchant.form.dataModeDetail','明细模式 — 逐用户上传（邮箱/ID + 是否成交），可对账可追溯')+'<br><span style="font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeDetailHint','按用户身份去重防误报多付；邮箱即刻哈希脱敏，平台不存原文')+'</span></span></label>'
@@ -1465,7 +1475,7 @@ function csvModeBlockHTML(task) {
     ? 'code,'+t('merchant.csv.hdrUser','用户邮箱或ID')+','+t('merchant.csv.hdrConverted','是否完成交易')+'\nHERIX-A3K9Z2,alice@gmail.com,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,0'
     : 'code,'+t('merchant.csv.hdrRegistered','注册数')+','+t('merchant.csv.hdrUsed','使用数')+'\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3';
   var notes = isDetail ? [
-    t('merchant.csv.noteUseExistingId','<b>直接使用你系统里现成的用户标识</b>（邮箱/用户名均可）——上传后立即加盐单向加密，平台不保存明文（见下方数据处理承诺）；同一用户请始终使用同一标识'),
+    t('merchant.csv.noteUseExistingId','<b>请上传您平台内的用户邮箱或账号 ID</b>——系统接收后立即做不可逆处理，原始数据不落库、不显示（详见下方数据处理承诺）；同一用户请始终使用同一标识，以确保正确去重'),
     t('merchant.csv.noteIncrementalOk','<b>增量或全量上传均可</b>——系统按推广码+用户自动去重，重传、重叠都不会重复计费'),
     t('merchant.csv.noteOneCodePerUser','请在你的系统侧<b>确保每位用户仅能使用一个推广码</b>——同一用户经多个码转化将分别计费（每位赫使的推广都有回报），此类重复支出需由商家承担'),
     t('merchant.csv.noteConvertedFlag','「是否完成交易」填 1/0；从 1 改回 0 <b>不会撤销</b>，已结算不回收'),
@@ -1680,11 +1690,20 @@ function setWalletPeriod(p) {
   render();
 }
 
+function retryBrandWallet() {
+  brandBalance = null;
+  var b = document.getElementById('task-capacity-banner');
+  if (b) b.innerHTML = '<div style="padding:10px 14px;margin-bottom:16px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted)">'+t('merchant.credit.loading','加载额度信息...')+'</div>';
+  loadBrandWallet();
+}
+
 function loadBrandWallet() {
   var r = walletPeriodRange(walletPeriod);
   var qs = '?from='+encodeURIComponent(r.from)+'&to='+encodeURIComponent(r.to);
   api('GET', '/wallet/brand-balance'+qs, null, function(d) {
-    brandBalance = d;
+    // 失败响应(网络错/401/服务器重启瞬间)曾被直接当数据渲染成全 ¥0，
+    // 跟"真没额度"无法区分(2026-07-18 实测踩到)——标记错误态，banner 显示重试
+    brandBalance = (d && d.currency) ? d : { loadError: true };
     // 在任务表单页，直接更新 banner 节点，不重渲（否则清空用户输入）
     if (state.page === 'task_create' || state.page === 'task_edit') {
       var b = document.getElementById('task-capacity-banner');
@@ -1714,6 +1733,10 @@ function copyText(text) {
 
 function walletPage() {
   if (!brandBalance) { loadBrandWallet(); return '<div style="padding:80px;text-align:center;color:var(--muted)">'+t('common.loading','加载中...')+'</div>'; }
+  if (brandBalance.loadError) {
+    return '<div style="padding:60px;text-align:center;color:#991b1b;font-size:13px">'+t('merchant.credit.loadFailed','额度信息加载失败，请检查网络后重试')
+      +'<div style="margin-top:12px"><button class="btn btn-sm btn-outline" onclick="brandBalance=null;loadBrandWallet();render()">'+t('merchant.credit.retry','重试')+'</button></div></div>';
+  }
   var b = brandBalance;
   var cur = b.currency || 'JPY';
   var h = '';
@@ -1764,12 +1787,26 @@ function taskCapacityBannerContent() {
   if (!brandBalance) {
     return '<div style="padding:10px 14px;margin-bottom:16px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted)">'+t('merchant.credit.loading','加载额度信息...')+'</div>';
   }
+  if (brandBalance.loadError) {
+    return '<div style="padding:12px 16px;margin-bottom:16px;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;font-size:13px;color:#991b1b;display:flex;align-items:center;justify-content:space-between">'
+      +'<span>'+t('merchant.credit.loadFailed','额度信息加载失败，请检查网络后重试')+'</span>'
+      +'<button class="btn btn-sm btn-outline" onclick="retryBrandWallet()">'+t('merchant.credit.retry','重试')+'</button></div>';
+  }
   var c = brandBalance.credit || {};
-  var capacity = c.totalCapacity != null ? c.totalCapacity : (brandBalance.available || 0);
+  var wallet = brandBalance.available || 0;
+  var trial = c.trialEligible ? (c.trialDefault || 0) : 0;
+  var capacity = (c.totalCapacity != null ? c.totalCapacity : wallet) + trial;
   var hasToppedUp = !!c.hasToppedUp;
-  var sub = hasToppedUp
-    ? t('merchant.credit.realBalanceSub','真实余额，充值后发布自动获得极速打款')
-    : t('merchant.credit.capacityFormula','信用剩余 ¥{credit} + 钱包 ¥{wallet} = 可发 ¥{cap}',{credit:(c.creditRemaining||0).toLocaleString(),wallet:(brandBalance.available||0).toLocaleString(),cap:capacity.toLocaleString()});
+  var sub;
+  if (hasToppedUp) {
+    sub = t('merchant.credit.realBalanceSub','真实余额，充值后发布自动获得极速打款');
+  } else if (trial > 0) {
+    sub = t('merchant.credit.trialSub','🎁 新商家体验额度 ¥{trial} + 钱包 ¥{wallet}，可直接发布第一个任务；赫使报酬打款需要钱包真实余额，请提前充值',{trial:trial.toLocaleString(),wallet:wallet.toLocaleString()});
+  } else if ((c.initialCredit || 0) > 0) {
+    sub = t('merchant.credit.capacityFormula','信用剩余 ¥{credit} + 钱包 ¥{wallet} = 可发 ¥{cap}',{credit:(c.creditRemaining||0).toLocaleString(),wallet:wallet.toLocaleString(),cap:capacity.toLocaleString()});
+  } else {
+    sub = t('merchant.credit.walletOnlySub','钱包 ¥{wallet} · 发布任务与报酬打款需要钱包余额，请先充值',{wallet:wallet.toLocaleString()});
+  }
 
   return '<div style="background:'+(hasToppedUp?'#f0fdf4':'#eff6ff')+';border:1px solid '+(hasToppedUp?'#bbf7d0':'#bfdbfe')+';border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">'
     +'<div>'
@@ -1798,8 +1835,8 @@ function onTaskCostInput() {
   var isPerformance = ((document.getElementById('mode')||{}).value) === 'PERFORMANCE';
 
   // 额度数据（成果报酬任务按转化付费，无法预估总支出，不做额度预检）
-  var c        = brandBalance && brandBalance.credit;
-  var capacity = !isPerformance ? (c ? c.totalCapacity : (brandBalance ? brandBalance.available : null)) : null;
+  var c        = brandBalance && !brandBalance.loadError && brandBalance.credit;
+  var capacity = !isPerformance ? (c ? (c.totalCapacity + (c.trialEligible ? (c.trialDefault||0) : 0)) : null) : null;
   var over     = capacity !== null && total > capacity;
   var barColor = over ? '#dc2626' : '#16a34a';
 
@@ -2699,14 +2736,15 @@ function saveTask(publish) {
   if (publish) {
     var rate  = (state.brandProfile && state.brandProfile.commission_rate) || 0.15;
     var total = Math.round(body.payoutPerHerald / (1 - rate)) * body.maxHeralds;
-    var c        = brandBalance && brandBalance.credit;
-    // 单笔任务只走一个资金池：钱包 OR 信用剩余，取较大值
-    var wallet = brandBalance ? (brandBalance.available || 0) : 0;
-    var creditLeft = c ? (c.creditRemaining || 0) : 0;
-    var maxSingle = Math.max(wallet, creditLeft);
-    if (maxSingle > 0 && total > maxSingle) {
-      showFormError(t('merchant.form.errInsufficient','额度不足，本任务需 ¥{total}，当前最大可发 ¥{max}（钱包 ¥{wallet} / 信用剩余 ¥{credit}）。',{total:Number(total).toLocaleString(),max:Math.round(maxSingle).toLocaleString(),wallet:Math.round(wallet).toLocaleString(),credit:Math.round(creditLeft).toLocaleString()}));
-      return;
+    var c = brandBalance && !brandBalance.loadError && brandBalance.credit;
+    // 可发容量 = 共享池(钱包+提额-占用) + 首单体验额度；与服务端 /publish 闸口同一口径。
+    // 额度数据没加载成功就不拦，交给服务端闸口兜底
+    if (c) {
+      var cap = c.totalCapacity + (c.trialEligible ? (c.trialDefault||0) : 0);
+      if (total > cap) {
+        showFormError(t('merchant.form.errInsufficient','额度不足，本任务需 ¥{total}，当前可发 ¥{max}，请充值后再发布。',{total:Number(total).toLocaleString(),max:Math.round(cap).toLocaleString()}));
+        return;
+      }
     }
   }
 
@@ -2742,12 +2780,12 @@ function saveTask(publish) {
           if (p.error) {
             var errMsg = p.error;
             if (p.code === 'INSUFFICIENT_CREDIT') {
-              errMsg = t('merchant.form.errInsufficientPublish','额度不足，本任务需 ¥{needed}，当前剩余 ¥{cap}。请充值后再发布。',{needed:(p.needed||0).toLocaleString(),cap:Math.round((p.creditInfo||{}).totalCapacity||0).toLocaleString()});
+              errMsg = t('merchant.form.errInsufficientPublish','额度不足，本任务需 ¥{needed}，当前可发 ¥{cap}，请充值后再发布。',{needed:(p.needed||0).toLocaleString(),cap:Math.round((p.creditInfo||{}).totalCapacity||0).toLocaleString()});
             }
             showFormError(errMsg); return;
           }
           state.msg = p.reviewPending ? t('merchant.publish.pendingReview','已提交平台审核，通过后自动上线并通知你') : t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
-          if (p.topupReminder) setTimeout(function(){ showTopupReminder(p.topupReminder); }, 400);
+          if (p.topupReminder) setTimeout(function(){ showTopupReminder(t('merchant.publish.topupReminder','任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。')); }, 400);
           loadMyTasks(); loadDashStats();
           openTask(d.id);
         });
@@ -2827,7 +2865,7 @@ function publishTask(id) {
               var ci = d.creditInfo || {};
               showConfirmModal({
                 title: t('merchant.publish.insufficientTitle','额度不足，需充值后发布'),
-                body: t('merchant.publish.insufficientBody','本任务需 ¥{needed}，当前剩余 ¥{left}（可发额度 ¥{cap} - 已占用 ¥{used}）',{needed:Number(d.needed||0).toLocaleString(),left:Math.round(ci.totalCapacity||0).toLocaleString(),cap:Math.round(ci.taskCapacity||0).toLocaleString(),used:Math.round(ci.creditUsed||0).toLocaleString()}),
+                body: t('merchant.publish.insufficientBody','本任务需 ¥{needed}，当前可发 ¥{left}，充值后即可发布。',{needed:Number(d.needed||0).toLocaleString(),left:Math.round(ci.totalCapacity||0).toLocaleString()}),
                 confirmText: t('merchant.form.goTopup','去充值'),
                 cancelText: t('merchant.publish.later','稍后再说'),
                 onConfirm: function() { nav('wallet'); },
@@ -2840,7 +2878,7 @@ function publishTask(id) {
           state.msg = d.reviewPending ? t('merchant.publish.pendingReview','已提交平台审核，通过后自动上线并通知你') : t('merchant.publish.done','任务已发布！'); state.msgType = 'success';
           if (state.currentTask) state.currentTask.status = 'OPEN';
           loadMyTasks(); loadDashStats();
-          if (d.topupReminder) setTimeout(function(){ showTopupReminder(d.topupReminder); }, 400);
+          if (d.topupReminder) setTimeout(function(){ showTopupReminder(t('merchant.publish.topupReminder','任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。')); }, 400);
           render();
         });
       },

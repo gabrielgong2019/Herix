@@ -227,6 +227,8 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
       creditUsed:       creditInfo.creditUsed,
       creditRemaining:  creditInfo.creditRemaining,
       totalCapacity:    creditInfo.totalCapacity,
+      trialEligible:    creditInfo.trialEligible,
+      trialDefault:     creditInfo.trialDefault,
       fastPayoutEligible,
       fastPayoutThreshold: fpThreshold,
     },

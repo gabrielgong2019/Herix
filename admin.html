@@ -275,6 +275,12 @@ function reviewsPage(){
     }).join('');
   }
   if(tab==='kyb'){
+    var tc=st.data.trialCredit;
+    h+='<div class="card" style="padding:14px 18px;margin-bottom:16px">'
+      +'<div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px">新商家首单体验额度（JPY）</div>'
+      +'<div style="display:flex;gap:8px;align-items:center"><input id="kyb-trial-credit" type="number" value="'+(tc!=null?tc:'')+'" style="width:140px">'
+      +'<button class="btn btn-primary btn-sm" onclick="saveTrialCredit()">保存</button></div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:4px">首个任务发布时按 min(此值, 任务总成本) 自动发放，绑定该任务、任务关闭后随之失效；已发放的不受改动影响</div></div>';
     if(!kybRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审认证</div>';
     return h+kybRv.map(function(r){
       return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.company_name||r.nickname||'')+(r.is_agency?' <span style="font-size:11px;color:#c2410c">[广告代理]</span>':'')+'</span>'
@@ -306,6 +312,11 @@ function doTaskReview(id,approve){
   });
 }
 
+function saveTrialCredit(){
+  var v=Number((document.getElementById('kyb-trial-credit')||{}).value);
+  if(!isFinite(v)||v<0){showToast('金额无效');return}
+  apiPatch('/admin/kyb/trial-credit',{amount:v},function(d){if(d.error){showToast(d.error);return}st.data.trialCredit=d.amount;st.msg='体验额度已更新为 ¥'+d.amount.toLocaleString();st.msgType='success';render()});
+}
 function doKyb(userId,approve){
   var reason=approve?null:prompt('拒绝原因（必填，会展示给商家）');
   if(!approve&&(reason===null||!reason.trim()))return;
@@ -1047,6 +1058,7 @@ function load(page){
     apiGet('/admin/declarations',function(d){st.data.decls=d;render()});
     apiGet('/admin/task-reviews',function(d){st.data.taskReviews=Array.isArray(d)?d:[];render()});
     apiGet('/admin/kyb-reviews',function(d){st.data.kybReviews=Array.isArray(d)?d:[];render()});
+    apiGet('/admin/kyb/trial-credit',function(d){if(d&&d.amount!=null){st.data.trialCredit=d.amount;render()}});
   } else if(page==='topups'){
     apiGet('/admin/topup-requests',function(d){st.data.topups=Array.isArray(d)?d:[];render()});
   } else if(page==='withdrawals'){

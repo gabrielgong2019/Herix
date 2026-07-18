@@ -65,6 +65,21 @@ adminRouter.post('/task-reviews/:id/reject', async (req: Request, res: Response)
   res.json({ success: true });
 });
 
+/** GET/PATCH /api/admin/kyb/trial-credit — 新商家首单体验额度（发放规则见 utils/settings.ts getBrandCreditInfo） */
+adminRouter.get('/kyb/trial-credit', async (_req: Request, res: Response) => {
+  const { getSetting } = await import('../utils/settings');
+  res.json({ amount: Number(await getSetting('merchant_trial_credit')) || 0 });
+});
+adminRouter.patch('/kyb/trial-credit', async (req: Request, res: Response) => {
+  const amount = Number(req.body?.amount);
+  if (!Number.isFinite(amount) || amount < 0 || amount > 1000000) {
+    return res.status(400).json({ error: '金额须为 0 ~ 1,000,000 之间的数字' });
+  }
+  const { setSetting } = await import('../utils/settings');
+  await setSetting('merchant_trial_credit', String(Math.round(amount)));
+  res.json({ success: true, amount: Math.round(amount) });
+});
+
 /** GET /api/admin/kyb-reviews — 待审核的商家认证申请 */
 adminRouter.get('/kyb-reviews', async (_req: Request, res: Response) => {
   const rows = await findMany<any>(

@@ -924,8 +924,8 @@
   "merchant.upload.readFailed": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.upload.readFailedRetry": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.form.errRequired": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
-  "merchant.form.errInsufficient": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
-  "merchant.form.errInsufficientPublish": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
+  "merchant.form.errInsufficient": "发布预检额度不足(前端)——口径=共享池+体验额度，与服务端/publish闸口一致",
+  "merchant.form.errInsufficientPublish": "发布额度不足(服务端402返回后展示)",
   "merchant.publish.done": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.publish.doneVisible": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.publish.needCodesFirst": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
@@ -942,7 +942,7 @@
   "merchant.publish.confirmTitle": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.publish.confirmGo": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.publish.insufficientTitle": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
-  "merchant.publish.insufficientBody": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
+  "merchant.publish.insufficientBody": "任务详情页发布时额度不足的弹窗正文",
   "merchant.publish.later": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.close.body": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
   "merchant.close.confirm": "商家后台交互反馈(发布/关闭确认弹窗/上传状态/CSV结果/评分/小程序链接/海报)，merchant.html(2026-07-18 补漏批次2)",
@@ -1030,5 +1030,11 @@
   "merchant.kyb.pendingHint": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
   "merchant.kyb.rejectedPrefix": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
   "merchant.kyb.benefit": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
-  "merchant.kyb.submitted": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片"
+  "merchant.kyb.submitted": "首任务审核门+商家KYB(2026-07-18 PRD§29)：发布待审提示/任务审核标签/设置页企业认证卡片",
+  "merchant.credit.trialSub": "任务表单额度banner——新商家首单体验额度提示。机制上额度绑定首单任务，但文案刻意不提'绑定'(产品决策2026-07-18)：商户只需知道①能发第一单②有个额度③打款要提前充值",
+  "merchant.credit.walletOnlySub": "任务表单额度banner——体验额度已用完/无提额时的兜底文案，引导充值",
+  "merchant.credit.loadFailed": "额度接口请求失败时的错误提示(不再伪装成¥0)，旁边有重试按钮",
+  "merchant.credit.retry": "重试按钮",
+  "merchant.dash.arrears": "仪表盘催充值黄条：进行中任务承诺报酬>钱包余额时显示。{used}=已承诺 {bal}=余额",
+  "merchant.publish.topupReminder": "发布成功后的充值提醒弹窗正文(首次发布且余额为0时触发)——语气积极但把'打款需要真实余额'说清楚"
 }

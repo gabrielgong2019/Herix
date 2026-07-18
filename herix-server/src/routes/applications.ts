@@ -140,13 +140,14 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
       'SELECT mode, cost_per_herald, creator_id FROM tasks WHERE id = ?', [app.task_id]
     );
     if (taskCredit && taskCredit.mode === 'STANDARD' && (taskCredit.cost_per_herald || 0) > 0) {
-      const creditInfo = await getBrandCreditInfo(taskCredit.creator_id);
-      if (creditInfo.totalCapacity < taskCredit.cost_per_herald) {
+      // 按任务口径：该任务的占用先吃自己的体验额度戳，吃不完才占共享池（钱包+KYB提额）
+      const creditInfo = await getBrandCreditInfo(taskCredit.creator_id, app.task_id);
+      if (creditInfo.capacityForTask < taskCredit.cost_per_herald) {
         return res.status(402).json({
           error: '信用额度不足，请充值以保证赫使及时付款',
           code: 'INSUFFICIENT_CREDIT',
           needed: taskCredit.cost_per_herald,
-          available: creditInfo.totalCapacity,
+          available: creditInfo.capacityForTask,
         });
       }
     }

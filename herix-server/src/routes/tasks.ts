@@ -981,7 +981,7 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, trial_credit_amount FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -997,6 +997,34 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   const costPerHerald = Math.round(task.payout_per_herald / (1 - commissionRate));
 
   const creditInfo  = await getBrandCreditInfo(task.creator_id);
+
+  // 服务端容量闸 + 首单体验额度（STANDARD 任务；PERFORMANCE 按转化付费不占额度）。
+  // 此前只有前端预检，绕过前端可无限发布未注资任务（2026-07-18 补上）。
+  // 体验额度 = min(配置额度, 任务总成本) 盖戳在任务行上，只对本任务生效——
+  // 审核驳回回 DRAFT 再发布时戳还在（trialGrant 分支一），不算重新发放。
+  let trialGrant = 0;
+  let stampTrial = false;
+  if (task.mode === 'STANDARD') {
+    const totalCost = costPerHerald * Number(task.max_heralds || 0);
+    if (Number(task.trial_credit_amount) > 0) {
+      trialGrant = Number(task.trial_credit_amount);
+    } else if (creditInfo.trialEligible) {
+      trialGrant = Math.min(creditInfo.trialDefault, totalCost);
+      stampTrial = trialGrant > 0;
+    }
+    if (totalCost > creditInfo.totalCapacity + trialGrant) {
+      return res.status(402).json({
+        error: '额度不足，请充值后再发布',
+        code: 'INSUFFICIENT_CREDIT',
+        needed: totalCost,
+        creditInfo: {
+          totalCapacity: creditInfo.totalCapacity + trialGrant,
+          creditUsed: creditInfo.creditUsed,
+        },
+      });
+    }
+  }
+
   const fpThreshold = Number(await getSetting('fast_payout_threshold')) || 100000;
   const fast_payout = creditInfo.availableBalance >= fpThreshold;
   const uploadToken = crypto.randomBytes(16).toString('hex');
@@ -1016,7 +1044,16 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     upload_token:    uploadToken,
     platform_review: needsReview ? 'pending' : 'approved',
     platform_review_note: null,
+    ...(stampTrial ? { trial_credit_amount: trialGrant } : {}),
   }, 'id = ?', [req.params.id]);
+
+  // 体验额度发放标记（一次性）：记下发放去向，之后不再有资格
+  if (stampTrial) {
+    await pool.query(
+      'UPDATE brand_profiles SET trial_task_id = $1 WHERE user_id = $2',
+      [req.params.id, task.creator_id],
+    );
+  }
 
   // 首次发布且未充值 → 响应中附带充值引导提醒
   const prevPublished = await findOne<{ id: string }>(
@@ -1037,7 +1074,8 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     ...updated,
     reviewPending: needsReview,
     ...(isFirstPublish ? {
-      topupReminder: '任务已经可以被赫使看到了。等有赫使报名或完成任务时，需要账户里有余额才能完成打款——可以现在充值，也可以晚点再来。提前充值后任务会带上「极速打款」标签，赫使报名会更积极一些。',
+      // 前端用 merchant.publish.topupReminder 词条渲染三语版本，此文案是兜底
+      topupReminder: '任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。',
     } : {}),
   });
 });

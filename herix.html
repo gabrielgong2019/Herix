@@ -2070,7 +2070,7 @@ function adminDeclHTML(){
     h+='<div style="background:#fff;border-radius:14px;padding:16px;margin-bottom:10px">';
     h+='<div style="display:flex;justify-content:space-between;margin-bottom:8px">';
     h+='<div style="font-weight:600">'+escHtml(d.nickname)+'</div><div style="font-size:11px;color:var(--muted)">'+fmtLocal(d.submitted_at).slice(0,10)+'</div></div>';
-    h+='<div style="font-size:12px;color:#555;margin-bottom:4px">在留资格：'+escHtml(d.visa_type)+'</div>';
+    h+='<div style="font-size:12px;color:#555;margin-bottom:4px">在留资格：'+escHtml(({permanent:'永住者',work:'就労',student:'留学',other:'其他'})[d.visa_type]||d.visa_type)+'</div>';
     h+='<div style="font-size:12px;color:var(--muted);margin-bottom:12px">'+escHtml(d.email||'')+'</div>';
     h+='<div style="display:flex;gap:8px">';
     h+='<button class="btn btn-primary btn-sm" style="flex:1" onclick="adminApproveDecl(\''+d.id+'\')">✓ 通过</button>';
@@ -2702,10 +2702,11 @@ function onboardHTML(){
     h+='<div style="font-size:11px;color:var(--muted);text-align:center;margin-top:6px">收款时必须完善</div>';
 
   } else if(step===3&&d.residence==='japan'){
-    var visas=[{v:'永住者',l:'永住者 / 定住者 / 日本人配偶'},
-               {v:'就労',l:'就労・人文知識・国際業務等'},
-               {v:'留学',l:'留学生（资格外活动许可）'},
-               {v:'其他',l:'其他（请说明）'}];
+    // v 是入库的稳定 id（2026-07-18 从 CJK 文本迁移）
+    var visas=[{v:'permanent',l:'永住者 / 定住者 / 日本人配偶'},
+               {v:'work',l:'就労・人文知識・国際業務等'},
+               {v:'student',l:'留学生（资格外活动许可）'},
+               {v:'other',l:'其他（请说明）'}];
     for(var vi=0;vi<visas.length;vi++){
       h+='<div class="ob-choice'+(d.visaType===visas[vi].v?' ob-selected':'')+'" onclick="obSelect(\'visaType\',\''+visas[vi].v+'\')" style="margin-bottom:8px">';
       h+='<div style="font-weight:500;font-size:13px">'+visas[vi].l+'</div></div>';
@@ -2912,10 +2913,11 @@ function onboardBrandHTML(){
     h+='<div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
     h+='<div style="margin-top:16px"><label style="font-size:12px;color:var(--muted)">公司 / 品牌名称 *</label><input id="ob-company" class="ob-input" placeholder="例：周大福珠宝" value="'+(d.companyName||'')+'"></div>';
     h+='<div style="margin-top:12px"><label style="font-size:12px;color:var(--muted)">所属行业</label>';
-    var industries=['美妆','时尚','食品饮料','金融服务','旅游','母婴','电商','其他'];
+    // id 入库（2026-07-18，与 merchant.html industrySelectHTML 同一套 id）
+    var industries=[['beauty','美妆'],['fashion','时尚'],['food','食品饮料'],['finance','金融服务'],['travel','旅游'],['baby','母婴'],['ecommerce','电商'],['other','其他']];
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
     for(var ii=0;ii<industries.length;ii++){
-      h+='<div class="ob-chip'+(d.industry===industries[ii]?' ob-chip-sel':'')+'" onclick="obSelect(\'industry\',\''+industries[ii]+'\')">'+industries[ii]+'</div>';
+      h+='<div class="ob-chip'+(d.industry===industries[ii][0]?' ob-chip-sel':'')+'" onclick="obSelect(\'industry\',\''+industries[ii][0]+'\')">'+industries[ii][1]+'</div>';
     }
     h+='</div></div>';
     h+='<div style="margin-top:12px"><label style="font-size:12px;color:var(--muted)">品牌官网（选填）</label><input id="ob-website" class="ob-input" placeholder="https://example.com" value="'+(d.website||'')+'"></div>';

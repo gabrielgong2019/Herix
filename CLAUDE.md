@@ -175,6 +175,11 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **钱包代码**：余额读写必须走 `utils/wallet.ts` 的 `applyWalletEntry`（行锁+幂等+事务）；多步业务+钱包操作用 extClient 合并进单事务
 - **金额展示**统一用 `utils/format.ts` 的 `fmt`，不要 `toLocaleString`（小程序引擎差异）
 - **配置类数值**（提现最低额等）走 `platform_settings` 单一事实源，前端由接口下发，禁止写死
+- **枚举/分类字段一律存稳定 ASCII id，禁止存显示文本**（2026-07-18 立）：DB 里存 `beauty`/`permanent` 这类 id，
+  显示文本属于展示层（i18n 词条或前端映射表）。存文本的代价是三连锁：没法翻译、没法改文案（改了和历史数据对不上）、
+  没法做逻辑分支（字符串比对撞上简繁/全半角）。已踩过的实例：`industry` 存"美妆"、`visa_type` 存"永住者"，
+  都靠幂等 UPDATE 迁移 + 前端兼容层才救回来。新增任何枚举字段前对照 `/db-design-review` 原则 #8 自查；
+  写选项列表时的自检问题："这个 value 如果直接拼进 SQL 或 URL 会不会出现非 ASCII？"会 → 说明存的是文案不是 id
 
 
 ## 品牌术语规范（2026-07-17 定稿，PRD §27 为唯一权威）

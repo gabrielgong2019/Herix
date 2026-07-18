@@ -248,7 +248,7 @@ function reviewsPage(){
   return '<div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px">在留声明审核（'+decls.length+'条待处理）</div>'
     +decls.map(function(d){
       return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(d.nickname)+'</span><span style="font-size:11px;color:var(--muted)">'+fmtLocal(d.submitted_at).slice(0,10)+'</span></div>'
-        +'<div class="acard-sub">在留资格：'+esc(d.visa_type)+' · '+esc(d.email||'')+'</div>'
+        +'<div class="acard-sub">在留资格：'+esc(({permanent:'永住者',work:'就労',student:'留学',other:'其他'})[d.visa_type]||d.visa_type)+' · '+esc(d.email||'')+'</div>'
         +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doDecl(\''+d.id+'\',true)">✓ 通过</button>'
         +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doDecl(\''+d.id+'\',false)">✗ 拒绝</button></div></div>';
     }).join('');

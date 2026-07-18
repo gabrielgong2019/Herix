@@ -361,6 +361,7 @@ function pageContent() {
 /* ── Login ── */
 function loginPage() {
   return '<div class="login-wrap"><div class="login-card">'
+    +'<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'+langSwitcherHTML()+'</div>'
     +'<div class="login-logo"><img src="Logo/herix-orig-icon.png" style="width:52px;height:52px;border-radius:13px;display:block;margin:0 auto 8px">Herix</div>'
     +'<div class="login-sub">'+t('merchant.login.subtitle','品牌商家管理后台')+'</div>'
     +Auth.loginForm({

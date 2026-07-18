@@ -598,6 +598,15 @@ export async function initDatabase() {
        WHEN '食品饮料' THEN 'food' WHEN '旅游' THEN 'travel' WHEN '母婴' THEN 'baby'
        WHEN '电商' THEN 'ecommerce' WHEN '其他' THEN 'other' ELSE industry END
      WHERE industry IN ('金融服务','美妆','时尚','食品饮料','旅游','母婴','电商','其他')`,
+    // 在留资格同样 id 化（2026-07-18）：herald_profiles 和 declarations 两处，幂等
+    `UPDATE herald_profiles SET visa_type = CASE visa_type
+       WHEN '永住者' THEN 'permanent' WHEN '就労' THEN 'work'
+       WHEN '留学' THEN 'student' WHEN '其他' THEN 'other' ELSE visa_type END
+     WHERE visa_type IN ('永住者','就労','留学','其他')`,
+    `UPDATE declarations SET visa_type = CASE visa_type
+       WHEN '永住者' THEN 'permanent' WHEN '就労' THEN 'work'
+       WHEN '留学' THEN 'student' WHEN '其他' THEN 'other' ELSE visa_type END
+     WHERE visa_type IN ('永住者','就労','留学','其他')`,
   ];
   for (const m of migrations) {
     await pool.query(m);

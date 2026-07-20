@@ -75,15 +75,24 @@ async function request<T = any>(
     }
   }
 
+  const callWeapp = () => wx.cloud.callContainer({
+    config: { env: CLOUD_ENV_ID },
+    path: `/api${path}`,
+    method,
+    header: { ...header, 'X-WX-SERVICE': CLOUD_SERVICE_NAME },
+    data,
+  });
+
   try {
     if (isWeapp) {
       // 小程序端：走微信云托管，绕开服务器域名白名单/备案要求
-      const res = await wx.cloud.callContainer({
-        config: { env: CLOUD_ENV_ID },
-        path: `/api${path}`,
-        method,
-        header: { ...header, 'X-WX-SERVICE': CLOUD_SERVICE_NAME },
-        data,
+      // 冷启动期间首次请求可能超时，静默重试一次再报错
+      let res = await callWeapp().catch(async (e: any) => {
+        if (e?.errMsg?.includes('timeout') || e?.errMsg?.includes('fail')) {
+          await new Promise(r => setTimeout(r, 1500));
+          return callWeapp();
+        }
+        throw e;
       });
 
       if (res.statusCode >= 400) {

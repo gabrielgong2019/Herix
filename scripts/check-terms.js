@@ -26,6 +26,7 @@ const TARGETS = [
   'herix-miniapp/src/i18n/ja.json',
   'herix-miniapp/src/i18n/en.json',
   'herix-miniapp/src/i18n/vi.json', // vi=仅客户端，键集守卫见文件末尾 checkViParity()
+  'herix-miniapp/src/i18n/ko.json', // ko=仅商户端，键集守卫见 checkKoParity()
 ];
 
 const root = path.join(__dirname, '..');
@@ -86,3 +87,21 @@ function checkViParity() {
   }
 }
 checkViParity();
+
+// ── ko=仅商户端（2026-07-19）：merchant.* 全部键 + merchant.html/shared/auth.js 引用的共享键。
+// 客户端不打包/不请求 ko，故不设混入硬闸；只警告 merchant.* 缺 ko(回落中文)
+function checkKoParity() {
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.join(__dirname, '..');
+  const zh = JSON.parse(fs.readFileSync(path.join(root, 'herix-miniapp/src/i18n/zh.json'), 'utf8'));
+  const ko = JSON.parse(fs.readFileSync(path.join(root, 'herix-miniapp/src/i18n/ko.json'), 'utf8'));
+  const merchantKeys = Object.keys(zh).filter((k) => k.startsWith('merchant.'));
+  const missing = merchantKeys.filter((k) => !(k in ko));
+  if (missing.length) {
+    console.warn(`⚠ ${missing.length} 个 merchant.* 键缺 ko 译文（回落中文，需有意识补齐）：${missing.slice(0, 8).join(', ')}${missing.length > 8 ? '...' : ''}`);
+  } else {
+    console.log('✓ ko 覆盖全部 merchant.* 键');
+  }
+}
+checkKoParity();

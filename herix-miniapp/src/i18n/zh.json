@@ -444,7 +444,7 @@
   "onboard.communityLabel": "你所在的文化社群",
   "onboard.communityHint": "帮助我们为你推荐更相关的任务",
   "onboard.communitySkip": "暂时跳过",
-  "task.communityFilter": "当前：{{name}}任务 + 通用任务",
+  "task.communityFilter": "当前：{name}任务 + 通用任务",
   "task.communityFilterOff": "查看全部任务",
   "task.communityFilterOn": "只看我的社群",
   "landing.switchToRegister": "没有账号？立即注册",

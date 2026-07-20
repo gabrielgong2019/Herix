@@ -444,7 +444,7 @@
   "onboard.communityLabel": "あなたのコミュニティ",
   "onboard.communityHint": "より関連性の高いタスクをおすすめするために使用します",
   "onboard.communitySkip": "スキップ",
-  "task.communityFilter": "表示中：{{name}} + 全員向けタスク",
+  "task.communityFilter": "表示中：{name} + 全員向けタスク",
   "task.communityFilterOff": "すべてのタスクを見る",
   "task.communityFilterOn": "自分のコミュニティのみ",
   "landing.switchToRegister": "アカウントをお持ちでない方はこちら",

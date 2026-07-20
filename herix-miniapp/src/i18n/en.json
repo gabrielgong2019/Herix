@@ -444,7 +444,7 @@
   "onboard.communityLabel": "Your community",
   "onboard.communityHint": "Helps us surface the most relevant tasks for you",
   "onboard.communitySkip": "Skip for now",
-  "task.communityFilter": "Showing: {{name}} + open tasks",
+  "task.communityFilter": "Showing: {name} + open tasks",
   "task.communityFilterOff": "View all tasks",
   "task.communityFilterOn": "My community only",
   "landing.switchToRegister": "No account? Sign up",

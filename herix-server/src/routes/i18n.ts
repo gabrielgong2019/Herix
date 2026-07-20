@@ -86,7 +86,7 @@ i18nAdminRouter.patch('/:key', async (req: Request, res: Response) => {
     }
     // 国际化分叉规则（2026-07-19）：vi 仅客户端（赫使端），商家后台维持中日英——
     // merchant.* 词条禁止写入 vi，防止运营/后续开发无意间扩大范围
-    if (locale === 'vi' && key.startsWith('merchant.')) {
+    if (locale === 'vi' && String(key).startsWith('merchant.')) {
       return res.status(400).json({ error: '商家后台(merchant.*)词条不做越南语——vi 仅覆盖赫使端，见 PRD §27.1' });
     }
     if (v === '') {

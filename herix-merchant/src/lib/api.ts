@@ -313,7 +313,6 @@ export interface BrandBalance {
 export interface WalletEntry {
   id: string
   type: string
-  label: string
   amount: number
   currency: string
   note?: string

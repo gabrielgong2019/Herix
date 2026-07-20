@@ -321,6 +321,7 @@ footer {
     <button class="lang-btn active" onclick="setLang('zh')">中</button>
     <button class="lang-btn" onclick="setLang('ja')">日</button>
     <button class="lang-btn" onclick="setLang('en')">EN</button>
+    <button class="lang-btn" onclick="setLang('ko')">한국어</button>
   </div>
 </nav>
 
@@ -467,6 +468,31 @@ var CONTENT = {
     heraldTitle: 'Turn your influence into income',
     heraldDesc: "Accept brand partnerships, create authentic content, and get paid securely. The platform handles all settlement — no chasing payments.",
     footerCopy: '© 2026 Herix · Connecting brands with diaspora communities',
+  },
+  ko: {
+    eyebrow: '해외 생활 커뮤니티 마케팅 플랫폼',
+    headline: '진짜 목소리를,\n더 멀리까지.',
+    sub: 'Herix는 검증된 앰배서더를 통해 브랜드와 해외 생활 커뮤니티를 연결합니다. 캠페인 게시, 자금 예치, 성과 추적까지 모두 온라인으로 완결됩니다.',
+    ctaBrand: '브랜드로 입점',
+    ctaHerald: '앰배서더 되기',
+    featuresLabel: '플랫폼 강점',
+    f1Title: '진짜 커뮤니티 도달',
+    f1Desc: '앰배서더는 해외에서 실제로 생활하는 커뮤니티의 일원입니다. 이들의 추천은 광고 문구가 아닌 실제 사용 경험에서 나옵니다.',
+    f2Title: '투명한 정산, 간편한 관리',
+    f2Desc: '캠페인 완료 후 플랫폼이 정산을 일괄 처리합니다. 모든 지출이 명확히 기록되어 수동 이체나 대금 독촉이 필요 없습니다.',
+    f3Title: '명확한 성과 추적',
+    f3Desc: '추천 코드 전환 데이터가 실시간으로 집계되고, 콘텐츠 심사 기록이 완전히 보존되어 모든 지출을 투명하게 확인할 수 있습니다.',
+    brandEyebrow: '브랜드이신가요',
+    brandTitle: '커뮤니티를 움직이는 진짜 목소리',
+    brandDesc: 'Herix에 캠페인을 게시하고 일본을 비롯한 전 세계 해외 생활 커뮤니티에 도달하세요. 예산 설정, 앰배서더 심사, 성과 확인까지 전 과정이 온라인으로 진행됩니다.',
+    agencyEyebrow: '광고 대행사이신가요',
+    agencyTitle: '실행력을 플랫폼 위로',
+    agencyDesc: '브랜드의 홍보를 수주하셨나요? Herix에서 고객사에 맞는 앰배서더를 찾아 캠페인 게시부터 진행 관리, 투명한 정산까지 한 번에. 브랜드 고객은 진행 상황과 데이터를 실시간으로 확인할 수 있습니다.',
+    ctaAgency: '광고 대행사로 입점',
+    heraldEyebrow: '앰배서더이신가요',
+    heraldTitle: '영향력을 안정적인 수입으로',
+    heraldDesc: '브랜드 캠페인을 수행하고 커뮤니티에서의 진짜 영향력을 발휘하세요. 콘텐츠 제작 후 안전하게 보수를 받을 수 있으며, 정산은 플랫폼이 보장합니다.',
+    footerCopy: '© 2026 Herix · 브랜드와 해외 생활 커뮤니티를 잇다',
   }
 };
 
@@ -497,5 +523,6 @@ function setLang(lang) {
 var lang = navigator.language || 'zh';
 if (lang.startsWith('zh')) setLang('zh');
 else if (lang.startsWith('ja')) setLang('ja');
+else if (lang.startsWith('ko')) setLang('ko');
 else setLang('en');
 </script>

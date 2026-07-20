@@ -174,7 +174,7 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
   **任何触碰 i18n 的改动（含其他 AI 会话的）收尾跑 `/i18n-review`**——体系是四件套(三语json+context+seed双库+构建部署)，外部改动常只做第一件（2026-07-17 实例）
 - **国际化分叉（2026-07-19，PRD §27.1/§27.2）**：越南语(vi)**仅覆盖客户端（赫使端小程序/H5）**；
   韩文(ko)**仅覆盖商户端**(merchant.* 全部 + merchant.html/shared/auth.js 引用的共享键，checkKoParity 守卫)；
-  admin/主页维持中日英三语。规则由三层强制：
+  主页(index.html)=中日英韩(内嵌静态词典，不走DB)；admin维持中日英。规则由三层强制：
   ①新增**客户端**词条必须同时写 zh/ja/en/vi 四份，`check-terms.js` 的 checkViParity()
   会警告缺失（merchant.* 混进 vi.json 则直接报错退出）；
   ②admin 本地化矩阵 merchant.* 行的 vi 列显示"—"不给输入框；

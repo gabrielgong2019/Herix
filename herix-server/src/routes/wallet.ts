@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import db from '../db';
 import { findOne, findMany, insert, update, remove, genId } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
-import { getBalance, freezeWithdrawal, ENTRY_DIRECTION, ENTRY_TYPE_LABELS, WalletType } from '../utils/wallet';
+import { getBalance, freezeWithdrawal, ENTRY_DIRECTION, WalletType } from '../utils/wallet';
 import { calcWithdrawalFee, getSetting, getBrandCreditInfo } from '../utils/settings';
 
 export const walletRouter = Router();
@@ -90,7 +90,6 @@ walletRouter.get('/transactions', async (req: Request, res: Response) => {
       const dir = ENTRY_DIRECTION[r.type as keyof typeof ENTRY_DIRECTION];
       return {
         ...r,
-        label: ENTRY_TYPE_LABELS[r.type as keyof typeof ENTRY_TYPE_LABELS] || r.type,
         direction: dir === 'adjustment' ? (Number(r.amount) >= 0 ? 'in' : 'out') : dir,
       };
     }),

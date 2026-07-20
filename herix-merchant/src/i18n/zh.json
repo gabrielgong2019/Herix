@@ -239,7 +239,19 @@
     "periodLastMonth": "上月",
     "period7d": "最近7天",
     "period30d": "最近30天",
-    "periodAll": "全部"
+    "periodAll": "全部",
+    "entryType": {
+      "TOPUP": "充值到账",
+      "TASK_FREEZE": "任务发布（冻结）",
+      "TASK_UNFREEZE": "任务取消（解冻）",
+      "TASK_SETTLE": "任务结算支出",
+      "TASK_CREDIT": "任务收入",
+      "PLATFORM_FEE": "平台服务费",
+      "WITHDRAWAL_FREEZE": "提现申请（冻结）",
+      "WITHDRAWAL_DEBIT": "提现到账",
+      "WITHDRAWAL_UNFREEZE": "提现取消（解冻）",
+      "ADJUSTMENT": "人工调整"
+    }
   },
   "credit": {
     "bannerTitle": "案件额度",
@@ -449,6 +461,16 @@
     "approve": "通过",
     "reject": "拒绝",
     "empty": "暂无待审核内容"
+  },
+  "category": {
+    "experience": "体验",
+    "beauty": "美妆",
+    "travel": "旅行",
+    "fashion": "穿搭",
+    "food": "美食",
+    "lifestyle": "生活",
+    "referral": "推荐",
+    "baby": "母婴"
   },
   "auth": {
     "loginTitle": "登录商家后台",

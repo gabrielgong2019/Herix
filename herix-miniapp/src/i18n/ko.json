@@ -575,5 +575,15 @@
   "taskCard.fastPayout": "⚡ 빠른 정산",
   "taskCard.new": "NEW",
   "taskCard.perf": "성과 보상",
-  "taskCard.std": "체험형"
+  "taskCard.std": "체험형",
+  "wallet.txnType.TOPUP": "충전",
+  "wallet.txnType.TASK_FREEZE": "태스크 게시 (동결)",
+  "wallet.txnType.TASK_UNFREEZE": "태스크 취소 (동결 해제)",
+  "wallet.txnType.TASK_SETTLE": "태스크 정산 지출",
+  "wallet.txnType.TASK_CREDIT": "태스크 수입",
+  "wallet.txnType.PLATFORM_FEE": "플랫폼 수수료",
+  "wallet.txnType.WITHDRAWAL_FREEZE": "출금 신청 (동결)",
+  "wallet.txnType.WITHDRAWAL_DEBIT": "출금 완료",
+  "wallet.txnType.WITHDRAWAL_UNFREEZE": "출금 취소 (동결 해제)",
+  "wallet.txnType.ADJUSTMENT": "수동 조정"
 }

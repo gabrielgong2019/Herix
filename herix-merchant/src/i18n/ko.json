@@ -171,7 +171,10 @@
     "tech": "테크",
     "fashion": "패션",
     "health": "건강",
-    "other": "기타"
+    "other": "기타",
+    "experience": "체험",
+    "referral": "추천",
+    "baby": "육아"
   },
   "wallet": {
     "title": "지갑 · 입금",
@@ -239,7 +242,19 @@
     "periodLastMonth": "지난달",
     "period7d": "최근 7일",
     "period30d": "최근 30일",
-    "periodAll": "전체"
+    "periodAll": "전체",
+    "entryType": {
+      "TOPUP": "충전",
+      "TASK_FREEZE": "태스크 게시 (동결)",
+      "TASK_UNFREEZE": "태스크 취소 (동결 해제)",
+      "TASK_SETTLE": "태스크 정산 지출",
+      "TASK_CREDIT": "태스크 수입",
+      "PLATFORM_FEE": "플랫폼 수수료",
+      "WITHDRAWAL_FREEZE": "출금 신청 (동결)",
+      "WITHDRAWAL_DEBIT": "출금 완료",
+      "WITHDRAWAL_UNFREEZE": "출금 취소 (동결 해제)",
+      "ADJUSTMENT": "수동 조정"
+    }
   },
   "credit": {
     "bannerTitle": "캠페인 예산",

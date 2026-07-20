@@ -171,7 +171,10 @@
     "tech": "テック",
     "fashion": "ファッション",
     "health": "ヘルス",
-    "other": "その他"
+    "other": "その他",
+    "experience": "体験",
+    "referral": "紹介",
+    "baby": "ベビー・ママ"
   },
   "wallet": {
     "title": "ウォレット・入金",
@@ -239,7 +242,19 @@
     "periodLastMonth": "先月",
     "period7d": "直近7日",
     "period30d": "直近30日",
-    "periodAll": "すべて"
+    "periodAll": "すべて",
+    "entryType": {
+      "TOPUP": "入金",
+      "TASK_FREEZE": "タスク公開（凍結）",
+      "TASK_UNFREEZE": "タスクキャンセル（凍結解除）",
+      "TASK_SETTLE": "タスク結算支出",
+      "TASK_CREDIT": "タスク収入",
+      "PLATFORM_FEE": "プラットフォーム手数料",
+      "WITHDRAWAL_FREEZE": "出金申請（凍結）",
+      "WITHDRAWAL_DEBIT": "出金完了",
+      "WITHDRAWAL_UNFREEZE": "出金キャンセル（凍結解除）",
+      "ADJUSTMENT": "手動調整"
+    }
   },
   "credit": {
     "bannerTitle": "案件発行枠",

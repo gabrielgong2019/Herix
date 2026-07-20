@@ -317,7 +317,7 @@ export default class Wallet extends Component<{}, State> {
               <View key={tx.id || i} className='txn-row'>
                 <View className='txn-info'>
                   <Text className='txn-label'>
-                    {tx.label || tx.type}
+                    {t(`wallet.txnType.${tx.type}`, tx.type)}
                     {tx.note ? ` · ${tx.note}` : ''}
                   </Text>
                   <Text className='txn-time'>{fmtLocal(tx.created_at)}</Text>

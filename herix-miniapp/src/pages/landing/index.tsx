@@ -204,6 +204,7 @@ export default class Landing extends Component<{}, State> {
     const cat = task ? categories.find(c => c.id === task.category) : null;
     const catText = task ? [cat?.icon, cat ? tf(`category.${cat.id}`, cat.label) : task.category].filter(Boolean).join(' ') : '';
     const payout = task?.payout_per_herald ? `¥${fmt(task.payout_per_herald)}` : '';
+    const isWeapp = process.env.TARO_ENV === 'weapp';
 
     return (
       <View className='landing-page'>
@@ -225,87 +226,110 @@ export default class Landing extends Component<{}, State> {
             </View>
             {!!task.description && <Text className='lp-task-desc'>{task.description}</Text>}
           </View>
-        ) : (
+        ) : taskLoading ? (
           <View className='lp-task placeholder'>
-            <Text className='lp-task-loading'>{taskLoading ? t('landing.loadingTask') : ''}</Text>
+            <Text className='lp-task-loading'>{t('landing.loadingTask')}</Text>
           </View>
-        )}
+        ) : null}
 
         {/* 登录 / 注册 */}
         <View className='lp-auth'>
           <Text className='lp-auth-title'>{task ? t('landing.loginToApply') : t('landing.join')}</Text>
 
-          <View className='lp-tabs'>
-            <Text
-              className={`lp-tab ${authTab === 'login' ? 'active' : ''}`}
-              onClick={() => this.setState({ authTab: 'login', err: '' })}
+          {/* 微信一键进入（小程序专属，首选操作） */}
+          {isWeapp && (
+            <View
+              className={`lp-wechat-btn ${submitting ? 'disabled' : ''}`}
+              onClick={submitting ? undefined : this.handleWechatEnter}
             >
-              {t('profile.login')}
-            </Text>
-            <Text
-              className={`lp-tab ${authTab === 'register' ? 'active' : ''}`}
-              onClick={() => this.setState({ authTab: 'register', err: '' })}
-            >
-              {t('profile.register')}
-            </Text>
-          </View>
-
-          <Text className='lp-err'>{err}</Text>
-
-          {process.env.TARO_ENV === 'weapp' && (
-            <>
-              <View className='lp-wechat-btn' onClick={this.handleWechatEnter}>{t('auth.wechatOneTap')}</View>
-              <Text className='lp-divider'>{t('auth.orEmailLogin')}</Text>
-            </>
-          )}
-
-          <Input
-            className='lp-input'
-            type='text'
-            placeholder={t('profile.emailAddr')}
-            value={email}
-            onInput={e => this.setState({ email: e.detail.value })}
-          />
-          {isReg && (
-            <View className='lp-code-row'>
-              <Input
-                className='lp-input lp-code-input'
-                type='number'
-                maxlength={6}
-                placeholder={t('landing.codePlaceholder')}
-                value={this.state.vcode}
-                onInput={e => this.setState({ vcode: e.detail.value })}
-              />
-              <View
-                className={`lp-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`}
-                onClick={this.state.codeCountdown > 0 ? undefined : this.sendVcode}
-              >
-                {this.state.codeCountdown > 0
-                  ? t('landing.codeResend', { s: this.state.codeCountdown })
-                  : t('landing.codeSend')}
-              </View>
+              {submitting ? t('landing.processing') : t('auth.wechatOneTap')}
             </View>
           )}
-          {isReg && (
+
+          {/* 邮箱表单区 */}
+          <Text className='lp-divider'>{t('auth.orEmailLogin')}</Text>
+
+          {!!err && <Text className='lp-err'>{err}</Text>}
+
+          {/* 邮箱 */}
+          <View className='lp-field'>
+            <Text className='lp-field-label'>{t('profile.emailAddr')}</Text>
             <Input
               className='lp-input'
               type='text'
-              placeholder={t('profile.nickname')}
-              value={nick}
-              onInput={e => this.setState({ nick: e.detail.value })}
+              placeholder='you@example.com'
+              value={email}
+              onInput={e => this.setState({ email: e.detail.value })}
             />
-          )}
-          <Input
-            className='lp-input'
-            password
-            placeholder={t('profile.passwordMin')}
-            value={pass}
-            onInput={e => this.setState({ pass: e.detail.value })}
-          />
-
-          <View className={`lp-submit ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.doAuth}>
-            {submitting ? t('landing.processing') : authTab === 'login' ? t('landing.loginAndApply') : t('landing.registerAndApply')}
           </View>
+
+          {/* 密码 */}
+          <View className='lp-field'>
+            <Text className='lp-field-label'>{t('landing.passwordLabel')}</Text>
+            <Input
+              className='lp-input'
+              password
+              placeholder={isReg ? t('profile.passwordMin') : '••••••'}
+              value={pass}
+              onInput={e => this.setState({ pass: e.detail.value })}
+            />
+          </View>
+
+          {/* 注册专属字段 */}
+          {isReg && (
+            <>
+              <View className='lp-field'>
+                <Text className='lp-field-label'>{t('landing.nicknameLabel')}</Text>
+                <Input
+                  className='lp-input'
+                  type='text'
+                  placeholder={t('profile.nickname')}
+                  value={nick}
+                  onInput={e => this.setState({ nick: e.detail.value })}
+                />
+              </View>
+              <View className='lp-field'>
+                <Text className='lp-field-label'>{t('landing.vcodeLabel')}</Text>
+                <View className='lp-code-row'>
+                  <Input
+                    className='lp-input lp-code-input'
+                    type='number'
+                    maxlength={6}
+                    placeholder={t('landing.codePlaceholder')}
+                    value={this.state.vcode}
+                    onInput={e => this.setState({ vcode: e.detail.value })}
+                  />
+                  <View
+                    className={`lp-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`}
+                    onClick={this.state.codeCountdown > 0 ? undefined : this.sendVcode}
+                  >
+                    {this.state.codeCountdown > 0
+                      ? t('landing.codeResend', { s: this.state.codeCountdown })
+                      : t('landing.codeSend')}
+                  </View>
+                </View>
+              </View>
+            </>
+          )}
+
+          <View
+            className={`lp-submit ${submitting ? 'disabled' : ''}`}
+            onClick={submitting ? undefined : this.doAuth}
+          >
+            {submitting
+              ? t('landing.processing')
+              : task
+                ? (isReg ? t('landing.registerAndApply') : t('landing.loginAndApply'))
+                : (isReg ? t('landing.registerBtn') : t('landing.loginBtn'))}
+          </View>
+
+          {/* 登录 ↔ 注册切换 */}
+          <Text
+            className='lp-switch-link'
+            onClick={() => this.setState({ authTab: isReg ? 'login' : 'register', err: '' })}
+          >
+            {isReg ? t('landing.switchToLogin') : t('landing.switchToRegister')}
+          </Text>
 
           <Text className='lp-lang' onClick={this.switchLanguage}>
             🌐 {LOCALES.find(l => l.id === getLocale())?.label}

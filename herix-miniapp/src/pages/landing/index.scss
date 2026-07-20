@@ -100,33 +100,60 @@
   color: var(--text-primary);
   margin-bottom: 32px;
 }
-.lp-tabs {
-  display: flex;
-  background: #f0f0f5;
-  border-radius: 20px;
-  padding: 6px;
-  margin-bottom: 32px;
-}
-.lp-tab {
-  flex: 1;
-  text-align: center;
-  padding: 18px;
-  border-radius: 16px;
-  font-size: 26px;
-  font-weight: 600;
-  color: var(--text-muted);
-  &.active {
-    background: var(--card-bg);
-    color: var(--primary);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-  }
-}
 .lp-err {
   display: block;
   color: #ef4444;
   font-size: 24px;
-  min-height: 36px;
-  margin-bottom: 8px;
+  margin-bottom: 16px;
+}
+
+// 微信一键进入（首选 CTA，绿底白字醒目）
+.lp-wechat-btn {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  padding: 32px;
+  background: #07c160;
+  color: #fff;
+  border-radius: 28px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 24px;
+  &.disabled {
+    opacity: 0.6;
+  }
+}
+.lp-divider {
+  display: block;
+  text-align: center;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-bottom: 28px;
+  position: relative;
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 25%;
+    height: 1PX;
+    background: var(--border);
+  }
+  &::before { left: 0; }
+  &::after { right: 0; }
+}
+
+// 字段标签 + 输入框组
+.lp-field {
+  margin-bottom: 24px;
+}
+.lp-field-label {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
 }
 .lp-input {
   display: block;
@@ -135,34 +162,13 @@
   padding: 28px 32px;
   border: 3px solid var(--border);
   border-radius: 24px;
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1.5;
   background: var(--card-bg);
   color: var(--text-primary);
-  margin-bottom: 24px;
-}
-// 小程序微信一键进入
-.lp-wechat-btn {
-  width: 100%;
-  box-sizing: border-box;
-  text-align: center;
-  padding: 26px;
-  background: #07c160;
-  color: #fff;
-  border-radius: 24px;
-  font-size: 30px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
-.lp-divider {
-  display: block;
-  text-align: center;
-  font-size: 22px;
-  color: var(--text-muted);
-  margin-bottom: 16px;
 }
 
-// 注册验证码行：输入框 + 发送按钮
+// 验证码行：输入框 + 发送按钮
 .lp-code-row {
   display: flex;
   gap: 16px;
@@ -177,7 +183,6 @@
   display: flex;
   align-items: center;
   padding: 0 28px;
-  margin-bottom: 24px;
   border: 3px solid var(--primary);
   border-radius: 24px;
   color: var(--primary);
@@ -200,16 +205,25 @@
   font-weight: 700;
   letter-spacing: 1px;
   text-align: center;
-  margin-top: 16px;
+  margin-top: 8px;
   &.disabled {
     opacity: 0.6;
   }
 }
 
-.lp-lang {
+// 登录 ↔ 注册切换链接
+.lp-switch-link {
   display: block;
   text-align: center;
   margin-top: 32px;
+  font-size: 26px;
+  color: var(--primary);
+}
+
+.lp-lang {
+  display: block;
+  text-align: center;
+  margin-top: 28px;
   font-size: 24px;
   color: var(--text-muted);
 }

@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+/* CSS 变量不放进 layer — 不影响工具类优先级，放外面更省事 */
+:root {
+  --primary: #D43B27;
+  --primary-hover: #B02F1D;
+  --primary-light: #FEF2F0;
+  --sidebar: #111827;
+  --sidebar-text: #9CA3AF;
+  --border: #E5E7EB;
+  --muted: #6B7280;
+  --card: #FFFFFF;
+  --bg: #F5F5F7;
+  --text: #111111;
+  --success: #16A34A;
+  --warning: #D97706;
+  --danger: #DC2626;
+  --sidebar-w: 220px;
+}
+
+/* 必须放进 @layer base，否则无层叠规则优先级高于 @layer utilities，
+   导致 p-* m-* grid-cols-* 等工具类全部失效（Tailwind v4 层叠 bug 根因）*/
+@layer base {
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #root { min-height: 100vh; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #9ca3af; }
+}

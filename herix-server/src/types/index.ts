@@ -78,6 +78,8 @@ export const CreateTaskSchema = z.object({
   dataMode: z.enum(['AGGREGATE', 'DETAIL']).default('AGGREGATE'),
   // 社群定向：空数组=全员可见
   targetCommunities: z.array(z.string()).default([]),
+  // 站点归属：任务属于哪个运营站点，赫使按站点过滤
+  siteId: z.string().default('jp'),
 });
 
 export const ApplyTaskSchema = z.object({

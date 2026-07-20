@@ -10,7 +10,8 @@ import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
-import { VALID_COMMUNITIES } from '../constants/communities';
+import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
+import { VALID_SITES } from '../constants/sites';
 import pool from '../db';
 
 function genCode(): string {
@@ -59,6 +60,12 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
     );
     const community = heraldProfile?.community ?? null;
     const allCommunities = req.query.allCommunities === 'true';
+    // 站点过滤：赫使只看自己所在站点的任务（从 community 推导，无 community 则不过滤）
+    const heraldSite = community ? communityToSite(community) : null;
+    if (heraldSite) {
+      where += ` AND t.site_id = ?`;
+      params.push(heraldSite);
+    }
     if (community && !allCommunities) {
       where += ` AND (t.target_communities = '{}' OR ? = ANY(t.target_communities))`;
       params.push(community);
@@ -902,6 +909,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       data_mode:         data.mode === 'PERFORMANCE' ? data.dataMode : 'AGGREGATE',
       visibility:        data.visibility || 'PUBLIC',
       target_communities: data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c)),
+      site_id:           VALID_SITES.has(data.siteId) ? data.siteId : 'jp',
       status:            'DRAFT',
       // cost_per_herald 和 commission_rate 在发布时计算快照
     });
@@ -945,6 +953,9 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (visibility && ['PUBLIC', 'INVITE'].includes(visibility)) data.visibility = visibility;
   if (req.body.targetCommunities !== undefined) {
     data.target_communities = (req.body.targetCommunities as string[]).filter(c => VALID_COMMUNITIES.has(c));
+  }
+  if (req.body.siteId !== undefined && VALID_SITES.has(req.body.siteId)) {
+    data.site_id = req.body.siteId;
   }
   if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
     data.req_mode = reqMode;

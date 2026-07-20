@@ -21,6 +21,7 @@ import { qrRouter } from './routes/qr';
 import { notificationsRouter } from './routes/notifications';
 import { categoriesRouter } from './routes/categories';
 import { communitiesRouter } from './routes/communities';
+import { sitesRouter } from './routes/sites';
 import { i18nPublicRouter } from './routes/i18n';
 import { UPLOADS_DIR } from './utils/uploads';
 
@@ -39,6 +40,10 @@ app.use(cors());
 const H5_DIR = path.join(__dirname, '../../herix-miniapp/dist/h5');
 app.use('/app', express.static(H5_DIR));
 app.get('/app/*', (_req, res) => res.sendFile(path.join(H5_DIR, 'index.html')));
+// 新版商家后台（React SPA）挂在 /merchant；旧 merchant.html 保留在 /merchant.html 过渡期并存
+const MERCHANT_DIR = path.join(__dirname, '../../herix-merchant/dist');
+app.use('/merchant', express.static(MERCHANT_DIR));
+app.get('/merchant/*', (_req, res) => res.sendFile(path.join(MERCHANT_DIR, 'index.html')));
 // 根路径 → 项目根目录（营销主页、merchant.html 等）
 app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
@@ -70,6 +75,7 @@ app.use('/api/qr', qrRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/categories', categoriesRouter);
 app.use('/api/communities', communitiesRouter);
+app.use('/api/sites', sitesRouter);
 app.use('/api/i18n', i18nPublicRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

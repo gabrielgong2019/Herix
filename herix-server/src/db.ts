@@ -646,6 +646,9 @@ export async function initDatabase() {
     `CREATE INDEX IF NOT EXISTS idx_tasks_active_time ON tasks(status, created_at DESC)`,
     `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS community TEXT DEFAULT NULL`,
     `CREATE INDEX IF NOT EXISTS idx_herald_profiles_community ON herald_profiles(community)`,
+    // 站点归属（2026-07-20）：任务归属站点，赫使按站点过滤任务；默认 jp 兼容存量数据
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS site_id TEXT NOT NULL DEFAULT 'jp'`,
+    `CREATE INDEX IF NOT EXISTS idx_tasks_site ON tasks(site_id)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

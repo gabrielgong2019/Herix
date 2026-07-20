@@ -172,6 +172,13 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **局部变量不要叫 `t`**（遮蔽 i18n 的 `t()`，已炸过两次：messages timeAgo、apply loadContext）
 - **i18n 词条 key 由代码 seed 创建**，运营只改译文；seed 只覆盖 `updated_by='seed'` 的行。
   **任何触碰 i18n 的改动（含其他 AI 会话的）收尾跑 `/i18n-review`**——体系是四件套(三语json+context+seed双库+构建部署)，外部改动常只做第一件（2026-07-17 实例）
+- **国际化分叉（2026-07-19，PRD §27.1）**：越南语(vi)**仅覆盖客户端（赫使端小程序/H5）**，
+  商家后台(merchant.*)/admin/主页维持中日英三语。规则由三层强制：
+  ①新增**客户端**词条必须同时写 zh/ja/en/vi 四份，`check-terms.js` 的 checkViParity()
+  会警告缺失（merchant.* 混进 vi.json 则直接报错退出）；
+  ②admin 本地化矩阵 merchant.* 行的 vi 列显示"—"不给输入框；
+  ③服务端 PATCH /admin/i18n/:key 拒绝给 merchant.* 写 vi。
+  将来商家侧若真要加语言，是独立决策——别顺手"补齐"。
 - **钱包代码**：余额读写必须走 `utils/wallet.ts` 的 `applyWalletEntry`（行锁+幂等+事务）；多步业务+钱包操作用 extClient 合并进单事务
 - **金额展示**统一用 `utils/format.ts` 的 `fmt`，不要 `toLocaleString`（小程序引擎差异）
 - **配置类数值**（提现最低额等）走 `platform_settings` 单一事实源，前端由接口下发，禁止写死

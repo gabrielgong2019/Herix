@@ -1008,17 +1008,19 @@ function cancelPromo(id){
 function i18nPage(){
   var rows=st.data.i18n||[];
   var q=(st.filter.q||'');var ql=q.toLowerCase();
-  var shown=q?rows.filter(function(r){return r.key.toLowerCase().indexOf(ql)>=0||(r.zh||'').indexOf(q)>=0||(r.ja||'').indexOf(q)>=0||(r.en||'').toLowerCase().indexOf(ql)>=0||(r.context||'').indexOf(q)>=0}):rows;
+  var shown=q?rows.filter(function(r){return r.key.toLowerCase().indexOf(ql)>=0||(r.zh||'').indexOf(q)>=0||(r.ja||'').indexOf(q)>=0||(r.en||'').toLowerCase().indexOf(ql)>=0||(r.vi||'').toLowerCase().indexOf(ql)>=0||(r.context||'').indexOf(q)>=0}):rows;
   var h='<div class="search-bar"><input id="i18nq" placeholder="搜索 key / 译文" value="'+esc(q)+'" onkeydown="if(event.key===\'Enter\')searchI18n()">'
     +'<button class="btn btn-outline btn-sm" onclick="searchI18n()">搜索</button>'
     +'<span style="font-size:12px;color:var(--muted);margin-left:8px">共 '+rows.length+' 词条 · 缺译标红 · key/语境由代码管理，此处只改译文；语境=该词条的使用位置与参数说明</span></div>';
   if(!shown.length) return h+'<div class="empty"><div class="empty-icon">🌐</div>'+(rows.length?'无匹配词条':'暂无词条，先在服务器执行 scripts/seed-i18n.ts')+'</div>';
-  h+='<div class="tcard"><table><thead><tr><th style="width:16%">key</th><th style="width:17%">语境</th><th>中文</th><th>日本語</th><th>English</th><th style="width:64px"></th></tr></thead><tbody>';
+  h+='<div class="tcard"><table><thead><tr><th style="width:15%">key</th><th style="width:15%">语境</th><th>中文</th><th>日本語</th><th>English</th><th>Tiếng Việt <span style="font-weight:400;font-size:10px">(仅客户端)</span></th><th style="width:64px"></th></tr></thead><tbody>';
   h+=shown.map(function(r){
     var kid=r.key.replace(/[^a-zA-Z0-9]/g,'_');
     function cell(loc){var v=r[loc]||'';return '<td><input id="i18n-'+loc+'-'+kid+'" value="'+esc(v)+'" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid '+(v?'var(--border)':'var(--danger)')+';border-radius:6px;font-size:12px"></td>'}
+    // 国际化分叉(2026-07-19)：vi 仅客户端，merchant.* 行显示"—"不给输入框(服务端也会拒绝)
+    var viCell = r.key.indexOf('merchant.')===0 ? '<td style="text-align:center;color:var(--muted);font-size:12px" title="商家后台不做越南语(PRD §27.1)">—</td>' : cell('vi');
     return '<tr><td style="font-family:monospace;font-size:11px;color:var(--muted);word-break:break-all">'+esc(r.key)+'</td>'
-      +'<td style="font-size:11px;color:var(--muted);line-height:1.5">'+esc(r.context||'')+'</td>'+cell('zh')+cell('ja')+cell('en')
+      +'<td style="font-size:11px;color:var(--muted);line-height:1.5">'+esc(r.context||'')+'</td>'+cell('zh')+cell('ja')+cell('en')+viCell
       +'<td><button class="btn btn-primary btn-sm" onclick="saveI18n(\''+esc(r.key)+'\',\''+kid+'\')">保存</button></td></tr>';
   }).join('');
   return h+'</tbody></table></div>';
@@ -1026,6 +1028,7 @@ function i18nPage(){
 function searchI18n(){st.filter.q=document.getElementById('i18nq').value;render()}
 function saveI18n(key,kid){
   var body={zh:document.getElementById('i18n-zh-'+kid).value,ja:document.getElementById('i18n-ja-'+kid).value,en:document.getElementById('i18n-en-'+kid).value};
+  var viEl=document.getElementById('i18n-vi-'+kid); if(viEl) body.vi=viEl.value; // merchant.* 行无 vi 输入框
   apiPatch('/admin/i18n/'+encodeURIComponent(key),body,function(d){
     if(d.error){st.msg=d.error;st.msgType='danger';render();return}
     st.msg='已保存：'+key;st.msgType='success';

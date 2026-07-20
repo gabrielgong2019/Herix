@@ -25,7 +25,7 @@ const TARGETS = [
   'herix-miniapp/src/i18n/zh.json',
   'herix-miniapp/src/i18n/ja.json',
   'herix-miniapp/src/i18n/en.json',
-  'herix-miniapp/src/i18n/vi.json',
+  'herix-miniapp/src/i18n/vi.json', // vi=仅客户端，键集守卫见文件末尾 checkViParity()
 ];
 
 const root = path.join(__dirname, '..');
@@ -61,3 +61,28 @@ if (bad) {
   process.exit(1);
 }
 console.log('✓ 术语检查通过（PRD §27）');
+
+
+// ── 国际化分叉守卫（2026-07-19，PRD §27.1）：vi 仅客户端 ──
+// 硬性错误：vi.json 出现 merchant.* 键（范围违规）
+// 警告：zh 客户端键缺 vi 译文（运行时回落中文不白屏，但要有意识地补齐）
+function checkViParity() {
+  const fs = require('fs');
+  const path = require('path');
+  const root = path.join(__dirname, '..');
+  const zh = JSON.parse(fs.readFileSync(path.join(root, 'herix-miniapp/src/i18n/zh.json'), 'utf8'));
+  const vi = JSON.parse(fs.readFileSync(path.join(root, 'herix-miniapp/src/i18n/vi.json'), 'utf8'));
+  const viMerchant = Object.keys(vi).filter((k) => k.startsWith('merchant.'));
+  if (viMerchant.length) {
+    console.error(`✗ 分叉违规：vi.json 含 ${viMerchant.length} 个 merchant.* 键（vi 仅客户端）：${viMerchant.slice(0, 5).join(', ')}...`);
+    process.exit(1);
+  }
+  const clientKeys = Object.keys(zh).filter((k) => !k.startsWith('merchant.'));
+  const missing = clientKeys.filter((k) => !(k in vi));
+  if (missing.length) {
+    console.warn(`⚠ ${missing.length} 个客户端键缺 vi 译文（回落中文，需有意识补齐）：${missing.slice(0, 8).join(', ')}${missing.length > 8 ? '...' : ''}`);
+  } else {
+    console.log('✓ vi 键集与客户端键集齐平');
+  }
+}
+checkViParity();

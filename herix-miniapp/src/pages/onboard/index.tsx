@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { ambassador, getToken } from '../../utils/api';
+import { ambassador, communities as communitiesApi, getToken } from '../../utils/api';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
 import './index.scss';
 import { t } from '../../utils/i18n';
@@ -41,6 +41,7 @@ interface OnboardData {
   snsVal: string;
   snsFollowers: string;
   residence: string;
+  community: string;
   visaType: string;
   agreed: boolean;
   bankType: string;
@@ -49,9 +50,12 @@ interface OnboardData {
   iban: string;
 }
 
+interface CommunityItem { id: string; labelKey: string; region: string; }
+
 interface State {
   step: number;
   data: OnboardData;
+  communityList: CommunityItem[];
   submitting: boolean;
   taskId: string;
 }
@@ -65,6 +69,7 @@ export default class Onboard extends Component<{}, State> {
       snsVal: '',
       snsFollowers: '',
       residence: '',
+      community: '',
       visaType: '',
       agreed: false,
       bankType: '',
@@ -72,6 +77,7 @@ export default class Onboard extends Component<{}, State> {
       swiftCode: '',
       iban: '',
     },
+    communityList: [],
     submitting: false,
     taskId: '',
   };
@@ -80,6 +86,7 @@ export default class Onboard extends Component<{}, State> {
     const params = Taro.getCurrentInstance().router?.params || {};
     if (params.taskId) this.setState({ taskId: params.taskId as string });
     if (!getToken()) Taro.showToast({ title: t('ob.needLogin'), icon: 'none' });
+    communitiesApi.list().then(list => this.setState({ communityList: list })).catch(() => {});
   }
 
   set = <K extends keyof OnboardData>(key: K, val: OnboardData[K]) =>
@@ -100,7 +107,11 @@ export default class Onboard extends Component<{}, State> {
 
   nextResidence = () => {
     if (!this.state.data.residence) return;
-    this.setState({ step: 3 });
+    this.setState({ step: 3 }); // → community step
+  };
+
+  nextCommunity = () => {
+    this.setState({ step: 4 }); // community 可跳过
   };
 
   nextJapan = () => {
@@ -135,6 +146,7 @@ export default class Onboard extends Component<{}, State> {
     }
     const body = {
       residence: d.residence || undefined,
+      community: d.community || undefined,
       visaType: d.visaType || undefined,
       hasWorkPermit: true,
       bankAccountType: d.bankType || undefined,
@@ -144,7 +156,7 @@ export default class Onboard extends Component<{}, State> {
     this.setState({ submitting: true });
     try {
       await ambassador.onboard(body);
-      this.setState({ step: 4, submitting: false });
+      this.setState({ step: 5, submitting: false });
     } catch (err: any) {
       Taro.showToast({ title: err?.message || t('common.submitFailed'), icon: 'none' });
       this.setState({ submitting: false });
@@ -158,18 +170,25 @@ export default class Onboard extends Component<{}, State> {
   };
 
   render() {
-    const { step, data: d, submitting } = this.state;
+    const { step, data: d, submitting, communityList } = this.state;
+    // 按居住地过滤社群选项（有居住地则只展示对应 region）
+    const residenceRegion = d.residence === 'japan' ? 'JP' : d.residence === 'overseas' ? null : null;
+    const filteredCommunities = residenceRegion
+      ? communityList.filter(c => c.region === residenceRegion)
+      : communityList;
     const titles: Record<number, string> = {
       1: t('ob.title1'),
       2: t('ob.title2'),
-      3: d.residence === 'japan' ? t('ob.title3jp') : t('ob.title3bank'),
-      4: t('ob.title4'),
+      3: t('onboard.communityLabel'),
+      4: d.residence === 'japan' ? t('ob.title3jp') : t('ob.title3bank'),
+      5: t('ob.title4'),
     };
     const subs: Record<number, string> = {
       1: t('ob.sub1'),
       2: t('ob.sub2'),
-      3: d.residence === 'japan' ? t('ob.sub3jp') : t('ob.sub3bank'),
-      4: t('ob.sub4'),
+      3: t('onboard.communityHint'),
+      4: d.residence === 'japan' ? t('ob.sub3jp') : t('ob.sub3bank'),
+      5: t('ob.sub4'),
     };
     const sns = PLATFORM_REGISTRY.filter(p => p.id !== 'wechat');
     const hint = wechatHint(d.wechatId);
@@ -179,7 +198,7 @@ export default class Onboard extends Component<{}, State> {
       <View className='onboard-page'>
         {/* 进度条 */}
         <View className='progress'>
-          {[1, 2, 3, 4].map(i => (
+          {[1, 2, 3, 4, 5].map(i => (
             <View key={i} className={`progress-seg ${i <= step ? 'on' : ''}`} />
           ))}
         </View>
@@ -272,8 +291,26 @@ export default class Onboard extends Component<{}, State> {
           </View>
         )}
 
-        {/* STEP 3-japan: 在留资格 */}
-        {step === 3 && d.residence === 'japan' && (
+        {/* STEP 3: 社群选择 */}
+        {step === 3 && (
+          <View>
+            {filteredCommunities.map(c => (
+              <View
+                key={c.id}
+                className={`choice compact ${d.community === c.id ? 'sel' : ''}`}
+                onClick={() => this.set('community', d.community === c.id ? '' : c.id)}
+              >
+                <Text className='choice-name sm'>{t(c.labelKey)}</Text>
+              </View>
+            ))}
+            <View className='btn-primary' onClick={this.nextCommunity}>
+              {d.community ? t('ob.next') : t('onboard.communitySkip')}
+            </View>
+          </View>
+        )}
+
+        {/* STEP 4-japan: 在留资格 */}
+        {step === 4 && d.residence === 'japan' && (
           <View>
             {VISAS.map(v => (
               <View key={v.v} className={`choice compact ${d.visaType === v.v ? 'sel' : ''}`} onClick={() => this.set('visaType', v.v)}>
@@ -296,8 +333,8 @@ export default class Onboard extends Component<{}, State> {
           </View>
         )}
 
-        {/* STEP 3-overseas: 打款方式 */}
-        {step === 3 && d.residence !== 'japan' && (
+        {/* STEP 4-overseas: 打款方式 */}
+        {step === 4 && d.residence !== 'japan' && (
           <View>
             {BANK_METHODS.map(m => (
               <View key={m.v} className={`choice ${d.bankType === m.v ? 'sel' : ''}`} onClick={() => this.set('bankType', m.v)}>
@@ -329,8 +366,8 @@ export default class Onboard extends Component<{}, State> {
           </View>
         )}
 
-        {/* STEP 4: 完成 */}
-        {step === 4 && (
+        {/* STEP 5: 完成 */}
+        {step === 5 && (
           <View className='done'>
             <Text className='done-emoji'>🎉</Text>
             <Text className='done-title'>{t('ob.doneTitle')}</Text>

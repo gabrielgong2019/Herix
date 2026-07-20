@@ -2,7 +2,7 @@ import { Component } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text, Image, ScrollView } from '@tarojs/components';
 import logoWide from '../../assets/herix-logo-wide.png';
-import { tasks as taskApi, categories as categoriesApi } from '../../utils/api';
+import { tasks as taskApi, categories as categoriesApi, communities as communitiesApi, ambassador } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
 import { refreshUnreadBadge } from '../../utils/badge';
@@ -43,6 +43,9 @@ interface State {
   activeCategory: string;
   loading: boolean;
   navMetrics: NavMetrics | null;
+  communityId: string;
+  communityName: string;
+  allCommunities: boolean;
 }
 
 export default class Index extends Component<{}, State> {
@@ -54,11 +57,27 @@ export default class Index extends Component<{}, State> {
     activeCategory: '',
     loading: true,
     navMetrics: getWeappNavMetrics(),
+    communityId: '',
+    communityName: '',
+    allCommunities: false,
   };
 
   componentDidMount() {
+    this.loadCommunity();
     this.loadData();
   }
+
+  loadCommunity = async () => {
+    try {
+      const [profile, commList] = await Promise.all([
+        ambassador.getProfile(),
+        communitiesApi.list(),
+      ]);
+      const cid = profile?.community ?? '';
+      const comm = commList.find(c => c.id === cid);
+      if (cid && comm) this.setState({ communityId: cid, communityName: t(comm.labelKey) });
+    } catch { /* 社群信息拿不到不阻断列表 */ }
+  };
 
   // 语言可能在其他 tab(profile)被切换——回到本页时按当前语言重渲染。
   // 其他 tab 页的 componentDidShow 本来就会 setState 触发重渲染,唯独本页曾漏掉
@@ -67,12 +86,10 @@ export default class Index extends Component<{}, State> {
     refreshUnreadBadge(); // 消息 tab 未读气泡随 tab 切换刷新
   }
 
-  loadData = async () => {
+  loadData = async (allCommunities?: boolean) => {
     this.setState({ loading: true });
     try {
-      // 分类接口是次要数据（仅用于筛选胶囊+卡片图标展示），拿不到不该连累任务列表整体不可用，
-      // 所以跟任务列表分开 catch，不放进同一个 Promise.all
-      const taskRes = await taskApi.list();
+      const taskRes = await taskApi.list({ allCommunities: allCommunities ?? this.state.allCommunities });
       this.setState({ taskList: taskRes.tasks || [] });
 
       try {
@@ -87,8 +104,14 @@ export default class Index extends Component<{}, State> {
     this.setState({ loading: false });
   };
 
+  toggleCommunityFilter = () => {
+    const next = !this.state.allCommunities;
+    this.setState({ allCommunities: next });
+    this.loadData(next);
+  };
+
   render() {
-    const { taskList, categories, activeCategory, loading, navMetrics } = this.state;
+    const { taskList, categories, activeCategory, loading, navMetrics, communityId, communityName, allCommunities } = this.state;
     const visibleTasks = activeCategory ? taskList.filter(t => t.category === activeCategory) : taskList;
     // 对齐 herix.html：分类胶囊只显示当前任务列表中实际有任务的分类（从全量列表算，别用过滤后的）
     const visibleCategories = categories.filter(c => taskList.some(t => t.category === c.id));
@@ -113,6 +136,20 @@ export default class Index extends Component<{}, State> {
               <Image className='logo-wide' src={logoWide} mode='aspectFit' />
             </View>
             <Text className='slogan'>{t('index.slogan')}</Text>
+          </View>
+        )}
+
+        {/* 社群过滤 banner（仅在有社群设置时展示） */}
+        {!!communityId && (
+          <View className='community-banner' onClick={this.toggleCommunityFilter}>
+            <Text className='community-banner-text'>
+              {allCommunities
+                ? t('task.communityFilterOff')
+                : t('task.communityFilter', { name: communityName })}
+            </Text>
+            <Text className='community-banner-toggle'>
+              {allCommunities ? t('task.communityFilterOn') : t('task.communityFilterOff')}
+            </Text>
           </View>
         )}
 

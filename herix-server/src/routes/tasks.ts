@@ -10,6 +10,7 @@ import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
+import { VALID_COMMUNITIES } from '../constants/communities';
 import pool from '../db';
 
 function genCode(): string {
@@ -51,6 +52,17 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   } else {
     // 赫使浏览探索列表：只显示 OPEN 且 PUBLIC 且已过平台审核
     where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'";
+    // 社群过滤：只显示定向到该社群的任务 + 无社群限制的任务（community=null 历史账号降级全量）
+    // allCommunities=true 时赫使可主动关闭过滤，看全量任务
+    const heraldProfile = await findOne<{ community: string | null }>(
+      'SELECT community FROM herald_profiles WHERE user_id = ?', [uid]
+    );
+    const community = heraldProfile?.community ?? null;
+    const allCommunities = req.query.allCommunities === 'true';
+    if (community && !allCommunities) {
+      where += ` AND (t.target_communities = '{}' OR ? = ANY(t.target_communities))`;
+      params.push(community);
+    }
   }
 
   const totalRow = await findOne<{ cnt: number }>(
@@ -889,6 +901,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       req_min_count:     data.reqMode === 'ANY_N' ? (data.reqMinCount || 1) : null,
       data_mode:         data.mode === 'PERFORMANCE' ? data.dataMode : 'AGGREGATE',
       visibility:        data.visibility || 'PUBLIC',
+      target_communities: data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c)),
       status:            'DRAFT',
       // cost_per_herald 和 commission_rate 在发布时计算快照
     });
@@ -930,6 +943,9 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
   if (visibility && ['PUBLIC', 'INVITE'].includes(visibility)) data.visibility = visibility;
+  if (req.body.targetCommunities !== undefined) {
+    data.target_communities = (req.body.targetCommunities as string[]).filter(c => VALID_COMMUNITIES.has(c));
+  }
   if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
     data.req_mode = reqMode;
     data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;

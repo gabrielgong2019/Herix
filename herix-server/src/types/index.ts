@@ -76,6 +76,8 @@ export const CreateTaskSchema = z.object({
   reqMinCount: z.number().int().min(1).optional(),
   // 数据回传模式（仅 PERFORMANCE 有意义）：AGGREGATE=累计计数；DETAIL=逐用户明细。发布后锁定
   dataMode: z.enum(['AGGREGATE', 'DETAIL']).default('AGGREGATE'),
+  // 社群定向：空数组=全员可见
+  targetCommunities: z.array(z.string()).default([]),
 });
 
 export const ApplyTaskSchema = z.object({

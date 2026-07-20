@@ -1229,6 +1229,7 @@ var CATEGORIES = [
 // category.<id> 词条跟 herix-miniapp 共用(已有 category.referral/category.baby 等)，免费复用
 function catLabel(id){ var c=CATEGORIES.find(function(x){return x.id===id}); return t('category.'+id, c?c.label:(id||'-')); }
 function loadCategories(){ var x=new XMLHttpRequest(); x.open('GET',API+'/categories',true); x.onload=function(){try{var d=JSON.parse(x.responseText);if(Array.isArray(d)&&d.length)CATEGORIES=d;}catch(e){}}; x.send(); }
+function loadCommunities(){ var x=new XMLHttpRequest(); x.open('GET',API+'/communities',true); x.onload=function(){try{var d=JSON.parse(x.responseText);if(Array.isArray(d))window._communityList=d;}catch(e){}}; x.send(); }
 
 // PLATFORM_REGISTRY, calcTier, platformById 均来自 /shared/platforms.js
 // 当前任务表单中已选平台要求 [{platformId, minFollowers, required}]
@@ -1354,6 +1355,11 @@ function taskFormPage(task) {
     +'<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">'
     +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-agg" value="AGGREGATE" '+((!task||task.data_mode!=='DETAIL')?'checked':'')+' style="margin-top:2px"><span>'+t('merchant.form.dataModeAgg','汇总模式 — 每个码填累计注册数/使用数，最简单')+'<br><span style="font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeAggHint','系统按增量结算，重复上传不重复打款')+'</span></span></label>'
     +'<label style="display:flex;align-items:flex-start;gap:6px;cursor:pointer;font-weight:normal"><input type="radio" name="dataMode" id="dataMode-detail" value="DETAIL" '+(task&&task.data_mode==='DETAIL'?'checked':'')+' style="margin-top:2px"><span>'+t('merchant.form.dataModeDetail','明细模式 — 逐用户上传（邮箱/ID + 是否成交），可对账可追溯')+'<br><span style="font-size:11px;color:var(--muted)">'+t('merchant.form.dataModeDetailHint','按用户身份去重防误报多付；邮箱即刻哈希脱敏，平台不存原文')+'</span></span></label>'
+    +'</div></div>'
+    // 目标社群多选
+    +'<div class="field form-full"><label>'+t('task.targetCommunity','目标社群')+' <span style="font-weight:400;font-size:11px;color:var(--muted)">'+t('community.any','不限社群')+'</span></label>'
+    +'<div id="community-checkboxes" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">'
+    +(window._communityList||[]).map(function(c){var checked=(task&&Array.isArray(task.target_communities)&&task.target_communities.includes(c.id))||false;return'<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-weight:normal;font-size:13px;padding:6px 12px;border:1px solid var(--border);border-radius:20px;background:'+(checked?'var(--primary-light, #e8f5f0)':'var(--card-bg)')+'"><input type="checkbox" name="community" value="'+c.id+'"'+(checked?' checked':'')+' style="accent-color:var(--primary)"> '+t(c.labelKey,c.id)+'</label>';}).join('')
     +'</div></div>'
     +'</div>'  // close advanced-fields
     +'<div id="task-form-error" style="display:none;margin-bottom:12px"></div>'
@@ -2841,6 +2847,7 @@ function saveTask(publish) {
     reqMinCount: taskReqMode === 'ANY_N' ? taskReqMinCount : undefined,
     dataMode: document.getElementById('dataMode-detail')?.checked ? 'DETAIL' : 'AGGREGATE',
     visibility: (document.getElementById('visibility')||{}).value || 'PUBLIC',
+    targetCommunities: Array.from(document.querySelectorAll('input[name="community"]:checked')).map(function(el){return el.value;}),
   };
   showFormError('');  // 清除旧错误
   if (!body.title || !body.description || !body.payoutPerHerald || !body.category) {
@@ -3752,6 +3759,7 @@ function downloadPoster() {
   }
 })();
 loadCategories();
+loadCommunities();
 var PLATFORM_INFO = { operatorEntity: 'AfterWork株式会社' };
 fetch(API + '/platform-info').then(function(r){return r.json()}).then(function(d){ if (d && d.operatorEntity) PLATFORM_INFO = d; }).catch(function(){});
 loadI18nDict(MI18N_LOCALE); // 缓存词典先渲染(可能为空,fallback顶上)，这次异步拉到最新覆盖

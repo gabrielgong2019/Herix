@@ -150,7 +150,7 @@ export const auth = {
 
 // ── Tasks ──
 export const tasks = {
-  list: (params?: { status?: string; mode?: string; page?: number }) =>
+  list: (params?: { status?: string; mode?: string; page?: number; allCommunities?: boolean }) =>
     request<{ tasks: any[]; pagination: any }>('GET', '/tasks', params, false),
   detail: (id: string) => request<any>('GET', `/tasks/${id}`, undefined, false),
   create: (data: any) => request<any>('POST', '/tasks', data),
@@ -187,6 +187,7 @@ export const users = {
 
 // ── Ambassador（赫使身份/入驻）──
 export const ambassador = {
+  getProfile: () => request<any>('GET', '/ambassador/profile'),
   updateProfile: (data: {
     residence?: string;
     residenceCountry?: string;
@@ -235,6 +236,11 @@ export const referrals = {
 // ── Categories ──
 export const categories = {
   list: () => request<any[]>('GET', '/categories', undefined, false),
+};
+
+// ── Communities ──
+export const communities = {
+  list: () => request<{ id: string; labelKey: string; region: string }[]>('GET', '/communities', undefined, false),
 };
 
 // ── i18n（公开，不需登录）──

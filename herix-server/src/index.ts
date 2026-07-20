@@ -20,6 +20,7 @@ import { uploadsRouter } from './routes/uploads';
 import { qrRouter } from './routes/qr';
 import { notificationsRouter } from './routes/notifications';
 import { categoriesRouter } from './routes/categories';
+import { communitiesRouter } from './routes/communities';
 import { i18nPublicRouter } from './routes/i18n';
 import { UPLOADS_DIR } from './utils/uploads';
 
@@ -68,6 +69,7 @@ app.use('/api/uploads', uploadsRouter);
 app.use('/api/qr', qrRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/categories', categoriesRouter);
+app.use('/api/communities', communitiesRouter);
 app.use('/api/i18n', i18nPublicRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

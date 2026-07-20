@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
 import { calcTier } from '../types';
+import { VALID_COMMUNITIES } from '../constants/communities';
 
 /** 根据 social_platforms JSON 计算各平台段位快照 */
 function buildTierSnapshot(socialPlatforms: any[]): Record<string, string> {
@@ -17,6 +18,11 @@ function buildTierSnapshot(socialPlatforms: any[]): Record<string, string> {
 export const ambassadorRouter = Router();
 
 /** GET /api/ambassador/status — 检查大使身份状态 */
+ambassadorRouter.get('/profile', requireAuth, async (req: Request, res: Response) => {
+  const profile = await findOne<any>('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
+  res.json(profile || null);
+});
+
 ambassadorRouter.get('/status', requireAuth, async (req: Request, res: Response) => {
   const profile = await findOne<any>(
     'SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]
@@ -60,7 +66,7 @@ ambassadorRouter.get('/status', requireAuth, async (req: Request, res: Response)
 
 /** PATCH /api/ambassador/profile — 更新大使身份 */
 ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Response) => {
-  const { residence, residenceCountry, kycStatus, visaType, bankAccount, socialPlatforms } = req.body;
+  const { residence, residenceCountry, kycStatus, visaType, bankAccount, socialPlatforms, community } = req.body;
 
   const data: Record<string, any> = {};
   if (residence) {
@@ -79,6 +85,9 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
     data.social_platforms = JSON.stringify(socialPlatforms);
     data.tier_snapshot = JSON.stringify(buildTierSnapshot(socialPlatforms));
     data.social_platforms_updated_at = new Date().toISOString();
+  }
+  if (community !== undefined) {
+    data.community = community && VALID_COMMUNITIES.has(community) ? community : null;
   }
 
   // 查找或创建 profile
@@ -133,7 +142,7 @@ ambassadorRouter.post('/declaration', requireAuth, async (req: Request, res: Res
 
 /** POST /api/ambassador/onboard — 一次性完成大使入驻 */
 ambassadorRouter.post('/onboard', requireAuth, async (req: Request, res: Response) => {
-  const { residence, residenceCountry, visaType, hasWorkPermit, bankAccountType, bankDetails, socialPlatforms } = req.body;
+  const { residence, residenceCountry, visaType, hasWorkPermit, bankAccountType, bankDetails, socialPlatforms, community } = req.body;
 
   // 居住地选填：有就保存，没有也能完成入驻
   const profileData: Record<string, any> = {
@@ -142,6 +151,7 @@ ambassadorRouter.post('/onboard', requireAuth, async (req: Request, res: Respons
     tier_snapshot: socialPlatforms ? JSON.stringify(buildTierSnapshot(socialPlatforms)) : null,
     social_platforms_updated_at: socialPlatforms ? new Date().toISOString() : null,
   };
+  if (community && VALID_COMMUNITIES.has(community)) profileData.community = community;
 
   if (residence && ['japan', 'overseas'].includes(residence)) {
     profileData.residence = residence;

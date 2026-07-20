@@ -640,6 +640,12 @@ export async function initDatabase() {
     )`,
     `CREATE INDEX IF NOT EXISTS idx_kyb_submissions_user ON kyb_submissions(user_id, submitted_at DESC)`,
     `CREATE INDEX IF NOT EXISTS idx_brand_profiles_kyb_status ON brand_profiles(kyb_status)`,
+    // 社群定向（2026-07-20）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS target_communities TEXT[] DEFAULT '{}'`,
+    `CREATE INDEX IF NOT EXISTS idx_tasks_communities ON tasks USING GIN(target_communities)`,
+    `CREATE INDEX IF NOT EXISTS idx_tasks_active_time ON tasks(status, created_at DESC)`,
+    `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS community TEXT DEFAULT NULL`,
+    `CREATE INDEX IF NOT EXISTS idx_herald_profiles_community ON herald_profiles(community)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

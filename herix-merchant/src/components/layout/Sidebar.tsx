@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, ListTodo, ClipboardCheck, Wallet, Settings, LogOut,
+  LayoutDashboard, ListTodo, ClipboardCheck, Wallet, Settings, LogOut, Upload, Handshake,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -11,7 +11,12 @@ const NAV_ITEMS = [
   { key: 'tasks', path: '/tasks', icon: ListTodo },
   { key: 'reviews', path: '/reviews', icon: ClipboardCheck },
   { key: 'wallet', path: '/wallet', icon: Wallet },
+  { key: 'csv', path: '/csv', icon: Upload },
   { key: 'settings', path: '/settings', icon: Settings },
+]
+
+const AGENCY_NAV_ITEMS = [
+  { key: 'partner', path: '/partner', icon: Handshake },
 ]
 
 export function Sidebar() {
@@ -30,16 +35,19 @@ export function Sidebar() {
       className="fixed top-0 left-0 h-screen flex flex-col z-50"
     >
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/10">
-        <span className="text-white text-base font-bold tracking-widest">
-          HER<span style={{ color: 'var(--primary)' }}>IX</span>
-        </span>
-        <div className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>商家后台</div>
+      <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2.5">
+        <img src="/merchant/logo-icon.png" alt="" style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0 }} />
+        <div>
+          <div className="text-white text-base font-bold tracking-widest leading-none">
+            HER<span style={{ color: 'var(--primary)' }}>IX</span>
+          </div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>商家后台</div>
+        </div>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 py-3 px-2">
-        {NAV_ITEMS.map(({ key, path, icon: Icon }) => (
+        {[...NAV_ITEMS, ...(user?.is_agency ? AGENCY_NAV_ITEMS : [])].map(({ key, path, icon: Icon }) => (
           <NavLink
             key={key}
             to={path}

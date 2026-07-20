@@ -1,9 +1,23 @@
-import { Outlet, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function AppLayout() {
   const { user, loading } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Handle ?bind_task=<id>&bind_token=<tok> deep links from agency invitations
+  useEffect(() => {
+    if (!user) return
+    const params = new URLSearchParams(location.search)
+    const bindTask = params.get('bind_task')
+    const bindToken = params.get('bind_token')
+    if (bindTask && bindToken) {
+      navigate(`/partner/${bindTask}?bind_token=${bindToken}`, { replace: true })
+    }
+  }, [user, location.search])
 
   if (loading) {
     return (
@@ -14,6 +28,11 @@ export function AppLayout() {
   }
 
   if (!user) return <Navigate to="/login" replace />
+
+  // Gate: force onboarding if not yet completed
+  if (user.brand_onboarded === false && location.pathname !== '/onboard') {
+    return <Navigate to="/onboard" replace />
+  }
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg)' }}>

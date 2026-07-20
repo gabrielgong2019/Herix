@@ -292,7 +292,7 @@ export async function initDatabase() {
     -- 运营在 admin「本地化」矩阵里只改译文不建 key；规范式存储，加语言=加行不动表结构
     CREATE TABLE IF NOT EXISTS i18n_entries (
       key TEXT NOT NULL,
-      locale TEXT NOT NULL CHECK(locale IN ('zh','ja','en')),
+      locale TEXT NOT NULL CHECK(locale IN ('zh','ja','en','vi')),
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_by TEXT,
@@ -514,6 +514,9 @@ export async function initDatabase() {
      ON CONFLICT (key) DO NOTHING`,
     // i18n_entries 语义背景（key级元数据，seed 维护，给运营/机翻提供语境）
     `ALTER TABLE i18n_entries ADD COLUMN IF NOT EXISTS context TEXT`,
+    // 越南语（2026-07-19，仅客户端500词条）：放宽 locale 约束
+    `ALTER TABLE i18n_entries DROP CONSTRAINT IF EXISTS i18n_entries_locale_check`,
+    `ALTER TABLE i18n_entries ADD CONSTRAINT i18n_entries_locale_check CHECK(locale IN ('zh','ja','en','vi'))`,
     // withdrawal_requests 新增字段：手续费快照 + 预计打款日
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fee DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS net_amount DOUBLE PRECISION`,

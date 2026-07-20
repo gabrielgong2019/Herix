@@ -13,7 +13,7 @@ import path from 'path';
 import pool from '../src/db';
 
 const DICT_DIR = path.resolve(__dirname, '../../herix-miniapp/src/i18n');
-const LOCALES = ['zh', 'ja', 'en'] as const;
+const LOCALES = ['zh', 'ja', 'en', 'vi'] as const; // vi 仅客户端词条(500条,无 merchant.*)，2026-07-19
 
 async function main() {
   const now = new Date().toISOString();

@@ -10,7 +10,7 @@
 import { Router, Request, Response } from 'express';
 import pool from '../db';
 
-const LOCALES = ['zh', 'ja', 'en'] as const;
+const LOCALES = ['zh', 'ja', 'en', 'vi'] as const; // vi 仅客户端(2026-07-19)
 type Locale = (typeof LOCALES)[number];
 
 const now = () => new Date().toISOString();

@@ -25,6 +25,7 @@ const TARGETS = [
   'herix-miniapp/src/i18n/zh.json',
   'herix-miniapp/src/i18n/ja.json',
   'herix-miniapp/src/i18n/en.json',
+  'herix-miniapp/src/i18n/vi.json',
 ];
 
 const root = path.join(__dirname, '..');

@@ -11,15 +11,17 @@ import { i18n as i18nApi } from './api';
 import zh from '../i18n/zh.json';
 import ja from '../i18n/ja.json';
 import en from '../i18n/en.json';
+import vi from '../i18n/vi.json';
 
-export type Locale = 'zh' | 'ja' | 'en';
+export type Locale = 'zh' | 'ja' | 'en' | 'vi';
 export const LOCALES: { id: Locale; label: string }[] = [
   { id: 'zh', label: '中文' },
   { id: 'ja', label: '日本語' },
   { id: 'en', label: 'English' },
+  { id: 'vi', label: 'Tiếng Việt' },
 ];
 
-const BUNDLED: Record<Locale, Record<string, string>> = { zh, ja, en };
+const BUNDLED: Record<Locale, Record<string, string>> = { zh, ja, en, vi };
 const LOCALE_KEY = 'herix_locale';
 const DICT_KEY = (l: Locale) => `herix_i18n_${l}`;
 
@@ -32,6 +34,7 @@ function detectLocale(): Locale {
     if (sys.startsWith('zh')) return 'zh';
     if (sys.startsWith('ja')) return 'ja';
     if (sys.startsWith('en')) return 'en';
+    if (sys.startsWith('vi')) return 'vi';
   } catch { /* 检测失败走默认 */ }
   return 'zh';
 }

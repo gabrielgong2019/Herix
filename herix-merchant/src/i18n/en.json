@@ -467,6 +467,8 @@
   },
   "auth": {
     "loginTitle": "Merchant Dashboard",
+    "loginHeadline": "Recruit Bloggers / KOLs",
+    "loginSubline": "On Herix, we call them Ambassadors",
     "email": "Email",
     "password": "Password",
     "loginBtn": "Log in",

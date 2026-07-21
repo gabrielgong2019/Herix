@@ -474,6 +474,8 @@
   },
   "auth": {
     "loginTitle": "登录商家后台",
+    "loginHeadline": "招募博主 / KOL",
+    "loginSubline": "在 Herix，我们称他们为「赫使」",
     "email": "邮箱",
     "password": "密码",
     "loginBtn": "登录",

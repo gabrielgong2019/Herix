@@ -77,7 +77,8 @@ export default function Login() {
             style={{ display: 'block', margin: '0 auto 12px', width: 64, height: 64, borderRadius: 14, objectFit: 'cover' }}
           />
           <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>Herix</div>
-          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>{t('auth.loginTitle')}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text)', marginTop: 6 }}>{t('auth.loginHeadline')}</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>{t('auth.loginSubline')}</div>
         </div>
 
         {/* Form */}

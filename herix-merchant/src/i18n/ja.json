@@ -467,6 +467,8 @@
   },
   "auth": {
     "loginTitle": "商家ダッシュボード",
+    "loginHeadline": "ブロガー / KOL を募集",
+    "loginSubline": "Herix では、彼らを「アンバサダー」と呼びます",
     "email": "メールアドレス",
     "password": "パスワード",
     "loginBtn": "ログイン",

@@ -467,6 +467,8 @@
   },
   "auth": {
     "loginTitle": "브랜드 대시보드",
+    "loginHeadline": "블로거 / KOL 모집",
+    "loginSubline": "Herix에서는 이들을 「어시스턴트」라고 부릅니다",
     "email": "이메일",
     "password": "비밀번호",
     "loginBtn": "로그인",

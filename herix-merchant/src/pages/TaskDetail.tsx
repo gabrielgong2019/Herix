@@ -9,6 +9,11 @@ import { formatDate } from '@/lib/utils'
 
 type Tab = 'applicants' | 'submissions' | 'codes' | 'referrals' | 'partners'
 
+function maskName(name: string): string {
+  if (!name || name.length <= 1) return name
+  return name[0] + '**'
+}
+
 // ── Publish banner ────────────────────────────────────────────────
 function PublishBanner({ taskId }: { taskId: string }) {
   const { t } = useTranslation()
@@ -538,7 +543,7 @@ export default function TaskDetail() {
                 {applications.map((app) => (
                   <tr key={app.id}>
                     <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>
-                      {app.display_name || app.nickname || app.herald?.name || app.user_id}
+                      {maskName(app.display_name || app.nickname || app.herald?.name || app.user_id || '')}
                     </td>
                     <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
                       {formatDate(app.created_at)}
@@ -592,7 +597,7 @@ export default function TaskDetail() {
                 )}
                 {submissions.map((sub) => (
                   <tr key={sub.id}>
-                    <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{sub.nickname || sub.herald?.name || sub.user_id}</td>
+                    <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{maskName(sub.nickname || sub.herald?.name || sub.user_id || '')}</td>
                     <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{formatDate(sub.created_at)}</td>
                     <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{

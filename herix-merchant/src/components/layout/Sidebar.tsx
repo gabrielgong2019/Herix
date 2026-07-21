@@ -41,7 +41,7 @@ export function Sidebar() {
           <div className="text-white text-base font-bold tracking-widest leading-none">
             HER<span style={{ color: 'var(--primary)' }}>IX</span>
           </div>
-          <div className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>商家后台</div>
+          <div className="text-xs mt-0.5" style={{ color: 'var(--sidebar-text)' }}>{user?.is_agency ? '代理后台' : '商家后台'}</div>
         </div>
       </div>
 

@@ -89,7 +89,7 @@ export default function TaskCard({ task, categories }: Props) {
                 {s <= filledStars ? '★' : '☆'}
               </Text>
             ))}
-            <Text className='rating-num'>{rating > 0 ? rating : t('taskCard.new')}</Text>
+            {rating > 0 && <Text className='rating-num'>{rating}</Text>}
           </View>
         </View>
         <View className='thumb' style={img ? { backgroundImage: `url(${img})` } : undefined} />

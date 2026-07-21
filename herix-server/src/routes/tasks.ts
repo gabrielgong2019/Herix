@@ -863,8 +863,9 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   }
 
   const applications = await findMany<any>(
-    `SELECT ta.*, u.nickname, hp.display_name, hp.country, hp.social_platforms,
-            hp.tier_snapshot, hp.social_platforms_updated_at,
+    `SELECT ta.*, u.nickname, u.avatar_url, hp.display_name, hp.country,
+            hp.social_platforms, hp.tier_snapshot, hp.social_platforms_updated_at,
+            hp.community, hp.bio,
             (SELECT COUNT(*) FROM task_submissions ts2 WHERE ts2.herald_id = ta.herald_id AND ts2.status = 'APPROVED') AS completed_tasks,
             (SELECT ROUND(AVG(CASE WHEN tr.score >= 4 THEN 1.0 ELSE 0 END) * 100) / 100.0
              FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate

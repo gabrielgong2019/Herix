@@ -219,8 +219,12 @@ export interface Application {
   created_at: string
   nickname?: string
   display_name?: string
+  avatar_url?: string
   herald?: { name: string; avatar?: string }
   tier_snapshot?: string
+  social_platforms?: string
+  community?: string
+  bio?: string
   completed_tasks?: number
   good_rate?: number
 }

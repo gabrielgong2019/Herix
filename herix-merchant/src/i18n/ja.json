@@ -21,6 +21,38 @@
     "draft": "下書き",
     "new": "新規"
   },
+  "platform": {
+    "xiaohongshu": "小紅書",
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "douyin": "抖音",
+    "youtube": "YouTube",
+    "weibo": "微博",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "line": "LINE",
+    "other": "その他"
+  },
+  "tier": {
+    "Nano": "Nano · 1K-10K",
+    "Micro": "Micro · 1万-10万",
+    "Mid": "Mid · 10万-50万",
+    "Macro": "Macro · 50万+",
+    "Mega": "Mega · 100万+"
+  },
+  "herald": {
+    "drawerTitle": "アンバサダー資格",
+    "platforms": "SNSプラットフォーム",
+    "followers": "{n} フォロワー",
+    "record": "Herix 実績",
+    "completedTasks": "完了案件",
+    "goodRate": "好評率",
+    "community": "コミュニティ",
+    "noPlatforms": "プラットフォーム情報なし",
+    "noRecord": "実績なし",
+    "tasks": "{n} 件",
+    "joinedAt": "{date} 参加"
+  },
   "nav": {
     "dashboard": "ダッシュボード",
     "tasks": "タスク管理",

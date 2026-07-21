@@ -21,6 +21,38 @@
     "draft": "草稿",
     "new": "新建"
   },
+  "platform": {
+    "xiaohongshu": "小红书",
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "douyin": "抖音",
+    "youtube": "YouTube",
+    "weibo": "微博",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "line": "LINE",
+    "other": "其他平台"
+  },
+  "tier": {
+    "Nano": "Nano · 1K-10K",
+    "Micro": "Micro · 1万-10万",
+    "Mid": "Mid · 10万-50万",
+    "Macro": "Macro · 50万+",
+    "Mega": "Mega · 百万+"
+  },
+  "herald": {
+    "drawerTitle": "赫使资质",
+    "platforms": "社交平台",
+    "followers": "{n} 粉丝",
+    "record": "Herix 记录",
+    "completedTasks": "完成任务",
+    "goodRate": "好评率",
+    "community": "所在社群",
+    "noPlatforms": "暂无平台信息",
+    "noRecord": "暂无记录",
+    "tasks": "{n} 个",
+    "joinedAt": "加入于 {date}"
+  },
   "nav": {
     "dashboard": "概览",
     "tasks": "我的任务",

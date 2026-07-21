@@ -21,6 +21,38 @@
     "draft": "Draft",
     "new": "New"
   },
+  "platform": {
+    "xiaohongshu": "Xiaohongshu (RED)",
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "douyin": "Douyin",
+    "youtube": "YouTube",
+    "weibo": "Weibo",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "line": "LINE",
+    "other": "Other"
+  },
+  "tier": {
+    "Nano": "Nano · 1K-10K",
+    "Micro": "Micro · 10K-100K",
+    "Mid": "Mid · 100K-500K",
+    "Macro": "Macro · 500K+",
+    "Mega": "Mega · 1M+"
+  },
+  "herald": {
+    "drawerTitle": "Ambassador Profile",
+    "platforms": "Social Platforms",
+    "followers": "{n} followers",
+    "record": "Herix Record",
+    "completedTasks": "Completed",
+    "goodRate": "Good Rate",
+    "community": "Community",
+    "noPlatforms": "No platform info",
+    "noRecord": "No record yet",
+    "tasks": "{n} tasks",
+    "joinedAt": "Joined {date}"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "tasks": "Tasks",

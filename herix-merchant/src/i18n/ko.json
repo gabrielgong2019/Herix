@@ -21,6 +21,38 @@
     "draft": "초안",
     "new": "새로 만들기"
   },
+  "platform": {
+    "xiaohongshu": "샤오홍수",
+    "instagram": "Instagram",
+    "tiktok": "TikTok",
+    "douyin": "더우인",
+    "youtube": "YouTube",
+    "weibo": "웨이보",
+    "twitter": "X (Twitter)",
+    "facebook": "Facebook",
+    "line": "LINE",
+    "other": "기타"
+  },
+  "tier": {
+    "Nano": "Nano · 1K-10K",
+    "Micro": "Micro · 1만-10만",
+    "Mid": "Mid · 10만-50만",
+    "Macro": "Macro · 50만+",
+    "Mega": "Mega · 100만+"
+  },
+  "herald": {
+    "drawerTitle": "앰배서더 프로필",
+    "platforms": "소셜 플랫폼",
+    "followers": "{n} 팔로워",
+    "record": "Herix 실적",
+    "completedTasks": "완료 캠페인",
+    "goodRate": "호평률",
+    "community": "커뮤니티",
+    "noPlatforms": "플랫폼 정보 없음",
+    "noRecord": "실적 없음",
+    "tasks": "{n} 건",
+    "joinedAt": "{date} 가입"
+  },
   "nav": {
     "dashboard": "대시보드",
     "tasks": "태스크 관리",

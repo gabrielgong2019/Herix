@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { tasksApi } from '@/lib/api'
+import { tasksApi, type Application } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
+import { HeraldDrawer } from '@/components/HeraldDrawer'
 import { ArrowLeft, Check, X, Copy, Download, ExternalLink, Upload } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -406,6 +407,7 @@ export default function TaskDetail() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('applicants')
+  const [drawerApp, setDrawerApp] = useState<Application | null>(null)
 
   const { data: task } = useQuery({
     queryKey: ['task', id],
@@ -427,11 +429,18 @@ export default function TaskDetail() {
 
   const approveMut = useMutation({
     mutationFn: (appId: string) => tasksApi.approveApp(id!, appId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['task-apps', id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task-apps', id] })
+      qc.invalidateQueries({ queryKey: ['task', id] })
+      setDrawerApp(null)
+    },
   })
   const rejectMut = useMutation({
     mutationFn: (appId: string) => tasksApi.rejectApp(id!, appId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['task-apps', id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task-apps', id] })
+      setDrawerApp(null)
+    },
   })
 
   if (!task) return null
@@ -541,9 +550,26 @@ export default function TaskDetail() {
                   <tr><td colSpan={4} className="px-5 py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>{t('tasks.emptyApplicants')}</td></tr>
                 )}
                 {applications.map((app) => (
-                  <tr key={app.id}>
+                  <tr
+                    key={app.id}
+                    onClick={() => setDrawerApp(app)}
+                    style={{ cursor: 'pointer', transition: 'background 0.1s' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#fafafa')}
+                    onMouseLeave={e => (e.currentTarget.style.background = '')}
+                  >
                     <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>
-                      {maskName(app.display_name || app.nickname || app.herald?.name || app.user_id || '')}
+                      <div className="flex items-center gap-2.5">
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                          background: 'var(--primary)', display: 'flex', alignItems: 'center',
+                          justifyContent: 'center', fontSize: 12, color: '#fff',
+                          backgroundImage: app.avatar_url ? `url(${app.avatar_url})` : undefined,
+                          backgroundSize: 'cover',
+                        }}>
+                          {!app.avatar_url && ((app.display_name || app.nickname || '?')[0]).toUpperCase()}
+                        </div>
+                        {maskName(app.display_name || app.nickname || app.herald?.name || app.user_id || '')}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
                       {formatDate(app.created_at)}
@@ -556,24 +582,11 @@ export default function TaskDetail() {
                         {t(`status.${app.status}`)}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                    <td className="px-5 py-3.5 text-xs" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
                       {app.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button
-                            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer"
-                            style={{ background: '#dcfce7', color: '#16a34a' }}
-                            onClick={() => approveMut.mutate(app.id)}
-                          >
-                            <Check size={12} /> {t('reviews.approve')}
-                          </button>
-                          <button
-                            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer"
-                            style={{ background: '#fee2e2', color: '#dc2626' }}
-                            onClick={() => rejectMut.mutate(app.id)}
-                          >
-                            <X size={12} /> {t('reviews.reject')}
-                          </button>
-                        </div>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Check size={12} style={{ color: '#16a34a' }} /> / <X size={12} style={{ color: '#dc2626' }} />
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -621,6 +634,15 @@ export default function TaskDetail() {
           {tab === 'partners' && <PartnersTab taskId={id!} parties={parties} />}
         </div>
       </div>
+
+      <HeraldDrawer
+        app={drawerApp}
+        onClose={() => setDrawerApp(null)}
+        onApprove={(appId) => approveMut.mutate(appId)}
+        onReject={(appId) => rejectMut.mutate(appId)}
+        approving={approveMut.isPending}
+        rejecting={rejectMut.isPending}
+      />
     </div>
   )
 }

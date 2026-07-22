@@ -6,6 +6,7 @@ import {
   wallet as walletApi,
   ambassador,
   users,
+  specialtyTags,
   setToken,
   getToken,
   clearToken,
@@ -73,6 +74,11 @@ interface State {
   /** 绑定邮箱弹层（微信注册用户） */
   beSheet: null | { email: string; code: string; password: string };
   beCountdown: number;
+  /** 擅长领域标签 */
+  allTags: { id: string; sort_order: number }[];
+  myTagIds: string[];
+  tagSheetOpen: boolean;
+  tagSaving: boolean;
 }
 
 export default class Profile extends Component<{}, State> {
@@ -96,6 +102,10 @@ export default class Profile extends Component<{}, State> {
     wxBindMode: false,
     beSheet: null,
     beCountdown: 0,
+    allTags: [],
+    myTagIds: [],
+    tagSheetOpen: false,
+    tagSaving: false,
   };
 
   componentDidShow() {
@@ -123,10 +133,33 @@ export default class Profile extends Component<{}, State> {
       const user = await authApi.me();
       this.setState({ user, isLogin: true });
       Taro.setStorageSync('herix_user', user);
-      if (user.role === 'HERALD') this.loadBalance();
+      if (user.role === 'HERALD') { this.loadBalance(); this.loadTags(); }
     } catch {
       clearToken();
       this.setState({ isLogin: false });
+    }
+  };
+
+  loadTags = async () => {
+    try {
+      const [all, mine] = await Promise.all([
+        specialtyTags.list(),
+        specialtyTags.myTags(),
+      ]);
+      this.setState({ allTags: all || [], myTagIds: (mine || []).map((tg: any) => tg.id) });
+    } catch { /* 非关键，失败忽略 */ }
+  };
+
+  saveTags = async () => {
+    this.setState({ tagSaving: true });
+    try {
+      await specialtyTags.saveTags(this.state.myTagIds);
+      this.setState({ tagSheetOpen: false });
+      Taro.showToast({ title: t('common.save'), icon: 'success' });
+    } catch (err: any) {
+      Taro.showToast({ title: err.message || t('error.GENERIC'), icon: 'none' });
+    } finally {
+      this.setState({ tagSaving: false });
     }
   };
 
@@ -471,23 +504,23 @@ export default class Profile extends Component<{}, State> {
               </>
             ) : showRegister ? (
               <>
-                <Input className='input' placeholder={t('profile.email')} value={email} onInput={e => this.setState({ email: e.detail.value })} />
+                <Input className='input' placeholder={t('profile.email')} placeholderClass='ph' value={email} onInput={e => this.setState({ email: e.detail.value })} />
                 <View className='pf-code-row'>
-                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} value={this.state.vcode} onInput={e => this.setState({ vcode: e.detail.value })} />
+                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} placeholderClass='ph' value={this.state.vcode} onInput={e => this.setState({ vcode: e.detail.value })} />
                   <View className={`pf-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.codeCountdown > 0 ? undefined : this.sendRegCode}>
                     {this.state.codeCountdown > 0 ? t('landing.codeResend', { s: this.state.codeCountdown }) : t('landing.codeSend')}
                   </View>
                 </View>
-                <Input className='input' placeholder={t('profile.nickname')} value={nickname} onInput={e => this.setState({ nickname: e.detail.value })} />
-                <Input className='input' placeholder={t('profile.passwordMin')} password value={password} onInput={e => this.setState({ password: e.detail.value })} />
+                <Input className='input' placeholder={t('profile.nickname')} placeholderClass='ph' value={nickname} onInput={e => this.setState({ nickname: e.detail.value })} />
+                <Input className='input' placeholder={t('profile.passwordMin')} placeholderClass='ph' password value={password} onInput={e => this.setState({ password: e.detail.value })} />
                 <Button className='btn-primary' onClick={this.handleRegister} loading={loading}>{t('profile.register')}</Button>
                 <Text className='switch-auth' onClick={() => this.setState({ showRegister: false })}>{t('profile.toLogin')}</Text>
               </>
             ) : (
               <>
                 {this.state.wxBindMode && <Text className='auth-hint'>{t('auth.bindModeHint')}</Text>}
-                <Input className='input' placeholder={t('profile.account')} value={account} onInput={e => this.setState({ account: e.detail.value })} />
-                <Input className='input' placeholder={t('profile.password')} password value={password} onInput={e => this.setState({ password: e.detail.value })} />
+                <Input className='input' placeholder={t('profile.account')} placeholderClass='ph' value={account} onInput={e => this.setState({ account: e.detail.value })} />
+                <Input className='input' placeholder={t('profile.password')} placeholderClass='ph' password value={password} onInput={e => this.setState({ password: e.detail.value })} />
                 <Button className='btn-primary' onClick={this.handleLogin} loading={loading}>
                   {this.state.wxBindMode ? t('auth.loginAndBind') : t('profile.login')}
                 </Button>
@@ -525,7 +558,7 @@ export default class Profile extends Component<{}, State> {
           <Text className='top-role'>{isHerald ? t('profile.roleHerald') : t('profile.roleBrand')}</Text>
           {editingName ? (
             <View className='name-edit'>
-              <Input className='input' placeholder={t('profile.newNickname')} value={newNick} onInput={e => this.setState({ newNick: e.detail.value })} />
+              <Input className='input' placeholder={t('profile.newNickname')} placeholderClass='ph' value={newNick} onInput={e => this.setState({ newNick: e.detail.value })} />
               <View className='name-edit-btns'>
                 <Text className='btn-outline sm' onClick={() => this.setState({ editingName: false })}>{t('common.cancel')}</Text>
                 <Text className='btn-primary sm' onClick={this.saveNickname}>{t('common.save')}</Text>
@@ -641,6 +674,64 @@ export default class Profile extends Component<{}, State> {
           </View>
         )}
 
+        {/* 擅长领域（赫使）*/}
+        {isHerald && (
+          <View className='card'>
+            <View className='card-head-row'>
+              <Text className='card-head'>{t('specialty.selectTitle')}</Text>
+              <Text className='card-action' onClick={() => this.setState({ tagSheetOpen: true })}>
+                {t('common.edit')}
+              </Text>
+            </View>
+            <View className='tag-chips'>
+              {this.state.myTagIds.length === 0 ? (
+                <Text className='tag-empty' onClick={() => this.setState({ tagSheetOpen: true })}>
+                  {t('specialty.selectHint')}
+                </Text>
+              ) : (
+                this.state.myTagIds.map(id => (
+                  <Text key={id} className='tag-chip'>{t(`specialty.${id}`)}</Text>
+                ))
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* 标签选择器 overlay */}
+        {isHerald && this.state.tagSheetOpen && (
+          <View className='ps-overlay' onClick={() => this.setState({ tagSheetOpen: false })}>
+            <View className='ps-sheet tag-sheet' onClick={e => e.stopPropagation()}>
+              <Text className='ps-title'>{t('specialty.selectTitle')}</Text>
+              <Text className='ps-hint'>{t('specialty.selectHint')}</Text>
+              <View className='tag-picker-grid'>
+                {this.state.allTags.map(tag => {
+                  const selected = this.state.myTagIds.includes(tag.id);
+                  const maxed = !selected && this.state.myTagIds.length >= 5;
+                  return (
+                    <View
+                      key={tag.id}
+                      className={`tag-pick-item ${selected ? 'selected' : ''} ${maxed ? 'maxed' : ''}`}
+                      onClick={maxed ? undefined : () => {
+                        const ids = this.state.myTagIds;
+                        const next = selected ? ids.filter(i => i !== tag.id) : [...ids, tag.id];
+                        this.setState({ myTagIds: next });
+                      }}
+                    >
+                      {t(`specialty.${tag.id}`)}
+                    </View>
+                  );
+                })}
+              </View>
+              <View
+                className={`btn-primary${this.state.tagSaving ? ' disabled' : ''}`}
+                onClick={this.state.tagSaving ? undefined : this.saveTags}
+              >
+                {this.state.tagSaving ? t('common.saving') : t('specialty.save')}
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* 绑定邮箱弹层（微信注册用户） */}
         {this.state.beSheet && (() => {
           const be = this.state.beSheet!;
@@ -650,16 +741,16 @@ export default class Profile extends Component<{}, State> {
                 <Text className='ps-title'>📧 {t('profile.bindEmail')}</Text>
                 <Text className='ps-hint'>{t('profile.bindEmailHint')}</Text>
                 <Text className='ps-label'>{t('profile.emailAddr')}</Text>
-                <Input className='input' type='text' placeholder={t('profile.emailAddr')} value={be.email} onInput={e => this.setState({ beSheet: { ...be, email: e.detail.value } })} />
+                <Input className='input' type='text' placeholder={t('profile.emailAddr')} placeholderClass='ph' value={be.email} onInput={e => this.setState({ beSheet: { ...be, email: e.detail.value } })} />
                 <Text className='ps-label'>{t('landing.codePlaceholder')}</Text>
                 <View className='pf-code-row'>
-                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} value={be.code} onInput={e => this.setState({ beSheet: { ...be, code: e.detail.value } })} />
+                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} placeholderClass='ph' value={be.code} onInput={e => this.setState({ beSheet: { ...be, code: e.detail.value } })} />
                   <View className={`pf-code-btn ${this.state.beCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.beCountdown > 0 ? undefined : this.sendBindCode}>
                     {this.state.beCountdown > 0 ? t('landing.codeResend', { s: this.state.beCountdown }) : t('landing.codeSend')}
                   </View>
                 </View>
                 <Text className='ps-label'>{t('profile.setPassword')}</Text>
-                <Input className='input' password placeholder={t('profile.passwordMin')} value={be.password} onInput={e => this.setState({ beSheet: { ...be, password: e.detail.value } })} />
+                <Input className='input' password placeholder={t('profile.passwordMin')} placeholderClass='ph' value={be.password} onInput={e => this.setState({ beSheet: { ...be, password: e.detail.value } })} />
                 <View className='btn-primary' onClick={this.submitBindEmail}>{t('common.save')}</View>
               </View>
             </View>

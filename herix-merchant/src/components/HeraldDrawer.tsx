@@ -170,6 +170,22 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
               </div>
             </Section>
           )}
+
+          {/* Specialty tags */}
+          {app.specialty_tags && app.specialty_tags.length > 0 && (
+            <Section label={t('herald.specialties')}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {app.specialty_tags.map((tagId: string) => (
+                  <span key={tagId} style={{
+                    padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 500,
+                    background: 'var(--primary-light, #eff6ff)', color: 'var(--primary)',
+                  }}>
+                    {t(`specialty.${tagId}`, tagId)}
+                  </span>
+                ))}
+              </div>
+            </Section>
+          )}
         </div>
 
         {/* Footer actions — only for pending */}

@@ -39,11 +39,11 @@ export default function Dashboard() {
   })
   const { data: walletData } = useQuery({
     queryKey: ['wallet-balance'],
-    queryFn: () => walletApi.balance().then((r) => r.data),
+    queryFn: () => walletApi.brandBalance().then((r) => r.data),
   })
 
   const tasks = tasksData?.tasks || []
-  const openCount = tasks.filter((t) => t.status === 'open').length
+  const openCount = tasks.filter((t) => t.status.toUpperCase() === 'OPEN').length
   const totalApplicants = tasks.reduce((s, t) => s + (t.applicant_count || 0), 0)
 
   return (
@@ -56,7 +56,7 @@ export default function Dashboard() {
           <StatCard label={t('dashboard.statTasks')} value={openCount} color="var(--primary)" />
           <StatCard label={t('dashboard.statApplicants')} value={totalApplicants} />
           <StatCard label={t('dashboard.statSubmissions')} value="—" />
-          <StatCard label={t('dashboard.statCredits')} value={walletData ? `¥${walletData.credits.toLocaleString()}` : '—'} />
+          <StatCard label={t('dashboard.statCredits')} value={walletData ? `¥${walletData.available.toLocaleString()}` : '—'} />
         </div>
 
         {/* Recent tasks */}

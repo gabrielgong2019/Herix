@@ -444,6 +444,56 @@
   color: var(--text-muted);
 }
 
+// ── 擅长领域标签 ──
+.tag-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 12px 32px 28px;
+}
+.tag-chip {
+  display: inline-block;
+  padding: 10px 24px;
+  border-radius: 32px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 24px;
+  font-weight: 500;
+}
+.tag-empty {
+  display: block;
+  font-size: 24px;
+  color: var(--text-muted);
+  padding: 4px 0 8px;
+}
+.tag-sheet {
+  max-height: 80vh;
+}
+.tag-picker-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin: 24px 0 32px;
+}
+.tag-pick-item {
+  padding: 16px 28px;
+  border-radius: 32px;
+  border: 2px solid var(--border);
+  font-size: 26px;
+  color: var(--text-primary);
+  background: var(--bg);
+  cursor: pointer;
+  &.selected {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: #fff;
+  }
+  &.maxed {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
 // ── 操作 ──
 .actions {
   padding: 0;

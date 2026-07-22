@@ -56,6 +56,13 @@ body {
   background-color: var(--bg);
 }
 
+// WeChat miniapp dark-mode 会把 <input> placeholder 颜色强制改为白色，
+// 在白色背景输入框上不可见。用 placeholder-class 显式固定颜色覆盖系统覆写。
+// 所有 <Input> 加 placeholderClass='ph' 属性即可复用此规则。
+.ph {
+  color: #b2b2b2;
+}
+
 // 配置 tabBar 后，H5 真正撑满宽度的最外层是 .taro-tabbar__container，约束这层即可
 // （tabbar 本体 position:relative 在容器内，跟着一起被约束，不用单独处理）。
 // 大写 PX = 真实像素：pxtransform 不转换大写单位，浏览器对单位大小写不敏感。

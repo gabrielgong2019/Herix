@@ -238,6 +238,13 @@ export const categories = {
   list: () => request<any[]>('GET', '/categories', undefined, false),
 };
 
+// ── Specialty Tags ──
+export const specialtyTags = {
+  list: () => request<{ id: string; sort_order: number }[]>('GET', '/specialty-tags', undefined, false),
+  myTags: () => request<{ id: string; source: string }[]>('GET', '/specialty-tags/herald/me', undefined, true),
+  saveTags: (tagIds: string[]) => request<any>('PUT', '/specialty-tags/herald/me', { tagIds }, true),
+};
+
 // ── Communities ──
 export const communities = {
   list: () => request<{ id: string; labelKey: string; region: string }[]>('GET', '/communities', undefined, false),

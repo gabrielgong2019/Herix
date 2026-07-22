@@ -347,14 +347,14 @@ export default class Onboard extends Component<{}, State> {
                 {d.bankType === 'wise' || d.bankType === 'paypal' ? (
                   <View>
                     <Text className='field-label'>{t('ob.bankEmail')}</Text>
-                    <Input className='ob-input' placeholder='your@email.com' value={d.bankEmail} onInput={e => this.set('bankEmail', e.detail.value)} />
+                    <Input className='ob-input' placeholder='your@email.com' placeholderClass='ph' value={d.bankEmail} onInput={e => this.set('bankEmail', e.detail.value)} />
                   </View>
                 ) : (
                   <View>
                     <Text className='field-label'>SWIFT Code</Text>
-                    <Input className='ob-input' placeholder='XXXXXXXX' value={d.swiftCode} onInput={e => this.set('swiftCode', e.detail.value)} />
+                    <Input className='ob-input' placeholder='XXXXXXXX' placeholderClass='ph' value={d.swiftCode} onInput={e => this.set('swiftCode', e.detail.value)} />
                     <Text className='field-label'>{t('ob.iban')}</Text>
-                    <Input className='ob-input' placeholder={t('addMethod.ph.cnAcctNo')} value={d.iban} onInput={e => this.set('iban', e.detail.value)} />
+                    <Input className='ob-input' placeholder={t('addMethod.ph.cnAcctNo')} placeholderClass='ph' value={d.iban} onInput={e => this.set('iban', e.detail.value)} />
                   </View>
                 )}
                 <View className={`btn-primary ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.nextBank}>

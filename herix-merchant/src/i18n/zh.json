@@ -51,7 +51,22 @@
     "noPlatforms": "暂无平台信息",
     "noRecord": "暂无记录",
     "tasks": "{n} 个",
-    "joinedAt": "加入于 {date}"
+    "joinedAt": "加入于 {date}",
+    "specialties": "擅长领域"
+  },
+  "specialty": {
+    "baby-mom": "宝妈",
+    "food-explorer": "美食探店",
+    "beauty": "美妆",
+    "student-abroad": "留学生",
+    "working-adult": "社会人",
+    "travel": "旅行者",
+    "finance": "理财房产",
+    "lifestyle": "生活方式",
+    "fitness": "健身运动",
+    "tech": "数码科技",
+    "fashion": "时尚穿搭",
+    "pet": "宠物"
   },
   "nav": {
     "dashboard": "概览",

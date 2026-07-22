@@ -51,7 +51,22 @@
     "noPlatforms": "プラットフォーム情報なし",
     "noRecord": "実績なし",
     "tasks": "{n} 件",
-    "joinedAt": "{date} 参加"
+    "joinedAt": "{date} 参加",
+    "specialties": "得意分野"
+  },
+  "specialty": {
+    "baby-mom": "ママ・育児",
+    "food-explorer": "グルメ探訪",
+    "beauty": "美容・コスメ",
+    "student-abroad": "留学生",
+    "working-adult": "社会人",
+    "travel": "旅行",
+    "finance": "資産運用・不動産",
+    "lifestyle": "ライフスタイル",
+    "fitness": "フィットネス",
+    "tech": "デジタル・テック",
+    "fashion": "ファッション",
+    "pet": "ペット"
   },
   "nav": {
     "dashboard": "ダッシュボード",

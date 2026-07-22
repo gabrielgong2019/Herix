@@ -871,7 +871,11 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             hp.community, hp.bio,
             (SELECT COUNT(*) FROM task_submissions ts2 WHERE ts2.herald_id = ta.herald_id AND ts2.status = 'APPROVED') AS completed_tasks,
             (SELECT ROUND(AVG(CASE WHEN tr.score >= 4 THEN 1.0 ELSE 0 END) * 100) / 100.0
-             FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate
+             FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate,
+            (SELECT json_agg(hst.tag_id ORDER BY st.sort_order)
+             FROM herald_specialty_tags hst
+             JOIN specialty_tags st ON st.id = hst.tag_id
+             WHERE hst.herald_id = ta.herald_id AND st.active = 1) AS specialty_tags
      FROM task_applications ta
      JOIN users u ON u.id = ta.herald_id
      LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id

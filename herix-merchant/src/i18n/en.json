@@ -51,7 +51,22 @@
     "noPlatforms": "No platform info",
     "noRecord": "No record yet",
     "tasks": "{n} tasks",
-    "joinedAt": "Joined {date}"
+    "joinedAt": "Joined {date}",
+    "specialties": "Specialties"
+  },
+  "specialty": {
+    "baby-mom": "Mom & Baby",
+    "food-explorer": "Food Explorer",
+    "beauty": "Beauty",
+    "student-abroad": "Student Abroad",
+    "working-adult": "Working Adult",
+    "travel": "Travel",
+    "finance": "Finance & Real Estate",
+    "lifestyle": "Lifestyle",
+    "fitness": "Fitness",
+    "tech": "Tech & Gadgets",
+    "fashion": "Fashion",
+    "pet": "Pets"
   },
   "nav": {
     "dashboard": "Dashboard",

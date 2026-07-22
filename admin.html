@@ -149,6 +149,7 @@ function shell(inner){
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
     {id:'categories',icon:'🏷️',label:'任务分类'},
+    {id:'specialty-tags',icon:'🔖',label:'专长标签'},
     {id:'i18n',icon:'🌐',label:'本地化'},
     {id:'pricing',icon:'💰',label:'定价'},
   ];
@@ -162,7 +163,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类',i18n:'本地化',pricing:'定价'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',i18n:'本地化',pricing:'定价'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -179,6 +180,7 @@ function pageCont(){
     case 'tasks': return tasksPage();
     case 'ambassadors': return ambassadorsPage();
     case 'categories': return categoriesPage();
+    case 'specialty-tags': return specialtyTagsPage();
     case 'i18n': return i18nPage();
     case 'pricing': return pricingPage();
     default: return dashPage();
@@ -824,6 +826,93 @@ function showCatMsg(msg,type){
   setTimeout(function(){el.innerHTML=''},3000);
 }
 
+// ── 专长标签管理 ──
+function specialtyTagsPage(){
+  var tags = st.data.specialtyTags || [];
+  var h = '<div style="margin-bottom:20px;display:flex;justify-content:space-between;align-items:center">';
+  h += '<div style="font-size:13px;color:var(--muted)">共 '+tags.length+' 个标签</div>';
+  h += '<button class="btn btn-primary btn-sm" onclick="showAddTag()">+ 新建标签</button></div>';
+  h += '<div id="stag-msg"></div>';
+  h += '<div class="tcard"><table><thead><tr><th>ID</th><th>排序</th><th>使用人数</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+  if(!tags.length){
+    h += '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">暂无标签</td></tr>';
+  } else {
+    tags.forEach(function(tg){
+      var activeLabel = tg.active ? '<span style="color:#16a34a;font-size:12px">● 启用</span>' : '<span style="color:#9ca3af;font-size:12px">● 停用</span>';
+      h += '<tr>';
+      h += '<td style="font-family:monospace;font-size:12px">'+esc(tg.id)+'</td>';
+      h += '<td>'+tg.sort_order+'</td>';
+      h += '<td>'+(tg.herald_count||0)+'</td>';
+      h += '<td>'+activeLabel+'</td>';
+      h += '<td><span style="cursor:pointer;color:var(--primary);font-size:12px;margin-right:12px" onclick="editTag(\''+esc(tg.id)+'\')">编辑</span>';
+      h += '<span style="cursor:pointer;color:'+(tg.active?'#dc2626':'#16a34a')+';font-size:12px" onclick="toggleTag(\''+esc(tg.id)+'\','+(tg.active?'false':'true')+')">'+( tg.active?'停用':'启用')+'</span></td>';
+      h += '</tr>';
+    });
+  }
+  h += '</tbody></table></div>';
+  h += '<div id="stag-form-wrap" style="display:none;margin-top:24px;background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:400px">';
+  h += '<div style="font-size:15px;font-weight:600;margin-bottom:16px" id="stag-form-title">新建标签</div>';
+  h += '<div class="ig"><label>ID（英文/连字符，不可修改）</label><input id="stf-id" placeholder="e.g. beauty"></div>';
+  h += '<div class="ig"><label>排序（数字越小越靠前）</label><input id="stf-sort" type="number" value="99"></div>';
+  h += '<div style="display:flex;gap:10px;margin-top:4px">';
+  h += '<button class="btn btn-primary" onclick="saveTag()">保存</button>';
+  h += '<button class="btn" onclick="document.getElementById(\'stag-form-wrap\').style.display=\'none\'">取消</button>';
+  h += '</div></div>';
+  return h;
+}
+
+function showAddTag(){
+  var w=document.getElementById('stag-form-wrap'); if(!w) return;
+  document.getElementById('stag-form-title').textContent='新建标签';
+  document.getElementById('stf-id').value=''; document.getElementById('stf-id').disabled=false;
+  document.getElementById('stf-sort').value='99';
+  w._editId=null; w.style.display='block';
+  document.getElementById('stf-id').focus();
+}
+
+function editTag(id){
+  var tags=st.data.specialtyTags||[];
+  var tg=tags.find(function(x){return x.id===id}); if(!tg) return;
+  var w=document.getElementById('stag-form-wrap'); if(!w) return;
+  document.getElementById('stag-form-title').textContent='编辑标签';
+  document.getElementById('stf-id').value=tg.id; document.getElementById('stf-id').disabled=true;
+  document.getElementById('stf-sort').value=tg.sort_order;
+  w._editId=id; w.style.display='block';
+}
+
+function saveTag(){
+  var w=document.getElementById('stag-form-wrap');
+  var editId=w?w._editId:null;
+  var id=(document.getElementById('stf-id').value||'').trim();
+  var sort=parseInt(document.getElementById('stf-sort').value)||99;
+  if(!editId && !id) return showTagMsg('请填写 ID','error');
+  function reload(){apiGet('/specialty-tags/all',function(d){st.data.specialtyTags=Array.isArray(d)?d:[];render()});}
+  if(!editId){
+    post('/specialty-tags',{id:id,sort_order:sort},function(d){
+      if(d.error) return showTagMsg(d.error,'error');
+      w.style.display='none'; reload();
+    });
+  } else {
+    apiPatch('/specialty-tags/'+editId,{sort_order:sort},function(d){
+      if(d.error) return showTagMsg(d.error,'error');
+      w.style.display='none'; reload();
+    });
+  }
+}
+
+function toggleTag(id,active){
+  apiPatch('/specialty-tags/'+id,{active:active},function(d){
+    if(d.error) return showToast(d.error);
+    apiGet('/specialty-tags/all',function(d){st.data.specialtyTags=Array.isArray(d)?d:[];render()});
+  });
+}
+
+function showTagMsg(msg,type){
+  var el=document.getElementById('stag-msg'); if(!el) return;
+  el.innerHTML='<div style="padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:13px;background:'+(type==='error'?'#fee2e2':'#dcfce7')+';color:'+(type==='error'?'#dc2626':'#16a34a')+'">'+esc(msg)+'</div>';
+  setTimeout(function(){el.innerHTML=''},3000);
+}
+
 /* ── Review Actions ── */
 function doDecl(id,approve){
   var reason=approve?null:prompt('拒绝原因（可选）');
@@ -1080,6 +1169,8 @@ function load(page){
     apiGet('/admin/ambassadors',function(d){st.data.ambassadors=d;render()});
   } else if(page==='categories'){
     apiGet('/categories/all',function(d){st.data.categories=Array.isArray(d)?d:[];render()});
+  } else if(page==='specialty-tags'){
+    apiGet('/specialty-tags/all',function(d){st.data.specialtyTags=Array.isArray(d)?d:[];render()});
   }
 }
 

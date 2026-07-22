@@ -51,7 +51,22 @@
     "noPlatforms": "플랫폼 정보 없음",
     "noRecord": "실적 없음",
     "tasks": "{n} 건",
-    "joinedAt": "{date} 가입"
+    "joinedAt": "{date} 가입",
+    "specialties": "전문 분야"
+  },
+  "specialty": {
+    "baby-mom": "육아·맘",
+    "food-explorer": "맛집 탐방",
+    "beauty": "뷰티",
+    "student-abroad": "유학생",
+    "working-adult": "직장인",
+    "travel": "여행",
+    "finance": "재테크·부동산",
+    "lifestyle": "라이프스타일",
+    "fitness": "피트니스",
+    "tech": "디지털·테크",
+    "fashion": "패션",
+    "pet": "반려동물"
   },
   "nav": {
     "dashboard": "대시보드",

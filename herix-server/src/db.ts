@@ -649,6 +649,26 @@ export async function initDatabase() {
     // 站点归属（2026-07-20）：任务归属站点，赫使按站点过滤任务；默认 jp 兼容存量数据
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS site_id TEXT NOT NULL DEFAULT 'jp'`,
     `CREATE INDEX IF NOT EXISTS idx_tasks_site ON tasks(site_id)`,
+    // 赫使专长标签（2026-07-22）
+    `CREATE TABLE IF NOT EXISTS specialty_tags (
+      id TEXT PRIMARY KEY,
+      sort_order INTEGER NOT NULL DEFAULT 99,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    )`,
+    `CREATE TABLE IF NOT EXISTS herald_specialty_tags (
+      herald_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      tag_id TEXT NOT NULL REFERENCES specialty_tags(id) ON DELETE CASCADE,
+      source TEXT NOT NULL DEFAULT 'manual',
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      PRIMARY KEY (herald_id, tag_id)
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_herald_specialty_tags_tag ON herald_specialty_tags(tag_id)`,
+    `INSERT INTO specialty_tags (id, sort_order) VALUES
+      ('baby-mom', 1), ('food-explorer', 2), ('beauty', 3), ('student-abroad', 4),
+      ('working-adult', 5), ('travel', 6), ('finance', 7), ('lifestyle', 8),
+      ('fitness', 9), ('tech', 10), ('fashion', 11), ('pet', 12)
+     ON CONFLICT (id) DO NOTHING`,
   ];
   for (const m of migrations) {
     await pool.query(m);

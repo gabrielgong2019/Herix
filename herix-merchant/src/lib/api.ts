@@ -227,6 +227,7 @@ export interface Application {
   bio?: string
   completed_tasks?: number
   good_rate?: number
+  specialty_tags?: string[] | null
 }
 
 export interface Submission {

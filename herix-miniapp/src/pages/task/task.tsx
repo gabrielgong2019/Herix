@@ -26,6 +26,8 @@ interface TaskDetailData {
   status: string;
   creator_name: string;
   creator_id: string;
+  approved_count?: number;
+  avg_payout_days?: number | null;
   application_count: number;
   applications: any[];
   is_escrowed: number;
@@ -427,6 +429,17 @@ export default class TaskDetail extends Component<{ id: string }, State> {
               : t('task.perPerson', { n: task.payout_per_herald ?? task.commission })}
           </Text>
           <Text className='meta'>{t('task.budgetMeta', { b: task.budget, n: task.max_heralds })}</Text>
+          <View className='task-info-row'>
+            {(() => {
+              const slotsLeft = task.max_heralds - (task.approved_count || 0);
+              return slotsLeft > 0
+                ? <Text className='slots-left'>{t('task.slotsLeft', { n: slotsLeft })}</Text>
+                : <Text className='slots-none'>{t('task.slotsNone')}</Text>;
+            })()}
+            {task.avg_payout_days != null && (
+              <Text className='avg-pay-days'>{t('task.avgPayDays', { n: task.avg_payout_days })}</Text>
+            )}
+          </View>
         </View>
 
         <View className='section'>

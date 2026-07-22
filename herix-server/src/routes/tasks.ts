@@ -833,7 +833,10 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     `SELECT t.*, u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
-            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
+            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count,
+            (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (ts.reviewed_at::timestamp - ts.submitted_at::timestamp)) / 86400))
+             FROM task_submissions ts JOIN tasks t2 ON t2.id = ts.task_id
+             WHERE t2.creator_id = t.creator_id AND ts.status = 'APPROVED' AND ts.reviewed_at IS NOT NULL) as avg_payout_days
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      WHERE t.id = ?`, [req.params.id]

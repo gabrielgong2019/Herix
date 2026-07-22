@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './contexts/AuthContext'
 import { AppLayout } from './components/layout/AppLayout'
 import Login from './pages/Login'
+import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
 import TaskForm from './pages/TaskForm'
@@ -27,6 +28,7 @@ export default function App() {
         <BrowserRouter basename="/merchant">
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/onboard" element={<Onboard />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />

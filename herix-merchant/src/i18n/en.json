@@ -52,7 +52,8 @@
     "noRecord": "No record yet",
     "tasks": "{n} tasks",
     "joinedAt": "Joined {date}",
-    "specialties": "Specialties"
+    "specialties": "Specialties",
+    "proposal": "Proposal"
   },
   "specialty": {
     "baby-mom": "Mom & Baby",
@@ -183,6 +184,19 @@
     "previewTitle": "Herald's view",
     "saveDraft": "Save Draft",
     "publishTask": "Publish Task",
+    "publishAndEnter": "Publish & Enter Dashboard",
+    "skipForNow": "Skip for Now",
+    "onboardTitle": "Create Your First Task",
+    "sec5Title": "Collaboration Rules",
+    "sec5Hint": "Set revision limits, submission deadline, and proposal requirements",
+    "fieldMinImages": "Minimum Images",
+    "fieldMinVideoSecs": "Minimum Video Length (seconds)",
+    "fieldMaxRevisions": "Max Revision Rounds",
+    "fieldMaxRevisionsUnit": "rounds",
+    "warnRevisions": "More than 2 revisions may deter ambassadors. Please confirm this is necessary.",
+    "fieldSubmitDeadline": "Content Submission Deadline",
+    "fieldRequireProposal": "Require Proposal from Ambassadors",
+    "requireProposalDesc": "Ambassadors must submit a written proposal and reference links when applying — ideal for tasks with specific content style requirements",
     "errorTitle": "Please enter a task title",
     "errorPayout": "Please enter the payout amount",
     "errorMaxHeralds": "Please enter max heralds"
@@ -520,6 +534,25 @@
     "password": "Password",
     "loginBtn": "Log in",
     "loggingIn": "Logging in...",
-    "errorInvalid": "Invalid email or password"
+    "errorInvalid": "Invalid email or password",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign up",
+    "registerTitle": "Create a Brand Account",
+    "registerBtn": "Register",
+    "registering": "Creating account...",
+    "sendCode": "Send Code",
+    "verifyCode": "Email Verification Code",
+    "codeSent": "Code sent — check your inbox",
+    "passwordHint": "At least 6 characters",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Log in",
+    "errorEmailRequired": "Please enter your email",
+    "errorEmailTaken": "This email is already registered",
+    "errorCodeRequired": "Please enter the verification code",
+    "errorCodeInvalid": "Invalid verification code",
+    "errorCodeExpired": "Code expired — please request a new one",
+    "errorCodeFrequent": "Too many requests — please wait 1 minute",
+    "errorSendCode": "Failed to send code — please try again",
+    "errorRegister": "Registration failed — please try again"
   }
 }

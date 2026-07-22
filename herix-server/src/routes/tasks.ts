@@ -919,6 +919,11 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       target_communities: data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c)),
       site_id:           VALID_SITES.has(data.siteId) ? data.siteId : 'jp',
       status:            'DRAFT',
+      min_images:        data.minImages || null,
+      min_video_seconds: data.minVideoSeconds || null,
+      max_revisions:     data.maxRevisions ?? 2,
+      require_proposal:  data.requireProposal ? 1 : 0,
+      submit_deadline:   data.submitDeadline || null,
       // cost_per_herald 和 commission_rate 在发布时计算快照
     });
 
@@ -973,6 +978,11 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (req.body.dataMode && ['AGGREGATE', 'DETAIL'].includes(req.body.dataMode)) {
     data.data_mode = req.body.dataMode;
   }
+  if (req.body.minImages !== undefined) data.min_images = req.body.minImages || null;
+  if (req.body.minVideoSeconds !== undefined) data.min_video_seconds = req.body.minVideoSeconds || null;
+  if (req.body.maxRevisions !== undefined) data.max_revisions = req.body.maxRevisions ?? 2;
+  if (req.body.requireProposal !== undefined) data.require_proposal = req.body.requireProposal ? 1 : 0;
+  if (req.body.submitDeadline !== undefined) data.submit_deadline = req.body.submitDeadline || null;
 
   await update('tasks', data, 'id = ?', [req.params.id]);
   res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));

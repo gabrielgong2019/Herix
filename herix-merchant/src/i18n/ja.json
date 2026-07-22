@@ -52,7 +52,8 @@
     "noRecord": "実績なし",
     "tasks": "{n} 件",
     "joinedAt": "{date} 参加",
-    "specialties": "得意分野"
+    "specialties": "得意分野",
+    "proposal": "提案内容"
   },
   "specialty": {
     "baby-mom": "ママ・育児",
@@ -183,6 +184,19 @@
     "previewTitle": "ヘラルドに見える画面",
     "saveDraft": "下書き保存",
     "publishTask": "タスクを公開",
+    "publishAndEnter": "公開して管理画面へ",
+    "skipForNow": "あとで設定する",
+    "onboardTitle": "最初のタスクを作成",
+    "sec5Title": "協力ルール",
+    "sec5Hint": "修正回数・提出締切・提案要件を設定",
+    "fieldMinImages": "最低画像枚数",
+    "fieldMinVideoSecs": "動画最短尺（秒）",
+    "fieldMaxRevisions": "最大修正回数",
+    "fieldMaxRevisionsUnit": "回",
+    "warnRevisions": "修正回数が2回を超えると、応募をためらうアンバサダーが増える可能性があります",
+    "fieldSubmitDeadline": "コンテンツ提出締切日",
+    "fieldRequireProposal": "アンバサダーに提案書を求める",
+    "requireProposalDesc": "応募時に文章での提案と参考事例リンクの提出を必須にします。スタイル重視の案件に適しています",
     "errorTitle": "タイトルを入力してください",
     "errorPayout": "報酬を入力してください",
     "errorMaxHeralds": "募集人数を入力してください"
@@ -520,6 +534,25 @@
     "password": "パスワード",
     "loginBtn": "ログイン",
     "loggingIn": "ログイン中...",
-    "errorInvalid": "メールアドレスまたはパスワードが間違っています"
+    "errorInvalid": "メールアドレスまたはパスワードが間違っています",
+    "noAccount": "アカウントをお持ちでない方は",
+    "signUp": "新規登録",
+    "registerTitle": "ブランドアカウントを作成",
+    "registerBtn": "登録する",
+    "registering": "登録中...",
+    "sendCode": "認証コードを取得",
+    "verifyCode": "メール認証コード",
+    "codeSent": "認証コードを送信しました。メールをご確認ください",
+    "passwordHint": "6文字以上",
+    "haveAccount": "アカウントをお持ちの方は",
+    "loginLink": "ログイン",
+    "errorEmailRequired": "メールアドレスを入力してください",
+    "errorEmailTaken": "このメールアドレスはすでに登録されています",
+    "errorCodeRequired": "認証コードを入力してください",
+    "errorCodeInvalid": "認証コードが正しくありません",
+    "errorCodeExpired": "認証コードの有効期限が切れました。再取得してください",
+    "errorCodeFrequent": "送信が多すぎます。1分後にお試しください",
+    "errorSendCode": "送信に失敗しました。後でお試しください",
+    "errorRegister": "登録に失敗しました。後でお試しください"
   }
 }

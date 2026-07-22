@@ -456,6 +456,112 @@
 
 .req-fail-desc-hard { color: #ef4444; }
 
+// ── 任务规格网格 ──────────────────────────────────────────────
+
+.spec-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spec-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 26px;
+}
+
+.spec-label { color: var(--text-muted); }
+.spec-value { font-weight: 600; color: var(--text); }
+
+.proposal-badge {
+  margin-top: 16px;
+  padding: 12px 20px;
+  background: #eff6ff;
+  border-radius: 16px;
+  display: inline-flex;
+}
+
+.proposal-badge-text {
+  font-size: 24px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+// ── 方案提交 sheet ─────────────────────────────────────────────
+
+.proposal-textarea {
+  width: 100%;
+  min-height: 160px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  font-size: 26px;
+  box-sizing: border-box;
+  margin-bottom: 24px;
+  resize: none;
+  outline: none;
+}
+
+.proposal-links-title {
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text);
+  display: block;
+  margin-bottom: 12px;
+}
+
+.proposal-link-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.proposal-link-text {
+  flex: 1;
+  font-size: 24px;
+  color: var(--primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proposal-link-del {
+  font-size: 32px;
+  color: var(--text-muted);
+  padding: 0 8px;
+}
+
+.proposal-link-input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.proposal-link-input {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 24px;
+  outline: none;
+}
+
+.proposal-link-add {
+  width: 56px;
+  height: 56px;
+  background: var(--primary);
+  color: #fff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+}
+
 // ============================================================
 // 桌面：详情页切「主内容 + 右侧操作卡」两栏（电商 PC 详情页的购买卡形态）。
 // 纯 CSS 实现：.actions 从手机的 fixed 底栏变为 sticky 侧卡，组件树不动。

@@ -73,7 +73,7 @@ export default function Onboard() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['merchant-profile'] })
-      navigate('/', { replace: true })
+      navigate('/tasks/new?from=onboard', { replace: true })
     },
   })
 

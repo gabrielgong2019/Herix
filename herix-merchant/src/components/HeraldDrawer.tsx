@@ -41,6 +41,11 @@ const TIER_COLORS: Record<string, { bg: string; color: string }> = {
   Mega:  { bg: '#fef2f2', color: '#dc2626' },
 }
 
+function parseProposalLinks(raw: string | null | undefined): string[] {
+  if (!raw) return []
+  try { return JSON.parse(raw) } catch { return [] }
+}
+
 export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rejecting }: Props) {
   const { t } = useTranslation()
 
@@ -184,6 +189,24 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
                   </span>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {app.proposal_text && (
+            <Section label={t('herald.proposal')}>
+              <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, margin: 0 }}>
+                {app.proposal_text}
+              </p>
+              {app.proposal_links && parseProposalLinks(app.proposal_links).length > 0 && (
+                <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {parseProposalLinks(app.proposal_links).map((link, i) => (
+                    <a key={i} href={link} target="_blank" rel="noopener noreferrer"
+                      style={{ fontSize: 13, color: 'var(--primary)', wordBreak: 'break-all' }}>
+                      {link}
+                    </a>
+                  ))}
+                </div>
+              )}
             </Section>
           )}
         </div>

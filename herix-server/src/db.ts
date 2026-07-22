@@ -669,6 +669,14 @@ export async function initDatabase() {
       ('working-adult', 5), ('travel', 6), ('finance', 7), ('lifestyle', 8),
       ('fitness', 9), ('tech', 10), ('fashion', 11), ('pet', 12)
      ON CONFLICT (id) DO NOTHING`,
+    // 任务发布标准化（2026-07-22）
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS min_images INTEGER`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS min_video_seconds INTEGER`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS max_revisions INTEGER NOT NULL DEFAULT 2`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS require_proposal INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submit_deadline TEXT`,
+    `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS proposal_text TEXT`,
+    `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS proposal_links TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

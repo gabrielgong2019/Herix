@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksApi, metaApi, type TaskFormData, type Task } from '@/lib/api'
@@ -186,6 +186,11 @@ interface FormState {
   mode: 'STANDARD' | 'PERFORMANCE'
   codeMode: 'auto' | 'custom'
   dataMode: 'AGGREGATE' | 'DETAIL'
+  minImages: number | ''
+  minVideoSeconds: number | ''
+  maxRevisions: number
+  requireProposal: boolean
+  submitDeadline: string
 }
 
 const DEFAULT_STATE: FormState = {
@@ -197,6 +202,7 @@ const DEFAULT_STATE: FormState = {
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
+  minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, submitDeadline: '',
 }
 
 function taskToFormState(task: Task): FormState {
@@ -218,6 +224,11 @@ function taskToFormState(task: Task): FormState {
     mode: task.mode,
     codeMode: task.code_mode || 'auto',
     dataMode: task.data_mode || 'AGGREGATE',
+    minImages: task.min_images || '',
+    minVideoSeconds: task.min_video_seconds || '',
+    maxRevisions: task.max_revisions ?? 2,
+    requireProposal: !!(task.require_proposal),
+    submitDeadline: task.submit_deadline ? task.submit_deadline.slice(0, 10) : '',
   }
 }
 
@@ -225,6 +236,8 @@ export default function TaskForm() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
+  const [searchParams] = useSearchParams()
+  const fromOnboard = searchParams.get('from') === 'onboard'
   const qc = useQueryClient()
   const isEdit = !!id
 
@@ -289,12 +302,17 @@ export default function TaskForm() {
         deadline: form.deadline || undefined,
         codeMode: form.mode === 'PERFORMANCE' ? form.codeMode : undefined,
         dataMode: form.mode === 'PERFORMANCE' ? form.dataMode : undefined,
+        minImages: form.minImages ? Number(form.minImages) : undefined,
+        minVideoSeconds: form.minVideoSeconds ? Number(form.minVideoSeconds) : undefined,
+        maxRevisions: form.maxRevisions,
+        requireProposal: form.requireProposal,
+        submitDeadline: form.submitDeadline || undefined,
       }
       return isEdit ? tasksApi.update(id!, payload) : tasksApi.create(payload)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
-      navigate('/tasks')
+      navigate(fromOnboard ? '/' : '/tasks')
     },
     onError: () => setError('提交失败，请稍后重试'),
   })
@@ -311,7 +329,7 @@ export default function TaskForm() {
     saveMut.mutate(status)
   }
 
-  const pageTitle = isEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')
+  const pageTitle = fromOnboard ? t('taskForm.onboardTitle') : isEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -436,6 +454,29 @@ export default function TaskForm() {
                 </div>
               </Field>
 
+              {(form.contentType === 'photo' || form.contentType === 'both') && (
+                <Field label={t('taskForm.fieldMinImages')}>
+                  <Input
+                    type="number" min={1}
+                    value={form.minImages}
+                    onChange={(e) => set('minImages', e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="3"
+                    style={{ maxWidth: 160 }}
+                  />
+                </Field>
+              )}
+              {(form.contentType === 'video' || form.contentType === 'both') && (
+                <Field label={t('taskForm.fieldMinVideoSecs')}>
+                  <Input
+                    type="number" min={1}
+                    value={form.minVideoSeconds}
+                    onChange={(e) => set('minVideoSeconds', e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="30"
+                    style={{ maxWidth: 160 }}
+                  />
+                </Field>
+              )}
+
               <Field label={t('taskForm.fieldRequirements')}>
                 <Textarea
                   value={form.requirements}
@@ -527,6 +568,49 @@ export default function TaskForm() {
               </Field>
             </div>
 
+            {/* SECTION 5: 合作规则 */}
+            <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+              <SectionHeader num={5} title={t('taskForm.sec5Title')} hint={t('taskForm.sec5Hint')} />
+
+              <Field label={t('taskForm.fieldMaxRevisions')}>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number" min={0} max={20}
+                    value={form.maxRevisions}
+                    onChange={(e) => set('maxRevisions', Number(e.target.value))}
+                    style={{ maxWidth: 120 }}
+                  />
+                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldMaxRevisionsUnit')}</span>
+                </div>
+                {form.maxRevisions > 2 && (
+                  <div className="mt-2 px-3 py-2 rounded-lg text-xs" style={{ background: '#fef3c7', color: '#92400e' }}>
+                    {t('taskForm.warnRevisions')}
+                  </div>
+                )}
+              </Field>
+
+              <Field label={t('taskForm.fieldSubmitDeadline')} hint={t('taskForm.fieldDeadlineHint')}>
+                <Input
+                  type="date"
+                  value={form.submitDeadline}
+                  onChange={(e) => set('submitDeadline', e.target.value)}
+                  style={{ maxWidth: 220 }}
+                />
+              </Field>
+
+              <Field label={t('taskForm.fieldRequireProposal')}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={form.requireProposal}
+                    onChange={(e) => set('requireProposal', e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm" style={{ color: 'var(--text)' }}>{t('taskForm.requireProposalDesc')}</span>
+                </label>
+              </Field>
+            </div>
+
             {/* ADVANCED (collapsible) */}
             <div className="rounded-2xl overflow-hidden mb-6" style={{ background: '#fff' }}>
               <button
@@ -613,14 +697,25 @@ export default function TaskForm() {
             )}
 
             <div className="flex gap-3 justify-end">
-              <button
-                type="button"
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
-                style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--text)' }}
-                onClick={() => navigate('/tasks')}
-              >
-                {t('common.cancel')}
-              </button>
+              {fromOnboard ? (
+                <button
+                  type="button"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}
+                  onClick={() => navigate('/')}
+                >
+                  {t('taskForm.skipForNow')}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--text)' }}
+                  onClick={() => navigate('/tasks')}
+                >
+                  {t('common.cancel')}
+                </button>
+              )}
               <button
                 type="button"
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
@@ -637,7 +732,7 @@ export default function TaskForm() {
                 onClick={() => handleSubmit('open')}
                 disabled={saveMut.isPending}
               >
-                {saveMut.isPending ? t('common.loading') : t('taskForm.publishTask')}
+                {saveMut.isPending ? t('common.loading') : fromOnboard ? t('taskForm.publishAndEnter') : t('taskForm.publishTask')}
               </button>
             </div>
           </div>

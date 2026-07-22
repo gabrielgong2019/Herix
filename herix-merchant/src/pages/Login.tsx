@@ -158,6 +158,17 @@ export default function Login() {
             {loading ? t('auth.loggingIn') : t('auth.loginBtn')}
           </button>
         </form>
+
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>{t('auth.noAccount')}</span>
+          {' '}
+          <a
+            href="/merchant/register"
+            style={{ fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}
+          >
+            {t('auth.signUp')}
+          </a>
+        </div>
       </div>
     </div>
   )

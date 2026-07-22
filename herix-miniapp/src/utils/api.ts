@@ -161,8 +161,8 @@ export const tasks = {
 
 // ── Applications ──
 export const applications = {
-  apply: (taskId: string, message?: string) =>
-    request<any>('POST', `/applications/${taskId}`, { message }),
+  apply: (taskId: string, message?: string, proposalText?: string, proposalLinks?: string[]) =>
+    request<any>('POST', `/applications/${taskId}`, { message, proposalText, proposalLinks }),
   review: (id: string, status: 'APPROVED' | 'REJECTED') =>
     request<any>('PATCH', `/applications/${id}/review`, { status }),
   my: () => request<any[]>('GET', '/applications/my'),

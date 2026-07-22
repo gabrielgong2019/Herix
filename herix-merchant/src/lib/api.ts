@@ -26,6 +26,10 @@ export const authApi = {
   login: (email: string, password: string) =>
     http.post<{ token: string; user: MerchantUser }>('/auth/login', { account: email, password }),
   me: () => http.get<MerchantUser>('/auth/me'),
+  sendCode: (email: string) =>
+    http.post('/auth/send-code', { email, purpose: 'REGISTER' }),
+  register: (data: { email: string; password: string; code: string; nickname?: string }) =>
+    http.post<{ token: string }>('/auth/register', { ...data, role: 'BRAND' }),
   onboard: (data: {
     companyName: string
     industry?: string
@@ -178,6 +182,11 @@ export interface Task {
   deadline?: string
   code_mode?: 'auto' | 'custom'
   data_mode?: 'AGGREGATE' | 'DETAIL'
+  min_images?: number | null
+  min_video_seconds?: number | null
+  max_revisions?: number
+  require_proposal?: number
+  submit_deadline?: string | null
   created_at: string
   published_at?: string
   applicant_count?: number
@@ -208,6 +217,11 @@ export interface TaskFormData {
   deadline?: string
   codeMode?: 'auto' | 'custom'
   dataMode?: 'AGGREGATE' | 'DETAIL'
+  minImages?: number | null
+  minVideoSeconds?: number | null
+  maxRevisions: number
+  requireProposal: boolean
+  submitDeadline?: string | null
 }
 
 export interface Application {
@@ -228,6 +242,8 @@ export interface Application {
   completed_tasks?: number
   good_rate?: number
   specialty_tags?: string[] | null
+  proposal_text?: string | null
+  proposal_links?: string | null
 }
 
 export interface Submission {

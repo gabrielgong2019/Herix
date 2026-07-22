@@ -18,8 +18,8 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
   try {
     const data = ApplyTaskSchema.parse(req.body);
 
-    const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null; req_mode: string | null; req_min_count: number | null }>(
-      'SELECT id, status, max_heralds, platform_requirements, req_mode, req_min_count FROM tasks WHERE id = ?', [req.params.taskId]
+    const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null; req_mode: string | null; req_min_count: number | null; require_proposal: number }>(
+      'SELECT id, status, max_heralds, platform_requirements, req_mode, req_min_count, require_proposal FROM tasks WHERE id = ?', [req.params.taskId]
     );
     if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
     if (task.status !== 'OPEN') return res.status(400).json({ error: '任务不在招募中', code: 'TASK_NOT_RECRUITING' });
@@ -80,6 +80,11 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     //   return res.status(403).json({ error: '不能报名自己发布的任务', code: 'CANNOT_APPLY_OWN_TASK' });
     // }
 
+    // 方案要求校验
+    if (task.require_proposal && !data.proposalText?.trim()) {
+      return res.status(400).json({ error: '该任务要求提交方案', code: 'PROPOSAL_REQUIRED' });
+    }
+
     // 检查是否已报名
     const existing = await findOne<{ id: string }>(
       'SELECT id FROM task_applications WHERE task_id = ? AND herald_id = ?',
@@ -91,6 +96,8 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       task_id: req.params.taskId,
       herald_id: req.user!.userId,
       message: data.message || null,
+      proposal_text: data.proposalText || null,
+      proposal_links: data.proposalLinks?.length ? JSON.stringify(data.proposalLinks) : null,
     });
 
     const app = await findOne<any>(

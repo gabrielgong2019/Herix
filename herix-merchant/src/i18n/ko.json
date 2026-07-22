@@ -52,7 +52,8 @@
     "noRecord": "실적 없음",
     "tasks": "{n} 건",
     "joinedAt": "{date} 가입",
-    "specialties": "전문 분야"
+    "specialties": "전문 분야",
+    "proposal": "제안 내용"
   },
   "specialty": {
     "baby-mom": "육아·맘",
@@ -183,6 +184,19 @@
     "previewTitle": "헤럴드에게 보이는 화면",
     "saveDraft": "초안 저장",
     "publishTask": "태스크 게시",
+    "publishAndEnter": "게시하고 대시보드로 이동",
+    "skipForNow": "나중에 설정하기",
+    "onboardTitle": "첫 번째 태스크 만들기",
+    "sec5Title": "협력 규칙",
+    "sec5Hint": "수정 횟수, 제출 마감일, 제안서 요건 설정",
+    "fieldMinImages": "최소 이미지 수",
+    "fieldMinVideoSecs": "동영상 최소 길이(초)",
+    "fieldMaxRevisions": "최대 수정 횟수",
+    "fieldMaxRevisionsUnit": "회",
+    "warnRevisions": "수정 횟수가 2회를 초과하면 헤럴드가 신중하게 지원할 수 있습니다",
+    "fieldSubmitDeadline": "콘텐츠 제출 마감일",
+    "fieldRequireProposal": "헤럴드에게 제안서 요청",
+    "requireProposalDesc": "지원 시 문서 제안서와 참고 사례 링크 제출을 필수로 합니다",
     "errorTitle": "태스크 제목을 입력해 주세요",
     "errorPayout": "보수를 입력해 주세요",
     "errorMaxHeralds": "모집 인원을 입력해 주세요"
@@ -520,6 +534,25 @@
     "password": "비밀번호",
     "loginBtn": "로그인",
     "loggingIn": "로그인 중...",
-    "errorInvalid": "이메일 또는 비밀번호가 올바르지 않습니다"
+    "errorInvalid": "이메일 또는 비밀번호가 올바르지 않습니다",
+    "noAccount": "계정이 없으신가요?",
+    "signUp": "회원가입",
+    "registerTitle": "브랜드 계정 만들기",
+    "registerBtn": "가입하기",
+    "registering": "가입 중...",
+    "sendCode": "인증코드 받기",
+    "verifyCode": "이메일 인증코드",
+    "codeSent": "인증코드가 발송되었습니다. 이메일을 확인해 주세요",
+    "passwordHint": "6자 이상",
+    "haveAccount": "이미 계정이 있으신가요?",
+    "loginLink": "로그인",
+    "errorEmailRequired": "이메일을 입력해 주세요",
+    "errorEmailTaken": "이미 가입된 이메일입니다",
+    "errorCodeRequired": "인증코드를 입력해 주세요",
+    "errorCodeInvalid": "인증코드가 올바르지 않습니다",
+    "errorCodeExpired": "인증코드가 만료되었습니다. 다시 받아주세요",
+    "errorCodeFrequent": "요청이 너무 많습니다. 1분 후 다시 시도해 주세요",
+    "errorSendCode": "발송 실패. 잠시 후 다시 시도해 주세요",
+    "errorRegister": "가입 실패. 잠시 후 다시 시도해 주세요"
   }
 }

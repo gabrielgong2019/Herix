@@ -60,7 +60,7 @@ export const CreateTaskSchema = z.object({
   maxHeralds: z.number().int().min(1).default(1),
   deadline: z.string().optional(),
   category: z.string().min(1, '请选择任务分类'),
-  contentType: z.enum(['photo', 'video', 'referral']).default('photo'),
+  contentType: z.enum(['photo', 'video', 'both', 'referral']).default('photo'),
   difficulty: z.enum(['easy', 'medium', 'hard']).default('easy'),
   coverImage: z.string().optional(),
   userBenefit: z.string().optional(),
@@ -80,10 +80,18 @@ export const CreateTaskSchema = z.object({
   targetCommunities: z.array(z.string()).default([]),
   // 站点归属：任务属于哪个运营站点，赫使按站点过滤
   siteId: z.string().default('jp'),
+  // 任务发布标准化
+  minImages: z.number().int().min(1).optional(),
+  minVideoSeconds: z.number().int().min(1).optional(),
+  maxRevisions: z.number().int().min(0).max(20).default(2),
+  requireProposal: z.boolean().default(false),
+  submitDeadline: z.string().optional(),
 });
 
 export const ApplyTaskSchema = z.object({
   message: z.string().optional(),
+  proposalText: z.string().optional(),
+  proposalLinks: z.array(z.string()).optional(),
 });
 
 export const SubmitResultSchema = z.object({

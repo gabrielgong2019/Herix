@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { View, Text, Button } from '@tarojs/components';
+import { View, Text, Button, Textarea, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, auth, ApiError, getToken } from '../../utils/api';
 import { getAmbassadorProfile, invalidateProfileCache } from '../../utils/profileCache';
@@ -32,6 +32,12 @@ interface TaskDetailData {
   applications: any[];
   is_escrowed: number;
   _count: { applications: number; submissions: number };
+  content_type?: string;
+  min_images?: number | null;
+  min_video_seconds?: number | null;
+  max_revisions?: number;
+  require_proposal?: number;
+  submit_deadline?: string | null;
 }
 
 interface State {
@@ -46,6 +52,11 @@ interface State {
   /** 明细模式：我的邀请进度（脱敏行） */
   referralRecords: any[];
   applying: boolean;
+  // 方案提交 sheet
+  proposalSheetOpen: boolean;
+  proposalText: string;
+  proposalLinks: string[];
+  proposalLinkInput: string;
   // 报名不满足资质要求时的补充账号弹窗
   showReqModal: boolean;
   reqFailures: RequirementFailure[];
@@ -66,6 +77,10 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     referralRecords: [],
     ambassadorProfile: null,
     applying: false,
+    proposalSheetOpen: false,
+    proposalText: '',
+    proposalLinks: [],
+    proposalLinkInput: '',
     showReqModal: false,
     reqFailures: [],
     reqCanRetry: false,
@@ -146,16 +161,20 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       Taro.switchTab({ url: '/pages/profile/profile' });
       return;
     }
+    if (this.state.task?.require_proposal) {
+      this.setState({ proposalSheetOpen: true, proposalText: '', proposalLinks: [], proposalLinkInput: '' });
+      return;
+    }
     this.doApply();
   };
 
-  doApply = async () => {
+  doApply = async (proposalText?: string, proposalLinks?: string[]) => {
     if (!this.state.task) return;
     this.setState({ applying: true });
     try {
-      await applications.apply(this.state.task.id, '');
+      await applications.apply(this.state.task.id, '', proposalText, proposalLinks);
       Taro.showToast({ title: t('task.applySuccess'), icon: 'success' });
-      this.setState({ showReqModal: false });
+      this.setState({ showReqModal: false, proposalSheetOpen: false });
       this.loadTask();
     } catch (err: any) {
       if (err instanceof ApiError && err.data?.code === 'REQUIREMENTS_NOT_MET') {
@@ -218,7 +237,11 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       const updated = await ambassador.updateProfile({ socialPlatforms: merged });
       invalidateProfileCache();
       this.setState({ ambassadorProfile: updated });
-      await this.doApply();
+      if (this.state.task?.require_proposal) {
+        this.setState({ showReqModal: false, proposalSheetOpen: true, proposalText: '', proposalLinks: [], proposalLinkInput: '' });
+      } else {
+        await this.doApply();
+      }
     } catch (err: any) {
       Taro.showToast({ title: err.message || t('common.saveFailed'), icon: 'none' });
     } finally {
@@ -238,7 +261,72 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     });
   };
 
+  submitProposal = () => {
+    const { proposalText, proposalLinks } = this.state;
+    if (!proposalText.trim()) {
+      Taro.showToast({ title: t('task.proposalTextRequired'), icon: 'none' });
+      return;
+    }
+    this.doApply(proposalText.trim(), proposalLinks);
+  };
+
+  addProposalLink = () => {
+    const { proposalLinkInput, proposalLinks } = this.state;
+    const link = proposalLinkInput.trim();
+    if (!link) return;
+    this.setState({ proposalLinks: [...proposalLinks, link], proposalLinkInput: '' });
+  };
+
+  removeProposalLink = (idx: number) => {
+    this.setState(prev => ({ proposalLinks: prev.proposalLinks.filter((_, i) => i !== idx) }));
+  };
+
   // ── 渲染 ──
+
+  renderProposalSheet() {
+    const { proposalSheetOpen, proposalText, proposalLinks, proposalLinkInput, applying } = this.state;
+    if (!proposalSheetOpen) return null;
+
+    return (
+      <View className='req-modal-overlay'>
+        <View className='req-modal-card'>
+          <Text className='req-modal-title'>{t('task.proposalTitle')}</Text>
+          <Text className='req-modal-sub'>{t('task.proposalTextPh')}</Text>
+
+          <Textarea
+            className='proposal-textarea'
+            value={proposalText}
+            placeholder={t('task.proposalTextPh')}
+            onInput={(e: any) => this.setState({ proposalText: e.detail.value })}
+          />
+
+          <Text className='proposal-links-title'>{t('task.proposalLinksTitle')}</Text>
+          {proposalLinks.map((link, idx) => (
+            <View key={idx} className='proposal-link-row'>
+              <Text className='proposal-link-text' numberOfLines={1}>{link}</Text>
+              <Text className='proposal-link-del' onClick={() => this.removeProposalLink(idx)}>×</Text>
+            </View>
+          ))}
+          <View className='proposal-link-input-row'>
+            <Input
+              className='proposal-link-input'
+              value={proposalLinkInput}
+              placeholder={t('task.proposalLinksPh')}
+              onInput={(e: any) => this.setState({ proposalLinkInput: e.detail.value })}
+            />
+            <Text className='proposal-link-add' onClick={this.addProposalLink}>+</Text>
+          </View>
+
+          <Button className='btn-primary' loading={applying} onClick={this.submitProposal}>
+            {t('task.submitProposal')}
+          </Button>
+          <Button className='btn-outline' onClick={() => this.setState({ proposalSheetOpen: false })}>
+            {t('common.cancel')}
+          </Button>
+        </View>
+      </View>
+    );
+  }
 
   renderReqModal() {
     const { showReqModal, reqFailures, reqCanRetry, reqFormValues, reqSubmitting } = this.state;
@@ -454,6 +542,50 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           </View>
         )}
 
+        {/* 内容规格 */}
+        {(task.content_type || task.min_images || task.min_video_seconds || task.max_revisions || task.require_proposal || task.submit_deadline) && (
+          <View className='section'>
+            <Text className='section-title'>{t('task.specsTitle')}</Text>
+            <View className='spec-grid'>
+              {task.content_type && task.content_type !== 'referral' && (
+                <View className='spec-row'>
+                  <Text className='spec-label'>{t('task.contentTypeLabel')}</Text>
+                  <Text className='spec-value'>{t(`task.contentType${task.content_type.charAt(0).toUpperCase() + task.content_type.slice(1)}`)}</Text>
+                </View>
+              )}
+              {task.min_images != null && (
+                <View className='spec-row'>
+                  <Text className='spec-label'>{t('task.minImages')}</Text>
+                  <Text className='spec-value'>{task.min_images}</Text>
+                </View>
+              )}
+              {task.min_video_seconds != null && (
+                <View className='spec-row'>
+                  <Text className='spec-label'>{t('task.minVideoSecs')}</Text>
+                  <Text className='spec-value'>{task.min_video_seconds}s</Text>
+                </View>
+              )}
+              {task.max_revisions != null && (
+                <View className='spec-row'>
+                  <Text className='spec-label'>{t('task.maxRevisions')}</Text>
+                  <Text className='spec-value'>{task.max_revisions}</Text>
+                </View>
+              )}
+              {task.submit_deadline && (
+                <View className='spec-row'>
+                  <Text className='spec-label'>{t('task.submitDeadline')}</Text>
+                  <Text className='spec-value'>{task.submit_deadline.slice(0, 10)}</Text>
+                </View>
+              )}
+            </View>
+            {!!task.require_proposal && (
+              <View className='proposal-badge'>
+                <Text className='proposal-badge-text'>{t('task.requireProposal')}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {this.isHerald() && (
           <View className='section'>
             <RequirementsChecklist task={task} ambassadorProfile={ambassadorProfile} />
@@ -511,6 +643,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
         {this.renderActionBar()}
         {this.renderReqModal()}
+        {this.renderProposalSheet()}
       </View>
     );
   }

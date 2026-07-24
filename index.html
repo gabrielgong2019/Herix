@@ -501,6 +501,7 @@ function setLang(lang) {
     b.classList.remove('active');
   });
   document.querySelector('.lang-btn[onclick="setLang(\'' + lang + '\')"]').classList.add('active');
+  localStorage.setItem('herix-merchant-lang', lang);
 
   var c = CONTENT[lang];
   document.querySelectorAll('[data-key]').forEach(function(el) {

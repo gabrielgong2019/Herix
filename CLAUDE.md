@@ -129,7 +129,10 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
   2. ECS：`cd /home/herix/Herix && git status --short`（必须干净）→ `git pull`
   3. `cd herix-server && npm install && npm run build`（tsc → dist，**漏 build = 跑旧代码**）
   4. `pm2 restart herix --update-env` → `curl localhost:3005/api/tasks` 冒烟
-  5. H5 前端 ECS 不构建，从 Mac rsync：`rsync -az --delete herix-miniapp/dist/h5/ root@8.210.73.0:/home/herix/Herix/herix-miniapp/dist/h5/`
+  5. **前端均在 Mac 本地 build，ECS 不构建**，通过 rsync 同步（漏 rsync = 线上跑旧页面）：
+     - H5 miniapp：`cd herix-miniapp && npm run build:h5 && rsync -az --delete dist/h5/ root@8.210.73.0:/home/herix/Herix/herix-miniapp/dist/h5/`
+     - 商家端 React：`cd herix-merchant && npm run build && rsync -az --delete dist/ root@8.210.73.0:/home/herix/Herix/herix-merchant/dist/`
+     - ⚠️ 凡改动 `herix-merchant/` 或 `herix-miniapp/` 下的文件，必须重新 build + rsync 对应端；纯 server 改动不需要
   6. 环境变量在 `herix-server/.env`（DATABASE_URL/JWT_SECRET/PORT/SMTP_*/REFERRAL_HASH_SALT/WX_PROXY_SECRET 已配齐）
   7. 生产 PG 独立于本地：schema 迁移由启动时 initDatabase 自动打上；**i18n 词条须在 ECS 上手动跑**
      `export $(grep -v '^#' .env | grep '=' | xargs) && npx tsx scripts/seed-i18n.ts`（新增词条的每次部署都要跑）

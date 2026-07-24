@@ -364,15 +364,14 @@ export default class Profile extends Component<{}, State> {
   };
 
   addBrandRole = async () => {
+    const MERCHANT_URL = 'https://herix.huaxuex.com/merchant.html';
     const res = await Taro.showModal({ title: t('profile.addBrandTitle'), content: t('profile.addBrandConfirm'), confirmText: t('common.confirm'), cancelText: t('common.cancel') });
     if (!res.confirm) return;
-    try {
-      const r = await users.addRole('BRAND');
-      if (r?.token) setToken(r.token);
-      Taro.showToast({ title: t('profile.enabled'), icon: 'success' });
-      this.loadUser();
-    } catch (err: any) {
-      Taro.showToast({ title: err?.message || t('profile.enableFailed'), icon: 'none' });
+    if (process.env.TARO_ENV === 'weapp') {
+      Taro.setClipboardData({ data: MERCHANT_URL });
+      Taro.showToast({ title: t('profile.brandUrlCopied'), icon: 'none', duration: 3000 });
+    } else {
+      window.open(MERCHANT_URL, '_blank');
     }
   };
 

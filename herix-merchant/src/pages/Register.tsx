@@ -60,7 +60,7 @@ export default function Register() {
       startCountdown()
     } catch (err: any) {
       const code = err?.response?.data?.code
-      if (code === 'ACCOUNT_TAKEN') setError(t('auth.errorEmailTaken'))
+      if (code === 'ACCOUNT_TAKEN') { navigate(`/login?email=${encodeURIComponent(email.trim())}&reason=email_taken`, { replace: true }); return }
       else if (code === 'CODE_TOO_FREQUENT') setError(t('auth.errorCodeFrequent'))
       else setError(err?.response?.data?.error || t('auth.errorSendCode'))
     } finally {
@@ -79,7 +79,7 @@ export default function Register() {
       navigate('/onboard', { replace: true })
     } catch (err: any) {
       const errCode = err?.response?.data?.code
-      if (errCode === 'ACCOUNT_TAKEN') setError(t('auth.errorEmailTaken'))
+      if (errCode === 'ACCOUNT_TAKEN') { navigate(`/login?email=${encodeURIComponent(email.trim())}&reason=email_taken`, { replace: true }); return }
       else if (errCode === 'CODE_INVALID') setError(t('auth.errorCodeInvalid'))
       else if (errCode === 'CODE_EXPIRED') setError(t('auth.errorCodeExpired'))
       else setError(err?.response?.data?.error || t('auth.errorRegister'))
@@ -135,7 +135,7 @@ export default function Register() {
             <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="email" required value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => { setEmail(e.target.value); setError('') }}
                 placeholder="brand@company.com"
                 style={{ ...inputStyle, flex: 1 }}
                 onFocus={(e) => (e.currentTarget.style.borderColor = 'var(--primary)')}

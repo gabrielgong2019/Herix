@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { View, Text, Button, Textarea, Input } from '@tarojs/components';
+import { View, Text, Button, Textarea, Input, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, auth, ApiError, getToken } from '../../utils/api';
 import { getAmbassadorProfile, invalidateProfileCache } from '../../utils/profileCache';
@@ -26,7 +26,13 @@ interface TaskDetailData {
   status: string;
   creator_name: string;
   creator_id: string;
+  brand_logo_url?: string;
+  brand_promo_image_url?: string;
+  brand_company_name?: string;
+  brand_company_desc?: string;
   approved_count?: number;
+  code_mode?: string;
+  data_mode?: string;
   avg_payout_days?: number | null;
   application_count: number;
   applications: any[];
@@ -499,35 +505,61 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
     const isPerformance = task.mode === 'PERFORMANCE';
 
+    const approvedCount = task.approved_count || 0;
+    const slotsTotal = task.max_heralds;
+    const slotsLeft = slotsTotal - approvedCount;
+    const fillPct = Math.min(100, Math.round((approvedCount / slotsTotal) * 100));
+
     return (
       <View className='task-detail'>
         <BackBar />
+
+        {/* 品牌卡 */}
+        {(task.brand_logo_url || task.brand_company_name) && (
+          <View className='brand-card'>
+            {task.brand_logo_url
+              ? <Image className='brand-logo' src={task.brand_logo_url} mode='aspectFill' />
+              : <View className='brand-logo brand-logo-placeholder' />}
+            <View className='brand-info'>
+              <Text className='brand-name'>{task.brand_company_name || task.creator_name}</Text>
+              {task.brand_company_desc
+                ? <Text className='brand-desc' numberOfLines={2}>{task.brand_company_desc}</Text>
+                : null}
+            </View>
+          </View>
+        )}
+
         <View className='section'>
-          <Text className='title'>{task.title}</Text>
           <View className='tags'>
-            <Text className='tag'>{isPerformance ? t('taskCard.perf') : t('task.modeStd')}</Text>
+            <Text className='tag tag-mode'>{isPerformance ? t('task.modeReferral') : t('task.modeContent')}</Text>
+            {!!task.is_escrowed && <Text className='tag tag-escrowed'>{t('task.instantPayout')}</Text>}
             <Text className={`tag status-${task.status.toLowerCase()}`}>
               {task.status === 'OPEN' ? t('task.recruiting') : task.status}
             </Text>
           </View>
+          <Text className='title'>{task.title}</Text>
           <Text className='price'>
             {/* 赫使视角单价 = payout_per_herald（到手报酬）；commission 是重构前废弃字段，新任务恒 0，仅作老数据兜底 */}
             {isPerformance
               ? t('task.perConversion', { n: task.payout_per_herald ?? task.commission })
               : t('task.perPerson', { n: task.payout_per_herald ?? task.commission })}
           </Text>
-          <Text className='meta'>{t('task.budgetMeta', { b: task.budget, n: task.max_heralds })}</Text>
-          <View className='task-info-row'>
-            {(() => {
-              const slotsLeft = task.max_heralds - (task.approved_count || 0);
-              return slotsLeft > 0
-                ? <Text className='slots-left'>{t('task.slotsLeft', { n: slotsLeft })}</Text>
-                : <Text className='slots-none'>{t('task.slotsNone')}</Text>;
-            })()}
-            {task.avg_payout_days != null && (
-              <Text className='avg-pay-days'>{t('task.avgPayDays', { n: task.avg_payout_days })}</Text>
-            )}
+
+          {/* 名额进度条 */}
+          <View className='slots-bar-wrap'>
+            <View className='slots-bar'>
+              <View className='slots-fill' style={{ width: `${fillPct}%` }} />
+            </View>
+            <Text className='slots-text'>
+              {slotsLeft > 0 ? t('task.slotsLeft', { n: slotsLeft }) : t('task.slotsNone')}
+              {'  '}
+              <Text className='slots-sub'>{t('task.spotsProgress', { used: approvedCount, total: slotsTotal })}</Text>
+            </Text>
           </View>
+
+          {task.avg_payout_days != null && (
+            <Text className='avg-pay-days'>{t('task.avgPayDays', { n: task.avg_payout_days })}</Text>
+          )}
         </View>
 
         <View className='section'>
@@ -539,6 +571,24 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           <View className='section'>
             <Text className='section-title'>{t('task.reqSectionTitle')}</Text>
             <Text className='content'>{task.requirements}</Text>
+          </View>
+        )}
+
+        {/* 邀请码说明（PERFORMANCE 专属） */}
+        {isPerformance && (
+          <View className='section'>
+            <Text className='section-title'>{t('task.referralSection')}</Text>
+            <Text className='content'>
+              {task.code_mode === 'custom' ? t('task.codeCustom') : t('task.codeAuto')}
+            </Text>
+            <View className='spec-grid' style={{ marginTop: 8 }}>
+              <View className='spec-row'>
+                <Text className='spec-label'>{t('task.dataModeLabel')}</Text>
+                <Text className='spec-value'>
+                  {task.data_mode === 'DETAIL' ? t('task.dataModeDetail') : t('task.dataModeAgg')}
+                </Text>
+              </View>
+            </View>
           </View>
         )}
 

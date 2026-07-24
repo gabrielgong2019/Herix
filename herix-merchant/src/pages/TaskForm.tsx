@@ -191,6 +191,7 @@ interface FormState {
   maxRevisions: number
   requireProposal: boolean
   submitDeadline: string
+  customCodes: string
 }
 
 const DEFAULT_STATE: FormState = {
@@ -203,6 +204,7 @@ const DEFAULT_STATE: FormState = {
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, submitDeadline: '',
+  customCodes: '',
 }
 
 function taskToFormState(task: Task): FormState {
@@ -229,6 +231,7 @@ function taskToFormState(task: Task): FormState {
     maxRevisions: task.max_revisions ?? 2,
     requireProposal: !!(task.require_proposal),
     submitDeadline: task.submit_deadline ? task.submit_deadline.slice(0, 10) : '',
+    customCodes: '',
   }
 }
 
@@ -245,16 +248,19 @@ export default function TaskForm() {
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [error, setError] = useState('')
 
+  const isStandard = form.mode === 'STANDARD'
+  const sn = isStandard
+    ? { info: 1, target: 2, content: 3, payout: 4, rules: 5 }
+    : { info: 1, target: 2, perf: 3, payout: 4 }
+
   // Meta queries
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => metaApi.categories().then((r) => r.data) })
   const { data: sites = [] } = useQuery({ queryKey: ['sites'], queryFn: () => metaApi.sites().then((r) => r.data) })
-  // Communities filtered by selected site — re-fetch when site changes
   const { data: communities = [] } = useQuery({
     queryKey: ['communities', form.siteId],
     queryFn: () => metaApi.communities(form.siteId).then((r) => r.data),
   })
 
-  // Edit mode: load existing task
   const { data: existingTask } = useQuery({
     queryKey: ['task', id],
     queryFn: () => tasksApi.get(id!).then((r) => r.data),
@@ -267,7 +273,6 @@ export default function TaskForm() {
 
   const set = useCallback(<K extends keyof FormState>(key: K, val: FormState[K]) => {
     setForm((prev) => {
-      // 切换站点时清空社群选择（旧站点的社群在新站点无效）
       if (key === 'siteId') return { ...prev, [key]: val, targetCommunities: [] }
       return { ...prev, [key]: val }
     })
@@ -283,7 +288,7 @@ export default function TaskForm() {
 
   // Mutations
   const saveMut = useMutation({
-    mutationFn: (status: 'draft' | 'open') => {
+    mutationFn: async (status: 'draft' | 'open') => {
       const payload: TaskFormData = {
         title: form.title,
         description: form.description,
@@ -308,7 +313,15 @@ export default function TaskForm() {
         requireProposal: form.requireProposal,
         submitDeadline: form.submitDeadline || undefined,
       }
-      return isEdit ? tasksApi.update(id!, payload) : tasksApi.create(payload)
+      const res = isEdit ? await tasksApi.update(id!, payload) : await tasksApi.create(payload)
+      if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
+        const codes = form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
+        if (codes.length > 0) {
+          const taskId = isEdit ? id! : (res.data as Task).id
+          await tasksApi.uploadCustomCodes(taskId, codes)
+        }
+      }
+      return res
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
@@ -321,6 +334,10 @@ export default function TaskForm() {
     if (!form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
     if (!form.payoutPerHerald) { setError(t('taskForm.errorPayout')); return false }
     if (!form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
+    if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
+      const codes = form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
+      if (codes.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
+    }
     return true
   }
 
@@ -331,111 +348,135 @@ export default function TaskForm() {
 
   const pageTitle = fromOnboard ? t('taskForm.onboardTitle') : isEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')
 
+  const currentSite = sites.find((s) => s.id === form.siteId)
+  const siteName = currentSite ? t(`site.${currentSite.id}`, { defaultValue: currentSite.id }) : t(`site.${form.siteId}`, { defaultValue: form.siteId })
+
   return (
     <div className="flex flex-col min-h-screen">
       <Topbar title={pageTitle} />
 
       <div className="flex-1 p-7">
-        <div className="flex gap-6 items-start max-w-[1100px] mx-auto">
+        <div className="max-w-[680px] mx-auto">
 
-          {/* ── Form ─────────────────────────────────────────────── */}
-          <div className="flex-1 min-w-0">
+          {/* Site badge */}
+          <div className="flex items-center gap-2 mb-4 text-xs" style={{ color: 'var(--muted)' }}>
+            <span>📍</span>
+            <span>{t('taskForm.fieldSite', '发布站点')}：</span>
+            <span
+              className="px-2 py-0.5 rounded-full font-medium"
+              style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}
+            >
+              {siteName}
+            </span>
+          </div>
 
-            {/* SECTION 1: What is the task */}
-            <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
-              <SectionHeader num={1} title={t('taskForm.sec1Title')} hint={t('taskForm.sec1Hint')} />
-
-              <Field label={t('taskForm.fieldTitle')} required>
-                <Input
-                  value={form.title}
-                  onChange={(e) => set('title', e.target.value)}
-                  placeholder={t('taskForm.fieldTitlePh')}
-                />
-              </Field>
-
-              <Field label={t('taskForm.fieldDesc')}>
-                <Textarea
-                  value={form.description}
-                  onChange={(e) => set('description', e.target.value)}
-                  rows={3}
-                  placeholder={t('taskForm.fieldDescPh')}
-                />
-              </Field>
-
-              <Field label={t('taskForm.fieldCategory')}>
-                <div className="flex flex-wrap gap-2">
-                  {categories.map((c) => (
-                    <Chip
-                      key={c.id}
-                      label={t(`category.${c.id}`, { defaultValue: c.label })}
-                      selected={form.category === c.id}
-                      onClick={() => set('category', c.id)}
-                    />
-                  ))}
-                </div>
-              </Field>
+          {/* Mode selection card */}
+          <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+            <div className="text-base font-semibold mb-1" style={{ color: 'var(--text)' }}>
+              {t('taskForm.modeSelectTitle')}
             </div>
-
-            {/* SECTION 2: Who do you want */}
-            <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
-              <SectionHeader num={2} title={t('taskForm.sec2Title')} hint={t('taskForm.sec2Hint')} />
-
-              <Field label={t('taskForm.fieldSite', '发布站点')} required hint={t('taskForm.fieldSiteHint', '赫使按站点过滤任务')}>
-                <div className="flex flex-wrap gap-2">
-                  {sites.map((s) => (
-                    <Chip
-                      key={s.id}
-                      label={t(`site.${s.id}`, { defaultValue: s.id })}
-                      selected={form.siteId === s.id}
-                      onClick={() => set('siteId', s.id)}
-                    />
-                  ))}
-                </div>
-              </Field>
-
-              <Field label={t('taskForm.fieldCommunity')} hint={t('taskForm.fieldCommunityHint')}>
-                <div className="flex flex-wrap gap-2">
-                  {communities.map((c) => (
-                    <Chip
-                      key={c.id}
-                      label={t(`community.${c.id}`, { defaultValue: c.id })}
-                      selected={form.targetCommunities.includes(c.id)}
-                      onClick={() => toggleList('targetCommunities', c.id)}
-                    />
-                  ))}
-                </div>
-              </Field>
-
-              <Field label={t('taskForm.fieldPlatform')}>
-                <div className="flex flex-wrap gap-2">
-                  {PLATFORMS.map((p) => (
-                    <Chip
-                      key={p.id}
-                      label={`${p.icon} ${p.name}`}
-                      selected={form.platforms.includes(p.id)}
-                      onClick={() => toggleList('platforms', p.id)}
-                    />
-                  ))}
-                </div>
-              </Field>
-
-              <Field label={t('taskForm.fieldDifficulty')}>
-                <div className="flex gap-3">
-                  {(['EASY', 'MEDIUM', 'HARD'] as const).map((d) => (
-                    <Chip
-                      key={d}
-                      label={t(`taskForm.diff${d[0]}${d.slice(1).toLowerCase()}`)}
-                      selected={form.difficulty === d}
-                      onClick={() => set('difficulty', d)}
-                    />
-                  ))}
-                </div>
-              </Field>
+            <div className="text-xs mb-4" style={{ color: 'var(--muted)' }}>
+              {t('taskForm.modeSelectHint')}
             </div>
+            <div className="flex gap-3">
+              <RadioCard
+                selected={form.mode === 'STANDARD'}
+                onClick={() => set('mode', 'STANDARD')}
+                title={t('taskForm.modeStandard')}
+                desc={t('taskForm.modeStandardDesc')}
+              />
+              <RadioCard
+                selected={form.mode === 'PERFORMANCE'}
+                onClick={() => set('mode', 'PERFORMANCE')}
+                title={t('taskForm.modePerformance')}
+                desc={t('taskForm.modePerformanceDesc')}
+              />
+            </div>
+          </div>
 
-            {/* SECTION 3: What they do */}
+          {/* SECTION 1: What is the task */}
+          <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+            <SectionHeader num={sn.info} title={t('taskForm.sec1Title')} hint={t('taskForm.sec1Hint')} />
+
+            <Field label={t('taskForm.fieldTitle')} required>
+              <Input
+                value={form.title}
+                onChange={(e) => set('title', e.target.value)}
+                placeholder={t('taskForm.fieldTitlePh')}
+              />
+            </Field>
+
+            <Field label={t('taskForm.fieldDesc')}>
+              <Textarea
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
+                rows={3}
+                placeholder={t('taskForm.fieldDescPh')}
+              />
+            </Field>
+
+            <Field label={t('taskForm.fieldCategory')}>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((c) => (
+                  <Chip
+                    key={c.id}
+                    label={t(`category.${c.id}`, { defaultValue: c.label })}
+                    selected={form.category === c.id}
+                    onClick={() => set('category', c.id)}
+                  />
+                ))}
+              </div>
+            </Field>
+          </div>
+
+          {/* SECTION 2: Who do you want */}
+          <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+            <SectionHeader num={sn.target} title={t('taskForm.sec2Title')} hint={t('taskForm.sec2Hint')} />
+
+            <Field label={t('taskForm.fieldCommunity')} hint={t('taskForm.fieldCommunityHint')}>
+              <div className="flex flex-wrap gap-2">
+                {communities.map((c) => (
+                  <Chip
+                    key={c.id}
+                    label={t(`community.${c.id}`, { defaultValue: c.id })}
+                    selected={form.targetCommunities.includes(c.id)}
+                    onClick={() => toggleList('targetCommunities', c.id)}
+                  />
+                ))}
+              </div>
+            </Field>
+
+            <Field label={t('taskForm.fieldPlatform')}>
+              <div className="flex flex-wrap gap-2">
+                {PLATFORMS.map((p) => (
+                  <Chip
+                    key={p.id}
+                    label={`${p.icon} ${p.name}`}
+                    selected={form.platforms.includes(p.id)}
+                    onClick={() => toggleList('platforms', p.id)}
+                  />
+                ))}
+              </div>
+            </Field>
+
+            <Field label={t('taskForm.fieldDifficulty')}>
+              <div className="flex gap-3">
+                {(['EASY', 'MEDIUM', 'HARD'] as const).map((d) => (
+                  <Chip
+                    key={d}
+                    label={t(`taskForm.diff${d[0]}${d.slice(1).toLowerCase()}`)}
+                    selected={form.difficulty === d}
+                    onClick={() => set('difficulty', d)}
+                  />
+                ))}
+              </div>
+            </Field>
+          </div>
+
+          {/* SECTION 3a: What they do — STANDARD only */}
+          {isStandard && (
             <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
-              <SectionHeader num={3} title={t('taskForm.sec3Title')} hint={t('taskForm.sec3Hint')} />
+              <SectionHeader num={sn.content!} title={t('taskForm.sec3Title')} hint={t('taskForm.sec3Hint')} />
 
               <Field label={t('taskForm.fieldContentType')}>
                 <div className="flex gap-3">
@@ -526,51 +567,106 @@ export default function TaskForm() {
                 />
               </Field>
             </div>
+          )}
 
-            {/* SECTION 4: Payout & Schedule */}
+          {/* SECTION 3b: Referral code setup — PERFORMANCE only */}
+          {!isStandard && (
             <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
-              <SectionHeader num={4} title={t('taskForm.sec4Title')} hint={t('taskForm.sec4Hint')} />
+              <SectionHeader num={(sn as any).perf} title={t('taskForm.sec3PerfTitle')} hint={t('taskForm.sec3PerfHint')} />
 
-              <CostPreview
-                payout={Number(form.payoutPerHerald) || 0}
-                maxHeralds={Number(form.maxHeralds) || 0}
-                t={t}
-              />
+              <Field label={t('taskForm.fieldCodeSource')}>
+                <div className="flex flex-col gap-2">
+                  {(['auto', 'custom'] as const).map((m) => (
+                    <label key={m} className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="radio" name="codeMode" value={m}
+                        checked={form.codeMode === m}
+                        onChange={() => set('codeMode', m)}
+                      />
+                      {t(`taskForm.code${m[0].toUpperCase()}${m.slice(1)}`)}
+                    </label>
+                  ))}
+                </div>
+              </Field>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>
-                  <Input
-                    type="number"
-                    min={0}
-                    value={form.payoutPerHerald}
-                    onChange={(e) => set('payoutPerHerald', e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="0"
+              {form.codeMode === 'custom' && (
+                <Field label={t('taskForm.customCodesLabel')} hint={t('taskForm.customCodesHint')}>
+                  <Textarea
+                    value={form.customCodes}
+                    onChange={(e) => set('customCodes', e.target.value)}
+                    rows={6}
+                    placeholder={t('taskForm.customCodesPh')}
+                    style={{ fontFamily: 'monospace', fontSize: 13 }}
                   />
+                  {form.customCodes.trim() && (
+                    <div className="mt-1.5 text-xs" style={{ color: 'var(--muted)' }}>
+                      {form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean).length} 个推广码
+                    </div>
+                  )}
                 </Field>
-                <Field label={t('taskForm.fieldMaxHeralds')} required>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.maxHeralds}
-                    onChange={(e) => set('maxHeralds', e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="10"
-                  />
-                </Field>
-              </div>
+              )}
 
-              <Field label={t('taskForm.fieldDeadline')} hint={t('taskForm.fieldDeadlineHint')}>
+              <Field label={t('taskForm.fieldDataMode')}>
+                <div className="flex gap-3">
+                  {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
+                    <RadioCard
+                      key={m}
+                      selected={form.dataMode === m}
+                      onClick={() => set('dataMode', m)}
+                      title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
+                      desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)}
+                    />
+                  ))}
+                </div>
+              </Field>
+            </div>
+          )}
+
+          {/* SECTION 4: Payout & Schedule */}
+          <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+            <SectionHeader num={sn.payout} title={t('taskForm.sec4Title')} hint={t('taskForm.sec4Hint')} />
+
+            <CostPreview
+              payout={Number(form.payoutPerHerald) || 0}
+              maxHeralds={Number(form.maxHeralds) || 0}
+              t={t}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>
                 <Input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => set('deadline', e.target.value)}
-                  style={{ maxWidth: 220 }}
+                  type="number"
+                  min={0}
+                  value={form.payoutPerHerald}
+                  onChange={(e) => set('payoutPerHerald', e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="0"
+                />
+              </Field>
+              <Field label={t('taskForm.fieldMaxHeralds')} required>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.maxHeralds}
+                  onChange={(e) => set('maxHeralds', e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="10"
                 />
               </Field>
             </div>
 
-            {/* SECTION 5: 合作规则 */}
+            <Field label={t('taskForm.fieldDeadline')} hint={t('taskForm.fieldDeadlineHint')}>
+              <Input
+                type="date"
+                value={form.deadline}
+                onChange={(e) => set('deadline', e.target.value)}
+                style={{ maxWidth: 220 }}
+              />
+            </Field>
+          </div>
+
+          {/* SECTION 5: Collaboration rules — STANDARD only */}
+          {isStandard && (
             <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
-              <SectionHeader num={5} title={t('taskForm.sec5Title')} hint={t('taskForm.sec5Hint')} />
+              <SectionHeader num={(sn as any).rules} title={t('taskForm.sec5Title')} hint={t('taskForm.sec5Hint')} />
 
               <Field label={t('taskForm.fieldMaxRevisions')}>
                 <div className="flex items-center gap-3">
@@ -610,196 +706,82 @@ export default function TaskForm() {
                 </label>
               </Field>
             </div>
+          )}
 
-            {/* ADVANCED (collapsible) */}
-            <div className="rounded-2xl overflow-hidden mb-6" style={{ background: '#fff' }}>
-              <button
-                type="button"
-                className="w-full flex items-center justify-between px-6 py-4 cursor-pointer"
-                onClick={() => setAdvancedOpen((v) => !v)}
-              >
-                <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
-                  {t('taskForm.advancedTitle')}
-                </span>
-                {advancedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-              </button>
+          {/* ADVANCED (collapsible) — visibility only */}
+          <div className="rounded-2xl overflow-hidden mb-6" style={{ background: '#fff' }}>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-6 py-4 cursor-pointer"
+              onClick={() => setAdvancedOpen((v) => !v)}
+            >
+              <span className="text-sm font-medium" style={{ color: 'var(--muted)' }}>
+                {t('taskForm.advancedTitle')}
+              </span>
+              {advancedOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
 
-              {advancedOpen && (
-                <div className="px-6 pb-6 border-t" style={{ borderColor: 'var(--border)' }}>
-                  <div className="pt-5 mb-5">
-                    <div className="text-sm font-medium mb-3" style={{ color: 'var(--text)' }}>
-                      {t('taskForm.fieldMode')}
-                    </div>
-                    <div className="flex gap-3">
-                      <RadioCard
-                        selected={form.mode === 'STANDARD'}
-                        onClick={() => set('mode', 'STANDARD')}
-                        title={t('taskForm.modeStandard')}
-                        desc={t('taskForm.modeStandardDesc')}
-                      />
-                      <RadioCard
-                        selected={form.mode === 'PERFORMANCE'}
-                        onClick={() => set('mode', 'PERFORMANCE')}
-                        title={t('taskForm.modePerformance')}
-                        desc={t('taskForm.modePerformanceDesc')}
-                      />
-                    </div>
-                  </div>
-
+            {advancedOpen && (
+              <div className="px-6 pb-6 border-t" style={{ borderColor: 'var(--border)' }}>
+                <div className="pt-5">
                   <Field label={t('taskForm.fieldVisibility')}>
                     <Select value={form.visibility} onChange={(e) => set('visibility', e.target.value as FormState['visibility'])}>
                       <option value="PUBLIC">{t('taskForm.visPublic')}</option>
                       <option value="INVITE">{t('taskForm.visInvite')}</option>
                     </Select>
                   </Field>
-
-                  {form.mode === 'PERFORMANCE' && (
-                    <>
-                      <Field label={t('taskForm.fieldCodeSource')}>
-                        <div className="flex flex-col gap-2">
-                          {(['auto', 'custom'] as const).map((m) => (
-                            <label key={m} className="flex items-center gap-2 cursor-pointer text-sm">
-                              <input
-                                type="radio" name="codeMode" value={m}
-                                checked={form.codeMode === m}
-                                onChange={() => set('codeMode', m)}
-                              />
-                              {t(`taskForm.code${m[0].toUpperCase()}${m.slice(1)}`)}
-                            </label>
-                          ))}
-                        </div>
-                      </Field>
-
-                      <Field label={t('taskForm.fieldDataMode')}>
-                        <div className="flex gap-3">
-                          {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
-                            <RadioCard
-                              key={m}
-                              selected={form.dataMode === m}
-                              onClick={() => set('dataMode', m)}
-                              title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
-                              desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)}
-                            />
-                          ))}
-                        </div>
-                      </Field>
-                    </>
-                  )}
                 </div>
-              )}
-            </div>
-
-            {/* Error + Actions */}
-            {error && (
-              <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#fee2e2', color: 'var(--danger)' }}>
-                {error}
               </div>
             )}
+          </div>
 
-            <div className="flex gap-3 justify-end">
-              {fromOnboard ? (
-                <button
-                  type="button"
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
-                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}
-                  onClick={() => navigate('/')}
-                >
-                  {t('taskForm.skipForNow')}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
-                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--text)' }}
-                  onClick={() => navigate('/tasks')}
-                >
-                  {t('common.cancel')}
-                </button>
-              )}
+          {/* Error + Actions */}
+          {error && (
+            <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#fee2e2', color: 'var(--danger)' }}>
+              {error}
+            </div>
+          )}
+
+          <div className="flex gap-3 justify-end">
+            {fromOnboard ? (
               <button
                 type="button"
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
                 style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}
-                onClick={() => handleSubmit('draft')}
-                disabled={saveMut.isPending}
+                onClick={() => navigate('/')}
               >
-                {t('taskForm.saveDraft')}
+                {t('taskForm.skipForNow')}
               </button>
+            ) : (
               <button
                 type="button"
-                className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
-                style={{ background: 'var(--primary)', color: '#fff' }}
-                onClick={() => handleSubmit('open')}
-                disabled={saveMut.isPending}
+                className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--text)' }}
+                onClick={() => navigate('/tasks')}
               >
-                {saveMut.isPending ? t('common.loading') : fromOnboard ? t('taskForm.publishAndEnter') : t('taskForm.publishTask')}
+                {t('common.cancel')}
               </button>
-            </div>
+            )}
+            <button
+              type="button"
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+              style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}
+              onClick={() => handleSubmit('draft')}
+              disabled={saveMut.isPending}
+            >
+              {t('taskForm.saveDraft')}
+            </button>
+            <button
+              type="button"
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+              style={{ background: 'var(--primary)', color: '#fff' }}
+              onClick={() => handleSubmit('open')}
+              disabled={saveMut.isPending}
+            >
+              {saveMut.isPending ? t('common.loading') : fromOnboard ? t('taskForm.publishAndEnter') : t('taskForm.publishTask')}
+            </button>
           </div>
 
-          {/* ── Sticky Preview Panel ─────────────────────────────── */}
-          <div className="w-72 flex-shrink-0 sticky top-20">
-            <div className="text-xs font-semibold mb-2" style={{ color: 'var(--muted)' }}>
-              {t('taskForm.previewTitle')}
-            </div>
-            <div className="rounded-2xl overflow-hidden shadow-md" style={{ background: '#fff' }}>
-              {form.coverImage && (
-                <img src={form.coverImage} className="w-full object-cover" style={{ aspectRatio: '16/9' }} alt="" />
-              )}
-              <div className="p-4">
-                <div className="text-xs mb-2">
-                  <span
-                    className="inline-block px-2 py-0.5 rounded-full text-xs font-medium mr-1"
-                    style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}
-                  >
-                    {t(`category.${form.category}`, { defaultValue: form.category })}
-                  </span>
-                  <span className="text-gray-400">
-                    {form.difficulty === 'EASY' ? t('taskForm.diffEasy') : form.difficulty === 'MEDIUM' ? t('taskForm.diffMedium') : t('taskForm.diffHard')}
-                  </span>
-                </div>
-                <div className="text-sm font-semibold mb-1.5 leading-snug" style={{ color: 'var(--text)' }}>
-                  {form.title || '任务标题'}
-                </div>
-                {form.description && (
-                  <div className="text-xs mb-3 leading-relaxed" style={{ color: 'var(--muted)' }}>
-                    {form.description}
-                  </div>
-                )}
-                {form.targetCommunities.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {form.targetCommunities.map((cid) => (
-                      <span key={cid} className="text-xs px-2 py-0.5 rounded-full" style={{ background: '#f0f9ff', color: '#0369a1' }}>
-                        {t(`community.${cid}`, { defaultValue: cid })}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div
-                  className="flex items-center justify-between pt-3 border-t"
-                  style={{ borderColor: 'var(--border)' }}
-                >
-                  <div>
-                    <div className="text-base font-bold" style={{ color: 'var(--primary)' }}>
-                      {form.payoutPerHerald ? `¥${Number(form.payoutPerHerald).toLocaleString()}` : '¥--'}
-                    </div>
-                    <div className="text-xs" style={{ color: 'var(--muted)' }}>/ 人</div>
-                  </div>
-                  <div
-                    className="px-4 py-2 rounded-full text-xs font-semibold"
-                    style={{ background: 'var(--primary)', color: '#fff' }}
-                  >
-                    立即报名
-                  </div>
-                </div>
-              </div>
-            </div>
-            {form.maxHeralds && form.payoutPerHerald && (
-              <div className="mt-3 text-xs text-center" style={{ color: 'var(--muted)' }}>
-                总预算 ¥{(Number(form.payoutPerHerald) * Number(form.maxHeralds) * 1.2).toLocaleString()}（含服务费）
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

@@ -41,7 +41,7 @@ export default function Onboard() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const qc = useQueryClient()
-  const { user, loading } = useAuth()
+  const { user, loading, refreshUser } = useAuth()
   const [step, setStep] = useState(0)
 
   if (loading) return null
@@ -71,7 +71,8 @@ export default function Onboard() {
         isAgency,
         agreedToTerms: agreed,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await refreshUser()
       qc.invalidateQueries({ queryKey: ['merchant-profile'] })
       navigate('/tasks/new?from=onboard', { replace: true })
     },
@@ -230,10 +231,10 @@ export default function Onboard() {
           {step === 3 && (
             <div className="space-y-4">
               <div
-                className="rounded-xl p-4 text-xs leading-relaxed"
-                style={{ background: '#f8fafc', border: '1px solid var(--border)', color: 'var(--muted)' }}
+                className="rounded-xl p-4 text-xs leading-relaxed overflow-y-auto"
+                style={{ background: '#f8fafc', border: '1px solid var(--border)', color: 'var(--muted)', maxHeight: '240px', whiteSpace: 'pre-wrap' }}
               >
-                {t('onboard.agreeTitle')}
+                {t('onboard.agreeContent')}
               </div>
               <label className="flex items-start gap-3 cursor-pointer">
                 <input

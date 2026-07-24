@@ -677,6 +677,37 @@ export async function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS submit_deadline TEXT`,
     `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS proposal_text TEXT`,
     `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS proposal_links TEXT`,
+    // 任务类型分表（2026-07-24）：原 tasks 表中 mode 专属字段迁移到独立 spec 表，
+    // 未来加第三种模式只需新增一张表，不改 tasks schema。
+    // 保留 tasks 表原有列（向后兼容 + 双写），spec 表查询时 COALESCE 优先。
+    `CREATE TABLE IF NOT EXISTS task_content_specs (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      content_type TEXT NOT NULL DEFAULT 'photo' CHECK(content_type IN ('photo','video','both')),
+      min_images INTEGER,
+      min_video_seconds INTEGER,
+      max_revisions INTEGER NOT NULL DEFAULT 2,
+      require_proposal INTEGER NOT NULL DEFAULT 0,
+      submit_deadline TEXT
+    )`,
+    `CREATE TABLE IF NOT EXISTS task_referral_specs (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      code_mode TEXT NOT NULL DEFAULT 'auto' CHECK(code_mode IN ('auto','custom')),
+      data_mode TEXT NOT NULL DEFAULT 'AGGREGATE' CHECK(data_mode IN ('AGGREGATE','DETAIL'))
+    )`,
+    // 存量数据迁移（幂等，ON CONFLICT DO NOTHING）
+    `INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline)
+     SELECT id,
+            CASE WHEN content_type IN ('photo','video','both') THEN content_type ELSE 'photo' END,
+            min_images, min_video_seconds,
+            COALESCE(max_revisions, 2),
+            COALESCE(require_proposal, 0),
+            submit_deadline
+     FROM tasks WHERE mode = 'STANDARD'
+     ON CONFLICT DO NOTHING`,
+    `INSERT INTO task_referral_specs (task_id, code_mode, data_mode)
+     SELECT id, COALESCE(code_mode, 'auto'), COALESCE(data_mode, 'AGGREGATE')
+     FROM tasks WHERE mode = 'PERFORMANCE'
+     ON CONFLICT DO NOTHING`,
   ];
   for (const m of migrations) {
     await pool.query(m);

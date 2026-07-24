@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import i18n from '@/i18n'
@@ -15,7 +15,9 @@ export default function Login() {
   const { t } = useTranslation()
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [searchParams] = useSearchParams()
+  const [email, setEmail] = useState(searchParams.get('email') ?? '')
+  const emailTakenHint = searchParams.get('reason') === 'email_taken'
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -82,6 +84,11 @@ export default function Login() {
         </div>
 
         {/* Form */}
+        {emailTakenHint && (
+          <div style={{ fontSize: 13, padding: '10px 14px', borderRadius: 8, background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', marginBottom: 20, lineHeight: 1.6 }}>
+            {t('auth.emailTakenHint')}
+          </div>
+        )}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 14 }}>
             <label style={{ display: 'block', fontSize: 13, fontWeight: 500, marginBottom: 6, color: 'var(--text)' }}>

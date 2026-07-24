@@ -333,6 +333,7 @@
   "profile.wechatOptionalPh": "微信号 或 手机号（选填）",
   "profile.optionalSuffix": "(选填)",
   "profile.socialSaved": "社交账号已保存",
+  "auth.tagline": "连接品牌与赫使，让影响力变现",
   "auth.wechatOneTap": "微信一键登录",
   "auth.orEmailLogin": "—— 或使用邮箱登录 ——",
   "auth.firstUseChoice": "首次使用，请选择",

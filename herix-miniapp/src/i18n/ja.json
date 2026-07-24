@@ -333,6 +333,7 @@
   "profile.wechatOptionalPh": "WeChat IDまたは電話番号（任意）",
   "profile.optionalSuffix": "（任意）",
   "profile.socialSaved": "SNSアカウントを保存しました",
+  "auth.tagline": "ブランドとヘラルドをつなぐ",
   "auth.wechatOneTap": "WeChatでログイン",
   "auth.orEmailLogin": "—— またはメールでログイン ——",
   "auth.firstUseChoice": "初回のご利用です。お選びください",

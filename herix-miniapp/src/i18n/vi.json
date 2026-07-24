@@ -95,6 +95,7 @@
   "auth.vcodePlaceholder": "Mã xác nhận 6 số",
   "auth.vcodeRequired": "Vui lòng nhập mã xác nhận email",
   "auth.wechatBoundOk": "Liên kết WeChat thành công",
+  "auth.tagline": "Kết nối thương hiệu với sứ giả",
   "auth.wechatOneTap": "Đăng nhập nhanh bằng WeChat",
   "auth.wechatQuickRegister": "Đăng ký nhanh bằng WeChat (tài khoản mới)",
   "category.baby": "Mẹ & bé",

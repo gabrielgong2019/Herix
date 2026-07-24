@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { View, Text, Input, Button } from '@tarojs/components';
+import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import {
   auth as authApi,
@@ -11,6 +11,7 @@ import {
   getToken,
   clearToken,
 } from '../../utils/api';
+import logoIcon from '../../assets/herix-icon.png';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
 import { t, LOCALES, getLocale, setLocale } from '../../utils/i18n';
 import { refreshUnreadBadge } from '../../utils/badge';
@@ -483,15 +484,30 @@ export default class Profile extends Component<{}, State> {
     const { user, isLogin, account, password, email, nickname, loading, showRegister } = this.state;
 
     if (!isLogin) {
+      if (process.env.TARO_ENV === 'weapp') {
+        return (
+          <View className='profile-page login-weapp'>
+            <View className='login-brand'>
+              <Image className='login-logo' src={logoIcon} mode='aspectFit' />
+              <Text className='login-name'>Herix</Text>
+              <Text className='login-tagline'>{t('auth.tagline')}</Text>
+            </View>
+            <View className='login-actions'>
+              <Button className='btn-wechat' onClick={this.handleWechatTap} loading={loading}>{t('auth.wechatOneTap')}</Button>
+              <Text className='login-lang' onClick={this.switchLanguage}>
+                🌐 {LOCALES.find(l => l.id === getLocale())?.label}
+              </Text>
+            </View>
+          </View>
+        );
+      }
+
       return (
         <View className='profile-page'>
           <View className='auth-card'>
             <Text className='auth-title'>{showRegister ? t('profile.register') : t('profile.login')}</Text>
             <Text className='auth-subtitle'>Herix 赫使</Text>
-            {process.env.TARO_ENV === 'weapp' ? (
-              // WeApp：仅微信一键登录，needRegister 时直接注册
-              <Button className='btn-wechat' onClick={this.handleWechatTap} loading={loading}>{t('auth.wechatOneTap')}</Button>
-            ) : (
+            {(
               // H5：邮箱登录 / 注册
               showRegister ? (
                 <>
@@ -524,6 +540,7 @@ export default class Profile extends Component<{}, State> {
         </View>
       );
     }
+
 
     const u = user || {};
     const isHerald = u.role === 'HERALD';

@@ -333,6 +333,7 @@
   "profile.wechatOptionalPh": "WeChat ID or phone (optional)",
   "profile.optionalSuffix": "(optional)",
   "profile.socialSaved": "Social accounts saved",
+  "auth.tagline": "Connecting brands with heralds",
   "auth.wechatOneTap": "Sign in with WeChat",
   "auth.orEmailLogin": "—— or sign in with email ——",
   "auth.firstUseChoice": "First time here — choose an option",

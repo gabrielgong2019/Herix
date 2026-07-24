@@ -209,7 +209,7 @@ export default class Profile extends Component<{}, State> {
         this.setState({ user: res.user, isLogin: true });
         this.loadUser();
       } else if (res?.needRegister) {
-        this.setState({ wxChoice: true });
+        await this.handleWechatRegister();
       }
     } catch (err: any) {
       Taro.showToast({ title: err.message || t('profile.loginFailed'), icon: 'none' });
@@ -488,46 +488,33 @@ export default class Profile extends Component<{}, State> {
           <View className='auth-card'>
             <Text className='auth-title'>{showRegister ? t('profile.register') : t('profile.login')}</Text>
             <Text className='auth-subtitle'>Herix 赫使</Text>
-            {/* 小程序：微信一键登录 / 首次使用选择 */}
-            {process.env.TARO_ENV === 'weapp' && !this.state.wxChoice && !this.state.wxBindMode && (
-              <>
-                <Button className='btn-wechat' onClick={this.handleWechatTap} loading={loading}>{t('auth.wechatOneTap')}</Button>
-                <Text className='auth-divider'>{t('auth.orEmailLogin')}</Text>
-              </>
-            )}
-            {this.state.wxChoice ? (
-              <>
-                <Text className='auth-subtitle'>{t('auth.firstUseChoice')}</Text>
-                <Button className='btn-wechat' onClick={this.handleWechatRegister} loading={loading}>{t('auth.wechatQuickRegister')}</Button>
-                <Button className='btn-primary' onClick={() => this.setState({ wxChoice: false, wxBindMode: true, showRegister: false })}>{t('auth.bindExisting')}</Button>
-                <Text className='switch-auth' onClick={() => this.setState({ wxChoice: false })}>{t('common.cancel')}</Text>
-              </>
-            ) : showRegister ? (
-              <>
-                <Input className='input' placeholder={t('profile.email')} placeholderClass='ph' value={email} onInput={e => this.setState({ email: e.detail.value })} />
-                <View className='pf-code-row'>
-                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} placeholderClass='ph' value={this.state.vcode} onInput={e => this.setState({ vcode: e.detail.value })} />
-                  <View className={`pf-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.codeCountdown > 0 ? undefined : this.sendRegCode}>
-                    {this.state.codeCountdown > 0 ? t('landing.codeResend', { s: this.state.codeCountdown }) : t('landing.codeSend')}
-                  </View>
-                </View>
-                <Input className='input' placeholder={t('profile.nickname')} placeholderClass='ph' value={nickname} onInput={e => this.setState({ nickname: e.detail.value })} />
-                <Input className='input' placeholder={t('profile.passwordMin')} placeholderClass='ph' password value={password} onInput={e => this.setState({ password: e.detail.value })} />
-                <Button className='btn-primary' onClick={this.handleRegister} loading={loading}>{t('profile.register')}</Button>
-                <Text className='switch-auth' onClick={() => this.setState({ showRegister: false })}>{t('profile.toLogin')}</Text>
-              </>
+            {process.env.TARO_ENV === 'weapp' ? (
+              // WeApp：仅微信一键登录，needRegister 时直接注册
+              <Button className='btn-wechat' onClick={this.handleWechatTap} loading={loading}>{t('auth.wechatOneTap')}</Button>
             ) : (
-              <>
-                {this.state.wxBindMode && <Text className='auth-hint'>{t('auth.bindModeHint')}</Text>}
-                <Input className='input' placeholder={t('profile.account')} placeholderClass='ph' value={account} onInput={e => this.setState({ account: e.detail.value })} />
-                <Input className='input' placeholder={t('profile.password')} placeholderClass='ph' password value={password} onInput={e => this.setState({ password: e.detail.value })} />
-                <Button className='btn-primary' onClick={this.handleLogin} loading={loading}>
-                  {this.state.wxBindMode ? t('auth.loginAndBind') : t('profile.login')}
-                </Button>
-                {this.state.wxBindMode
-                  ? <Text className='switch-auth' onClick={() => this.setState({ wxBindMode: false })}>{t('common.cancel')}</Text>
-                  : <Text className='switch-auth' onClick={() => this.setState({ showRegister: true })}>{t('profile.toRegister')}</Text>}
-              </>
+              // H5：邮箱登录 / 注册
+              showRegister ? (
+                <>
+                  <Input className='input' placeholder={t('profile.email')} placeholderClass='ph' value={email} onInput={e => this.setState({ email: e.detail.value })} />
+                  <View className='pf-code-row'>
+                    <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} placeholderClass='ph' value={this.state.vcode} onInput={e => this.setState({ vcode: e.detail.value })} />
+                    <View className={`pf-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.codeCountdown > 0 ? undefined : this.sendRegCode}>
+                      {this.state.codeCountdown > 0 ? t('landing.codeResend', { s: this.state.codeCountdown }) : t('landing.codeSend')}
+                    </View>
+                  </View>
+                  <Input className='input' placeholder={t('profile.nickname')} placeholderClass='ph' value={nickname} onInput={e => this.setState({ nickname: e.detail.value })} />
+                  <Input className='input' placeholder={t('profile.passwordMin')} placeholderClass='ph' password value={password} onInput={e => this.setState({ password: e.detail.value })} />
+                  <Button className='btn-primary' onClick={this.handleRegister} loading={loading}>{t('profile.register')}</Button>
+                  <Text className='switch-auth' onClick={() => this.setState({ showRegister: false })}>{t('profile.toLogin')}</Text>
+                </>
+              ) : (
+                <>
+                  <Input className='input' placeholder={t('profile.account')} placeholderClass='ph' value={account} onInput={e => this.setState({ account: e.detail.value })} />
+                  <Input className='input' placeholder={t('profile.password')} placeholderClass='ph' password value={password} onInput={e => this.setState({ password: e.detail.value })} />
+                  <Button className='btn-primary' onClick={this.handleLogin} loading={loading}>{t('profile.login')}</Button>
+                  <Text className='switch-auth' onClick={() => this.setState({ showRegister: true })}>{t('profile.toRegister')}</Text>
+                </>
+              )
             )}
             {/* 未登录也能切语言(此前入口只在登录后的操作区) */}
             <Text className='switch-auth' onClick={this.switchLanguage}>

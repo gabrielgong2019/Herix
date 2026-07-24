@@ -246,90 +246,93 @@ export default class Landing extends Component<{}, State> {
             </View>
           )}
 
-          {/* 邮箱表单区 */}
-          <Text className='lp-divider'>{t('auth.orEmailLogin')}</Text>
-
-          {!!err && <Text className='lp-err'>{err}</Text>}
-
-          {/* 邮箱 */}
-          <View className='lp-field'>
-            <Text className='lp-field-label'>{t('profile.emailAddr')}</Text>
-            <Input
-              className='lp-input'
-              type='text'
-              placeholder='you@example.com'
-              value={email}
-              onInput={e => this.setState({ email: e.detail.value })}
-            />
-          </View>
-
-          {/* 密码 */}
-          <View className='lp-field'>
-            <Text className='lp-field-label'>{t('landing.passwordLabel')}</Text>
-            <Input
-              className='lp-input'
-              password
-              placeholder={isReg ? t('profile.passwordMin') : '••••••'}
-              value={pass}
-              onInput={e => this.setState({ pass: e.detail.value })}
-            />
-          </View>
-
-          {/* 注册专属字段 */}
-          {isReg && (
+          {/* 邮箱表单区（H5 专用，weapp 已有微信一键登录） */}
+          {!isWeapp && (
             <>
+              <Text className='lp-divider'>{t('auth.orEmailLogin')}</Text>
+
+              {!!err && <Text className='lp-err'>{err}</Text>}
+
               <View className='lp-field'>
-                <Text className='lp-field-label'>{t('landing.nicknameLabel')}</Text>
+                <Text className='lp-field-label'>{t('profile.emailAddr')}</Text>
                 <Input
                   className='lp-input'
                   type='text'
-                  placeholder={t('profile.nickname')}
-                  value={nick}
-                  onInput={e => this.setState({ nick: e.detail.value })}
+                  placeholder='you@example.com'
+                  value={email}
+                  onInput={e => this.setState({ email: e.detail.value })}
                 />
               </View>
+
               <View className='lp-field'>
-                <Text className='lp-field-label'>{t('landing.vcodeLabel')}</Text>
-                <View className='lp-code-row'>
-                  <Input
-                    className='lp-input lp-code-input'
-                    type='number'
-                    maxlength={6}
-                    placeholder={t('landing.codePlaceholder')}
-                    value={this.state.vcode}
-                    onInput={e => this.setState({ vcode: e.detail.value })}
-                  />
-                  <View
-                    className={`lp-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`}
-                    onClick={this.state.codeCountdown > 0 ? undefined : this.sendVcode}
-                  >
-                    {this.state.codeCountdown > 0
-                      ? t('landing.codeResend', { s: this.state.codeCountdown })
-                      : t('landing.codeSend')}
-                  </View>
-                </View>
+                <Text className='lp-field-label'>{t('landing.passwordLabel')}</Text>
+                <Input
+                  className='lp-input'
+                  password
+                  placeholder={isReg ? t('profile.passwordMin') : '••••••'}
+                  value={pass}
+                  onInput={e => this.setState({ pass: e.detail.value })}
+                />
               </View>
+
+              {isReg && (
+                <>
+                  <View className='lp-field'>
+                    <Text className='lp-field-label'>{t('landing.nicknameLabel')}</Text>
+                    <Input
+                      className='lp-input'
+                      type='text'
+                      placeholder={t('profile.nickname')}
+                      value={nick}
+                      onInput={e => this.setState({ nick: e.detail.value })}
+                    />
+                  </View>
+                  <View className='lp-field'>
+                    <Text className='lp-field-label'>{t('landing.vcodeLabel')}</Text>
+                    <View className='lp-code-row'>
+                      <Input
+                        className='lp-input lp-code-input'
+                        type='number'
+                        maxlength={6}
+                        placeholder={t('landing.codePlaceholder')}
+                        value={this.state.vcode}
+                        onInput={e => this.setState({ vcode: e.detail.value })}
+                      />
+                      <View
+                        className={`lp-code-btn ${this.state.codeCountdown > 0 ? 'disabled' : ''}`}
+                        onClick={this.state.codeCountdown > 0 ? undefined : this.sendVcode}
+                      >
+                        {this.state.codeCountdown > 0
+                          ? t('landing.codeResend', { s: this.state.codeCountdown })
+                          : t('landing.codeSend')}
+                      </View>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              <View
+                className={`lp-submit ${submitting ? 'disabled' : ''}`}
+                onClick={submitting ? undefined : this.doAuth}
+              >
+                {submitting
+                  ? t('landing.processing')
+                  : task
+                    ? (isReg ? t('landing.registerAndApply') : t('landing.loginAndApply'))
+                    : (isReg ? t('landing.registerBtn') : t('landing.loginBtn'))}
+              </View>
+
+              <Text
+                className='lp-switch-link'
+                onClick={() => this.setState({ authTab: isReg ? 'login' : 'register', err: '' })}
+              >
+                {isReg ? t('landing.switchToLogin') : t('landing.switchToRegister')}
+              </Text>
             </>
           )}
 
-          <View
-            className={`lp-submit ${submitting ? 'disabled' : ''}`}
-            onClick={submitting ? undefined : this.doAuth}
-          >
-            {submitting
-              ? t('landing.processing')
-              : task
-                ? (isReg ? t('landing.registerAndApply') : t('landing.loginAndApply'))
-                : (isReg ? t('landing.registerBtn') : t('landing.loginBtn'))}
-          </View>
-
-          {/* 登录 ↔ 注册切换 */}
-          <Text
-            className='lp-switch-link'
-            onClick={() => this.setState({ authTab: isReg ? 'login' : 'register', err: '' })}
-          >
-            {isReg ? t('landing.switchToLogin') : t('landing.switchToRegister')}
-          </Text>
+          {/* weapp 微信登录错误提示 */}
+          {isWeapp && !!err && <Text className='lp-err'>{err}</Text>}
 
           <Text className='lp-lang' onClick={this.switchLanguage}>
             🌐 {LOCALES.find(l => l.id === getLocale())?.label}

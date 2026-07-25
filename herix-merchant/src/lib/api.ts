@@ -67,6 +67,13 @@ export const tasksApi = {
   getCodePool: (id: string) => http.get<CodePool>(`/tasks/${id}/codes`),
   uploadCustomCodes: (id: string, codes: string[]) =>
     http.post<{ added: number; skipped: number }>(`/tasks/${id}/codes/upload`, { codes }),
+  // 封面走既有 multipart 端点(压缩→存文件→DB只存URL)——禁止 base64 塞 JSON：
+  // express.json 100KB 上限会 413，且 base64 进 cover_image 列会拖垮所有列表接口
+  uploadCover: (id: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return http.post<{ url: string }>(`/uploads/task/${id}/cover`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
   downloadCodesUrl: (id: string) => `${BASE}/tasks/${id}/codes/export`,
   getWeappLink: (id: string) => http.get<WeappLinkResult>(`/tasks/${id}/weapp-link`),
   getWeappQrUrl: (id: string) => `${BASE}/tasks/${id}/weapp-qrcode`,

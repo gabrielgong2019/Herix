@@ -62,7 +62,9 @@ export const CreateTaskSchema = z.object({
   category: z.string().min(1, '请选择任务分类'),
   contentType: z.enum(['photo', 'video', 'both', 'referral']).default('photo'),
   difficulty: z.enum(['easy', 'medium', 'hard']).default('easy'),
-  coverImage: z.string().optional(),
+  // 拒绝 base64 dataURL：封面必须走 /uploads/task/:id/cover multipart(压缩+存文件+DB只存URL)，
+  // base64 进 JSON 会撞 express.json 100KB 上限(413)，进 DB 会拖垮所有任务列表接口(2026-07-20 实测)
+  coverImage: z.string().refine((v) => !v.startsWith('data:'), { message: '封面请使用图片上传接口，不支持 base64 内嵌' }).optional(),
   userBenefit: z.string().optional(),
   codeMode: z.enum(['auto', 'custom']).default('auto'),
   visibility: z.enum(['PUBLIC', 'INVITE']).default('PUBLIC'),

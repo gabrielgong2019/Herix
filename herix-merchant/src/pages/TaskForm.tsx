@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -236,7 +236,7 @@ function taskToFormState(task: Task): FormState {
 }
 
 export default function TaskForm() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const [searchParams] = useSearchParams()
@@ -252,6 +252,21 @@ export default function TaskForm() {
   const sn = isStandard
     ? { info: 1, target: 2, content: 3, payout: 4, rules: 5 }
     : { info: 1, target: 2, perf: 3, payout: 4 }
+
+  // Dynamic title placeholder: siteId × UI language → primary audience hint
+  const AUDIENCE_HINT: Record<string, Record<string, string>> = {
+    jp: { zh: '在日华人', en: 'Filipinos in Japan', ja: '在日外国人', ko: '재일 한국인' },
+    au: { zh: '在澳华人', en: 'Chinese in Australia', ja: '在豪外国人', ko: '호주 한인' },
+    us: { zh: '在美华人', en: 'Chinese in the US',   ja: '在米外国人', ko: '미주 한인' },
+    ca: { zh: '加拿大华人', en: 'Chinese in Canada', ja: '在カナダ外国人', ko: '캐나다 한인' },
+    uk: { zh: '英国华人', en: 'Chinese in the UK',   ja: '在英外国人', ko: 'UK 한인' },
+    sg: { zh: '新加坡华人', en: 'Chinese in Singapore', ja: '在シンガポール外国人', ko: '싱가포르 한인' },
+  }
+  const lang = i18n.language?.split('-')[0] || 'zh'
+  const audienceHint = AUDIENCE_HINT[form.siteId]?.[lang]
+  const titlePlaceholder = audienceHint
+    ? t('taskForm.fieldTitlePhDynamic', { audience: audienceHint })
+    : t('taskForm.fieldTitlePh')
 
   // Meta queries
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => metaApi.categories().then((r) => r.data) })
@@ -279,6 +294,9 @@ export default function TaskForm() {
     setError('')
   }, [])
 
+  // 封面原始文件：dataURL(form.coverImage)仅用于本地预览，真正上传走 multipart(见 saveMut)
+  const coverFileRef = useRef<File | null>(null)
+
   const toggleList = useCallback((key: 'targetCommunities' | 'platforms', val: string) => {
     setForm((prev) => {
       const list = prev[key] as string[]
@@ -303,7 +321,8 @@ export default function TaskForm() {
         maxHeralds: Number(form.maxHeralds),
         targetCommunities: form.targetCommunities,
         siteId: form.siteId,
-        coverImage: form.coverImage || undefined,
+        // dataURL 不进 JSON(413+DB膨胀双坑)；编辑态已有的服务器 URL 原样保留
+        coverImage: form.coverImage && !form.coverImage.startsWith('data:') ? form.coverImage : undefined,
         deadline: form.deadline || undefined,
         codeMode: form.mode === 'PERFORMANCE' ? form.codeMode : undefined,
         dataMode: form.mode === 'PERFORMANCE' ? form.dataMode : undefined,
@@ -314,6 +333,11 @@ export default function TaskForm() {
         submitDeadline: form.submitDeadline || undefined,
       }
       const res = isEdit ? await tasksApi.update(id!, payload) : await tasksApi.create(payload)
+      if (coverFileRef.current) {
+        const taskIdForCover = isEdit ? id! : (res.data as Task).id
+        await tasksApi.uploadCover(taskIdForCover, coverFileRef.current)
+        coverFileRef.current = null
+      }
       if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
         const codes = form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
         if (codes.length > 0) {
@@ -402,7 +426,7 @@ export default function TaskForm() {
               <Input
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
-                placeholder={t('taskForm.fieldTitlePh')}
+                placeholder={titlePlaceholder}
               />
             </Field>
 
@@ -542,7 +566,7 @@ export default function TaskForm() {
                       <button
                         type="button"
                         className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white"
-                        onClick={(e) => { e.stopPropagation(); set('coverImage', '') }}
+                        onClick={(e) => { e.stopPropagation(); set('coverImage', ''); coverFileRef.current = null }}
                       >
                         <X size={14} />
                       </button>
@@ -559,6 +583,7 @@ export default function TaskForm() {
                   onChange={(e) => {
                     const file = e.target.files?.[0]
                     if (file) {
+                      coverFileRef.current = file
                       const reader = new FileReader()
                       reader.onload = (ev) => set('coverImage', ev.target?.result as string)
                       reader.readAsDataURL(file)

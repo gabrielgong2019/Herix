@@ -158,6 +158,15 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **二期**：AI 内容辅助工具、培训内容库
 - **三期**：赫使付费订阅、品牌主动发现模式、MSO 汇款服务
 
+### 运维待办（有触发条件的延期项）
+
+- **图片存储迁移 OSS + uploads 备份**（2026-07-25 记，用户定为"正式上线后 3 个月"复查）：
+  当前图片（logo/promo/cover/KYB证件）存 ECS 本地磁盘无备份，磁盘损坏即全丢。
+  提前触发条件（任一满足即做，不必等 3 个月）：①真实商家开始付费入驻 ②uploads 目录超过几 GB。
+  短期止血项 = uploads 目录 crontab 定时备份；正式方案 = 迁阿里云 OSS（内网免流量费）+ CDN。
+  迁移成本低：存图已收口在 `saveBrandAsset`/`saveTaskCover`（utils/uploads.ts），换 OSS SDK 只改这一处，
+  存量文件 rsync 一次搬完。流程层（multipart+sharp压缩+DB只存URL）已是最佳实践不用动。
+
 ---
 
 ## 工作准则

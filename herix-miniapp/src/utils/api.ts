@@ -169,8 +169,27 @@ export const applications = {
 };
 
 // ── Submissions ──
+/** 提交图片上传（multipart）。weapp 走生产域名直传——需在小程序后台配置 uploadFile 合法域名
+ *  https://herix.huaxuex.com（云托管 callContainer 不支持 multipart，2026-07-26） */
+export async function uploadSubmissionImage(filePath: string): Promise<string> {
+  const token = getToken();
+  const url = (isWeapp ? 'https://herix.huaxuex.com' : '') + '/api/uploads/submission-image';
+  const res = await Taro.uploadFile({
+    url,
+    filePath,
+    name: 'file',
+    header: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  let body: any = res.data;
+  try { body = typeof body === 'string' ? JSON.parse(body) : body; } catch { /* keep raw */ }
+  if (res.statusCode >= 400 || !body?.url) {
+    throw new ApiError(apiErrorMessage(body), body);
+  }
+  return body.url as string;
+}
+
 export const submissions = {
-  submit: (taskId: string, data: { contentUrl: string; description?: string; screenshotUrls?: string[] }) =>
+  submit: (taskId: string, data: { contentUrl?: string; contentUrls?: string[]; description?: string; screenshotUrls?: string[] }) =>
     request<any>('POST', `/submissions/${taskId}`, data),
   review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
     request<any>('PATCH', `/submissions/${id}/review`, { status, reviewNote }),

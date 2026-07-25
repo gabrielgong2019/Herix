@@ -223,7 +223,10 @@
     "extractDismiss": "閉じる",
     "extractNone": "自動入力できる情報は見つかりませんでした。下のフォームにご記入ください",
     "secTimeTitle": "スケジュール",
-    "secTimeHint": "応募締切以降は新規応募を受け付けません。提出締切はコンテンツ提出の期限です"
+    "secTimeHint": "応募締切以降は新規応募を受け付けません。提出締切はコンテンツ提出の期限です",
+    "fieldRequireDraft": "下書き事前審査",
+    "requireDraftDesc": "アンバサダーに下書きの事前提出を求め、承認後にのみ公開・最終リンク提出を許可します",
+    "requireDraftHint": "有効にすると誤った内容が公開されず、修正は公開前に行われます。承認された下書きが確定版となり、相違があればプラットフォーム仲裁を申請できます。アンバサダーは最新版アプリが必要です"
   },
   "site": {
     "jp": "日本",
@@ -567,7 +570,29 @@
     "pending": "審査待ち",
     "approve": "承認",
     "reject": "却下",
-    "empty": "審査待ちのコンテンツはありません"
+    "empty": "審査待ちのコンテンツはありません",
+    "colTask": "案件",
+    "colHerald": "アンバサダー",
+    "colStage": "ステージ",
+    "colSubmittedAt": "提出日時",
+    "colContent": "コンテンツ",
+    "colActions": "操作",
+    "stageDraft": "下書き",
+    "stageFinal": "最終稿",
+    "stApproved": "承認済み",
+    "stRejected": "却下",
+    "stPending": "審査待ち",
+    "rejectBudget": "却下 {{used}}/{{limit}} 回",
+    "budgetExhausted": "却下回数を使い切りました。承認するか仲裁を申請してください",
+    "rejectReasonPrompt": "却下理由を入力してください（必須・アンバサダーに表示され記録されます）",
+    "rejectReasonRequired": "却下には理由の入力が必要です",
+    "actionFailed": "操作に失敗しました。再試行してください",
+    "linkN": "リンク {{n}}",
+    "compareDraft": "確定下書きと比較",
+    "approvedDraft": "承認済み下書き（確定版）",
+    "draftImages": "添付画像 {{n}} 枚",
+    "noDraft": "下書き記録が見つかりません",
+    "approveDraft": "下書きを承認"
   },
   "auth": {
     "loginTitle": "商家ダッシュボード",

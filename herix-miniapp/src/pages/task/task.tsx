@@ -255,8 +255,11 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     }
   };
 
+  submitMode: 'draft' | 'final' = 'final';
+  goSubmit = (mode: 'draft' | 'final') => { this.submitMode = mode; this.handleSubmit(); };
+
   handleSubmit = () => {
-    Taro.navigateTo({ url: `/pages/apply/apply?taskId=${this.state.task!.id}` });
+    Taro.navigateTo({ url: `/pages/apply/apply?taskId=${this.state.task!.id}&mode=${this.submitMode}` });
   };
 
   copyCode = () => {
@@ -426,11 +429,41 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             </View>
           );
         }
+        const requireDraft = !!(task as any).require_draft_review;
         if (!mySubmission) {
           return (
             <View className='actions'>
-              <Button className='btn-primary' onClick={this.handleSubmit}>{t('task.submitWork')}</Button>
-              <Text className='banner-hint'>{t('task.approvedHint')}</Text>
+              <Button className='btn-primary' onClick={() => this.goSubmit(requireDraft ? 'draft' : 'final')}>
+                {requireDraft ? t('task.submitDraft') : t('task.submitWork')}
+              </Button>
+              <Text className='banner-hint'>{requireDraft ? t('task.draftFirstHint') : t('task.approvedHint')}</Text>
+            </View>
+          );
+        }
+        // 两阶段：stage=DRAFT 的三个状态（旧任务无 stage 字段视为 FINAL）
+        if (mySubmission.stage === 'DRAFT') {
+          if (mySubmission.status === 'PENDING_REVIEW') {
+            return (
+              <View className='actions'>
+                <View className='status-banner banner-pending'>{t('task.draftPending')}</View>
+              </View>
+            );
+          }
+          if (mySubmission.status === 'REJECTED') {
+            return (
+              <View className='actions'>
+                <View className='status-banner banner-rejected'>{t('task.draftRejected')}</View>
+                {mySubmission.review_note && <Text className='banner-note'>{t('task.reason', { note: mySubmission.review_note })}</Text>}
+                <Button className='btn-primary' onClick={() => this.goSubmit('draft')}>{t('task.resubmitDraft')}</Button>
+              </View>
+            );
+          }
+          // DRAFT + APPROVED = 草稿已过，待发布并提交终稿
+          return (
+            <View className='actions'>
+              <View className='status-banner banner-success'>{t('task.draftApproved')}</View>
+              <Text className='banner-hint'>{t('task.draftApprovedNext')}</Text>
+              <Button className='btn-primary' onClick={() => this.goSubmit('final')}>{t('task.submitFinal')}</Button>
             </View>
           );
         }
@@ -453,7 +486,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             <View className='actions'>
               <View className='status-banner banner-rejected'>{t('task.workRejected')}</View>
               {mySubmission.review_note && <Text className='banner-note'>{t('task.reason', { note: mySubmission.review_note })}</Text>}
-              <Button className='btn-primary' onClick={this.handleSubmit}>{t('task.resubmit')}</Button>
+              <Button className='btn-primary' onClick={() => this.goSubmit('final')}>{t('task.resubmit')}</Button>
             </View>
           );
         }

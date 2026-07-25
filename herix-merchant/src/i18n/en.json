@@ -223,7 +223,10 @@
     "extractDismiss": "Dismiss",
     "extractNone": "Nothing recognized — please fill in the fields below manually",
     "secTimeTitle": "Timeline",
-    "secTimeHint": "Applications close at the deadline; the submission deadline is the final date for content delivery"
+    "secTimeHint": "Applications close at the deadline; the submission deadline is the final date for content delivery",
+    "fieldRequireDraft": "Draft review first",
+    "requireDraftDesc": "Require ambassadors to submit a draft for approval before publishing and submitting final links",
+    "requireDraftHint": "When enabled, mistakes never go live and revisions happen pre-publication. The approved draft becomes the reference version; mismatches can go to platform arbitration. Ambassadors need the latest app"
   },
   "site": {
     "jp": "Japan",
@@ -567,7 +570,29 @@
     "pending": "Pending",
     "approve": "Approve",
     "reject": "Reject",
-    "empty": "No items to review"
+    "empty": "No items to review",
+    "colTask": "Task",
+    "colHerald": "Ambassador",
+    "colStage": "Stage",
+    "colSubmittedAt": "Submitted",
+    "colContent": "Content",
+    "colActions": "Actions",
+    "stageDraft": "Draft",
+    "stageFinal": "Final",
+    "stApproved": "Approved",
+    "stRejected": "Rejected",
+    "stPending": "Pending",
+    "rejectBudget": "Rejected {{used}}/{{limit}}",
+    "budgetExhausted": "Rejection budget exhausted — approve or request arbitration",
+    "rejectReasonPrompt": "Enter a rejection reason (required — shown to the ambassador and archived)",
+    "rejectReasonRequired": "A reason is required to reject",
+    "actionFailed": "Action failed, please retry",
+    "linkN": "Link {{n}}",
+    "compareDraft": "Compare with approved draft",
+    "approvedDraft": "Approved draft (reference version)",
+    "draftImages": "{{n}} image(s) attached",
+    "noDraft": "No draft record found",
+    "approveDraft": "Approve draft"
   },
   "auth": {
     "loginTitle": "Merchant Dashboard",

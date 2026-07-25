@@ -21,4 +21,13 @@ export function saveTaskCover(taskId: string, buffer: Buffer): string {
   return `/uploads/tasks/${filename}`;
 }
 
+/** 保存赫使提交的截图/成品图，时间戳文件名（同一赫使多图不覆盖） */
+export function saveSubmissionImage(heraldId: string, buffer: Buffer): string {
+  const dir = path.join(UPLOADS_ROOT, 'submissions', heraldId);
+  fs.mkdirSync(dir, { recursive: true });
+  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+  fs.writeFileSync(path.join(dir, filename), buffer);
+  return `/uploads/submissions/${heraldId}/${filename}`;
+}
+
 export const UPLOADS_DIR = UPLOADS_ROOT;

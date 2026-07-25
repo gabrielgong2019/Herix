@@ -191,6 +191,7 @@ interface FormState {
   minVideoSeconds: number | ''
   maxRevisions: number
   requireProposal: boolean
+  requireDraftReview: boolean
   submitDeadline: string
   customCodes: string
 }
@@ -204,7 +205,7 @@ const DEFAULT_STATE: FormState = {
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
-  minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, submitDeadline: '',
+  minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
 }
 
@@ -232,6 +233,7 @@ function taskToFormState(task: Task): FormState {
     minVideoSeconds: task.min_video_seconds || '',
     maxRevisions: task.max_revisions ?? 2,
     requireProposal: !!(task.require_proposal),
+    requireDraftReview: !!(task.require_draft_review),
     submitDeadline: task.submit_deadline ? task.submit_deadline.slice(0, 10) : '',
     customCodes: '',
   }
@@ -347,6 +349,7 @@ export default function TaskForm() {
         minVideoSeconds: form.minVideoSeconds ? Number(form.minVideoSeconds) : undefined,
         maxRevisions: form.maxRevisions,
         requireProposal: form.requireProposal,
+        requireDraftReview: form.requireDraftReview,
         submitDeadline: form.submitDeadline || undefined,
       }
       const res = isEdit ? await tasksApi.update(id!, payload) : await tasksApi.create(payload)
@@ -644,6 +647,23 @@ export default function TaskForm() {
                   />
                 </Field>
               )}
+
+              <Field label={t('taskForm.fieldRequireDraft')}>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!form.requireDraftReview}
+                    onChange={(e) => set('requireDraftReview', e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm" style={{ color: 'var(--text)' }}>{t('taskForm.requireDraftDesc')}</span>
+                </label>
+                {!!form.requireDraftReview && (
+                  <div className="mt-2 px-3 py-2 rounded-lg text-xs" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+                    {t('taskForm.requireDraftHint')}
+                  </div>
+                )}
+              </Field>
 
               <Field label={t('taskForm.fieldCover')} hint={t('taskForm.fieldCoverHint')}>
                 <div

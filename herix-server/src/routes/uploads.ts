@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo, processCover } from '../utils/image';
-import { saveBrandAsset, saveTaskCover } from '../utils/uploads';
+import { saveBrandAsset, saveTaskCover, saveSubmissionImage } from '../utils/uploads';
 import { update, insert } from '../utils/db';
 
 export const uploadsRouter = Router();
@@ -53,6 +53,20 @@ uploadsRouter.post('/brand/kyb-doc', requireAuth, requireRole('BRAND'), imageUpl
     res.json({ success: true, url, kybStatus: 'pending' });
   } catch (err) {
     console.error('KYB doc upload error:', err);
+    res.status(500).json({ error: '图片处理失败' });
+  }
+});
+
+/** POST /api/uploads/submission-image — 赫使提交截图/成品图上传（草稿成品图与终稿证明截图共用）。
+ *  此前小程序提交页没有任何图片上传能力，min_images 闸机对小程序用户形同永久封锁（2026-07-26 补） */
+uploadsRouter.post('/submission-image', requireAuth, requireRole('HERALD'), imageUpload.single('file'), async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: '未提供文件' });
+  try {
+    const processed = await processPromo(req.file.buffer); // 沿用宣传图参数：长边保留较大，成品文字可读
+    const url = saveSubmissionImage(req.user!.userId, processed);
+    res.json({ success: true, url });
+  } catch (err) {
+    console.error('Submission image upload error:', err);
     res.status(500).json({ error: '图片处理失败' });
   }
 });

@@ -223,7 +223,10 @@
     "extractDismiss": "忽略",
     "extractNone": "没有识别到可自动填写的信息，请手动填写下方字段",
     "secTimeTitle": "时间线",
-    "secTimeHint": "报名截止后不再接受新报名；交稿截止是赫使提交内容的最后期限"
+    "secTimeHint": "报名截止后不再接受新报名；交稿截止是赫使提交内容的最后期限",
+    "fieldRequireDraft": "草稿前置",
+    "requireDraftDesc": "要求赫使先提交草稿，审核通过后才能发布内容并提交最终链接",
+    "requireDraftHint": "开启后：错误内容不会上网，改稿发生在发布前；草稿通过即定稿，发布内容与草稿不符可申请平台仲裁。需赫使使用新版 App"
   },
   "site": {
     "jp": "日本",
@@ -562,7 +565,29 @@
     "pending": "待审核",
     "approve": "通过",
     "reject": "拒绝",
-    "empty": "暂无待审核内容"
+    "empty": "暂无待审核内容",
+    "colTask": "任务",
+    "colHerald": "赫使",
+    "colStage": "阶段",
+    "colSubmittedAt": "提交时间",
+    "colContent": "内容",
+    "colActions": "操作",
+    "stageDraft": "草稿",
+    "stageFinal": "终稿",
+    "stApproved": "已通过",
+    "stRejected": "已拒绝",
+    "stPending": "待审核",
+    "rejectBudget": "已拒 {{used}}/{{limit}} 次",
+    "budgetExhausted": "拒绝次数已用完，只能通过或申请平台仲裁",
+    "rejectReasonPrompt": "请填写拒绝理由（必填，会展示给赫使并留档）",
+    "rejectReasonRequired": "拒绝时必须填写理由",
+    "actionFailed": "操作失败，请重试",
+    "linkN": "链接 {{n}}",
+    "compareDraft": "对照草稿定稿",
+    "approvedDraft": "已通过的草稿（定稿版本）",
+    "draftImages": "附图 {{n}} 张",
+    "noDraft": "未找到草稿记录",
+    "approveDraft": "通过草稿"
   },
   "auth": {
     "loginTitle": "登录商家后台",

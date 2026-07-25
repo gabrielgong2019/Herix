@@ -223,7 +223,10 @@
     "extractDismiss": "닫기",
     "extractNone": "자동 입력할 수 있는 정보를 찾지 못했습니다. 아래 항목을 직접 입력해 주세요",
     "secTimeTitle": "일정",
-    "secTimeHint": "지원 마감 이후 신규 지원을 받지 않으며, 제출 마감은 콘텐츠 제출 기한입니다"
+    "secTimeHint": "지원 마감 이후 신규 지원을 받지 않으며, 제출 마감은 콘텐츠 제출 기한입니다",
+    "fieldRequireDraft": "시안 사전 심사",
+    "requireDraftDesc": "앰배서더가 시안을 먼저 제출하고, 승인 후에만 게시 및 최종 링크 제출이 가능하도록 합니다",
+    "requireDraftHint": "활성화하면 잘못된 콘텐츠가 공개되지 않고 수정은 게시 전에 이루어집니다. 승인된 시안이 기준 버전이 되며, 불일치 시 플랫폼 중재를 신청할 수 있습니다. 앰배서더는 최신 앱이 필요합니다"
   },
   "site": {
     "jp": "일본",
@@ -567,7 +570,29 @@
     "pending": "대기 중",
     "approve": "승인",
     "reject": "거절",
-    "empty": "검토할 항목이 없습니다"
+    "empty": "검토할 항목이 없습니다",
+    "colTask": "캠페인",
+    "colHerald": "앰배서더",
+    "colStage": "단계",
+    "colSubmittedAt": "제출 시각",
+    "colContent": "콘텐츠",
+    "colActions": "작업",
+    "stageDraft": "시안",
+    "stageFinal": "최종",
+    "stApproved": "승인됨",
+    "stRejected": "거절됨",
+    "stPending": "심사 대기",
+    "rejectBudget": "거절 {{used}}/{{limit}}회",
+    "budgetExhausted": "거절 횟수를 모두 사용했습니다. 승인하거나 중재를 신청하세요",
+    "rejectReasonPrompt": "거절 사유를 입력하세요 (필수 - 앰배서더에게 표시되고 기록됩니다)",
+    "rejectReasonRequired": "거절 시 사유 입력이 필요합니다",
+    "actionFailed": "작업 실패, 다시 시도해 주세요",
+    "linkN": "링크 {{n}}",
+    "compareDraft": "승인 시안과 비교",
+    "approvedDraft": "승인된 시안 (기준 버전)",
+    "draftImages": "첨부 이미지 {{n}}장",
+    "noDraft": "시안 기록을 찾을 수 없습니다",
+    "approveDraft": "시안 승인"
   },
   "auth": {
     "loginTitle": "브랜드 대시보드",

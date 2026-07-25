@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { tasksApi, type Application } from '@/lib/api'
+import { parseLinks, tasksApi, type Application } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
 import { ArrowLeft, Check, X, Copy, Download, ExternalLink, Upload } from 'lucide-react'
@@ -618,23 +618,37 @@ export default function TaskDetail() {
                 {submissions.length === 0 && (
                   <tr><td colSpan={4} className="px-5 py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>{t('tasks.emptySubmissions')}</td></tr>
                 )}
-                {submissions.map((sub) => (
+                {submissions.map((sub) => {
+                  // 服务端 status 是大写(PENDING_REVIEW/APPROVED/REJECTED)——此前小写比较恒 false，徽章永远黄色
+                  const st = (sub.status || '').toUpperCase()
+                  const links = parseLinks(sub)
+                  return (
                   <tr key={sub.id}>
                     <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{maskName(sub.nickname || sub.herald?.name || sub.user_id || '')}</td>
-                    <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{formatDate(sub.created_at)}</td>
+                    <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{formatDate(sub.submitted_at || sub.created_at || '')}</td>
                     <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                      {sub.stage === 'DRAFT' && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium mr-1.5" style={{ background: '#eff6ff', color: '#1d4ed8' }}>
+                          {t('reviews.stageDraft')}
+                        </span>
+                      )}
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
-                        background: sub.status === 'approved' ? '#dcfce7' : sub.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                        color: sub.status === 'approved' ? '#16a34a' : sub.status === 'rejected' ? '#dc2626' : '#d97706',
+                        background: st === 'APPROVED' ? '#dcfce7' : st === 'REJECTED' ? '#fee2e2' : '#fef3c7',
+                        color: st === 'APPROVED' ? '#16a34a' : st === 'REJECTED' ? '#dc2626' : '#d97706',
                       }}>
-                        {t(`status.${sub.status}`)}
+                        {st === 'APPROVED' ? t('reviews.stApproved') : st === 'REJECTED' ? t('reviews.stRejected') : t('reviews.stPending')}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--primary)' }}>
-                      {sub.content_url ? <a href={sub.content_url} target="_blank" rel="noreferrer">{t('tasks.viewContent')}</a> : '—'}
+                      {links.length > 0
+                        ? links.map((u, i) => (
+                            <a key={u} href={u} target="_blank" rel="noreferrer" className="block text-xs">{t('reviews.linkN', { n: i + 1 })}</a>
+                          ))
+                        : '—'}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           )}

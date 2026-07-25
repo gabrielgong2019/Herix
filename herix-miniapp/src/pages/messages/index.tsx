@@ -9,6 +9,8 @@ import './index.scss';
 const ACCENT_MAP: Record<string, string> = {
   SUB_APPROVED: '#16a34a',
   SUB_REJECTED: '#dc2626',
+  DRAFT_APPROVED: '#1d4ed8',
+  DRAFT_REJECTED: '#dc2626',
   APP_APPROVED: '#16a34a',
   APP_REJECTED: '#dc2626',
   SETTLEMENT_BLOCKED: '#d97706',
@@ -19,6 +21,8 @@ const ACCENT_MAP: Record<string, string> = {
 const ICON_MAP: Record<string, string> = {
   SUB_APPROVED: '✅',
   SUB_REJECTED: '❌',
+  DRAFT_APPROVED: '📝',
+  DRAFT_REJECTED: '❌',
   APP_APPROVED: '🎉',
   APP_REJECTED: '😔',
   SETTLEMENT_BLOCKED: '⚠️',

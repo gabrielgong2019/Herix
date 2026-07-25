@@ -395,6 +395,48 @@ submissionsRouter.get('/task/:taskId', requireAuth, async (req: Request, res: Re
   res.json(subs);
 });
 
+/** GET /api/submissions/pending — 商家的全部待审提交（跨任务，审核中心用）。
+ *  含阶段/多链接/改稿计数/任务配置，前端据此渲染徽章与额度提示 */
+submissionsRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, ts.status, ts.content_url, ts.content_urls,
+            ts.description, ts.screenshot_urls, ts.submitted_at,
+            t.title AS task_title, u.nickname AS herald_name,
+            COALESCE(tcs.require_draft_review, 0) AS require_draft_review,
+            COALESCE(tcs.max_revisions, 2) AS max_revisions,
+            (SELECT COUNT(*)::int FROM submission_revisions sr
+             WHERE sr.task_id = ts.task_id AND sr.herald_id = ts.herald_id
+               AND sr.kind = 'REVIEW' AND sr.action = 'REJECTED' AND sr.stage = ts.stage) AS stage_rejects
+     FROM task_submissions ts
+     JOIN tasks t ON t.id = ts.task_id
+     JOIN users u ON u.id = ts.herald_id
+     LEFT JOIN task_content_specs tcs ON tcs.task_id = ts.task_id
+     WHERE t.creator_id = ? AND ts.status = 'PENDING_REVIEW'
+     ORDER BY ts.submitted_at ASC`, [req.user!.userId]
+  );
+  res.json(rows);
+});
+
+/** GET /api/submissions/:id/revisions — 交付审计链（仲裁证据/草稿定稿对照）。
+ *  可见方：任务创建者/管理员/该提交的赫使本人 */
+submissionsRouter.get('/:id/revisions', requireAuth, async (req: Request, res: Response) => {
+  const sub = await findOne<{ task_id: string; herald_id: string; creator_id: string }>(
+    `SELECT ts.task_id, ts.herald_id, t.creator_id FROM task_submissions ts
+     JOIN tasks t ON t.id = ts.task_id WHERE ts.id = ?`, [req.params.id]
+  );
+  if (!sub) return res.status(404).json({ error: '提交不存在' });
+  const uid = req.user!.userId;
+  if (uid !== sub.creator_id && uid !== sub.herald_id && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限' });
+  }
+  const rows = await findMany<any>(
+    `SELECT stage, kind, action, content_urls, description, screenshot_urls, note, created_at
+     FROM submission_revisions WHERE task_id = ? AND herald_id = ? ORDER BY created_at ASC`,
+    [sub.task_id, sub.herald_id]
+  );
+  res.json(rows);
+});
+
 /** GET /api/submissions/my — 我的提交 (赫使侧) */
 submissionsRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
   const subs = await findMany<any>(

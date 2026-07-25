@@ -87,9 +87,11 @@ export const tasksApi = {
 
 // ── Reviews ───────────────────────────────────────────────────────
 export const reviewsApi = {
-  list: () => http.get<Submission[]>('/merchant/submissions/pending'),
-  approve: (id: string) => http.post(`/submissions/${id}/approve`),
-  reject: (id: string, reason?: string) => http.post(`/submissions/${id}/reject`, { reason }),
+  // 2026-07-26 接到真实端点（此前 /merchant/submissions/pending 与 approve/reject POST 均不存在，页面是坏的）
+  list: () => http.get<Submission[]>('/submissions/pending'),
+  review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
+    http.patch(`/submissions/${id}/review`, { status, reviewNote }),
+  revisions: (id: string) => http.get<SubmissionRevision[]>(`/submissions/${id}/revisions`),
 }
 
 // ── Wallet ────────────────────────────────────────────────────────
@@ -193,6 +195,7 @@ export interface Task {
   min_video_seconds?: number | null
   max_revisions?: number
   require_proposal?: number
+  require_draft_review?: number
   submit_deadline?: string | null
   created_at: string
   published_at?: string
@@ -228,6 +231,7 @@ export interface TaskFormData {
   minVideoSeconds?: number | null
   maxRevisions: number
   requireProposal: boolean
+  requireDraftReview?: boolean
   submitDeadline?: string | null
 }
 
@@ -256,14 +260,42 @@ export interface Application {
 export interface Submission {
   id: string
   task_id: string
-  user_id: string
-  status: string
+  herald_id?: string
+  user_id?: string
+  stage?: 'DRAFT' | 'FINAL'
+  status: string // 服务端大写: PENDING_REVIEW | APPROVED | REJECTED
   content_url?: string
-  note?: string
-  created_at: string
-  task?: { title: string }
-  herald?: { name: string }
+  content_urls?: string | null // JSON 数组字符串，parseLinks() 解析
+  description?: string
+  screenshot_urls?: string | null
+  review_note?: string
+  submitted_at?: string
+  created_at?: string
+  task_title?: string
+  herald_name?: string
+  require_draft_review?: number
+  max_revisions?: number
+  stage_rejects?: number
   nickname?: string
+  herald?: { name: string }
+  task?: { title: string }
+}
+
+export interface SubmissionRevision {
+  stage: 'DRAFT' | 'FINAL'
+  kind: 'SUBMIT' | 'REVIEW'
+  action: string
+  content_urls?: string | null
+  description?: string | null
+  screenshot_urls?: string | null
+  note?: string | null
+  created_at: string
+}
+
+/** content_urls(JSON) → 数组，回落单链接旧字段 */
+export function parseLinks(sub: { content_urls?: string | null; content_url?: string | null }): string[] {
+  if (sub.content_urls) { try { const a = JSON.parse(sub.content_urls); if (Array.isArray(a)) return a } catch { /* fall through */ } }
+  return sub.content_url ? [sub.content_url] : []
 }
 
 export interface CodePool {

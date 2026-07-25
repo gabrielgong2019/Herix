@@ -107,7 +107,8 @@ tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) =>
   const uid = req.user!.userId;
 
   const tasks = await findMany<any>(`
-    SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at, t.data_mode,
+    SELECT t.id, t.title, t.mode, t.status, t.commission, t.max_heralds, t.created_at,
+      (SELECT trs.data_mode FROM task_referral_specs trs WHERE trs.task_id = t.id) as data_mode,
       (SELECT COUNT(*)::int FROM task_brand_parties tbp WHERE tbp.task_id = t.id) AS brand_party_count,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id) as app_total,
       (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id=t.id AND ta.status='APPROVED') as app_approved,
@@ -241,7 +242,7 @@ tasksRouter.get('/:id/upload-info', async (req: Request, res: Response) => {
   const token = String(req.query.token || '');
   if (!token) return res.status(401).json({ error: '缺少 token' });
   const task = await findOne<any>(
-    'SELECT id, title, mode, status, upload_token, max_heralds, data_mode FROM tasks WHERE id = ?',
+    'SELECT id, title, mode, status, upload_token, max_heralds, (SELECT trs.data_mode FROM task_referral_specs trs WHERE trs.task_id = tasks.id) as data_mode FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task || task.upload_token !== token) return res.status(403).json({ error: '链接无效或已过期' });
@@ -384,12 +385,13 @@ tasksRouter.post('/:id/brand-unbind', requireAuth, requireRole('BRAND', 'ADMIN')
 tasksRouter.get('/partner/mine', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
   // 绑定关系随任务生命周期：关闭超过 30 天缓冲期的任务不再出现（惰性失效）
   const rows = await findMany<any>(
-    `SELECT t.id, t.title, t.status, t.mode, t.data_mode, t.max_heralds, t.created_at, t.completed_at,
+    `SELECT t.id, t.title, t.status, t.mode, trs.data_mode, t.max_heralds, t.created_at, t.completed_at,
             u.nickname AS agency_name,
             (SELECT COUNT(*)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS code_holders,
             (SELECT COALESCE(SUM(at.registered_count),0)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS total_registered,
             (SELECT COALESCE(SUM(at.used_count),0)::int FROM ambassador_tasks at WHERE at.task_id = t.id) AS total_converted
      FROM tasks t
+     LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
      JOIN task_brand_parties tbp ON tbp.task_id = t.id
      JOIN users u ON u.id = t.creator_id
      WHERE tbp.user_id = ? AND ${BINDING_ACTIVE_SQL}
@@ -418,7 +420,7 @@ tasksRouter.post('/:id/upload-consent', async (req: Request, res: Response) => {
 
 /** GET /api/tasks/:id/referrals — 明细模式跟踪列表（商家）。只回脱敏标识，不存在原文 */
 tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, status, completed_at, data_mode FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id, status, completed_at, (SELECT trs.data_mode FROM task_referral_specs trs WHERE trs.task_id = tasks.id) as data_mode FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
   // 代理（创建者）/管理员随时可看；品牌方仅在任务活跃或 30 天缓冲期内可看
   const isCreatorOrAdmin = task.creator_id === req.user!.userId || req.user!.role === 'ADMIN';
@@ -444,7 +446,7 @@ tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), as
 /** POST /api/tasks/:id/csv — 上传推广码转化数据，每条新转化直接写 transactions */
 tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, mode, status, completed_at, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, data_mode FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, mode, status, completed_at, payout_per_herald, cost_per_herald, currency, title, lock_txn_id, upload_token, (SELECT trs.data_mode FROM task_referral_specs trs WHERE trs.task_id = tasks.id) as data_mode FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -839,14 +841,14 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             (SELECT ROUND(AVG(EXTRACT(EPOCH FROM (ts.reviewed_at::timestamp - ts.submitted_at::timestamp)) / 86400))
              FROM task_submissions ts JOIN tasks t2 ON t2.id = ts.task_id
              WHERE t2.creator_id = t.creator_id AND ts.status = 'APPROVED' AND ts.reviewed_at IS NOT NULL) as avg_payout_days,
-            COALESCE(tcs.content_type, t.content_type) as content_type,
-            COALESCE(tcs.min_images, t.min_images) as min_images,
-            COALESCE(tcs.min_video_seconds, t.min_video_seconds) as min_video_seconds,
-            COALESCE(tcs.max_revisions, t.max_revisions) as max_revisions,
-            COALESCE(tcs.require_proposal, t.require_proposal) as require_proposal,
-            COALESCE(tcs.submit_deadline, t.submit_deadline) as submit_deadline,
-            COALESCE(trs.code_mode, t.code_mode) as code_mode,
-            COALESCE(trs.data_mode, t.data_mode) as data_mode
+            tcs.content_type as content_type,
+            tcs.min_images as min_images,
+            tcs.min_video_seconds as min_video_seconds,
+            tcs.max_revisions as max_revisions,
+            tcs.require_proposal as require_proposal,
+            tcs.submit_deadline as submit_deadline,
+            trs.code_mode as code_mode,
+            trs.data_mode as data_mode
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id
@@ -908,34 +910,27 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
   try {
     const data = CreateTaskSchema.parse(req.body);
 
+    // 类型专属字段只住 spec 表（2026-07-25 用户决策：未上线不做双写，直接终态）
     const taskId = await insert('tasks', {
       creator_id:        req.user!.userId,
       mode:              data.mode,
       title:             data.title,
-      description:       data.description,
-      requirements:      data.requirements || null,
+      // 简报合并：description 即「任务简报」单一正文；requirements 仅为旧客户端兼容保留入参
+      description:       data.requirements ? `${data.description}\n\n${data.requirements}` : data.description,
       payout_per_herald: data.payoutPerHerald,
       currency:          'JPY',
       max_heralds:       data.maxHeralds,
       deadline:          data.deadline || null,
       category:          data.category || null,
-      content_type:      data.mode === 'PERFORMANCE' ? null : data.contentType,
       difficulty:        data.difficulty,
       cover_image:       data.coverImage || null,
-      code_mode:         data.codeMode || 'auto',
       platform_requirements: data.platformRequirements ? JSON.stringify(data.platformRequirements) : null,
       req_mode:          data.reqMode,
       req_min_count:     data.reqMode === 'ANY_N' ? (data.reqMinCount || 1) : null,
-      data_mode:         data.mode === 'PERFORMANCE' ? data.dataMode : 'AGGREGATE',
       visibility:        data.visibility || 'PUBLIC',
       target_communities: data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c)),
       site_id:           VALID_SITES.has(data.siteId) ? data.siteId : 'jp',
       status:            'DRAFT',
-      min_images:        data.minImages || null,
-      min_video_seconds: data.minVideoSeconds || null,
-      max_revisions:     data.maxRevisions ?? 2,
-      require_proposal:  data.requireProposal ? 1 : 0,
-      submit_deadline:   data.submitDeadline || null,
       // cost_per_herald 和 commission_rate 在发布时计算快照
     });
 
@@ -944,25 +939,33 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       generateCodePool(taskId, data.maxHeralds);
     }
 
-    // 写入 spec 分表（与 tasks 列双写，spec 表为权威来源）
+    // spec 分表 = 类型专属字段唯一权威来源
+    let spec: Record<string, any>;
     if (data.mode === 'STANDARD') {
+      spec = {
+        content_type: data.contentType || 'photo',
+        min_images: data.minImages || null,
+        min_video_seconds: data.minVideoSeconds || null,
+        max_revisions: data.maxRevisions ?? 2,
+        require_proposal: data.requireProposal ? 1 : 0,
+        submit_deadline: data.submitDeadline || null,
+      };
       await pool.query(
         `INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline)
-         SELECT id, COALESCE(content_type,'photo'), min_images, min_video_seconds, COALESCE(max_revisions,2), COALESCE(require_proposal,0), submit_deadline
-         FROM tasks WHERE id = $1 ON CONFLICT DO NOTHING`,
-        [taskId]
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [taskId, spec.content_type, spec.min_images, spec.min_video_seconds, spec.max_revisions, spec.require_proposal, spec.submit_deadline]
       );
     } else {
+      spec = { code_mode: data.codeMode || 'auto', data_mode: data.dataMode || 'AGGREGATE' };
       await pool.query(
-        `INSERT INTO task_referral_specs (task_id, code_mode, data_mode)
-         SELECT id, COALESCE(code_mode,'auto'), COALESCE(data_mode,'AGGREGATE')
-         FROM tasks WHERE id = $1 ON CONFLICT DO NOTHING`,
-        [taskId]
+        `INSERT INTO task_referral_specs (task_id, code_mode, data_mode) VALUES ($1, $2, $3)`,
+        [taskId, spec.code_mode, spec.data_mode]
       );
     }
 
-    const task = await findOne('SELECT * FROM tasks WHERE id = ?', [taskId]);
-    res.status(201).json(task);
+    // 响应形状保持不变：spec 字段合并进任务对象（线上旧客户端读同样的 JSON 键）
+    const task = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [taskId]);
+    res.status(201).json({ ...task, ...spec });
   } catch (err) {
     if (err instanceof ZodError) {
       return res.status(400).json({ error: '参数错误', details: err.errors });
@@ -974,7 +977,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
 
 /** PUT /api/tasks/:id — 编辑草稿任务 */
 tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, status FROM tasks WHERE id = ?', [req.params.id]);
+  const task = await findOne<any>('SELECT id, creator_id, status, mode FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
@@ -988,7 +991,6 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (maxHeralds) data.max_heralds = maxHeralds;
   if (deadline !== undefined) data.deadline = deadline || null;
   if (category !== undefined) data.category = category;
-  if (contentType) data.content_type = contentType;
   if (difficulty) data.difficulty = difficulty;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
@@ -1003,40 +1005,32 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
     data.req_mode = reqMode;
     data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;
   }
-  // 数据回传模式只在草稿期可改（发布后锁定，防两套数据对不上）
-  if (req.body.dataMode && ['AGGREGATE', 'DETAIL'].includes(req.body.dataMode)) {
-    data.data_mode = req.body.dataMode;
-  }
-  if (req.body.minImages !== undefined) data.min_images = req.body.minImages || null;
-  if (req.body.minVideoSeconds !== undefined) data.min_video_seconds = req.body.minVideoSeconds || null;
-  if (req.body.maxRevisions !== undefined) data.max_revisions = req.body.maxRevisions ?? 2;
-  if (req.body.requireProposal !== undefined) data.require_proposal = req.body.requireProposal ? 1 : 0;
-  if (req.body.submitDeadline !== undefined) data.submit_deadline = req.body.submitDeadline || null;
-
   await update('tasks', data, 'id = ?', [req.params.id]);
 
-  // spec 分表同步
+  // 类型专属字段只写 spec 表（终态，无双写）。传了才更新，未传保持原值
   if (task.mode === 'STANDARD') {
-    await pool.query(
-      `INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline)
-       SELECT id, COALESCE(content_type,'photo'), min_images, min_video_seconds, COALESCE(max_revisions,2), COALESCE(require_proposal,0), submit_deadline
-       FROM tasks WHERE id = $1
-       ON CONFLICT (task_id) DO UPDATE SET
-         content_type = EXCLUDED.content_type, min_images = EXCLUDED.min_images,
-         min_video_seconds = EXCLUDED.min_video_seconds, max_revisions = EXCLUDED.max_revisions,
-         require_proposal = EXCLUDED.require_proposal, submit_deadline = EXCLUDED.submit_deadline`,
-      [req.params.id]
-    );
-  } else {
-    await pool.query(
-      `INSERT INTO task_referral_specs (task_id, code_mode, data_mode)
-       SELECT id, COALESCE(code_mode,'auto'), COALESCE(data_mode,'AGGREGATE') FROM tasks WHERE id = $1
-       ON CONFLICT (task_id) DO UPDATE SET code_mode = EXCLUDED.code_mode, data_mode = EXCLUDED.data_mode`,
-      [req.params.id]
-    );
+    const sets: string[] = []; const vals: any[] = [];
+    const push = (col: string, v: any) => { vals.push(v); sets.push(`${col} = $${vals.length}`); };
+    if (req.body.contentType) push('content_type', req.body.contentType);
+    if (req.body.minImages !== undefined) push('min_images', req.body.minImages || null);
+    if (req.body.minVideoSeconds !== undefined) push('min_video_seconds', req.body.minVideoSeconds || null);
+    if (req.body.maxRevisions !== undefined) push('max_revisions', req.body.maxRevisions ?? 2);
+    if (req.body.requireProposal !== undefined) push('require_proposal', req.body.requireProposal ? 1 : 0);
+    if (req.body.submitDeadline !== undefined) push('submit_deadline', req.body.submitDeadline || null);
+    if (sets.length) {
+      vals.push(req.params.id);
+      await pool.query(`UPDATE task_content_specs SET ${sets.join(', ')} WHERE task_id = $${vals.length}`, vals);
+    }
+  } else if (req.body.dataMode && ['AGGREGATE', 'DETAIL'].includes(req.body.dataMode)) {
+    // 数据回传模式只在草稿期可改（发布后锁定，防两套数据对不上）——本路由本就仅限 DRAFT
+    await pool.query('UPDATE task_referral_specs SET data_mode = $1 WHERE task_id = $2', [req.body.dataMode, req.params.id]);
   }
 
-  res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
+  const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
+  const specRow = task.mode === 'STANDARD'
+    ? await findOne<any>('SELECT content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline FROM task_content_specs WHERE task_id = ?', [req.params.id])
+    : await findOne<any>('SELECT code_mode, data_mode FROM task_referral_specs WHERE task_id = ?', [req.params.id]);
+  res.json({ ...updated, ...(specRow || {}) });
 });
 
 /** PATCH /api/tasks/:id/meta — 已发布任务的有限字段编辑 */

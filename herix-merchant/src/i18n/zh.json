@@ -132,7 +132,7 @@
     "sec2Hint": "圈定目标社群和平台要求",
     "sec3Title": "他们要做什么",
     "sec3Hint": "内容形式、具体要求、封面素材",
-    "sec4Title": "报酬与时间",
+    "sec4Title": "报酬与质量",
     "sec4Hint": "设定每人报酬和招募规模",
     "advancedTitle": "高级设置",
     "fieldTitle": "任务标题",
@@ -153,7 +153,7 @@
     "fieldPayout": "每人报酬",
     "fieldPayoutUnit": "¥ / 人",
     "fieldMaxHeralds": "招募人数",
-    "fieldDeadline": "截止日期",
+    "fieldDeadline": "报名截止日",
     "fieldDeadlineHint": "选填",
     "fieldVisibility": "发布范围",
     "fieldMode": "任务类型",
@@ -208,7 +208,22 @@
     "requireProposalDesc": "报名时须提供文字方案及参考案例链接，适合有内容风格要求的任务",
     "errorTitle": "请填写任务标题",
     "errorPayout": "请填写每人报酬",
-    "errorMaxHeralds": "请填写招募人数"
+    "errorMaxHeralds": "请填写招募人数",
+    "typeStepTitle": "你要发布哪种任务？",
+    "typeStepHint": "类型决定后续的表单与结算方式，发布后不可更改",
+    "typeChange": "重新选择",
+    "secBriefTitle": "任务简报",
+    "secBriefHint": "把你的需求单粘进来，或从头写——结构化信息可自动识别填表",
+    "fieldBrief": "简报正文",
+    "fieldBriefPh": "建议包含：找什么样的赫使 / 要做什么(如需先体验产品请写明) / 发文要求 / 截止时间。例：\n找在日华人博主，粉丝1000+，母婴类\n领任务后需要自己试听课程\n发文要求：图片3张以上，视频超过30秒\n8月10日之前把发文链接提交",
+    "extractBtn": "识别简报，自动填表",
+    "extractHint": "识别结果需你确认后才会应用",
+    "extractFound": "从简报中识别到以下信息：",
+    "extractApply": "一键应用",
+    "extractDismiss": "忽略",
+    "extractNone": "没有识别到可自动填写的信息，请手动填写下方字段",
+    "secTimeTitle": "时间线",
+    "secTimeHint": "报名截止后不再接受新报名；交稿截止是赫使提交内容的最后期限"
   },
   "site": {
     "jp": "日本",
@@ -232,16 +247,14 @@
     "cn-in-sg": "新加坡华人"
   },
   "category": {
-    "food": "美食",
-    "lifestyle": "生活方式",
+    "experience": "体验",
     "beauty": "美妆",
     "travel": "旅行",
-    "finance": "金融",
-    "education": "教育",
-    "tech": "科技",
-    "fashion": "时尚",
-    "health": "健康",
-    "other": "其他"
+    "fashion": "穿搭",
+    "food": "美食",
+    "lifestyle": "生活",
+    "referral": "推荐",
+    "baby": "母婴"
   },
   "wallet": {
     "title": "钱包・入金",
@@ -346,8 +359,14 @@
     "escrowTag3": "余额可提现"
   },
   "industry": {
-    "finance": "金融服务", "beauty": "美妆", "fashion": "时尚", "food": "食品饮料",
-    "travel": "旅游", "baby": "母婴", "ecommerce": "电商", "other": "其他"
+    "finance": "金融服务",
+    "beauty": "美妆",
+    "fashion": "时尚",
+    "food": "食品饮料",
+    "travel": "旅游",
+    "baby": "母婴",
+    "ecommerce": "电商",
+    "other": "其他"
   },
   "kyb": {
     "title": "企业认证",
@@ -491,7 +510,8 @@
     "saveChanges": "保存修改",
     "saving": "保存中…",
     "saveSuccess": "✓ 已保存",
-    "saveFailed": "保存失败"
+    "saveFailed": "保存失败",
+    "duplicate": "复制为新任务"
   },
   "onboard": {
     "title": "品牌入驻",
@@ -543,16 +563,6 @@
     "approve": "通过",
     "reject": "拒绝",
     "empty": "暂无待审核内容"
-  },
-  "category": {
-    "experience": "体验",
-    "beauty": "美妆",
-    "travel": "旅行",
-    "fashion": "穿搭",
-    "food": "美食",
-    "lifestyle": "生活",
-    "referral": "推荐",
-    "baby": "母婴"
   },
   "auth": {
     "loginTitle": "登录商家后台",

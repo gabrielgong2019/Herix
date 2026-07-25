@@ -464,23 +464,33 @@ export default function TaskDetail() {
       <Topbar
         title={task.title}
         actions={
-          isDraft ? (
+          <div className="flex items-center gap-2">
+            {/* 复制为新任务：按类型白名单预填（排除日期/推广码），投放是重复性工作 */}
             <button
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
-              style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-              onClick={() => navigate(`/tasks/${id}/edit`)}
+              style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+              onClick={() => navigate(`/tasks/new?copy=${id}`)}
             >
-              {t('common.edit')}
+              {t('taskDetail.duplicate')}
             </button>
-          ) : (
-            <button
-              className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
-              style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-              onClick={() => navigate(`/tasks/${id}/meta`)}
-            >
-              {t('taskDetail.metaEditTitle')}
-            </button>
-          )
+            {isDraft ? (
+              <button
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                onClick={() => navigate(`/tasks/${id}/edit`)}
+              >
+                {t('common.edit')}
+              </button>
+            ) : (
+              <button
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                onClick={() => navigate(`/tasks/${id}/meta`)}
+              >
+                {t('taskDetail.metaEditTitle')}
+              </button>
+            )}
+          </div>
         }
       />
 

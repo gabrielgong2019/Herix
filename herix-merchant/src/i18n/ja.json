@@ -132,7 +132,7 @@
     "sec2Hint": "対象コミュニティとプラットフォーム要件を設定",
     "sec3Title": "作業内容",
     "sec3Hint": "コンテンツ形式・詳細要件・カバー画像",
-    "sec4Title": "報酬とスケジュール",
+    "sec4Title": "報酬と品質",
     "sec4Hint": "一人当たりの報酬と募集人数を設定",
     "advancedTitle": "詳細設定",
     "fieldTitle": "タスクタイトル",
@@ -153,7 +153,7 @@
     "fieldPayout": "一人当たり報酬",
     "fieldPayoutUnit": "¥ / 人",
     "fieldMaxHeralds": "募集人数",
-    "fieldDeadline": "締切日",
+    "fieldDeadline": "応募締切日",
     "fieldDeadlineHint": "任意",
     "fieldVisibility": "公開範囲",
     "fieldMode": "タスクタイプ",
@@ -208,7 +208,22 @@
     "requireProposalDesc": "応募時に文章での提案と参考事例リンクの提出を必須にします。スタイル重視の案件に適しています",
     "errorTitle": "タイトルを入力してください",
     "errorPayout": "報酬を入力してください",
-    "errorMaxHeralds": "募集人数を入力してください"
+    "errorMaxHeralds": "募集人数を入力してください",
+    "typeStepTitle": "どちらのタイプの案件を掲載しますか？",
+    "typeStepHint": "タイプによってフォームと精算方式が変わります。公開後は変更できません",
+    "typeChange": "選び直す",
+    "secBriefTitle": "案件ブリーフ",
+    "secBriefHint": "手元の依頼文を貼り付けるか、直接記入してください。構造化情報は自動認識できます",
+    "fieldBrief": "ブリーフ本文",
+    "fieldBriefPh": "含めると良い内容：求めるアンバサダー像／やってほしいこと（先に体験が必要なら明記）／投稿要件／締切。",
+    "extractBtn": "ブリーフを解析して自動入力",
+    "extractHint": "認識結果は確認後に反映されます",
+    "extractFound": "ブリーフから以下を認識しました：",
+    "extractApply": "すべて反映",
+    "extractDismiss": "閉じる",
+    "extractNone": "自動入力できる情報は見つかりませんでした。下のフォームにご記入ください",
+    "secTimeTitle": "スケジュール",
+    "secTimeHint": "応募締切以降は新規応募を受け付けません。提出締切はコンテンツ提出の期限です"
   },
   "site": {
     "jp": "日本",
@@ -349,8 +364,14 @@
     "escrowTag3": "残高出金可能"
   },
   "industry": {
-    "finance": "金融サービス", "beauty": "美容・コスメ", "fashion": "ファッション", "food": "食品・飲料",
-    "travel": "旅行", "baby": "育児・ベビー", "ecommerce": "EC・通販", "other": "その他"
+    "finance": "金融サービス",
+    "beauty": "美容・コスメ",
+    "fashion": "ファッション",
+    "food": "食品・飲料",
+    "travel": "旅行",
+    "baby": "育児・ベビー",
+    "ecommerce": "EC・通販",
+    "other": "その他"
   },
   "kyb": {
     "title": "企業認証（KYB）",
@@ -494,7 +515,8 @@
     "saveChanges": "変更を保存",
     "saving": "保存中…",
     "saveSuccess": "✓ 保存しました",
-    "saveFailed": "保存に失敗しました"
+    "saveFailed": "保存に失敗しました",
+    "duplicate": "複製して新規作成"
   },
   "onboard": {
     "title": "ブランド登録",

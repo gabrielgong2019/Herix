@@ -23,6 +23,25 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       return res.status(403).json({ error: '只有被批准的赫使可以提交结果', code: 'NOT_APPROVED_HERALD' });
     }
 
+    // 提交闸机（2026-07-25，P1）：内容型任务的图片张数在提交时机器校验，
+    // 把"改稿N次"里最蠢的一轮（张数不够）消灭在提交那一刻。
+    // 视频时长无法在此校验（内容是外链，我们拿不到元数据），仅作要求展示
+    const spec = await findOne<{ min_images: number | null }>(
+      'SELECT min_images FROM task_content_specs WHERE task_id = ?',
+      [req.params.taskId]
+    );
+    if (spec?.min_images) {
+      const got = data.screenshotUrls?.length || 0;
+      if (got < spec.min_images) {
+        return res.status(400).json({
+          error: `该任务要求至少 ${spec.min_images} 张图片/截图（当前 ${got} 张）`,
+          code: 'MIN_IMAGES_NOT_MET',
+          required: spec.min_images,
+          got,
+        });
+      }
+    }
+
     // 检查是否已有不可重提交的记录（待审/已通过）
     const blocking = await findOne<{ id: string }>(
       "SELECT id FROM task_submissions WHERE task_id = ? AND herald_id = ? AND status IN ('PENDING_REVIEW','APPROVED')",

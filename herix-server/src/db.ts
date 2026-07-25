@@ -694,20 +694,35 @@ export async function initDatabase() {
       code_mode TEXT NOT NULL DEFAULT 'auto' CHECK(code_mode IN ('auto','custom')),
       data_mode TEXT NOT NULL DEFAULT 'AGGREGATE' CHECK(data_mode IN ('AGGREGATE','DETAIL'))
     )`,
-    // 存量数据迁移（幂等，ON CONFLICT DO NOTHING）
-    `INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline)
-     SELECT id,
-            CASE WHEN content_type IN ('photo','video','both') THEN content_type ELSE 'photo' END,
-            min_images, min_video_seconds,
-            COALESCE(max_revisions, 2),
-            COALESCE(require_proposal, 0),
-            submit_deadline
-     FROM tasks WHERE mode = 'STANDARD'
-     ON CONFLICT DO NOTHING`,
-    `INSERT INTO task_referral_specs (task_id, code_mode, data_mode)
-     SELECT id, COALESCE(code_mode, 'auto'), COALESCE(data_mode, 'AGGREGATE')
-     FROM tasks WHERE mode = 'PERFORMANCE'
-     ON CONFLICT DO NOTHING`,
+    // 存量数据迁移（幂等）：主表旧列 → spec 表。用 DO 块守卫列存在性——
+    // 下面紧接着 DROP 旧列，二次启动时旧列已不在，裸 INSERT..SELECT 会直接报错
+    `DO $$ BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='content_type') THEN
+         INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline)
+         SELECT id,
+                CASE WHEN content_type IN ('photo','video','both') THEN content_type ELSE 'photo' END,
+                min_images, min_video_seconds,
+                COALESCE(max_revisions, 2),
+                COALESCE(require_proposal, 0),
+                submit_deadline
+         FROM tasks WHERE mode = 'STANDARD'
+         ON CONFLICT DO NOTHING;
+         INSERT INTO task_referral_specs (task_id, code_mode, data_mode)
+         SELECT id, COALESCE(code_mode, 'auto'), COALESCE(data_mode, 'AGGREGATE')
+         FROM tasks WHERE mode = 'PERFORMANCE'
+         ON CONFLICT DO NOTHING;
+       END IF;
+     END $$`,
+    // 终态（2026-07-25 用户决策：CTI 未上线不留过渡态）：回填完成后主表旧列直接 DROP，
+    // spec 表成为类型专属字段唯一来源。API 响应 JSON 键不变，由服务端组装层保证兼容
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS content_type`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS min_images`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS min_video_seconds`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS max_revisions`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS require_proposal`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS submit_deadline`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS code_mode`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS data_mode`,
   ];
   for (const m of migrations) {
     await pool.query(m);

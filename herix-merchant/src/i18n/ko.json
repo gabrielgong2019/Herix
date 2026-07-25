@@ -132,7 +132,7 @@
     "sec2Hint": "대상 커뮤니티와 플랫폼 요건 설정",
     "sec3Title": "무엇을 해야 하나요?",
     "sec3Hint": "콘텐츠 형식, 세부 요건, 커버 이미지",
-    "sec4Title": "보수 및 일정",
+    "sec4Title": "보수 및 품질",
     "sec4Hint": "1인당 보수와 모집 인원 설정",
     "advancedTitle": "고급 설정",
     "fieldTitle": "태스크 제목",
@@ -153,7 +153,7 @@
     "fieldPayout": "1인당 보수",
     "fieldPayoutUnit": "¥ / 명",
     "fieldMaxHeralds": "모집 인원",
-    "fieldDeadline": "마감일",
+    "fieldDeadline": "지원 마감일",
     "fieldDeadlineHint": "선택",
     "fieldVisibility": "공개 범위",
     "fieldMode": "태스크 유형",
@@ -208,7 +208,22 @@
     "requireProposalDesc": "지원 시 문서 제안서와 참고 사례 링크 제출을 필수로 합니다",
     "errorTitle": "태스크 제목을 입력해 주세요",
     "errorPayout": "보수를 입력해 주세요",
-    "errorMaxHeralds": "모집 인원을 입력해 주세요"
+    "errorMaxHeralds": "모집 인원을 입력해 주세요",
+    "typeStepTitle": "어떤 유형의 캠페인을 게시하시겠어요?",
+    "typeStepHint": "유형에 따라 양식과 정산 방식이 달라지며, 게시 후에는 변경할 수 없습니다",
+    "typeChange": "다시 선택",
+    "secBriefTitle": "캠페인 브리프",
+    "secBriefHint": "가지고 있는 의뢰서를 붙여넣거나 직접 작성하세요. 구조화된 정보는 자동 인식됩니다",
+    "fieldBrief": "브리프 본문",
+    "fieldBriefPh": "포함하면 좋은 내용: 원하는 앰배서더 조건 / 해야 할 일(체험이 먼저 필요하면 명시) / 게시물 요건 / 마감 기한.",
+    "extractBtn": "브리프 인식 후 자동 입력",
+    "extractHint": "인식 결과는 확인 후에 반영됩니다",
+    "extractFound": "브리프에서 다음 정보를 인식했습니다:",
+    "extractApply": "모두 적용",
+    "extractDismiss": "닫기",
+    "extractNone": "자동 입력할 수 있는 정보를 찾지 못했습니다. 아래 항목을 직접 입력해 주세요",
+    "secTimeTitle": "일정",
+    "secTimeHint": "지원 마감 이후 신규 지원을 받지 않으며, 제출 마감은 콘텐츠 제출 기한입니다"
   },
   "site": {
     "jp": "일본",
@@ -349,8 +364,14 @@
     "escrowTag3": "잔액 출금 가능"
   },
   "industry": {
-    "finance": "금융 서비스", "beauty": "뷰티·코스메틱", "fashion": "패션", "food": "식품·음료",
-    "travel": "여행", "baby": "육아·베이비", "ecommerce": "이커머스", "other": "기타"
+    "finance": "금융 서비스",
+    "beauty": "뷰티·코스메틱",
+    "fashion": "패션",
+    "food": "식품·음료",
+    "travel": "여행",
+    "baby": "육아·베이비",
+    "ecommerce": "이커머스",
+    "other": "기타"
   },
   "kyb": {
     "title": "사업자 인증(KYB)",
@@ -494,7 +515,8 @@
     "saveChanges": "변경 저장",
     "saving": "저장 중…",
     "saveSuccess": "✓ 저장됨",
-    "saveFailed": "저장 실패"
+    "saveFailed": "저장 실패",
+    "duplicate": "복제하여 새로 만들기"
   },
   "onboard": {
     "title": "브랜드 등록",

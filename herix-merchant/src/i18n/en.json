@@ -132,7 +132,7 @@
     "sec2Hint": "Target community and platform requirements",
     "sec3Title": "What should they do?",
     "sec3Hint": "Content format, detailed requirements, cover image",
-    "sec4Title": "Payout & Schedule",
+    "sec4Title": "Payout & quality",
     "sec4Hint": "Set per-herald payout and total headcount",
     "advancedTitle": "Advanced Settings",
     "fieldTitle": "Task Title",
@@ -153,7 +153,7 @@
     "fieldPayout": "Payout per Herald",
     "fieldPayoutUnit": "¥ / person",
     "fieldMaxHeralds": "Max Heralds",
-    "fieldDeadline": "Deadline",
+    "fieldDeadline": "Application deadline",
     "fieldDeadlineHint": "Optional",
     "fieldVisibility": "Visibility",
     "fieldMode": "Task Type",
@@ -208,7 +208,22 @@
     "requireProposalDesc": "Ambassadors must submit a written proposal and reference links when applying — ideal for tasks with specific content style requirements",
     "errorTitle": "Please enter a task title",
     "errorPayout": "Please enter the payout amount",
-    "errorMaxHeralds": "Please enter max heralds"
+    "errorMaxHeralds": "Please enter max heralds",
+    "typeStepTitle": "What kind of task are you publishing?",
+    "typeStepHint": "The type determines the form and settlement model. It cannot be changed after publishing",
+    "typeChange": "Change",
+    "secBriefTitle": "Task brief",
+    "secBriefHint": "Paste your existing brief or write from scratch — structured facts can be auto-extracted",
+    "fieldBrief": "Brief",
+    "fieldBriefPh": "Suggested contents: who you're looking for / what to do (mention if product trial is required first) / content requirements / deadlines.",
+    "extractBtn": "Extract & fill from brief",
+    "extractHint": "Nothing is applied until you confirm",
+    "extractFound": "Detected from your brief:",
+    "extractApply": "Apply all",
+    "extractDismiss": "Dismiss",
+    "extractNone": "Nothing recognized — please fill in the fields below manually",
+    "secTimeTitle": "Timeline",
+    "secTimeHint": "Applications close at the deadline; the submission deadline is the final date for content delivery"
   },
   "site": {
     "jp": "Japan",
@@ -349,8 +364,14 @@
     "escrowTag3": "Withdraw anytime"
   },
   "industry": {
-    "finance": "Financial Services", "beauty": "Beauty & Cosmetics", "fashion": "Fashion", "food": "Food & Beverage",
-    "travel": "Travel", "baby": "Baby & Parenting", "ecommerce": "E-Commerce", "other": "Other"
+    "finance": "Financial Services",
+    "beauty": "Beauty & Cosmetics",
+    "fashion": "Fashion",
+    "food": "Food & Beverage",
+    "travel": "Travel",
+    "baby": "Baby & Parenting",
+    "ecommerce": "E-Commerce",
+    "other": "Other"
   },
   "kyb": {
     "title": "Business Verification (KYB)",
@@ -494,7 +515,8 @@
     "saveChanges": "Save Changes",
     "saving": "Saving…",
     "saveSuccess": "✓ Saved",
-    "saveFailed": "Save failed"
+    "saveFailed": "Save failed",
+    "duplicate": "Duplicate"
   },
   "onboard": {
     "title": "Brand Registration",

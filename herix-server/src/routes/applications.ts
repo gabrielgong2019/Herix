@@ -19,7 +19,9 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     const data = ApplyTaskSchema.parse(req.body);
 
     const task = await findOne<{ id: string; status: string; max_heralds: number; platform_requirements: string | null; req_mode: string | null; req_min_count: number | null; require_proposal: number }>(
-      'SELECT id, status, max_heralds, platform_requirements, req_mode, req_min_count, require_proposal FROM tasks WHERE id = ?', [req.params.taskId]
+      `SELECT t.id, t.status, t.max_heralds, t.platform_requirements, t.req_mode, t.req_min_count,
+              COALESCE(tcs.require_proposal, 0) as require_proposal
+       FROM tasks t LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id WHERE t.id = ?`, [req.params.taskId]
     );
     if (!task) return res.status(404).json({ error: '任务不存在', code: 'TASK_NOT_FOUND' });
     if (task.status !== 'OPEN') return res.status(400).json({ error: '任务不在招募中', code: 'TASK_NOT_RECRUITING' });

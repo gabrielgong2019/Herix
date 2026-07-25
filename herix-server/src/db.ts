@@ -556,6 +556,36 @@ export async function initDatabase() {
       ('merchant_trial_credit',   '3000', '新商家首单体验额度（JPY）：首个任务发布时按 min(此值, 任务总成本) 盖戳发放，admin 审核中心-商家认证可改'),
       ('fast_payout_threshold',   '100000', '极速打款余额门槛（JPY，发布时余额达到此值则标记极速打款）')
      ON CONFLICT (key) DO NOTHING`,
+    // 两阶段交付状态机（2026-07-26，P0a）：草稿前置 opt-in + 多链接 + 审计留痕
+    `ALTER TABLE task_content_specs ADD COLUMN IF NOT EXISTS require_draft_review INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'FINAL'`,
+    // content_urls 为权威(JSON数组)；content_url 保留为首链接镜像——旧版 weapp 只认单链接，
+    // 待客户端车队更新后随 requirements 列一起退役（同一批遗留兼容清单）
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS content_urls TEXT`,
+    // 提交/审核全事件留痕(append-only)：改稿次数从本表派生(无计数列，单一来源)，仲裁证据链。
+    // 修复既有缺陷：重提复用行 UPDATE 会覆盖历史版本(与 kyb_submissions 同一审计模式)
+    `CREATE TABLE IF NOT EXISTS submission_revisions (
+      id TEXT PRIMARY KEY,
+      submission_id TEXT NOT NULL,
+      task_id TEXT NOT NULL REFERENCES tasks(id),
+      herald_id TEXT NOT NULL REFERENCES users(id),
+      stage TEXT NOT NULL,
+      kind TEXT NOT NULL CHECK(kind IN ('SUBMIT','REVIEW')),
+      action TEXT NOT NULL,
+      content_urls TEXT,
+      description TEXT,
+      screenshot_urls TEXT,
+      note TEXT,
+      actor_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_subrev_task_herald ON submission_revisions(task_id, herald_id, created_at)`,
+    // 并发防重加固：一个赫使对一个任务只有一行提交(此前仅应用层查询防重)。
+    // 先清可能的存量重复(保留最新一行)再建唯一索引，幂等
+    `DELETE FROM task_submissions a USING task_submissions b
+     WHERE a.task_id = b.task_id AND a.herald_id = b.herald_id
+       AND a.submitted_at < b.submitted_at`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_task_herald ON task_submissions(task_id, herald_id)`,
     // 首单体验额度（2026-07-18）：戳在任务行上 write-once，生命周期随任务状态派生
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS trial_credit_amount DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS trial_task_id TEXT`,

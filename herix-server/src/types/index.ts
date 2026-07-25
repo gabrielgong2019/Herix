@@ -86,6 +86,8 @@ export const CreateTaskSchema = z.object({
   minImages: z.number().int().min(1).optional(),
   minVideoSeconds: z.number().int().min(1).optional(),
   maxRevisions: z.number().int().min(0).max(20).default(2),
+  // 草稿前置(2026-07-26 opt-in)：开启后须先过草稿审核才能提交最终链接
+  requireDraftReview: z.boolean().default(false),
   requireProposal: z.boolean().default(false),
   submitDeadline: z.string().optional(),
 });
@@ -97,7 +99,10 @@ export const ApplyTaskSchema = z.object({
 });
 
 export const SubmitResultSchema = z.object({
-  contentUrl: z.string().url('请提供有效的内容链接'),
+  // 两阶段交付(2026-07-26)：contentUrls 为权威(终稿≥1，路由层按阶段校验)；
+  // contentUrl 为旧版 weapp 单链接兼容入参，服务端归一化进 contentUrls
+  contentUrl: z.string().url('请提供有效的内容链接').optional(),
+  contentUrls: z.array(z.string().url('请提供有效的内容链接')).max(10, '链接最多 10 个').optional(),
   description: z.string().optional(),
   screenshotUrls: z.array(z.string()).optional(),
 });

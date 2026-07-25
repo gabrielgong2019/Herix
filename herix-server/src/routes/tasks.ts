@@ -846,6 +846,7 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             tcs.min_video_seconds as min_video_seconds,
             tcs.max_revisions as max_revisions,
             tcs.require_proposal as require_proposal,
+            tcs.require_draft_review as require_draft_review,
             tcs.submit_deadline as submit_deadline,
             trs.code_mode as code_mode,
             trs.data_mode as data_mode
@@ -948,12 +949,13 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
         min_video_seconds: data.minVideoSeconds || null,
         max_revisions: data.maxRevisions ?? 2,
         require_proposal: data.requireProposal ? 1 : 0,
+        require_draft_review: data.requireDraftReview ? 1 : 0,
         submit_deadline: data.submitDeadline || null,
       };
       await pool.query(
-        `INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        [taskId, spec.content_type, spec.min_images, spec.min_video_seconds, spec.max_revisions, spec.require_proposal, spec.submit_deadline]
+        `INSERT INTO task_content_specs (task_id, content_type, min_images, min_video_seconds, max_revisions, require_proposal, require_draft_review, submit_deadline)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [taskId, spec.content_type, spec.min_images, spec.min_video_seconds, spec.max_revisions, spec.require_proposal, spec.require_draft_review, spec.submit_deadline]
       );
     } else {
       spec = { code_mode: data.codeMode || 'auto', data_mode: data.dataMode || 'AGGREGATE' };
@@ -1016,6 +1018,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
     if (req.body.minVideoSeconds !== undefined) push('min_video_seconds', req.body.minVideoSeconds || null);
     if (req.body.maxRevisions !== undefined) push('max_revisions', req.body.maxRevisions ?? 2);
     if (req.body.requireProposal !== undefined) push('require_proposal', req.body.requireProposal ? 1 : 0);
+    if (req.body.requireDraftReview !== undefined) push('require_draft_review', req.body.requireDraftReview ? 1 : 0);
     if (req.body.submitDeadline !== undefined) push('submit_deadline', req.body.submitDeadline || null);
     if (sets.length) {
       vals.push(req.params.id);
@@ -1028,7 +1031,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
 
   const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   const specRow = task.mode === 'STANDARD'
-    ? await findOne<any>('SELECT content_type, min_images, min_video_seconds, max_revisions, require_proposal, submit_deadline FROM task_content_specs WHERE task_id = ?', [req.params.id])
+    ? await findOne<any>('SELECT content_type, min_images, min_video_seconds, max_revisions, require_proposal, require_draft_review, submit_deadline FROM task_content_specs WHERE task_id = ?', [req.params.id])
     : await findOne<any>('SELECT code_mode, data_mode FROM task_referral_specs WHERE task_id = ?', [req.params.id]);
   res.json({ ...updated, ...(specRow || {}) });
 });

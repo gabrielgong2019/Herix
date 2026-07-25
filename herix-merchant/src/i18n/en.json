@@ -137,6 +137,7 @@
     "advancedTitle": "Advanced Settings",
     "fieldTitle": "Task Title",
     "fieldTitlePh": "e.g. Chinese in Japan | Specialty Coffee Review",
+    "fieldTitlePhDynamic": "e.g. {{audience}} | Local Recommendations",
     "fieldDesc": "Brief",
     "fieldDescPh": "One-line summary of the task goal and brand background (heralds read this before applying)",
     "fieldCategory": "Category",
@@ -326,15 +327,26 @@
     }
   },
   "credit": {
-    "bannerTitle": "Task Budget",
-    "trialTag": "Trial",
+    "bannerTitle": "Campaign Funds",
+    "trialTag": "Trial Credit",
     "bannerSub": "Credit limit + deposited amount = total task issuance cap. Funded tasks get the ⚡ Fast Payout badge, boosting ambassador sign-up rates.",
-    "topupNow": "Top Up Now",
+    "topupNow": "Add Funds",
     "creditLimit": "Credit Limit",
     "depositAmount": "Deposited",
     "taskCapacity": "Task Budget",
     "committed": "Committed ¥{{used}} · Remaining ¥{{left}}",
-    "topupBenefit": "Fund your wallet and tasks will display the ⚡ Fast Payout badge, significantly increasing ambassador applications."
+    "topupBenefit": "Fund your wallet and tasks will display the ⚡ Fast Payout badge, significantly increasing ambassador applications.",
+    "zeroTitle": "Add funds to start publishing campaigns",
+    "zeroDesc": "Funds are held in escrow. Payment is only released after ambassadors complete tasks and you approve the results. Unused balance can be withdrawn anytime.",
+    "zeroBenefit": "Funded tasks display the \"Fast Payout\" badge — ambassadors apply at a significantly higher rate",
+    "totalDeposit": "Total Deposited",
+    "walletFrozen": "In Active Tasks",
+    "walletAvailable": "Available",
+    "usageSub": "{{pct}}% committed",
+    "lowWarning": "Running low",
+    "escrowTag1": "Funds escrowed",
+    "escrowTag2": "Pay after approval",
+    "escrowTag3": "Withdraw anytime"
   },
   "industry": {
     "finance": "Financial Services", "beauty": "Beauty & Cosmetics", "fashion": "Fashion", "food": "Food & Beverage",

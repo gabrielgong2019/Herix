@@ -137,6 +137,7 @@
     "advancedTitle": "高级设置",
     "fieldTitle": "任务标题",
     "fieldTitlePh": "例：在日华人探店 | 精品咖啡推荐",
+    "fieldTitlePhDynamic": "例：{{audience}}探店 | 精品推荐",
     "fieldDesc": "简介",
     "fieldDescPh": "一句话描述任务目标和品牌背景（赫使会在报名前看到）",
     "fieldCategory": "分类",
@@ -323,15 +324,26 @@
     }
   },
   "credit": {
-    "bannerTitle": "案件额度",
-    "trialTag": "体验版",
+    "bannerTitle": "运营资金",
+    "trialTag": "体验额度",
     "bannerSub": "信用额度 + 充值金额 = 可发布案件总上限。充值后案件获得 ⚡ 即时结算 标签，赫使报名意愿更强。",
     "topupNow": "立即充值",
     "creditLimit": "信用额度",
     "depositAmount": "充值金额",
     "taskCapacity": "案件发行额度",
     "committed": "已承诺 ¥{{used}} · 剩余 ¥{{left}}",
-    "topupBenefit": "充值后案件将获得 ⚡ 即时结算 标签，显著提升赫使报名意愿，任务完成后自动打款无需等待。"
+    "topupBenefit": "充值后案件将获得 ⚡ 即时结算 标签，显著提升赫使报名意愿，任务完成后自动打款无需等待。",
+    "zeroTitle": "存入运营资金，开始发布任务",
+    "zeroDesc": "资金全程托管在平台。赫使完成任务、经您审核通过后才结算扣款，未使用余额随时可提现。",
+    "zeroBenefit": "存入后任务显示「即时结算」标签，赫使报名率显著提升",
+    "totalDeposit": "累计存入",
+    "walletFrozen": "任务占用",
+    "walletAvailable": "可用余额",
+    "usageSub": "已占用 {{pct}}%",
+    "lowWarning": "余额即将用完",
+    "escrowTag1": "资金托管",
+    "escrowTag2": "审核后结算",
+    "escrowTag3": "余额可提现"
   },
   "industry": {
     "finance": "金融服务", "beauty": "美妆", "fashion": "时尚", "food": "食品饮料",

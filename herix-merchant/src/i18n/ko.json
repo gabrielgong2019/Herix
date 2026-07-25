@@ -137,6 +137,7 @@
     "advancedTitle": "고급 설정",
     "fieldTitle": "태스크 제목",
     "fieldTitlePh": "예: 일본 거주 한국인 | 스페셜티 커피 리뷰",
+    "fieldTitlePhDynamic": "예: {{audience}} | 현지 맛집·추천 리뷰",
     "fieldDesc": "간략 소개",
     "fieldDescPh": "태스크 목표와 브랜드 배경을 한 줄로 (헤럴드가 지원 전에 확인합니다)",
     "fieldCategory": "카테고리",
@@ -326,15 +327,26 @@
     }
   },
   "credit": {
-    "bannerTitle": "캠페인 예산",
-    "trialTag": "체험판",
+    "bannerTitle": "운영 자금",
+    "trialTag": "체험 한도",
     "bannerSub": "신용 한도 + 입금액 = 캠페인 발행 총 한도. 입금 후 캠페인에는 ⚡ 즉시정산 태그가 붙어 앰배서더 지원 의욕이 높아집니다.",
-    "topupNow": "지금 충전",
+    "topupNow": "지금 입금",
     "creditLimit": "신용 한도",
     "depositAmount": "입금액",
     "taskCapacity": "캠페인 예산",
     "committed": "확약 ¥{{used}} · 잔여 ¥{{left}}",
-    "topupBenefit": "입금 후 캠페인에는 ⚡ 즉시정산 태그가 붙어 앰배서더 지원 의욕이 크게 향상됩니다."
+    "topupBenefit": "입금 후 캠페인에는 ⚡ 즉시정산 태그가 붙어 앰배서더 지원 의욕이 크게 향상됩니다.",
+    "zeroTitle": "입금하고 캠페인을 시작하세요",
+    "zeroDesc": "자금은 플랫폼이 전액 에스크로 보관합니다. 앰배서더가 캠페인을 완료하고 귀사가 승인한 후에만 정산됩니다. 미사용 잔액은 언제든지 출금 가능합니다.",
+    "zeroBenefit": "입금 후 캠페인에 '즉시정산' 배지가 표시되어 앰배서더 지원율이 크게 높아집니다",
+    "totalDeposit": "누적 입금액",
+    "walletFrozen": "캠페인 사용 중",
+    "walletAvailable": "사용 가능 잔액",
+    "usageSub": "{{pct}}% 사용 중",
+    "lowWarning": "잔액 부족 임박",
+    "escrowTag1": "에스크로 보관",
+    "escrowTag2": "승인 후 정산",
+    "escrowTag3": "잔액 출금 가능"
   },
   "industry": {
     "finance": "금융 서비스", "beauty": "뷰티·코스메틱", "fashion": "패션", "food": "식품·음료",

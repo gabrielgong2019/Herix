@@ -137,6 +137,7 @@
     "advancedTitle": "詳細設定",
     "fieldTitle": "タスクタイトル",
     "fieldTitlePh": "例：在日中国人向け | カフェ探訪レポート",
+    "fieldTitlePhDynamic": "例：{{audience}}向け | おすすめスポット紹介",
     "fieldDesc": "概要",
     "fieldDescPh": "タスクの目標とブランド背景を一言で（ヘラルドが応募前に確認します）",
     "fieldCategory": "カテゴリー",
@@ -326,15 +327,26 @@
     }
   },
   "credit": {
-    "bannerTitle": "案件発行枠",
-    "trialTag": "体験版",
+    "bannerTitle": "運営資金",
+    "trialTag": "体験与信",
     "bannerSub": "与信枠 + 入金額 = 発行できる案件の総上限。入金後の案件には ⚡ 即時精算タグが付き、アンバサダーの応募意欲が高まります。",
     "topupNow": "入金する",
     "creditLimit": "与信枠",
     "depositAmount": "入金額",
     "taskCapacity": "案件発行枠",
     "committed": "コミット済み ¥{{used}} · 残り ¥{{left}}",
-    "topupBenefit": "入金後の案件には ⚡ 即時精算 タグが付き、アンバサダーの応募意欲が大幅に向上します。"
+    "topupBenefit": "入金後の案件には ⚡ 即時精算 タグが付き、アンバサダーの応募意欲が大幅に向上します。",
+    "zeroTitle": "入金して案件を発行しましょう",
+    "zeroDesc": "資金はプラットフォームが全額エスクロー保全。アンバサダーが案件を完了し、あなたが承認した後にのみ精算されます。未使用残高はいつでも出金可能です。",
+    "zeroBenefit": "入金後の案件には「即時精算」バッジが付き、アンバサダーの応募率が大幅に向上します",
+    "totalDeposit": "累計入金額",
+    "walletFrozen": "案件使用中",
+    "walletAvailable": "利用可能残高",
+    "usageSub": "{{pct}}% 使用中",
+    "lowWarning": "残高わずか",
+    "escrowTag1": "エスクロー保全",
+    "escrowTag2": "承認後に精算",
+    "escrowTag3": "残高出金可能"
   },
   "industry": {
     "finance": "金融サービス", "beauty": "美容・コスメ", "fashion": "ファッション", "food": "食品・飲料",

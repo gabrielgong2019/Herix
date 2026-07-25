@@ -160,12 +160,9 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 ### 运维待办（有触发条件的延期项）
 
-- **task spec 表双写日落**（2026-07-25 记）：任务类型重构(CTI)当前处于过渡态——类型专属字段
-  在 tasks 主表旧列与 task_content_specs/task_referral_specs 双写，读取靠 COALESCE(spec,主表)。
-  双写是"同一事实两个来源"（同 is_enterprise_verified/kyb_status 已消灭的模式），UPDATE 只写一边
-  时 COALESCE 会静默掩盖漂移。日落步骤：①下一迭代停写主表旧列(content_type/min_images/
-  min_video_seconds/max_revisions/require_proposal/submit_deadline/code_mode/data_mode)，只写 spec
-  ②再过一个发布周期主表 DROP 旧列 + SELECT 去掉 COALESCE。回填已幂等完成，每个任务都有 spec 行。
+- ~~task spec 表双写日落~~（2026-07-25 用户决策否决过渡态）：CTI 重构未上线，**不做双写，直接终态**——
+  类型专属字段只存 task_content_specs/task_referral_specs，发版前去掉双写代码与 COALESCE，
+  主表旧列回填后 DROP。见「任务板块整体方案」（2026-07-25 定稿）。
 
 - **图片存储迁移 OSS + uploads 备份**（2026-07-25 记，用户定为"正式上线后 3 个月"复查）：
   当前图片（logo/promo/cover/KYB证件）存 ECS 本地磁盘无备份，磁盘损坏即全丢。

@@ -3,44 +3,21 @@ import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { SubmitResultSchema, ReviewSubmissionSchema } from '../types';
 import { ZodError } from 'zod';
-import { settleCreditTask, creditHerald, creditPlatformFee, PLATFORM_USER_ID, getBalance } from '../utils/wallet';
 import { notify } from '../utils/notify';
 import pool from '../db';
 import { decideSubmit, canReject } from '../utils/submissionFlow';
+import { auditRevision, countRejects, approveDraftSubmission, settleFinalSubmission } from '../utils/reviewActions';
 
 export const submissionsRouter = Router();
 
-/** 审计留痕：每次提交/审核动作各一行（append-only，改稿计数与仲裁证据链均从此表派生） */
-async function auditRevision(row: {
-  submissionId: string; taskId: string; heraldId: string; stage: string;
-  kind: 'SUBMIT' | 'REVIEW'; action: string;
-  contentUrls?: string[] | null; description?: string | null; screenshotUrls?: string[] | null;
-  note?: string | null; actorId?: string | null;
-}) {
-  await insert('submission_revisions', {
-    submission_id: row.submissionId, task_id: row.taskId, herald_id: row.heraldId,
-    stage: row.stage, kind: row.kind, action: row.action,
-    content_urls: row.contentUrls?.length ? JSON.stringify(row.contentUrls) : null,
-    description: row.description || null,
-    screenshot_urls: row.screenshotUrls?.length ? JSON.stringify(row.screenshotUrls) : null,
-    note: row.note || null, actor_id: row.actorId || null,
-  });
-}
-
-/** 按阶段统计既往拒绝次数（派生值，无计数列） */
-async function countRejects(taskId: string, heraldId: string): Promise<{ draft: number; final: number }> {
-  const r = await pool.query(
-    `SELECT stage, COUNT(*)::int AS n FROM submission_revisions
-     WHERE task_id = $1 AND herald_id = $2 AND kind = 'REVIEW' AND action = 'REJECTED'
-     GROUP BY stage`,
-    [taskId, heraldId]
+/** 商家在仲裁开案期间直接通过内容 = 争议消解，自动结案 */
+async function closeOpenArbitration(submissionId: string, resolvedBy: string) {
+  await pool.query(
+    `UPDATE arbitrations SET status = 'RESOLVED', resolution = 'APPROVED_BY_BRAND',
+            resolve_note = '商家在仲裁期间直接通过内容，争议消解', resolved_by = $1, resolved_at = $2
+     WHERE submission_id = $3 AND status = 'OPEN'`,
+    [resolvedBy, new Date().toISOString(), submissionId]
   );
-  const out = { draft: 0, final: 0 };
-  for (const row of r.rows) {
-    if (row.stage === 'DRAFT') out.draft = row.n;
-    if (row.stage === 'FINAL') out.final = row.n;
-  }
-  return out;
 }
 
 /** POST /api/submissions/:taskId — 赫使提交结果 */
@@ -110,6 +87,7 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       review_note: null,
       reviewed_at: null,
       submitted_at: new Date().toISOString(),
+      reminder_sent: 0,   // 新提交重置临期催审标记（每个待审周期最多催一次）
     };
     let subId: string;
     if (row) {
@@ -188,145 +166,70 @@ submissionsRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
       }
     }
 
+    const subRef = { id: submission.id, task_id: submission.task_id, herald_id: submission.herald_id };
+
     if (data.status === 'APPROVED' && stage === 'DRAFT') {
       // 草稿通过 = 内容定稿（发布后若与草稿不符走仲裁，留痕表就是基准版本）。
-      // 组合态 stage=DRAFT + status=APPROVED 表示"待赫使发布并提交终稿"，不结算
-      const claim = await pool.query(
-        `UPDATE task_submissions SET status = 'APPROVED', review_note = $1, reviewed_at = $2
-         WHERE id = $3 AND status = 'PENDING_REVIEW'`,
-        [data.reviewNote || null, new Date().toISOString(), req.params.id]
-      );
-      if (claim.rowCount === 0) return res.status(400).json({ error: '该提交已审核' });
-
-      await auditRevision({
-        submissionId: submission.id, taskId: submission.task_id, heraldId: submission.herald_id,
-        stage: 'DRAFT', kind: 'REVIEW', action: 'APPROVED', note: data.reviewNote, actorId: req.user!.userId,
+      // 组合态 stage=DRAFT + status=APPROVED 表示"待赫使发布并提交终稿"，不结算。
+      // CAS/审计/通知都在 approveDraftSubmission（与超时自动通过、仲裁裁决共用）
+      const r = await approveDraftSubmission({
+        submission: subRef, taskTitle: task.title,
+        reviewNote: data.reviewNote, actorId: req.user!.userId,
       });
-      const heraldU = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [submission.herald_id]);
-      await notify({
-        userId: submission.herald_id,
-        email: heraldU?.email,
-        targetRole: 'HERALD',
-        type: 'DRAFT_APPROVED',
-        title: `草稿审核通过：${task.title}`,
-        body: `${heraldU?.nickname || ''}，您提交的任务「${task.title}」草稿已通过审核。现在可以正式发布内容，发布后回到任务页提交最终链接。`,
-        metadata: { taskId: submission.task_id, submissionId: submission.id, taskTitle: task.title },
-      }).catch((e) => console.error('[notify] DRAFT_APPROVED failed:', e));
+      if (!r.ok) return res.status(400).json({ error: '该提交已审核' });
+      await closeOpenArbitration(submission.id, req.user!.userId);
 
       const updatedDraft = await findOne('SELECT * FROM task_submissions WHERE id = ?', [req.params.id]);
       return res.json({ ...updatedDraft, needsRating: false });
     }
 
     if (data.status === 'APPROVED') {
-      // 使用发布时快照，与当前费率设置解耦
-      const payout        = task.payout_per_herald;
-      const costPerHerald = task.cost_per_herald;
-      const commissionRate = task.commission_rate;
-      const platformFee   = Math.round((costPerHerald - payout) * 100) / 100;
-
-      // 1. 余额检查在任何写操作之前
-      const brandBal = await getBalance(task.creator_id, 'brand');
-      if (brandBal.available < costPerHerald) {
+      // 终稿通过 = 结算打款（余额检查→CAS→记账→通知都在 settleFinalSubmission）
+      const r = await settleFinalSubmission({
+        submission: subRef, task,
+        reviewNote: data.reviewNote, actorId: req.user!.userId,
+      });
+      if (!r.ok && r.code === 'INSUFFICIENT_BALANCE') {
         const isBrand = req.user!.role === 'BRAND';
-        await notify({
-          userId: task.creator_id,
-          targetRole: 'BRAND',
-          type: 'SETTLEMENT_BLOCKED',
-          title: '任务待结算 — 请充值完成打款',
-          body: `任务《${task.title}》已完成，需支付 ¥${costPerHerald}（赫使到手 ¥${payout} + 平台服务费 ¥${platformFee}），当前余额 ¥${brandBal.available} 不足。`,
-          metadata: { taskId: task.id, needed: costPerHerald, available: brandBal.available },
-        }).catch((e) => console.error('[notify] SETTLEMENT_BLOCKED failed:', e));
         return res.status(402).json({
           error: isBrand
-            ? `余额不足，需 ¥${costPerHerald}，当前可用 ¥${brandBal.available}，请充值后再审核`
-            : `品牌余额不足，需 ¥${costPerHerald}，当前可用 ¥${brandBal.available}，请联系代理公司完成充值`,
+            ? `余额不足，需 ¥${r.needed}，当前可用 ¥${r.available}，请充值后再审核`
+            : `品牌余额不足，需 ¥${r.needed}，当前可用 ¥${r.available}，请联系代理公司完成充值`,
           code: 'INSUFFICIENT_BALANCE',
-          needed: costPerHerald,
-          available: brandBal.available,
+          needed: r.needed,
+          available: r.available,
         });
       }
-
-      // 2. 原子 UPDATE：CAS（Compare-And-Swap）防止并发双重审批
-      //    只有 status 仍为 PENDING_REVIEW 时才更新，否则说明另一个请求已抢先
-      const claimResult = await pool.query(
-        `UPDATE task_submissions
-         SET status = 'APPROVED', commission_amount = $1, review_note = $2, reviewed_at = $3
-         WHERE id = $4 AND status = 'PENDING_REVIEW'`,
-        [payout, data.reviewNote || null, new Date().toISOString(), req.params.id]
-      );
-      if (claimResult.rowCount === 0) {
-        return res.status(400).json({ error: '该提交已审核' });
-      }
-
-      // task_transactions 记录业务事件
-      const releaseTxnId = await insert('task_transactions', {
-        task_id:           submission.task_id,
-        type:              'TASK_RELEASE',
-        task_amount:       costPerHerald,
-        amount:            payout,
-        platform_fee:      platformFee,
-        platform_fee_rate: commissionRate,
-        from_user_id:      task.creator_id,
-        to_user_id:        submission.herald_id,
-        status:            'completed',
-        note:              `任务《${task.title}》报酬发放`,
-      });
-
-      // 直接扣可用余额结算（无预冻结）
-      await Promise.all([
-        settleCreditTask({
-          userId: task.creator_id, amount: costPerHerald,
-          idempotencyKey: `SETTLE:${releaseTxnId}`,
-          referenceType: 'task_transaction', referenceId: releaseTxnId,
-          note: `任务《${task.title}》结算`,
-        }),
-        creditHerald({
-          userId: submission.herald_id, amount: payout,
-          idempotencyKey: `CREDIT:${releaseTxnId}`,
-          referenceType: 'task_transaction', referenceId: releaseTxnId,
-          note: `任务《${task.title}》报酬`,
-        }),
-        creditPlatformFee({
-          userId: PLATFORM_USER_ID, amount: platformFee,
-          idempotencyKey: `FEE:${releaseTxnId}`,
-          referenceType: 'task_transaction', referenceId: releaseTxnId,
-          note: `平台服务费 ${(commissionRate * 100).toFixed(0)}%`,
-        }),
-      ]);
+      if (!r.ok) return res.status(400).json({ error: '该提交已审核' });
+      await closeOpenArbitration(submission.id, req.user!.userId);
     } else {
       await update('task_submissions', {
         status: 'REJECTED',
         review_note: data.reviewNote || null,
         reviewed_at: new Date().toISOString(),
       }, 'id = ?', [req.params.id]);
-    }
 
-    await auditRevision({
-      submissionId: submission.id, taskId: submission.task_id, heraldId: submission.herald_id,
-      stage, kind: 'REVIEW', action: data.status, note: data.reviewNote, actorId: req.user!.userId,
-    });
+      await auditRevision({
+        submissionId: submission.id, taskId: submission.task_id, heraldId: submission.herald_id,
+        stage, kind: 'REVIEW', action: 'REJECTED', note: data.reviewNote, actorId: req.user!.userId,
+      });
 
-    // 通知赫使审核结果
-    const heraldUser = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [submission.herald_id]);
-    if (heraldUser) {
-      const approved = data.status === 'APPROVED';
-      const noteClause = data.reviewNote ? `\n备注：${data.reviewNote}` : '';
-      await notify({
-        userId: submission.herald_id,
-        email: heraldUser.email,
-        targetRole: 'HERALD',
-        type: approved ? 'SUB_APPROVED' : stage === 'DRAFT' ? 'DRAFT_REJECTED' : 'SUB_REJECTED',
-        title: stage === 'DRAFT'
-          ? `草稿审核未通过：${task.title}`
-          : `内容审核${approved ? '通过' : '未通过'}：${task.title}`,
-        body: approved
-          ? `${heraldUser.nickname}，您提交的任务「${task.title}」内容已审核通过，报酬将自动结算至您的钱包。${noteClause}`
-          : stage === 'DRAFT'
+      const heraldUser = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [submission.herald_id]);
+      if (heraldUser) {
+        const noteClause = data.reviewNote ? `\n备注：${data.reviewNote}` : '';
+        await notify({
+          userId: submission.herald_id,
+          email: heraldUser.email,
+          targetRole: 'HERALD',
+          type: stage === 'DRAFT' ? 'DRAFT_REJECTED' : 'SUB_REJECTED',
+          title: stage === 'DRAFT' ? `草稿审核未通过：${task.title}` : `内容审核未通过：${task.title}`,
+          body: stage === 'DRAFT'
             ? `${heraldUser.nickname}，您提交的任务「${task.title}」草稿未通过审核，请按反馈修改后重新提交草稿。${noteClause}`
             : `${heraldUser.nickname}，您提交的任务「${task.title}」内容审核未通过，请查看反馈后重新提交。${noteClause}`,
-        // taskTitle/note 进 metadata：前端按 type+params 渲染三语通知
-        metadata: { taskId: submission.task_id, submissionId: submission.id, taskTitle: task.title, note: data.reviewNote || null },
-      }).catch((e) => console.error('[notify] SUB review notification failed:', e));
+          // taskTitle/note 进 metadata：前端按 type+params 渲染三语通知
+          metadata: { taskId: submission.task_id, submissionId: submission.id, taskTitle: task.title, note: data.reviewNote || null },
+        }).catch((e) => console.error('[notify] SUB review notification failed:', e));
+      }
     }
 
     const updated = await findOne('SELECT * FROM task_submissions WHERE id = ?', [req.params.id]);
@@ -406,7 +309,9 @@ submissionsRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), as
             COALESCE(tcs.max_revisions, 2) AS max_revisions,
             (SELECT COUNT(*)::int FROM submission_revisions sr
              WHERE sr.task_id = ts.task_id AND sr.herald_id = ts.herald_id
-               AND sr.kind = 'REVIEW' AND sr.action = 'REJECTED' AND sr.stage = ts.stage) AS stage_rejects
+               AND sr.kind = 'REVIEW' AND sr.action = 'REJECTED' AND sr.stage = ts.stage) AS stage_rejects,
+            EXISTS (SELECT 1 FROM arbitrations a
+                    WHERE a.submission_id = ts.id AND a.status = 'OPEN') AS arbitration_open
      FROM task_submissions ts
      JOIN tasks t ON t.id = ts.task_id
      JOIN users u ON u.id = ts.herald_id
@@ -437,12 +342,21 @@ submissionsRouter.get('/:id/revisions', requireAuth, async (req: Request, res: R
   res.json(rows);
 });
 
-/** GET /api/submissions/my — 我的提交 (赫使侧) */
+/** GET /api/submissions/my — 我的提交 (赫使侧)。
+ *  额度/仲裁字段给客户端做"申请仲裁"入口的显隐判断 */
 submissionsRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
   const subs = await findMany<any>(
-    `SELECT ts.*, t.title as task_title, t.payout_per_herald
+    `SELECT ts.*, t.title as task_title, t.payout_per_herald,
+            COALESCE(tcs.require_draft_review, 0) AS require_draft_review,
+            COALESCE(tcs.max_revisions, 2) AS max_revisions,
+            (SELECT COUNT(*)::int FROM submission_revisions sr
+             WHERE sr.task_id = ts.task_id AND sr.herald_id = ts.herald_id
+               AND sr.kind = 'REVIEW' AND sr.action = 'REJECTED' AND sr.stage = ts.stage) AS stage_rejects,
+            EXISTS (SELECT 1 FROM arbitrations a
+                    WHERE a.submission_id = ts.id AND a.status = 'OPEN') AS arbitration_open
      FROM task_submissions ts
      JOIN tasks t ON t.id = ts.task_id
+     LEFT JOIN task_content_specs tcs ON tcs.task_id = ts.task_id
      WHERE ts.herald_id = ?
      ORDER BY ts.submitted_at DESC`, [req.user!.userId]
   );

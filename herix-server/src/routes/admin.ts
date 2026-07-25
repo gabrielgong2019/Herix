@@ -618,6 +618,8 @@ const PRICING_KEYS = [
   'withdrawal_monthly_limit',
   'withdrawal_min_amount',
   'topup_cc_rate',
+  'review_timeout_days',
+  'resubmit_timeout_days',
 ] as const;
 
 /** GET /api/admin/pricing — 读取全局定价配置 */
@@ -632,6 +634,8 @@ adminRouter.get('/pricing', async (_req: Request, res: Response) => {
     withdrawalMonthlyLimit:  Number(cfg.withdrawal_monthly_limit),
     withdrawalMinAmount:     Number(cfg.withdrawal_min_amount),
     topupCcRate:             Number(cfg.topup_cc_rate),
+    reviewTimeoutDays:       Number(cfg.review_timeout_days),
+    resubmitTimeoutDays:     Number(cfg.resubmit_timeout_days),
   });
 });
 
@@ -639,7 +643,8 @@ adminRouter.get('/pricing', async (_req: Request, res: Response) => {
 adminRouter.patch('/pricing', async (req: Request, res: Response) => {
   const adminId = req.user!.userId;
   const { note, commissionRate, withdrawalFeeFlat, withdrawalScheduleMode,
-          withdrawalMonthlyLimit, withdrawalMinAmount, topupCcRate } = req.body;
+          withdrawalMonthlyLimit, withdrawalMinAmount, topupCcRate,
+          reviewTimeoutDays, resubmitTimeoutDays } = req.body;
 
   const updates: [string, string][] = [];
   if (commissionRate        !== undefined) updates.push(['commission_rate',          String(commissionRate)]);
@@ -648,6 +653,8 @@ adminRouter.patch('/pricing', async (req: Request, res: Response) => {
   if (withdrawalMonthlyLimit !== undefined) updates.push(['withdrawal_monthly_limit', String(withdrawalMonthlyLimit)]);
   if (withdrawalMinAmount   !== undefined) updates.push(['withdrawal_min_amount',    String(withdrawalMinAmount)]);
   if (topupCcRate           !== undefined) updates.push(['topup_cc_rate',            String(topupCcRate)]);
+  if (reviewTimeoutDays     !== undefined) updates.push(['review_timeout_days',      String(reviewTimeoutDays)]);
+  if (resubmitTimeoutDays   !== undefined) updates.push(['resubmit_timeout_days',    String(resubmitTimeoutDays)]);
 
   if (!updates.length) return res.status(400).json({ error: '未提供任何更新字段' });
 

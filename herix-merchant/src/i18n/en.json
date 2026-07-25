@@ -623,5 +623,8 @@
     "errorCodeFrequent": "Too many requests — please wait 1 minute",
     "errorSendCode": "Failed to send code — please try again",
     "errorRegister": "Registration failed — please try again"
-  }
+  },
+  "reviews.arbitrate": "Request arbitration",
+  "reviews.arbitrateReasonPrompt": "Revision budget exhausted. Enter a reason for platform arbitration (we will review both parties' records before ruling)",
+  "reviews.arbitrationOpen": "In arbitration"
 }

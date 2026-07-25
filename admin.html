@@ -145,6 +145,7 @@ function shell(inner){
     {id:'kyb',icon:'🏢',label:'商家认证',badge:Array.isArray(st.data.kybReviews)?st.data.kybReviews.length:0},
     {id:'topups',icon:'🏦',label:'充值确认',badge:Array.isArray(st.data.topups)?st.data.topups.filter(function(r){return r.status==='pending'}).length:0},
     {id:'withdrawals',icon:'💸',label:'提现打款',badge:Array.isArray(st.data.withdrawals)?st.data.withdrawals.filter(function(r){return r.status==='pending'}).length:0},
+    {id:'arbitrations',icon:'⚖️',label:'仲裁',badge:Array.isArray(st.data.arbitrations)?st.data.arbitrations.filter(function(r){return r.status==='OPEN'}).length:0},
     {id:'users',icon:'👥',label:'用户管理'},
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
@@ -163,7 +164,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',i18n:'本地化',pricing:'定价'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',arbitrations:'仲裁',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',i18n:'本地化',pricing:'定价'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -175,6 +176,7 @@ function pageCont(){
     case 'kyb': return kybPage();
     case 'topups': return topupsPage();
     case 'withdrawals': return withdrawalsPage();
+    case 'arbitrations': return arbitrationsPage();
     case 'users': return usersPage();
     case 'brand-edit': return brandEditPage();
     case 'tasks': return tasksPage();
@@ -658,6 +660,61 @@ function rejectTopup(id){
   post('/admin/topup-requests/'+id+'/reject',{reason:reason},function(d){
     if(d.error){showToast(d.error);return;}
     st.msg='已拒绝';st.msgType='success';load('topups');render();
+  });
+}
+
+/* ── Arbitrations Page（P1 两阶段交付争议裁决）── */
+function arbitrationsPage(){
+  var list=st.data.arbitrations||[];
+  if(!list.length) return '<div class="empty"><div class="empty-icon">⚖️</div>暂无仲裁案</div>';
+  var open=list.filter(function(r){return r.status==='OPEN'});
+  var done=list.filter(function(r){return r.status!=='OPEN'});
+  function links(r){
+    var urls=[];try{urls=r.content_urls?JSON.parse(r.content_urls):[]}catch(e){}
+    if(!urls.length)return '—';
+    return urls.map(function(u,i){return '<a href="'+esc(u)+'" target="_blank" style="display:block;font-size:11px">链接'+(i+1)+'</a>'}).join('');
+  }
+  function caseRow(r){
+    var stg=r.submission_stage==='DRAFT'?'<span style="color:#1d4ed8">草稿</span>':'<span style="color:#16a34a">终稿</span>';
+    return '<tr><td><b>'+esc(r.task_title)+'</b><br><span style="font-size:11px;color:var(--muted)">商家 '+esc(r.brand_name)+' / 赫使 '+esc(r.herald_name)+'</span></td>'
+      +'<td>'+stg+'<br><span style="font-size:11px;color:var(--muted)">'+esc(r.submission_status)+'</span></td>'
+      +'<td style="max-width:200px"><div style="font-size:12px">'+esc(r.reason)+'</div>'
+      +'<div style="font-size:11px;color:var(--muted);margin-top:2px">发起方：'+(r.opened_by_role==='BRAND'?'商家':'赫使')+'</div></td>'
+      +'<td style="max-width:180px">'+links(r)
+      +(r.description?'<div style="font-size:11px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="'+esc(r.description)+'">'+esc(r.description)+'</div>':'')
+      +(r.review_note?'<div style="font-size:11px;color:var(--danger)">拒绝理由：'+esc(r.review_note)+'</div>':'')+'</td>'
+      +'<td>'+fmtLocal(r.created_at)+'</td>';
+  }
+  var h='';
+  if(open.length){
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--warning)">待裁决 ('+open.length+')</div>';
+    h+='<div class="tcard" style="margin-bottom:24px"><table><thead><tr><th>任务/当事人</th><th>阶段</th><th>申请理由</th><th>交付内容</th><th>开案时间</th><th>裁决</th></tr></thead><tbody>';
+    h+=open.map(function(r){
+      return caseRow(r)
+        +'<td><button class="btn btn-success btn-sm" onclick="resolveArb(\''+r.id+'\',\'HERALD\')">判赫使胜</button> '
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="resolveArb(\''+r.id+'\',\'BRAND\')">判商家胜</button></td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
+  if(done.length){
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px">已裁决</div>';
+    h+='<div class="tcard"><table><thead><tr><th>任务/当事人</th><th>阶段</th><th>申请理由</th><th>交付内容</th><th>开案时间</th><th>结果</th></tr></thead><tbody>';
+    h+=done.map(function(r){
+      var rl={HERALD:'<span style="color:var(--success);font-weight:600">赫使胜</span>',BRAND:'<span style="color:var(--danger);font-weight:600">商家胜</span>',APPROVED_BY_BRAND:'<span style="color:var(--muted)">商家直接通过</span>'};
+      return caseRow(r)+'<td>'+(rl[r.resolution]||esc(r.resolution||''))+(r.resolve_note?'<div style="font-size:11px;color:var(--muted)">'+esc(r.resolve_note)+'</div>':'')+'</td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
+  return h;
+}
+function resolveArb(id,winner){
+  var tip=winner==='HERALD'?'判赫使胜：强制通过该提交（终稿将立即结算打款给赫使）':'判商家胜：维持拒绝并释放该赫使的任务名额';
+  var note=prompt(tip+'\n\n请填写裁决理由（必填，双方都会收到）');
+  if(note===null)return;
+  if(!note.trim()){showToast('裁决理由必填');return;}
+  post('/arbitrations/'+id+'/resolve',{winner:winner,note:note.trim()},function(d){
+    if(d.error){showToast(d.error);return;}
+    st.msg='已裁决';st.msgType='success';load('arbitrations');render();
   });
 }
 
@@ -1161,6 +1218,8 @@ function load(page){
     apiGet('/admin/topup-requests',function(d){st.data.topups=Array.isArray(d)?d:[];render()});
   } else if(page==='withdrawals'){
     apiGet('/admin/withdrawal-requests',function(d){st.data.withdrawals=Array.isArray(d)?d:[];render()});
+  } else if(page==='arbitrations'){
+    apiGet('/arbitrations',function(d){st.data.arbitrations=Array.isArray(d)?d:[];render()});
   } else if(page==='users'){
     apiGet('/admin/users',function(d){st.data.users=d;render()});
   } else if(page==='tasks'){

@@ -10,6 +10,8 @@ const DEFAULTS: Record<string, string> = {
   topup_cc_rate:            '0.03',
   merchant_trial_credit:    '3000',
   fast_payout_threshold:    '100000',
+  review_timeout_days:      '7',
+  resubmit_timeout_days:    '7',
 };
 
 export async function getSetting(key: string): Promise<string> {

@@ -623,5 +623,8 @@
     "errorCodeFrequent": "요청이 너무 많습니다. 1분 후 다시 시도해 주세요",
     "errorSendCode": "발송 실패. 잠시 후 다시 시도해 주세요",
     "errorRegister": "가입 실패. 잠시 후 다시 시도해 주세요"
-  }
+  },
+  "reviews.arbitrate": "중재 신청",
+  "reviews.arbitrateReasonPrompt": "수정 한도가 소진되었습니다. 중재 신청 사유를 입력해 주세요 (플랫폼이 양측 기록을 검토한 후 판정합니다)",
+  "reviews.arbitrationOpen": "중재 중"
 }

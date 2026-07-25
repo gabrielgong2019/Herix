@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Button, Textarea, Input, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, auth, ApiError, getToken } from '../../utils/api';
+import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, arbitrations, auth, ApiError, getToken } from '../../utils/api';
 import { getAmbassadorProfile, invalidateProfileCache } from '../../utils/profileCache';
 import { fmtLocal } from '../../utils/format';
 import { checkRequirements, RequirementFailure } from '../../utils/requirements';
@@ -69,6 +69,10 @@ interface State {
   reqCanRetry: boolean;
   reqFormValues: Record<string, PlatformAccountValue>;
   reqSubmitting: boolean;
+  // 仲裁申请（改稿额度用尽后）
+  arbInput: boolean;
+  arbReason: string;
+  arbSubmitting: boolean;
 }
 
 export default class TaskDetail extends Component<{ id: string }, State> {
@@ -92,6 +96,9 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     reqCanRetry: false,
     reqFormValues: {},
     reqSubmitting: false,
+    arbInput: false,
+    arbReason: '',
+    arbSubmitting: false,
   };
 
   componentDidMount() {
@@ -388,6 +395,61 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     );
   }
 
+  submitArbitration = async () => {
+    const { arbReason, mySubmission } = this.state;
+    if (!arbReason.trim()) {
+      Taro.showToast({ title: t('task.arbitrateReasonRequired'), icon: 'none' });
+      return;
+    }
+    this.setState({ arbSubmitting: true });
+    try {
+      await arbitrations.open(mySubmission.id, arbReason.trim());
+      Taro.showToast({ title: t('task.arbitrateDone'), icon: 'success' });
+      this.setState({ arbInput: false, arbReason: '', arbSubmitting: false });
+      this.loadTask();
+    } catch (err: any) {
+      Taro.showToast({ title: err.message || t('common.opFailed'), icon: 'none' });
+      this.setState({ arbSubmitting: false });
+    }
+  };
+
+  /** 仲裁入口：被拒且商家拒绝额度已用尽时出现（额度约束的是商家——用尽后商家只能通过或仲裁，
+   *  赫使若不认可最后一次拒绝也可从这里开案）。开案期间双向超时计时冻结 */
+  renderArbEntry(sub: any) {
+    const limit = sub.stage === 'DRAFT'
+      ? (sub.max_revisions ?? 2)
+      : (sub.require_draft_review ? 2 : (sub.max_revisions ?? 2));
+    if ((sub.stage_rejects ?? 0) < limit) return null;
+    if (sub.arbitration_open) {
+      return <View className='status-banner banner-pending'>{t('task.arbitrationPending')}</View>;
+    }
+    const { arbInput, arbReason, arbSubmitting } = this.state;
+    if (!arbInput) {
+      return (
+        <View className='arb-entry'>
+          <Text className='banner-hint'>{t('task.arbitrateHint')}</Text>
+          <Button className='btn-outline' onClick={() => this.setState({ arbInput: true })}>
+            {t('task.arbitrate')}
+          </Button>
+        </View>
+      );
+    }
+    return (
+      <View className='arb-entry'>
+        <Textarea
+          className='textarea arb-reason'
+          placeholder={t('task.arbitrateReasonPh')}
+          value={arbReason}
+          onInput={e => this.setState({ arbReason: e.detail.value })}
+          maxlength={500}
+        />
+        <Button className='btn-primary' loading={arbSubmitting} disabled={arbSubmitting} onClick={this.submitArbitration}>
+          {t('task.arbitrateSubmit')}
+        </Button>
+      </View>
+    );
+  }
+
   renderActionBar() {
     const { task, myApplication, mySubmission, role, ambassadorProfile, applying } = this.state;
     if (!task) return null;
@@ -418,6 +480,14 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           <View className='actions'>
             <View className='status-banner banner-rejected'>{t('task.applyRejected')}</View>
             {myApplication.review_note && <Text className='banner-note'>{t('task.reason', { note: myApplication.review_note })}</Text>}
+          </View>
+        );
+      }
+      // 名额已释放（被拒后超时未重提 / 仲裁判商家胜）
+      if (myApplication.status === 'EXPIRED') {
+        return (
+          <View className='actions'>
+            <View className='status-banner banner-rejected'>{t('task.slotReleased')}</View>
           </View>
         );
       }
@@ -455,6 +525,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
                 <View className='status-banner banner-rejected'>{t('task.draftRejected')}</View>
                 {mySubmission.review_note && <Text className='banner-note'>{t('task.reason', { note: mySubmission.review_note })}</Text>}
                 <Button className='btn-primary' onClick={() => this.goSubmit('draft')}>{t('task.resubmitDraft')}</Button>
+                {this.renderArbEntry(mySubmission)}
               </View>
             );
           }
@@ -487,6 +558,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
               <View className='status-banner banner-rejected'>{t('task.workRejected')}</View>
               {mySubmission.review_note && <Text className='banner-note'>{t('task.reason', { note: mySubmission.review_note })}</Text>}
               <Button className='btn-primary' onClick={() => this.goSubmit('final')}>{t('task.resubmit')}</Button>
+              {this.renderArbEntry(mySubmission)}
             </View>
           );
         }

@@ -1068,5 +1068,19 @@
   "notif.DRAFT_REJECTED.title": "两阶段交付(2026-07-26 P0b)：草稿前置/多链接/提交图片相关词条，task任务页操作区+apply提交页+通知模板",
   "notif.DRAFT_REJECTED.body": "两阶段交付(2026-07-26 P0b)：草稿前置/多链接/提交图片相关词条，task任务页操作区+apply提交页+通知模板",
   "error.LINK_REQUIRED": "两阶段交付(2026-07-26 P0b)：草稿前置/多链接/提交图片相关词条，task任务页操作区+apply提交页+通知模板",
-  "error.DRAFT_EMPTY": "两阶段交付(2026-07-26 P0b)：草稿前置/多链接/提交图片相关词条，task任务页操作区+apply提交页+通知模板"
+  "error.DRAFT_EMPTY": "两阶段交付(2026-07-26 P0b)：草稿前置/多链接/提交图片相关词条，task任务页操作区+apply提交页+通知模板",
+  "task.arbitrate": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.arbitrateHint": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.arbitrateReasonPh": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.arbitrateReasonRequired": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.arbitrateSubmit": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.arbitrateDone": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.arbitrationPending": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "task.slotReleased": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "notif.SLOT_RELEASED.title": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "notif.SLOT_RELEASED.body": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "notif.ARBITRATION_OPENED.title": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "notif.ARBITRATION_OPENED.body": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "notif.ARBITRATION_RESOLVED.title": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板",
+  "notif.ARBITRATION_RESOLVED.body": "P1 仲裁/名额释放（2026-07-26）：改稿额度用尽后的平台仲裁入口、名额超时释放，task任务页+通知模板"
 }

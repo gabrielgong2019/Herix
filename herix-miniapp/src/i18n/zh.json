@@ -1148,5 +1148,19 @@
   "notif.DRAFT_REJECTED.title": "草稿未通过：{taskTitle}",
   "notif.DRAFT_REJECTED.body": "你提交的任务「{taskTitle}」草稿未通过审核，请按反馈修改后重新提交草稿。",
   "error.LINK_REQUIRED": "请提供至少一个内容链接",
-  "error.DRAFT_EMPTY": "草稿不能为空：请提供脚本文字、成品图或预览链接"
+  "error.DRAFT_EMPTY": "草稿不能为空：请提供脚本文字、成品图或预览链接",
+  "task.arbitrate": "申请平台仲裁",
+  "task.arbitrateHint": "商家的拒绝次数已用尽。若你不认可审核意见，可申请平台仲裁，平台将审阅双方记录后裁决",
+  "task.arbitrateReasonPh": "请说明争议情况与你的主张（平台将结合双方提交与审核记录裁决）…",
+  "task.arbitrateReasonRequired": "请填写仲裁理由",
+  "task.arbitrateSubmit": "提交仲裁申请",
+  "task.arbitrateDone": "已提交仲裁",
+  "task.arbitrationPending": "⚖️ 平台仲裁处理中，请留意通知",
+  "task.slotReleased": "名额已释放，本次参与已结束",
+  "notif.SLOT_RELEASED.title": "任务名额已释放：{taskTitle}",
+  "notif.SLOT_RELEASED.body": "您在任务「{taskTitle}」的提交被拒后长时间未重新提交，名额已自动释放。",
+  "notif.ARBITRATION_OPENED.title": "平台仲裁已开案：{taskTitle}",
+  "notif.ARBITRATION_OPENED.body": "任务「{taskTitle}」的交付争议已提交平台仲裁，平台将审阅双方提交与审核记录后裁决，请留意通知。",
+  "notif.ARBITRATION_RESOLVED.title": "仲裁已裁决：{taskTitle}",
+  "notif.ARBITRATION_RESOLVED.body": "平台已对任务「{taskTitle}」的交付争议作出裁决。"
 }

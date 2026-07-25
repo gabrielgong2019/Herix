@@ -134,7 +134,7 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
       herald_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN')),
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN','EXPIRED')),
       message TEXT,
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
@@ -586,6 +586,36 @@ export async function initDatabase() {
      WHERE a.task_id = b.task_id AND a.herald_id = b.herald_id
        AND a.submitted_at < b.submitted_at`,
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_submissions_task_herald ON task_submissions(task_id, herald_id)`,
+    // P1 双向计时器 + 仲裁（2026-07-26）
+    // reminder_sent：临期催审只发一次的标记，每次新提交时归零（提交路径负责重置）
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0`,
+    // 仲裁开案：改稿额度用尽后商家/赫使任一方开案，一个提交终身只能开一案（UNIQUE）。
+    // 开案期间该提交冻结超时计时（timers 跳过 OPEN 案对应的行）
+    `CREATE TABLE IF NOT EXISTS arbitrations (
+      id TEXT PRIMARY KEY,
+      submission_id TEXT NOT NULL UNIQUE,
+      task_id TEXT NOT NULL REFERENCES tasks(id),
+      herald_id TEXT NOT NULL REFERENCES users(id),
+      opened_by TEXT NOT NULL,
+      opened_by_role TEXT NOT NULL,
+      stage TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'OPEN' CHECK(status IN ('OPEN','RESOLVED')),
+      resolution TEXT,
+      resolve_note TEXT,
+      resolved_by TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      resolved_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_arbitrations_status ON arbitrations(status, created_at)`,
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('review_timeout_days',   '7', '商家审核时限（天）：待审超时自动通过（终稿=自动结算打款），临期24h先发催审通知'),
+      ('resubmit_timeout_days', '7', '赫使重提时限（天）：被拒后超时未重新提交，自动释放任务名额')
+     ON CONFLICT (key) DO NOTHING`,
+    // 报名状态新增 EXPIRED（名额释放：被拒超时未重提 / 仲裁判商家胜）——幂等重建约束
+    `ALTER TABLE task_applications DROP CONSTRAINT IF EXISTS task_applications_status_check`,
+    `ALTER TABLE task_applications ADD CONSTRAINT task_applications_status_check
+     CHECK(status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN','EXPIRED'))`,
     // 首单体验额度（2026-07-18）：戳在任务行上 write-once，生命周期随任务状态派生
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS trial_credit_amount DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS trial_task_id TEXT`,

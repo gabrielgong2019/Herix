@@ -642,3 +642,7 @@
     box-shadow: var(--shadow);
   }
 }
+
+/* ── 仲裁申请入口（P1，2026-07-26）── */
+.arb-entry { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
+.arb-reason { min-height: 160px; }

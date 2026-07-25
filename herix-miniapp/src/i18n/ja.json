@@ -1148,5 +1148,19 @@
   "notif.DRAFT_REJECTED.title": "下書きが承認されませんでした：{taskTitle}",
   "notif.DRAFT_REJECTED.body": "タスク「{taskTitle}」の下書きが承認されませんでした。フィードバックに沿って修正のうえ再提出してください。",
   "error.LINK_REQUIRED": "コンテンツリンクを1つ以上入力してください",
-  "error.DRAFT_EMPTY": "下書きが空です：本文・画像・リンクのいずれかを入力してください"
+  "error.DRAFT_EMPTY": "下書きが空です：本文・画像・リンクのいずれかを入力してください",
+  "task.arbitrate": "プラットフォーム仲裁を申請",
+  "task.arbitrateHint": "ブランドの差し戻し回数が上限に達しました。審査意見に納得できない場合、プラットフォーム仲裁を申請できます",
+  "task.arbitrateReasonPh": "争議の状況とあなたの主張を記入してください…",
+  "task.arbitrateReasonRequired": "仲裁理由を入力してください",
+  "task.arbitrateSubmit": "仲裁を申請する",
+  "task.arbitrateDone": "仲裁を申請しました",
+  "task.arbitrationPending": "⚖️ 仲裁手続き中です。通知をお待ちください",
+  "task.slotReleased": "参加枠は解放され、今回の参加は終了しました",
+  "notif.SLOT_RELEASED.title": "タスク枠が解放されました:{taskTitle}",
+  "notif.SLOT_RELEASED.body": "タスク「{taskTitle}」の提出が差し戻された後、長期間再提出がなかったため、参加枠は自動的に解放されました。",
+  "notif.ARBITRATION_OPENED.title": "仲裁が開始されました:{taskTitle}",
+  "notif.ARBITRATION_OPENED.body": "タスク「{taskTitle}」の納品争議が仲裁に付されました。双方の記録を確認のうえ裁定します。通知をお待ちください。",
+  "notif.ARBITRATION_RESOLVED.title": "仲裁の裁定が出ました:{taskTitle}",
+  "notif.ARBITRATION_RESOLVED.body": "タスク「{taskTitle}」の納品争議について裁定が出ました。"
 }

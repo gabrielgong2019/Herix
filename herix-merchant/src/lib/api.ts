@@ -92,6 +92,9 @@ export const reviewsApi = {
   review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
     http.patch(`/submissions/${id}/review`, { status, reviewNote }),
   revisions: (id: string) => http.get<SubmissionRevision[]>(`/submissions/${id}/revisions`),
+  // 改稿额度用尽后的出口：开平台仲裁案（一个提交终身一案，开案期间超时计时冻结）
+  arbitrate: (submissionId: string, reason: string) =>
+    http.post('/arbitrations', { submissionId, reason }),
 }
 
 // ── Wallet ────────────────────────────────────────────────────────
@@ -276,6 +279,7 @@ export interface Submission {
   require_draft_review?: number
   max_revisions?: number
   stage_rejects?: number
+  arbitration_open?: boolean
   nickname?: string
   herald?: { name: string }
   task?: { title: string }

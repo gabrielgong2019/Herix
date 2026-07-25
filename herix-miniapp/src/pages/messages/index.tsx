@@ -17,6 +17,9 @@ const ACCENT_MAP: Record<string, string> = {
   CONVERSION_SETTLED: '#16a34a',
   CONVERSION_UPDATED: '#1d4ed8',
   TASK_CLOSING: '#d97706',
+  SLOT_RELEASED: '#d97706',
+  ARBITRATION_OPENED: '#d97706',
+  ARBITRATION_RESOLVED: '#1d4ed8',
 };
 const ICON_MAP: Record<string, string> = {
   SUB_APPROVED: '✅',
@@ -29,6 +32,9 @@ const ICON_MAP: Record<string, string> = {
   CONVERSION_SETTLED: '💰',
   CONVERSION_UPDATED: '📈',
   TASK_CLOSING: '⏳',
+  SLOT_RELEASED: '⏳',
+  ARBITRATION_OPENED: '⚖️',
+  ARBITRATION_RESOLVED: '⚖️',
 };
 
 // 相对时间（等价 herix formatNotifTime）

@@ -623,5 +623,8 @@
     "errorCodeFrequent": "送信が多すぎます。1分後にお試しください",
     "errorSendCode": "送信に失敗しました。後でお試しください",
     "errorRegister": "登録に失敗しました。後でお試しください"
-  }
+  },
+  "reviews.arbitrate": "仲裁を申請",
+  "reviews.arbitrateReasonPrompt": "修正回数の上限に達しました。仲裁申請の理由を入力してください（プラットフォームが双方の記録を確認のうえ裁定します）",
+  "reviews.arbitrationOpen": "仲裁中"
 }

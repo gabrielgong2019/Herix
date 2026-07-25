@@ -1148,5 +1148,19 @@
   "notif.DRAFT_REJECTED.title": "Draft not approved: {taskTitle}",
   "notif.DRAFT_REJECTED.body": "Your draft for \"{taskTitle}\" was not approved. Please revise per the feedback and resubmit.",
   "error.LINK_REQUIRED": "Please provide at least one content link",
-  "error.DRAFT_EMPTY": "Draft is empty: add a script, images, or a preview link"
+  "error.DRAFT_EMPTY": "Draft is empty: add a script, images, or a preview link",
+  "task.arbitrate": "Request platform arbitration",
+  "task.arbitrateHint": "The brand's rejection budget is exhausted. If you disagree with the review, you can request platform arbitration",
+  "task.arbitrateReasonPh": "Describe the dispute and your position…",
+  "task.arbitrateReasonRequired": "Please enter a reason",
+  "task.arbitrateSubmit": "Submit arbitration request",
+  "task.arbitrateDone": "Arbitration requested",
+  "task.arbitrationPending": "⚖️ Arbitration in progress — watch for notifications",
+  "task.slotReleased": "Your slot has been released; this participation has ended",
+  "notif.SLOT_RELEASED.title": "Task slot released: {taskTitle}",
+  "notif.SLOT_RELEASED.body": "Your submission for \"{taskTitle}\" was rejected and not resubmitted in time, so the slot has been automatically released.",
+  "notif.ARBITRATION_OPENED.title": "Arbitration opened: {taskTitle}",
+  "notif.ARBITRATION_OPENED.body": "A delivery dispute for \"{taskTitle}\" has been submitted to platform arbitration. We will review both parties' records before ruling.",
+  "notif.ARBITRATION_RESOLVED.title": "Arbitration resolved: {taskTitle}",
+  "notif.ARBITRATION_RESOLVED.body": "The platform has ruled on the delivery dispute for \"{taskTitle}\"."
 }

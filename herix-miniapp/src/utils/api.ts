@@ -197,6 +197,12 @@ export const submissions = {
   my: () => request<any[]>('GET', '/submissions/my'),
 };
 
+// ── Arbitrations（改稿额度用尽后的平台仲裁）──
+export const arbitrations = {
+  open: (submissionId: string, reason: string) =>
+    request<any>('POST', '/arbitrations', { submissionId, reason }),
+};
+
 // ── Users ──
 export const users = {
   addRole: (role: 'HERALD' | 'BRAND') =>

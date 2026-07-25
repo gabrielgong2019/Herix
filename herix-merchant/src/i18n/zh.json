@@ -618,5 +618,8 @@
     "errorCodeFrequent": "发送太频繁，请1分钟后再试",
     "errorSendCode": "发送失败，请稍后重试",
     "errorRegister": "注册失败，请稍后重试"
-  }
+  },
+  "reviews.arbitrate": "申请仲裁",
+  "reviews.arbitrateReasonPrompt": "改稿额度已用尽。申请平台仲裁请填写理由（平台将审阅双方提交与审核记录后裁决）",
+  "reviews.arbitrationOpen": "仲裁中"
 }

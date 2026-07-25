@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { reviewsApi, parseLinks, type Submission, type SubmissionRevision } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
-import { Check, X, FileText } from 'lucide-react'
+import { Check, X, FileText, Scale } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 /** 草稿定稿对照：从审计链取最后一版草稿内容（草稿通过前的最后一次 SUBMIT 即定稿版本） */
@@ -65,6 +65,23 @@ export default function Reviews() {
     reviewMut.mutate({ id: sub.id, status: 'REJECTED', note: note.trim() })
   }
 
+  const arbMut = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => reviewsApi.arbitrate(id, reason),
+    onSuccess: () => { setErr(''); qc.invalidateQueries({ queryKey: ['reviews'] }) },
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setErr(msg || t('reviews.actionFailed'))
+    },
+  })
+
+  // 额度用尽后的出口：开平台仲裁案（开案期间超时计时冻结，商家直接通过则争议自动消解）
+  const doArbitrate = (sub: Submission) => {
+    const reason = window.prompt(t('reviews.arbitrateReasonPrompt'))
+    if (reason === null) return
+    if (!reason.trim()) { setErr(t('reviews.rejectReasonRequired')); return }
+    arbMut.mutate({ id: sub.id, reason: reason.trim() })
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
       <Topbar title={t('reviews.title')} />
@@ -106,6 +123,11 @@ export default function Reviews() {
                         }}>
                           {isDraft ? t('reviews.stageDraft') : t('reviews.stageFinal')}
                         </span>
+                        {sub.arbitration_open && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium ml-1" style={{ background: '#fef3c7', color: '#d97706' }}>
+                            {t('reviews.arbitrationOpen')}
+                          </span>
+                        )}
                         <div className="text-[11px] mt-1" style={{ color: used >= limit ? 'var(--danger)' : 'var(--muted)' }}>
                           {t('reviews.rejectBudget', { used, limit })}
                         </div>
@@ -143,15 +165,27 @@ export default function Reviews() {
                           >
                             <Check size={12} /> {isDraft ? t('reviews.approveDraft') : t('reviews.approve')}
                           </button>
-                          <button
-                            className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer"
-                            style={{ background: '#fee2e2', color: '#dc2626', opacity: used >= limit ? 0.5 : 1 }}
-                            onClick={() => doReject(sub)}
-                            disabled={reviewMut.isPending || used >= limit}
-                            title={used >= limit ? t('reviews.budgetExhausted') : undefined}
-                          >
-                            <X size={12} /> {t('reviews.reject')}
-                          </button>
+                          {used >= limit && !sub.arbitration_open ? (
+                            <button
+                              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer"
+                              style={{ background: '#fef3c7', color: '#d97706' }}
+                              onClick={() => doArbitrate(sub)}
+                              disabled={arbMut.isPending}
+                              title={t('reviews.budgetExhausted')}
+                            >
+                              <Scale size={12} /> {t('reviews.arbitrate')}
+                            </button>
+                          ) : (
+                            <button
+                              className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg font-medium cursor-pointer"
+                              style={{ background: '#fee2e2', color: '#dc2626', opacity: used >= limit ? 0.5 : 1 }}
+                              onClick={() => doReject(sub)}
+                              disabled={reviewMut.isPending || used >= limit}
+                              title={used >= limit ? t('reviews.budgetExhausted') : undefined}
+                            >
+                              <X size={12} /> {t('reviews.reject')}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

@@ -217,17 +217,12 @@ submissionsRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
 
       const heraldUser = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [submission.herald_id]);
       if (heraldUser) {
-        const noteClause = data.reviewNote ? `\n备注：${data.reviewNote}` : '';
         await notify({
           userId: submission.herald_id,
           email: heraldUser.email,
           targetRole: 'HERALD',
           type: stage === 'DRAFT' ? 'DRAFT_REJECTED' : 'SUB_REJECTED',
-          title: stage === 'DRAFT' ? `草稿审核未通过：${task.title}` : `内容审核未通过：${task.title}`,
-          body: stage === 'DRAFT'
-            ? `${heraldUser.nickname}，您提交的任务「${task.title}」草稿未通过审核，请按反馈修改后重新提交草稿。${noteClause}`
-            : `${heraldUser.nickname}，您提交的任务「${task.title}」内容审核未通过，请查看反馈后重新提交。${noteClause}`,
-          // taskTitle/note 进 metadata：前端按 type+params 渲染三语通知
+          variables: { task: task.title, nickname: heraldUser.nickname || '', note: data.reviewNote ? `\n备注：${data.reviewNote}` : '' },
           metadata: { taskId: submission.task_id, submissionId: submission.id, taskTitle: task.title, note: data.reviewNote || null },
         }).catch((e) => console.error('[notify] SUB review notification failed:', e));
       }

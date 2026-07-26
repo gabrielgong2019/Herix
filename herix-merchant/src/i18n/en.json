@@ -53,7 +53,8 @@
     "tasks": "{{n}} tasks",
     "joinedAt": "Joined {{date}}",
     "specialties": "Specialties",
-    "proposal": "Proposal"
+    "proposal": "Proposal",
+    "applyMessage": "Application message"
   },
   "specialty": {
     "baby-mom": "Mom & Baby",
@@ -635,7 +636,12 @@
     "arbitrationOpen": "In arbitration",
     "pendingAppsTitle": "Applications pending review ({{n}})",
     "goReviewApp": "Review",
-    "submissionsTitle": "Content submission reviews"
+    "submissionsTitle": "Content submission reviews",
+    "colPlatforms": "Platforms",
+    "colMessage": "Message",
+    "colAppliedAt": "Applied at",
+    "viewTask": "View task",
+    "goTopup": "Top up"
   },
   "auth": {
     "loginTitle": "Merchant Dashboard",

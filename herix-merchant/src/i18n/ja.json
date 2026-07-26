@@ -53,7 +53,8 @@
     "tasks": "{{n}} 件",
     "joinedAt": "{{date}} 参加",
     "specialties": "得意分野",
-    "proposal": "提案内容"
+    "proposal": "提案内容",
+    "applyMessage": "応募メッセージ"
   },
   "specialty": {
     "baby-mom": "ママ・育児",
@@ -635,7 +636,12 @@
     "arbitrationOpen": "仲裁中",
     "pendingAppsTitle": "応募審査待ち（{{n}}）",
     "goReviewApp": "審査する",
-    "submissionsTitle": "コンテンツ提出審査"
+    "submissionsTitle": "コンテンツ提出審査",
+    "colPlatforms": "プラットフォーム",
+    "colMessage": "メッセージ",
+    "colAppliedAt": "応募日時",
+    "viewTask": "タスクを見る",
+    "goTopup": "チャージする"
   },
   "auth": {
     "loginTitle": "商家ダッシュボード",

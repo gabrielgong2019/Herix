@@ -199,8 +199,7 @@ export async function activateOrRenew(sub: MerchantSubscription, opts?: { actor?
   await notify({
     userId: sub.brand_user_id, email: u?.email, targetRole: 'BRAND',
     type: first ? 'SUBSCRIPTION_ACTIVATED' : 'SUBSCRIPTION_RENEWED',
-    title: first ? '营销顾问服务已生效' : '订阅已自动续期',
-    body: `您的营销顾问订阅（${sub.plan_code}）已${first ? '生效' : '续期'}，本期至 ${periodEnd.slice(0, 10)}，已从余额扣除 ¥${invoice.amount.toLocaleString()}（${invoice.invoice_no}）。`,
+    variables: { plan: sub.plan_code, period: periodEnd.slice(0, 10), amount: invoice.amount, invoice: invoice.invoice_no },
     metadata: { subscriptionId: sub.id, invoiceNo: invoice.invoice_no, amount: invoice.amount, periodEnd },
   }).catch((e) => console.error('[sub] notify failed:', e));
   return { ok: true };
@@ -218,8 +217,7 @@ async function expireSubscription(sub: MerchantSubscription): Promise<void> {
   await notify({
     userId: sub.brand_user_id, email: u?.email, targetRole: 'BRAND',
     type: 'SUBSCRIPTION_EXPIRED',
-    title: '营销顾问订阅已到期',
-    body: '您的订阅已到期，发布数量回落至阶梯默认；进行中的任务不受影响。可随时重新订阅恢复权益。',
+    variables: {},
     metadata: { subscriptionId: sub.id },
   }).catch((e) => console.error('[sub] notify failed:', e));
 }
@@ -255,8 +253,7 @@ export async function sweepSubscriptionsOnce(): Promise<{ activated: number; ren
     await notify({
       userId: sub.brand_user_id, email: u?.email, targetRole: 'BRAND',
       type: 'SUBSCRIPTION_RENEWAL_DUE',
-      title: `订阅将于 ${sub.current_period_end.slice(0, 10)} 自动续期`,
-      body: `您的营销顾问订阅将自动续期，应付 ¥${sub.price_snapshot.toLocaleString()}。请确保账户余额同时覆盖续期费与进行中任务的结算备付金；余额不足将进入 ${graceDays} 天宽限期。如需取消自动续费可在订阅页操作。`,
+      variables: { period: sub.current_period_end.slice(0, 10), amount: sub.price_snapshot, graceDays },
       metadata: { subscriptionId: sub.id, amount: sub.price_snapshot, periodEnd: sub.current_period_end },
     }).catch((e) => console.error('[sub] remind failed:', e));
     await pool.query('UPDATE merchant_subscriptions SET renewal_reminded_at = $1 WHERE id = $2', [now, sub.id]);
@@ -279,8 +276,7 @@ export async function sweepSubscriptionsOnce(): Promise<{ activated: number; ren
     await notify({
       userId: sub.brand_user_id, email: u?.email, targetRole: 'BRAND',
       type: 'SUBSCRIPTION_PAST_DUE',
-      title: '订阅续期扣款失败 — 请充值',
-      body: `续期需 ¥${r.code === 'INSUFFICIENT_BALANCE' ? r.needed.toLocaleString() : sub.price_snapshot.toLocaleString()}，当前余额不足。${graceDays} 天宽限期内充值到账即自动续期，逾期订阅将到期回落。`,
+      variables: { needed: r.code === 'INSUFFICIENT_BALANCE' ? r.needed : sub.price_snapshot, graceDays },
       metadata: { subscriptionId: sub.id },
     }).catch((e) => console.error('[sub] past-due notify failed:', e));
     } catch (e) { console.error(`[subs] renew failed sub=${sub.id}:`, e); }

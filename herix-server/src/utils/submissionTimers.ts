@@ -50,8 +50,7 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
       email: s.email,
       targetRole: 'BRAND',
       type: 'REVIEW_REMINDER',
-      title: `审核提醒：${s.title}`,
-      body: `任务《${s.title}》有一份${stageName}提交已等待审核 ${reviewDays - 1} 天，若 24 小时内仍未处理，系统将自动通过${s.stage === 'FINAL' ? '并结算打款' : ''}。`,
+      variables: { task: s.title, days: reviewDays - 1, stage: s.stage, autoNote: s.stage === 'FINAL' ? '并结算打款' : '' },
       metadata: { taskId: s.task_id, submissionId: s.id, taskTitle: s.title, stage: s.stage },
     }).catch((e) => console.error('[timers] REVIEW_REMINDER failed:', e));
     await update('task_submissions', { reminder_sent: 1 }, 'id = ?', [s.id]);
@@ -119,8 +118,7 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
       email: s.email,
       targetRole: 'HERALD',
       type: 'RESUBMIT_EXPIRY_WARN',
-      title: `「${s.title}」修改期即将结束`,
-      body: `你在「${s.title}」的修改提交还有约 24 小时窗口，逾期名额将自动释放，请抓紧重新提交。`,
+      variables: { task: s.title },
       metadata: { taskId: s.task_id, submissionId: s.id, taskTitle: s.title },
     }).catch((e) => console.error('[timers] RESUBMIT_EXPIRY_WARN failed:', e));
     await update('task_submissions', { resubmit_warn_sent: 1 }, 'id = ?', [s.id]);
@@ -157,8 +155,7 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
       email: s.email,
       targetRole: 'HERALD',
       type: 'SLOT_RELEASED',
-      title: `你在「${s.title}」的参与名额已到期`,
-      body: `由于修改期已过，你在「${s.title}」的参与名额已自动结束。如有兴趣可重新报名参与。`,
+      variables: { task: s.title },
       metadata: { taskId: s.task_id, submissionId: s.id, taskTitle: s.title },
     }).catch((e) => console.error('[timers] SLOT_RELEASED failed:', e));
     released++;

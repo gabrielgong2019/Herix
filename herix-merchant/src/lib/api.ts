@@ -94,19 +94,9 @@ export const tasksApi = {
 }
 
 // ── Reviews ───────────────────────────────────────────────────────
-export interface PendingApplication {
-  id: string
-  task_id: string
-  herald_id: string
-  message?: string | null
-  created_at: string
-  task_title: string
-  herald_name: string
-  display_name?: string | null
-}
-
 export const reviewsApi = {
-  pendingApplications: () => http.get<PendingApplication[]>('/applications/pending'),
+  // 与任务详情报名列表同款档案字段（共享 applicationQueries），HeraldDrawer 可直接渲染
+  pendingApplications: () => http.get<Application[]>('/applications/pending'),
   // 2026-07-26 接到真实端点（此前 /merchant/submissions/pending 与 approve/reject POST 均不存在，页面是坏的）
   list: () => http.get<Submission[]>('/submissions/pending'),
   review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
@@ -333,6 +323,8 @@ export interface Application {
   specialty_tags?: string[] | null
   proposal_text?: string | null
   proposal_links?: string | null
+  message?: string | null
+  task_title?: string  // 仅 /applications/pending 返回（审核队列上下文）
 }
 
 export interface Submission {

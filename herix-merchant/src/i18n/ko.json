@@ -53,7 +53,8 @@
     "tasks": "{{n}} 건",
     "joinedAt": "{{date}} 가입",
     "specialties": "전문 분야",
-    "proposal": "제안 내용"
+    "proposal": "제안 내용",
+    "applyMessage": "지원 메시지"
   },
   "specialty": {
     "baby-mom": "육아·맘",
@@ -635,7 +636,12 @@
     "arbitrationOpen": "중재 중",
     "pendingAppsTitle": "지원 심사 대기 ({{n}})",
     "goReviewApp": "심사하기",
-    "submissionsTitle": "콘텐츠 제출 심사"
+    "submissionsTitle": "콘텐츠 제출 심사",
+    "colPlatforms": "플랫폼",
+    "colMessage": "메시지",
+    "colAppliedAt": "지원 일시",
+    "viewTask": "작업 보기",
+    "goTopup": "충전하기"
   },
   "auth": {
     "loginTitle": "브랜드 대시보드",

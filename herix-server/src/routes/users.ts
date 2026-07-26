@@ -78,12 +78,22 @@ usersRouter.patch('/profile/herald', requireAuth, async (req: Request, res: Resp
   }
 });
 
-/** PATCH /api/users/me — 修改昵称 */
+/** PATCH /api/users/me — 修改昵称 / 语言偏好 */
 usersRouter.patch('/me', requireAuth, async (req: Request, res: Response) => {
-  const { nickname } = req.body;
-  if (!nickname || !nickname.trim()) return res.status(400).json({ error: '昵称不能为空' });
-  await update('users', { nickname: nickname.trim() }, 'id = ?', [req.user!.userId]);
-  res.json({ success: true, nickname: nickname.trim() });
+  const { nickname, lang } = req.body;
+  const updates: Record<string, string> = {};
+  if (nickname !== undefined) {
+    if (!nickname || !nickname.trim()) return res.status(400).json({ error: '昵称不能为空' });
+    updates.nickname = nickname.trim();
+  }
+  if (lang !== undefined) {
+    const allowed = ['zh', 'en', 'ja', 'vi', 'ko'];
+    if (!allowed.includes(lang)) return res.status(400).json({ error: '不支持的语言' });
+    updates.preferred_lang = lang;
+  }
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: '无有效字段' });
+  await update('users', updates, 'id = ?', [req.user!.userId]);
+  res.json({ success: true, ...updates });
 });
 
 /** POST /api/users/add-role — 添加第二个角色 */

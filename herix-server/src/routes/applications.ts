@@ -5,6 +5,7 @@ import { ApplyTaskSchema } from '../types';
 import { ZodError } from 'zod';
 import { notify } from '../utils/notify';
 import { getBrandCreditInfo } from '../utils/settings';
+import { fetchPendingApplications } from '../utils/applicationQueries';
 import crypto from 'crypto';
 
 function genPromoCode(): string {
@@ -121,8 +122,7 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
         email: creator.email,
         targetRole: 'BRAND',
         type: 'NEW_APPLICATION',
-        title: `新报名：${app.task_title}`,
-        body: `${app.herald_name} 报名了你的任务「${app.task_title}」，请前往任务详情审核。`,
+        variables: { task: app.task_title, herald: app.herald_name },
         metadata: { taskId: req.params.taskId, applicationId: appId, taskTitle: app.task_title, heraldName: app.herald_name },
       }).catch((e) => console.error('[notify] NEW_APPLICATION notification failed:', e));
     }
@@ -232,17 +232,12 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
   const notifyTask = await findOne<any>('SELECT title FROM tasks WHERE id = ?', [app.task_id]);
   if (notifyHerald && notifyTask) {
     const approved = status === 'APPROVED';
-    const noteClause = reviewNote ? `\n备注：${reviewNote}` : '';
     await notify({
       userId: app.herald_id,
       email: notifyHerald.email,
       targetRole: 'HERALD',
       type: approved ? 'APP_APPROVED' : 'APP_REJECTED',
-      title: `报名${approved ? '通过' : '未通过'}：${notifyTask.title}`,
-      body: approved
-        ? `${notifyHerald.nickname}，您报名的任务「${notifyTask.title}」已通过审核，请前往平台查看任务详情并开始执行。${noteClause}`
-        : `${notifyHerald.nickname}，很遗憾，您报名的任务「${notifyTask.title}」未通过本次审核。欢迎继续报名其他任务。${noteClause}`,
-      // taskTitle/note 进 metadata：前端按 type+params 渲染三语通知，title/body 留作旧客户端兜底
+      variables: { task: notifyTask.title, nickname: notifyHerald.nickname || '', note: reviewNote ? `\n备注：${reviewNote}` : '' },
       metadata: { taskId: app.task_id, applicationId: app.id, taskTitle: notifyTask.title, note: reviewNote || null },
     }).catch((e) => console.error('[notify] APP review notification failed:', e));
   }
@@ -257,17 +252,7 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
 /** GET /api/applications/pending — 名下任务全部待审报名（商家审核队列页汇总用，2026-07-26：
  *  报名审核入口原来只在任务详情申请人Tab，用户两次找不到——审核队列页现在汇总报名+内容两类待办） */
 applicationRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const rows = await findMany<any>(
-    `SELECT ta.id, ta.task_id, ta.herald_id, ta.message, ta.created_at,
-            t.title AS task_title, u.nickname AS herald_name, hp.display_name
-     FROM task_applications ta
-     JOIN tasks t ON t.id = ta.task_id
-     JOIN users u ON u.id = ta.herald_id
-     LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id
-     WHERE t.creator_id = ? AND ta.status = 'PENDING'
-     ORDER BY ta.created_at ASC`, [req.user!.userId]
-  );
-  res.json(rows);
+  res.json(await fetchPendingApplications(req.user!.userId));
 });
 
 /** GET /api/applications/my — 我的报名 (赫使侧) */

@@ -10,6 +10,7 @@ import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate, getPublishLimitInfo } from '../utils/settings';
+import { fetchTaskApplications } from '../utils/applicationQueries';
 import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
 import { VALID_SITES } from '../constants/sites';
 import pool from '../db';
@@ -542,8 +543,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
           userId: at.herald_id,
           targetRole: 'HERALD',
           type: 'CONVERSION_UPDATED',
-          title: `推广数据更新：${task.title}`,
-          body: `你的推广码 ${code} 数据已更新：注册 ${newRegCount}、使用 ${newUsedCount}。`,
+          variables: { task: task.title, code, reg: newRegCount, used: newUsedCount },
           metadata: { taskId: task.id, taskTitle: task.title, code, reg: newRegCount, used: newUsedCount },
         }).catch((e) => console.error('[notify] CONVERSION_UPDATED failed:', e));
       }
@@ -616,8 +616,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
       email: heraldUser?.email || null,
       targetRole: 'HERALD',
       type: 'CONVERSION_SETTLED',
-      title: `推广收入到账：${task.title}`,
-      body: `你的推广码 ${code} 新增 ${delta} 次转化，收入 ¥${paidAmount} 已入账钱包。`,
+      variables: { task: task.title, code, conversions: delta, amount: paidAmount },
       metadata: { taskId: task.id, taskTitle: task.title, code, conversions: delta, amount: paidAmount, reg: newRegCount, used: newUsedCount },
     }).catch((e) => console.error('[notify] CONVERSION_SETTLED failed:', e));
 
@@ -796,15 +795,13 @@ async function handleDetailUpload(
       const paidAmount = money.payoutPerConv * delta;
       await notify({
         userId: at.herald_id, email: heraldUser?.email || null, targetRole: 'HERALD', type: 'CONVERSION_SETTLED',
-        title: `推广收入到账：${task.title}`,
-        body: `你的推广码 ${code} 新增 ${delta} 次转化，收入 ¥${paidAmount} 已入账钱包。`,
+        variables: { task: task.title, code, conversions: delta, amount: paidAmount },
         metadata: { taskId: task.id, taskTitle: task.title, code, conversions: delta, amount: paidAmount, reg: counts?.registered_count, used: counts?.used_count },
       }).catch((e) => console.error('[notify] CONVERSION_SETTLED failed:', e));
     } else if (delta === 0) {
       await notify({
         userId: at.herald_id, targetRole: 'HERALD', type: 'CONVERSION_UPDATED',
-        title: `推广数据更新：${task.title}`,
-        body: `你的推广码 ${code} 数据已更新：注册 ${counts?.registered_count || 0}、使用 ${counts?.used_count || 0}。`,
+        variables: { task: task.title, code, reg: counts?.registered_count || 0, used: counts?.used_count || 0 },
         metadata: { taskId: task.id, taskTitle: task.title, code, reg: counts?.registered_count, used: counts?.used_count },
       }).catch((e) => console.error('[notify] CONVERSION_UPDATED failed:', e));
     }
@@ -829,26 +826,6 @@ async function handleDetailUpload(
 }
 
 /** PATCH /api/tasks/:id/publish});
-
-/** 任务报名列表（含赫使档案/履历字段）——详情内嵌 + GET /:id/applications 共用 */
-async function fetchTaskApplications(taskId: string): Promise<any[]> {
-  return findMany<any>(
-    `SELECT ta.*, u.nickname, u.avatar_url, hp.display_name, hp.country,
-            hp.social_platforms, hp.tier_snapshot, hp.social_platforms_updated_at,
-            hp.community, hp.bio,
-            (SELECT COUNT(*) FROM task_submissions ts2 WHERE ts2.herald_id = ta.herald_id AND ts2.status = 'APPROVED') AS completed_tasks,
-            (SELECT ROUND(AVG(CASE WHEN tr.score >= 4 THEN 1.0 ELSE 0 END) * 100) / 100.0
-             FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate,
-            (SELECT json_agg(hst.tag_id ORDER BY st.sort_order)
-             FROM herald_specialty_tags hst
-             JOIN specialty_tags st ON st.id = hst.tag_id
-             WHERE hst.herald_id = ta.herald_id AND st.active = 1) AS specialty_tags
-     FROM task_applications ta
-     JOIN users u ON u.id = ta.herald_id
-     LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id
-     WHERE ta.task_id = ? ORDER BY ta.created_at DESC`, [taskId]
-  );
-}
 
 /** GET /api/tasks/:id/applications — 任务报名列表（仅创建者/管理员） */
 tasksRouter.get('/:id/applications', requireAuth, async (req: Request, res: Response) => {
@@ -1237,8 +1214,7 @@ tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), async (req
         email: h.email || null,
         targetRole: 'HERALD',
         type: 'TASK_CLOSING',
-        title: `任务已关闭，缓冲期至 ${deadline}：${task.title}`,
-        body: `任务「${task.title}」已关闭。数据仍可收录至 ${deadline}（30 天缓冲期）——请提醒你邀请的用户尽快完成转化，逾期将不再结算。`,
+        variables: { task: task.title, deadline },
         metadata: { taskId: task.id, taskTitle: task.title, code: h.unique_code, date: deadline },
       }).catch((e) => console.error('[notify] TASK_CLOSING failed:', e));
     }

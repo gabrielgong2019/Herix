@@ -53,7 +53,8 @@
     "tasks": "{{n}} 个",
     "joinedAt": "加入于 {{date}}",
     "specialties": "擅长领域",
-    "proposal": "投稿方案"
+    "proposal": "投稿方案",
+    "applyMessage": "报名留言"
   },
   "specialty": {
     "baby-mom": "宝妈",
@@ -630,7 +631,12 @@
     "arbitrationOpen": "仲裁中",
     "pendingAppsTitle": "报名待审（{{n}}）",
     "goReviewApp": "去审核",
-    "submissionsTitle": "内容提交审核"
+    "submissionsTitle": "内容提交审核",
+    "colPlatforms": "平台账号",
+    "colMessage": "留言",
+    "colAppliedAt": "申请时间",
+    "viewTask": "查看任务",
+    "goTopup": "去充值"
   },
   "auth": {
     "loginTitle": "登录商家后台",

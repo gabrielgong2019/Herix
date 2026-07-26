@@ -214,7 +214,7 @@ export const arbitrations = {
 export const users = {
   addRole: (role: 'HERALD' | 'BRAND') =>
     request<{ token: string; roles: string[] }>('POST', '/users/add-role', { role }),
-  updateMe: (data: { nickname?: string }) => request<any>('PATCH', '/users/me', data),
+  updateMe: (data: { nickname?: string; lang?: string }) => request<any>('PATCH', '/users/me', data),
 };
 
 // ── Ambassador（赫使身份/入驻）──

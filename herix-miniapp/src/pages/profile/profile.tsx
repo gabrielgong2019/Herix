@@ -395,6 +395,7 @@ export default class Profile extends Component<{}, State> {
       const picked = LOCALES[res.tapIndex];
       if (picked && picked.id !== getLocale()) {
         await setLocale(picked.id);
+        users.updateMe({ lang: picked.id }).catch(() => { /* 同步失败不阻断 */ });
         this.forceUpdate(); // 本页文案立即生效；其他页面在重新进入时生效
       }
     } catch {

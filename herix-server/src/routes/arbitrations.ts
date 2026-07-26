@@ -79,8 +79,7 @@ arbitrationsRouter.post('/', requireAuth, requireRole('BRAND', 'HERALD', 'ADMIN'
       email: cp?.email,
       targetRole: isBrandParty ? 'HERALD' : 'BRAND',
       type: 'ARBITRATION_OPENED',
-      title: `平台仲裁已开案：${sub.title}`,
-      body: `任务「${sub.title}」的交付争议已提交平台仲裁，平台将审阅双方提交与审核记录后裁决，请留意通知。`,
+      variables: { task: sub.title },
       metadata: { taskId: sub.task_id, submissionId: sub.id, taskTitle: sub.title, arbitrationId: arbId },
     }).catch((e) => console.error('[notify] ARBITRATION_OPENED failed:', e));
 

@@ -10,6 +10,8 @@ interface Props {
   onReject: (appId: string) => void
   approving?: boolean
   rejecting?: boolean
+  /** 审核队列上下文显示所属任务；任务详情内不传（上下文自明） */
+  taskTitle?: string
 }
 
 interface SocialPlatform {
@@ -46,7 +48,7 @@ function parseProposalLinks(raw: string | null | undefined): string[] {
   try { return JSON.parse(raw) } catch { return [] }
 }
 
-export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rejecting }: Props) {
+export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rejecting, taskTitle }: Props) {
   const { t } = useTranslation()
 
   if (!app) return null
@@ -82,7 +84,12 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px', borderBottom: '1px solid var(--border)',
         }}>
-          <span style={{ fontWeight: 600, fontSize: 15 }}>{t('herald.drawerTitle')}</span>
+          <div>
+            <span style={{ fontWeight: 600, fontSize: 15 }}>{t('herald.drawerTitle')}</span>
+            {taskTitle && (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{taskTitle}</div>
+            )}
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--muted)' }}>
             <X size={18} />
           </button>
@@ -189,6 +196,14 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
                   </span>
                 ))}
               </div>
+            </Section>
+          )}
+
+          {app.message && (
+            <Section label={t('herald.applyMessage')}>
+              <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap' }}>
+                {app.message}
+              </p>
             </Section>
           )}
 

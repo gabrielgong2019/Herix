@@ -85,8 +85,7 @@ export async function approveDraftSubmission(args: {
     email: heraldU?.email,
     targetRole: 'HERALD',
     type: 'DRAFT_APPROVED',
-    title: `草稿审核通过：${args.taskTitle}`,
-    body: `${heraldU?.nickname || ''}，您提交的任务「${args.taskTitle}」草稿已通过审核。现在可以正式发布内容，发布后回到任务页提交最终链接。`,
+    variables: { task: args.taskTitle, nickname: heraldU?.nickname || '', note: args.reviewNote ? `\n备注：${args.reviewNote}` : '' },
     metadata: { taskId: args.submission.task_id, submissionId: args.submission.id, taskTitle: args.taskTitle, note: args.reviewNote || null },
   }).catch((e) => console.error('[notify] DRAFT_APPROVED failed:', e));
   return { ok: true };
@@ -119,8 +118,7 @@ export async function settleFinalSubmission(args: {
         userId: task.creator_id,
         targetRole: 'BRAND',
         type: 'SETTLEMENT_BLOCKED',
-        title: '任务待结算 — 请充值完成打款',
-        body: `任务《${task.title}》已完成，需支付 ¥${costPerHerald}（赫使到手 ¥${payout} + 平台服务费 ¥${platformFee}），当前余额 ¥${brandBal.available} 不足。`,
+        variables: { task: task.title, needed: costPerHerald, available: brandBal.available },
         metadata: { taskId: task.id, submissionId: submission.id, taskTitle: task.title, needed: costPerHerald, available: brandBal.available },
       }).catch((e) => console.error('[notify] SETTLEMENT_BLOCKED failed:', e));
     }
@@ -180,14 +178,12 @@ export async function settleFinalSubmission(args: {
 
   const heraldUser = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [submission.herald_id]);
   if (heraldUser) {
-    const noteClause = args.reviewNote ? `\n备注：${args.reviewNote}` : '';
     await notify({
       userId: submission.herald_id,
       email: heraldUser.email,
       targetRole: 'HERALD',
       type: 'SUB_APPROVED',
-      title: `内容审核通过：${task.title}`,
-      body: `${heraldUser.nickname}，您提交的任务「${task.title}」内容已审核通过，报酬将自动结算至您的钱包。${noteClause}`,
+      variables: { task: task.title, nickname: heraldUser.nickname || '', note: args.reviewNote ? `\n备注：${args.reviewNote}` : '' },
       metadata: { taskId: submission.task_id, submissionId: submission.id, taskTitle: task.title, note: args.reviewNote || null },
     }).catch((e) => console.error('[notify] SUB_APPROVED failed:', e));
   }

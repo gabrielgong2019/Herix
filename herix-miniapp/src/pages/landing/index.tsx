@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { auth, tasks as taskApi, categories as categoriesApi, setToken, assetUrl } from '../../utils/api';
+import { auth, tasks as taskApi, categories as categoriesApi, users, setToken, assetUrl } from '../../utils/api';
 // 打包进产物的 logo（weapp 端拿不到服务器 /Logo/ 路径，H5/weapp 统一走 bundle）
 import logoIcon from '../../assets/herix-icon.png';
 import './index.scss';
@@ -112,6 +112,7 @@ export default class Landing extends Component<{}, State> {
       let d: any = await auth.wechatLogin();
       if (d?.needRegister) d = await auth.wechatRegister();
       if (d?.token) setToken(d.token);
+      users.updateMe({ lang: getLocale() }).catch(() => { /* 同步失败不阻断 */ });
       const { taskId } = this.state;
       const onboarded = d?.user?.is_onboarded;
       if (!onboarded) {
@@ -132,6 +133,7 @@ export default class Landing extends Component<{}, State> {
       const picked = LOCALES[res.tapIndex];
       if (picked && picked.id !== getLocale()) {
         await setLocale(picked.id);
+        users.updateMe({ lang: picked.id }).catch(() => { /* 同步失败不阻断 */ });
         this.forceUpdate();
       }
     } catch { /* 用户取消 */ }
@@ -182,6 +184,7 @@ export default class Landing extends Component<{}, State> {
         }
       }
       if (d?.token) setToken(d.token);
+      users.updateMe({ lang: getLocale() }).catch(() => { /* 同步失败不阻断 */ });
       // 新注册赫使 or 未完成入驻 → 先走入职引导（透传邀请任务，引导完再报名）；
       // 已入驻登录用户 → 有邀请任务直达详情、否则进首页
       const onboarded = d?.user?.is_onboarded;

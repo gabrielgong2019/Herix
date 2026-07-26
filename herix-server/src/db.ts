@@ -591,6 +591,8 @@ export async function initDatabase() {
     `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0`,
     // resubmit_warn_sent：赫使侧临期预警只发一次的标记，被拒后重提时归零
     `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS resubmit_warn_sent INTEGER NOT NULL DEFAULT 0`,
+    // preferred_lang：用户通知语言，由客户端登录/切语言时同步（heralds: zh/en/ja/vi；brands: zh/en/ja/ko）
+    `ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_lang TEXT NOT NULL DEFAULT 'zh'`,
     // 仲裁开案：改稿额度用尽后商家/赫使任一方开案，一个提交终身只能开一案（UNIQUE）。
     // 开案期间该提交冻结超时计时（timers 跳过 OPEN 案对应的行）
     `CREATE TABLE IF NOT EXISTS arbitrations (

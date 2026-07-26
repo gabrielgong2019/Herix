@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Image, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { auth, tasks as taskApi, categories as categoriesApi, setToken } from '../../utils/api';
+import { auth, tasks as taskApi, categories as categoriesApi, setToken, assetUrl } from '../../utils/api';
 // 打包进产物的 logo（weapp 端拿不到服务器 /Logo/ 路径，H5/weapp 统一走 bundle）
 import logoIcon from '../../assets/herix-icon.png';
 import './index.scss';
@@ -217,6 +217,7 @@ export default class Landing extends Component<{}, State> {
         {/* 邀请任务预览 */}
         {task ? (
           <View className='lp-task'>
+            {!!task.cover_image && <Image className='lp-task-cover' src={assetUrl(task.cover_image)} mode='widthFix' />}
             {!!catText && <Text className='lp-task-cat'>{catText}</Text>}
             <Text className='lp-task-title'>{task.title}</Text>
             {!!task.creator_name && <Text className='lp-task-brand'>{t('landing.from', { name: task.creator_name })}</Text>}

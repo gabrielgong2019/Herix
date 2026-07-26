@@ -33,16 +33,17 @@ adminRouter.get('/task-reviews', async (_req: Request, res: Response) => {
             u.nickname as creator_name, u.email as creator_email, bp.company_name, bp.is_agency
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
-     WHERE t.platform_review = 'pending' ORDER BY t.published_at ASC`
+     WHERE t.status = 'PENDING_REVIEW' ORDER BY t.published_at ASC`
   );
   res.json(rows);
 });
 
 /** POST /api/admin/task-reviews/:id/approve — 任务审核通过（进公开列表） */
 adminRouter.post('/task-reviews/:id/approve', async (req: Request, res: Response) => {
-  const task = await findOne<any>("SELECT id, title, creator_id FROM tasks WHERE id = ? AND platform_review = 'pending'", [req.params.id]);
+  const task = await findOne<any>("SELECT id, title, creator_id FROM tasks WHERE id = ? AND status = 'PENDING_REVIEW'", [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在或不在审核中' });
-  await update('tasks', { platform_review: 'approved', platform_review_note: null }, 'id = ?', [task.id]);
+  // published_at 语义 = 进入公开时间：审核通过时刷新（发布时写的是提交送审时间，队列排序用）
+  await update('tasks', { status: 'OPEN', published_at: new Date().toISOString(), platform_review: 'approved', platform_review_note: null }, 'id = ?', [task.id]);
   await createNotification({
     userId: task.creator_id, type: 'TASK_REVIEW_APPROVED', targetRole: 'BRAND',
     title: '任务审核通过',
@@ -56,9 +57,9 @@ adminRouter.post('/task-reviews/:id/approve', async (req: Request, res: Response
 adminRouter.post('/task-reviews/:id/reject', async (req: Request, res: Response) => {
   const reason = String(req.body?.reason || '').trim();
   if (!reason) return res.status(400).json({ error: '请填写拒绝原因（会展示给商家）' });
-  const task = await findOne<any>("SELECT id, title, creator_id FROM tasks WHERE id = ? AND platform_review = 'pending'", [req.params.id]);
+  const task = await findOne<any>("SELECT id, title, creator_id FROM tasks WHERE id = ? AND status = 'PENDING_REVIEW'", [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在或不在审核中' });
-  // 退回草稿零资金副作用：额度占用从 OPEN 状态动态计算，无发布时点的硬锁
+  // 退回草稿零资金副作用：额度占用从状态动态计算，无发布时点的硬锁
   await update('tasks', { platform_review: 'rejected', platform_review_note: reason, status: 'DRAFT' }, 'id = ?', [task.id]);
   await createNotification({
     userId: task.creator_id, type: 'TASK_REVIEW_REJECTED', targetRole: 'BRAND',
@@ -501,7 +502,7 @@ adminRouter.post('/topup-requests/:id/confirm', async (req: Request, res: Respon
   const fpThresh  = Number(fpSetting) || 100000;
   if (newBal >= fpThresh) {
     await pool.query(
-      `UPDATE tasks SET fast_payout = TRUE WHERE creator_id = $1 AND status IN ('OPEN','IN_PROGRESS')`,
+      `UPDATE tasks SET fast_payout = TRUE WHERE creator_id = $1 AND status IN ('PENDING_REVIEW','OPEN','IN_PROGRESS')`,
       [row.brand_id],
     );
   }

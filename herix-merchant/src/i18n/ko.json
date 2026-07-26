@@ -87,7 +87,8 @@
     "cancelled": "취소됨",
     "pending": "검토 중",
     "approved": "승인됨",
-    "rejected": "거절됨"
+    "rejected": "거절됨",
+    "pending_review": "심사 대기"
   },
   "dashboard": {
     "title": "대시보드",
@@ -721,6 +722,10 @@
     "SUBSCRIPTION_EXPIRED": {
       "title": "구독 만료",
       "body": "게시 한도가 기본 단계로 돌아갔습니다. 진행 중 작업은 영향받지 않습니다."
+    },
+    "NEW_APPLICATION": {
+      "title": "새 지원: {{taskTitle}}",
+      "body": "{{heraldName}} 님이 작업 \"{{taskTitle}}\"에 지원했습니다. 작업 상세에서 심사해 주세요."
     }
   },
   "subscribe": {

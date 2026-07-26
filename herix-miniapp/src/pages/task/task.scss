@@ -646,3 +646,11 @@
 /* ── 仲裁申请入口（P1，2026-07-26）── */
 .arb-entry { margin-top: 20px; display: flex; flex-direction: column; gap: 16px; }
 .arb-reason { min-height: 160px; }
+
+/* 任务封面图 */
+.task-cover {
+  width: 100%;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  display: block;
+}

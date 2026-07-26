@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Button, Textarea, Input, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, arbitrations, auth, ApiError, getToken } from '../../utils/api';
+import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, arbitrations, auth, ApiError, getToken, assetUrl } from '../../utils/api';
 import { getAmbassadorProfile, invalidateProfileCache } from '../../utils/profileCache';
 import { fmtLocal } from '../../utils/format';
 import { checkRequirements, RequirementFailure } from '../../utils/requirements';
@@ -15,6 +15,7 @@ import BackBar from '../../components/BackBar';
 interface TaskDetailData {
   id: string;
   title: string;
+  cover_image?: string | null;
   description: string;
   requirements: string;
   platform_requirements?: string | null;
@@ -618,6 +619,11 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     return (
       <View className='task-detail'>
         <BackBar />
+
+        {/* 任务封面图（2026-07-26 补：商家上传的 cover_image 此前只在商家端展示，赫使侧从未渲染） */}
+        {task.cover_image && (
+          <Image className='task-cover' src={assetUrl(task.cover_image)} mode='widthFix' />
+        )}
 
         {/* 品牌卡 */}
         {(task.brand_logo_url || task.brand_company_name) && (

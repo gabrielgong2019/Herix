@@ -87,7 +87,8 @@
     "cancelled": "已取消",
     "pending": "待审核",
     "approved": "已通过",
-    "rejected": "已拒绝"
+    "rejected": "已拒绝",
+    "pending_review": "待审核"
   },
   "dashboard": {
     "title": "概览",
@@ -716,6 +717,10 @@
     "SUBSCRIPTION_EXPIRED": {
       "title": "订阅已到期",
       "body": "发布数量已回落至阶梯默认，进行中任务不受影响，可随时重新订阅。"
+    },
+    "NEW_APPLICATION": {
+      "title": "新报名：{{taskTitle}}",
+      "body": "{{heraldName}} 报名了你的任务「{{taskTitle}}」，请前往任务详情审核。"
     }
   },
   "subscribe": {

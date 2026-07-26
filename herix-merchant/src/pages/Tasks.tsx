@@ -118,10 +118,12 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
 
 function StatusTag({ status }: { status: string }) {
   const { t } = useTranslation()
+  // PENDING_REVIEW 是真状态（2026-07-26 状态机补齐，见 contracts.ts TASK_STATUSES），直接映射词条
   const key = status.toLowerCase()
   const map: Record<string, { bg: string; color: string }> = {
     open: { bg: '#dcfce7', color: '#16a34a' },
-    draft: { bg: '#fef3c7', color: '#d97706' },
+    pending_review: { bg: '#fef3c7', color: '#d97706' },
+    draft: { bg: '#f3f4f6', color: '#6b7280' },
     completed: { bg: '#e0e7ff', color: '#4338ca' },
     cancelled: { bg: '#fee2e2', color: '#dc2626' },
   }
@@ -151,10 +153,12 @@ export default function Tasks() {
   })
 
   const tasks = data?.tasks || []
+  // val 传给服务端做精确匹配，须与 DB 状态值大小写一致（此前小写 'open' 恒查空）
   const filters = [
     { val: '', label: t('tasks.filterAll') },
-    { val: 'open', label: t('tasks.filterOpen') },
-    { val: 'draft', label: t('tasks.filterDraft') },
+    { val: 'OPEN', label: t('tasks.filterOpen') },
+    { val: 'PENDING_REVIEW', label: t('status.pending_review') },
+    { val: 'DRAFT', label: t('tasks.filterDraft') },
   ]
 
   return (

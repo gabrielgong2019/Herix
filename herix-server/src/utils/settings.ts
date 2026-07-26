@@ -201,7 +201,7 @@ export async function getBrandCreditInfo(brandUserId: string, forTaskId?: string
            AND ts.herald_id = ta.herald_id
            AND ts.status = 'APPROVED'
        )
-     WHERE t.creator_id = $1 AND t.status IN ('OPEN', 'IN_PROGRESS') AND t.mode = 'STANDARD'
+     WHERE t.creator_id = $1 AND t.status IN ('PENDING_REVIEW', 'OPEN', 'IN_PROGRESS') AND t.mode = 'STANDARD'
      GROUP BY t.id, t.trial_credit_amount`,
     [brandUserId],
   );
@@ -318,7 +318,7 @@ export async function getPublishLimitInfo(brandUserId: string): Promise<PublishL
       `SELECT kyb_status, max_open_tasks_override FROM brand_profiles WHERE user_id = $1`, [brandUserId]),
     pool.query(
       `SELECT COUNT(*)::int AS n FROM tasks
-       WHERE creator_id = $1 AND status IN ('OPEN', 'IN_PROGRESS')`, [brandUserId]),
+       WHERE creator_id = $1 AND status IN ('PENDING_REVIEW', 'OPEN', 'IN_PROGRESS')`, [brandUserId]),
     pool.query(
       `SELECT COALESCE(SUM(we.amount), 0) AS s FROM wallet_entries we
        JOIN wallets w ON w.id = we.wallet_id

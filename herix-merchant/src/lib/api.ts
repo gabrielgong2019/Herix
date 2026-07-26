@@ -65,11 +65,13 @@ export const tasksApi = {
   applications: (id: string) => http.get<Application[]>(`/tasks/${id}/applications`),
   uploadCsv: (id: string, records: CsvRecord[]) =>
     http.post<CsvUploadResult>(`/tasks/${id}/csv`, { records }),
-  submissions: (id: string) => http.get<Submission[]>(`/tasks/${id}/submissions`),
-  approveApp: (taskId: string, appId: string) =>
-    http.post(`/tasks/${taskId}/applications/${appId}/approve`),
-  rejectApp: (taskId: string, appId: string) =>
-    http.post(`/tasks/${taskId}/applications/${appId}/reject`),
+  // 提交/报名审核走服务端真实路由（2026-07-26 修契约漂移：此前 /tasks/:id/submissions
+  // 和 /tasks/:id/applications/:appId/approve|reject 服务端从未实现，Tab 恒空、审核按钮 404）
+  submissions: (id: string) => http.get<Submission[]>(`/submissions/task/${id}`),
+  approveApp: (_taskId: string, appId: string) =>
+    http.patch(`/applications/${appId}/review`, { status: 'APPROVED' }),
+  rejectApp: (_taskId: string, appId: string, reviewNote?: string) =>
+    http.patch(`/applications/${appId}/review`, { status: 'REJECTED', reviewNote }),
   getCodePool: (id: string) => http.get<CodePool>(`/tasks/${id}/codes`),
   uploadCustomCodes: (id: string, codes: string[]) =>
     http.post<{ added: number; skipped: number }>(`/tasks/${id}/codes/upload`, { codes }),

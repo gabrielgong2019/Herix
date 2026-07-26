@@ -57,7 +57,7 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
   const maskedName = name.length > 1 ? name[0] + '**' : name
   const completedTasks = Number(app.completed_tasks || 0)
   const goodRate = app.good_rate != null ? Math.round(Number(app.good_rate) * 100) : null
-  const isPending = app.status === 'pending'
+  const isPending = app.status.toLowerCase() === 'pending' // 服务端大写 PENDING，归一后比较
 
   return (
     <>

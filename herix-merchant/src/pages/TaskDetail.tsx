@@ -655,7 +655,7 @@ export default function TaskDetail() {
 
         {/* 审核中提示：分享链接此时对赫使 404（审核门防直链绕过），商家分享出去全是"无任务"——
             先把预期讲清楚（2026-07-26 用户实测 H5 落地页"无任务"由此） */}
-        {!isDraft && task.platform_review === 'pending' && (
+        {task.status === 'PENDING_REVIEW' && (
           <div className="rounded-2xl px-5 py-4 mb-5 text-sm flex items-center gap-2"
             style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
             ⏳ {t('taskDetail.reviewPendingShareHint')}
@@ -668,8 +668,8 @@ export default function TaskDetail() {
           </div>
         )}
 
-        {/* Share section */}
-        {!isDraft && <ShareSection taskId={id!} />}
+        {/* Share section：审核中不展示——链接对赫使 404，上方横幅已说明 */}
+        {!isDraft && task.status !== 'PENDING_REVIEW' && <ShareSection taskId={id!} />}
 
         {/* Task summary */}
         <div className="rounded-2xl p-6 mb-5" style={{ background: '#fff' }}>
@@ -751,15 +751,16 @@ export default function TaskDetail() {
                       {formatDate(app.created_at)}
                     </td>
                     <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                      {/* 服务端 status 大写(PENDING/APPROVED/REJECTED)，归一后再比较/取词条（同 submissions 徽章踩过的坑） */}
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
-                        background: app.status === 'approved' ? '#dcfce7' : app.status === 'rejected' ? '#fee2e2' : '#fef3c7',
-                        color: app.status === 'approved' ? '#16a34a' : app.status === 'rejected' ? '#dc2626' : '#d97706',
+                        background: app.status.toLowerCase() === 'approved' ? '#dcfce7' : app.status.toLowerCase() === 'rejected' ? '#fee2e2' : '#fef3c7',
+                        color: app.status.toLowerCase() === 'approved' ? '#16a34a' : app.status.toLowerCase() === 'rejected' ? '#dc2626' : '#d97706',
                       }}>
-                        {t(`status.${app.status}`)}
+                        {t(`status.${app.status.toLowerCase()}`)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-xs" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
-                      {app.status === 'pending' && (
+                      {app.status.toLowerCase() === 'pending' && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Check size={12} style={{ color: '#16a34a' }} /> / <X size={12} style={{ color: '#dc2626' }} />
                         </span>

@@ -84,7 +84,7 @@ export async function initDatabase() {
       difficulty TEXT DEFAULT 'medium' CHECK(difficulty IN ('easy','medium','hard')),
       category TEXT,
       content_type TEXT DEFAULT 'photo' CHECK(content_type IN ('photo','video','referral')),
-      status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','OPEN','IN_PROGRESS','COMPLETED','CANCELLED')),
+      status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED','CANCELLED')),
       published_at TEXT,
       completed_at TEXT,
       escrow_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
@@ -873,6 +873,13 @@ export async function initDatabase() {
     `ALTER TABLE tasks DROP COLUMN IF EXISTS submit_deadline`,
     `ALTER TABLE tasks DROP COLUMN IF EXISTS code_mode`,
     `ALTER TABLE tasks DROP COLUMN IF EXISTS data_mode`,
+    // 任务状态机补 PENDING_REVIEW 真状态（2026-07-26，contracts.ts TASK_STATUSES DB-CHECK）：
+    // 此前用 OPEN+platform_review 正交列表达"待审核"，报名闸只看 status 导致未过审任务可被报名。
+    // 幂等重建 CHECK + 存量数据迁移（platform_review 列保留做审计记录）
+    `ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check`,
+    `ALTER TABLE tasks ADD CONSTRAINT tasks_status_check
+     CHECK(status IN ('DRAFT','PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED','CANCELLED'))`,
+    `UPDATE tasks SET status = 'PENDING_REVIEW' WHERE status = 'OPEN' AND platform_review = 'pending'`,
   ];
   for (const m of migrations) {
     await pool.query(m);

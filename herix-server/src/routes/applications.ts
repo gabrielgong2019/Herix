@@ -110,6 +110,23 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
        WHERE ta.id = ?`, [appId]
     );
 
+    // 通知商家有新报名（2026-07-26 补：此前赫使报名后商家侧零感知，铃铛不响、只能自己翻任务详情）
+    const creator = await findOne<any>(
+      'SELECT u.id, u.email FROM users u JOIN tasks t ON t.creator_id = u.id WHERE t.id = ?',
+      [req.params.taskId]
+    );
+    if (creator) {
+      await notify({
+        userId: creator.id,
+        email: creator.email,
+        targetRole: 'BRAND',
+        type: 'NEW_APPLICATION',
+        title: `新报名：${app.task_title}`,
+        body: `${app.herald_name} 报名了你的任务「${app.task_title}」，请前往任务详情审核。`,
+        metadata: { taskId: req.params.taskId, applicationId: appId, taskTitle: app.task_title, heraldName: app.herald_name },
+      }).catch((e) => console.error('[notify] NEW_APPLICATION notification failed:', e));
+    }
+
     res.status(201).json(app);
   } catch (err) {
     if (err instanceof ZodError) {

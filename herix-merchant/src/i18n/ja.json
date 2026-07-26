@@ -87,7 +87,8 @@
     "cancelled": "キャンセル済",
     "pending": "審査中",
     "approved": "承認済",
-    "rejected": "却下済"
+    "rejected": "却下済",
+    "pending_review": "審査待ち"
   },
   "dashboard": {
     "title": "ダッシュボード",
@@ -721,6 +722,10 @@
     "SUBSCRIPTION_EXPIRED": {
       "title": "契約が終了しました",
       "body": "公開枠は通常に戻りました。進行中のタスクに影響はありません。"
+    },
+    "NEW_APPLICATION": {
+      "title": "新規応募：{{taskTitle}}",
+      "body": "{{heraldName}} さんがタスク「{{taskTitle}}」に応募しました。タスク詳細から審査してください。"
     }
   },
   "subscribe": {

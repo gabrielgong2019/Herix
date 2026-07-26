@@ -25,6 +25,7 @@ const TYPE_ICON: Record<string, string> = {
   SETTLEMENT_BLOCKED: '⚠️',
   ARBITRATION_OPENED: '⚖️',
   ARBITRATION_RESOLVED: '⚖️',
+  NEW_APPLICATION: '🙋',
   TASK_REVIEW_APPROVED: '✅',
   TASK_REVIEW_REJECTED: '❌',
   KYB_APPROVED: '🏢',

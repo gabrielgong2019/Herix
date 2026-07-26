@@ -27,7 +27,9 @@ export type ContentType = typeof CONTENT_TYPES[number];
 /** 内容创作任务的可选形式（表单 UI 用，不含 referral 占位值） */
 export const STANDARD_CONTENT_TYPES = ['photo', 'video', 'both'] as const;
 
-export const TASK_STATUSES = ['DRAFT', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+// PENDING_REVIEW（2026-07-26）：未KYB商家发布后的平台审核态（DRAFT→PENDING_REVIEW→OPEN，被拒退回DRAFT）。
+// 曾用 status=OPEN + platform_review 正交列表达，导致报名接口对未过审任务放行 + 商家端显示"招募中"误导
+export const TASK_STATUSES = ['DRAFT', 'PENDING_REVIEW', 'OPEN', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const; // DB-CHECK
 export type TaskStatus = typeof TASK_STATUSES[number];
 
 export const TASK_VISIBILITIES = ['PUBLIC', 'INVITE'] as const;

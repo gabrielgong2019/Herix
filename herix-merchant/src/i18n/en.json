@@ -87,7 +87,8 @@
     "cancelled": "Cancelled",
     "pending": "Pending",
     "approved": "Approved",
-    "rejected": "Rejected"
+    "rejected": "Rejected",
+    "pending_review": "Pending review"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -721,6 +722,10 @@
     "SUBSCRIPTION_EXPIRED": {
       "title": "Subscription expired",
       "body": "Publishing limits returned to standard tiers; in-flight tasks are unaffected."
+    },
+    "NEW_APPLICATION": {
+      "title": "New application: {{taskTitle}}",
+      "body": "{{heraldName}} applied to your task \"{{taskTitle}}\". Review it on the task detail page."
     }
   },
   "subscribe": {

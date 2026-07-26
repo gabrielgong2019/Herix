@@ -12,6 +12,13 @@ const CLOUD_SERVICE_NAME = 'herix-proxy'; // 云托管服务名称，需与部�
 // 打本地后端，以后部署到哪个域名就自动打那个域名自己，不用写死成线上地址
 const H5_BASE_URL = '/api';
 
+/** 服务端相对资源路径（/uploads/...）→ 可渲染 URL：H5 同源直用，weapp 拼生产域名 */
+export function assetUrl(p?: string | null): string {
+  if (!p) return '';
+  if (p.startsWith('http')) return p;
+  return (isWeapp ? 'https://herix.huaxuex.com' : '') + p;
+}
+
 const isWeapp = process.env.TARO_ENV === 'weapp';
 
 // 请求失败时，除了错误信息，把后端返回的完整 body（code/failures 等结构化字段）

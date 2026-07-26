@@ -44,15 +44,16 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   // 非创建者只看已发布（OPEN）任务；INVITE 任务不出现在公开列表
   const uid = req.user?.userId;
   if (!uid) {
-    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'";
+    // PENDING_REVIEW 真状态后 status='OPEN' 已隐含过审，platform_review 过滤冗余（列保留做审计）
+    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC'";
   } else if (creator) {
     // 商家查自己的任务：显示全部状态和 visibility
     if (creator !== uid) {
-      where += " AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'"; // 不能看别人的 INVITE/审核中任务
+      where += " AND t.visibility = 'PUBLIC' AND t.status NOT IN ('DRAFT','PENDING_REVIEW')"; // 不能看别人的 INVITE/草稿/审核中任务
     }
   } else {
-    // 赫使浏览探索列表：只显示 OPEN 且 PUBLIC 且已过平台审核
-    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC' AND t.platform_review = 'approved'";
+    // 赫使浏览探索列表：只显示 OPEN 且 PUBLIC（OPEN 已隐含过审）
+    where += " AND t.status = 'OPEN' AND t.visibility = 'PUBLIC'";
     // 社群过滤：只显示定向到该社群的任务 + 无社群限制的任务（community=null 历史账号降级全量）
     // allCommunities=true 时赫使可主动关闭过滤，看全量任务
     const heraldProfile = await findOne<{ community: string | null }>(
@@ -326,13 +327,13 @@ function graceDeadline(task: { status?: string; completed_at?: string | null }):
 
 /** 数据通道是否开放：进行中，或已完成且在 30 天缓冲期内。CANCELLED/DRAFT 一律关闭 */
 function uploadWindowOpen(task: { status?: string; completed_at?: string | null }): boolean {
-  if (['OPEN', 'IN_PROGRESS'].includes(String(task.status))) return true;
+  if (['PENDING_REVIEW', 'OPEN', 'IN_PROGRESS'].includes(String(task.status))) return true;
   const d = graceDeadline(task);
   return !!d && d.getTime() > Date.now();
 }
 
 /** SQL 片段：任务对品牌方仍"活跃"（进行中或缓冲期内），参数为 30 天前的 ISO 时间 */
-const BINDING_ACTIVE_SQL = `(t.status IN ('OPEN','IN_PROGRESS') OR (t.status = 'COMPLETED' AND t.completed_at > ?))`;
+const BINDING_ACTIVE_SQL = `(t.status IN ('PENDING_REVIEW','OPEN','IN_PROGRESS') OR (t.status = 'COMPLETED' AND t.completed_at > ?))`;
 const graceCutoffIso = () => new Date(Date.now() - GRACE_DAYS * 24 * 3600_000).toISOString();
 
 async function isBrandPartyOf(taskId: string, userId?: string): Promise<boolean> {
@@ -829,6 +830,36 @@ async function handleDetailUpload(
 
 /** PATCH /api/tasks/:id/publish});
 
+/** 任务报名列表（含赫使档案/履历字段）——详情内嵌 + GET /:id/applications 共用 */
+async function fetchTaskApplications(taskId: string): Promise<any[]> {
+  return findMany<any>(
+    `SELECT ta.*, u.nickname, u.avatar_url, hp.display_name, hp.country,
+            hp.social_platforms, hp.tier_snapshot, hp.social_platforms_updated_at,
+            hp.community, hp.bio,
+            (SELECT COUNT(*) FROM task_submissions ts2 WHERE ts2.herald_id = ta.herald_id AND ts2.status = 'APPROVED') AS completed_tasks,
+            (SELECT ROUND(AVG(CASE WHEN tr.score >= 4 THEN 1.0 ELSE 0 END) * 100) / 100.0
+             FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate,
+            (SELECT json_agg(hst.tag_id ORDER BY st.sort_order)
+             FROM herald_specialty_tags hst
+             JOIN specialty_tags st ON st.id = hst.tag_id
+             WHERE hst.herald_id = ta.herald_id AND st.active = 1) AS specialty_tags
+     FROM task_applications ta
+     JOIN users u ON u.id = ta.herald_id
+     LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id
+     WHERE ta.task_id = ? ORDER BY ta.created_at DESC`, [taskId]
+  );
+}
+
+/** GET /api/tasks/:id/applications — 任务报名列表（仅创建者/管理员） */
+tasksRouter.get('/:id/applications', requireAuth, async (req: Request, res: Response) => {
+  const task = await findOne<{ creator_id: string }>('SELECT creator_id FROM tasks WHERE id = ?', [req.params.id]);
+  if (!task) return res.status(404).json({ error: '任务不存在' });
+  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
+    return res.status(403).json({ error: '无权限' });
+  }
+  res.json(await fetchTaskApplications(String(req.params.id)));
+});
+
 /** PATCH /api/tasks/:id/publish — 发布任务 */
 tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const task = await findOne<any>(
@@ -859,8 +890,8 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
-  // 审核门（2026-07-18）：审核中/被拒的任务对非创建者一律 404，防直链绕过列表过滤
-  if (task.platform_review && task.platform_review !== 'approved') {
+  // 审核门（2026-07-18；2026-07-26 改按 status 判断）：草稿/审核中任务对非创建者一律 404，防直链绕过列表过滤
+  if (task.status === 'DRAFT' || task.status === 'PENDING_REVIEW') {
     const isOwnerOrAdmin = req.user && (req.user.userId === task.creator_id || req.user.role === 'ADMIN');
     if (!isOwnerOrAdmin) return res.status(404).json({ error: '任务不存在' });
   }
@@ -880,22 +911,7 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
     );
   }
 
-  const applications = await findMany<any>(
-    `SELECT ta.*, u.nickname, u.avatar_url, hp.display_name, hp.country,
-            hp.social_platforms, hp.tier_snapshot, hp.social_platforms_updated_at,
-            hp.community, hp.bio,
-            (SELECT COUNT(*) FROM task_submissions ts2 WHERE ts2.herald_id = ta.herald_id AND ts2.status = 'APPROVED') AS completed_tasks,
-            (SELECT ROUND(AVG(CASE WHEN tr.score >= 4 THEN 1.0 ELSE 0 END) * 100) / 100.0
-             FROM task_ratings tr WHERE tr.herald_id = ta.herald_id) AS good_rate,
-            (SELECT json_agg(hst.tag_id ORDER BY st.sort_order)
-             FROM herald_specialty_tags hst
-             JOIN specialty_tags st ON st.id = hst.tag_id
-             WHERE hst.herald_id = ta.herald_id AND st.active = 1) AS specialty_tags
-     FROM task_applications ta
-     JOIN users u ON u.id = ta.herald_id
-     LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id
-     WHERE ta.task_id = ?`, [req.params.id]
-  );
+  const applications = await fetchTaskApplications(String(req.params.id));
 
   const subRow = await findOne<{ cnt: number }>(
     'SELECT COUNT(*) as cnt FROM task_submissions WHERE task_id = ?', [req.params.id]
@@ -1146,13 +1162,14 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
 
   // 首任务审核门（2026-07-18，PRD §29；2026-07-19 gate 从 is_enterprise_verified 合并进 kyb_status）：
   // 未通过 KYB(kyb_status!=='approved') 的商家，发布的任务须平台审核后才进公开列表——
-  // 防恶意注册用任务做钓鱼/违规内容载体。状态仍置 OPEN（额度照常占用、商家可正常查看），
-  // 只是公开可见性由 platform_review 闸住
+  // 防恶意注册用任务做钓鱼/违规内容载体。
+  // 2026-07-26：审核态从 OPEN+platform_review 正交列改为真状态 PENDING_REVIEW（额度照常占用），
+  // admin 审核通过才转 OPEN 并刷新 published_at 为进入公开时间；此前报名闸只看 status，未过审任务可被报名
   const bpRow = await findOne<any>('SELECT kyb_status FROM brand_profiles WHERE user_id = ?', [task.creator_id]);
   const needsReview = req.user!.role !== 'ADMIN' && bpRow?.kyb_status !== 'approved';
 
   await update('tasks', {
-    status:          'OPEN',
+    status:          needsReview ? 'PENDING_REVIEW' : 'OPEN',
     published_at:    new Date().toISOString(),
     cost_per_herald: costPerHerald,
     commission_rate: commissionRate,

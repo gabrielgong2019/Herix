@@ -289,6 +289,12 @@ export const i18n = {
   ),
 };
 
+// ── Brands（品牌主页，公开）──
+export const brands = {
+  getProfile: (userId: string) =>
+    request<{ profile: any; tasks: any[] }>('GET', `/brands/${userId}`, undefined, false),
+};
+
 // ── Notifications ──
 export const notifications = {
   // 本端=赫使端, 声明 role 做通知隔离(双角色账号的商家侧通知不在这里出现)

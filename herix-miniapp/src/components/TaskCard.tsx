@@ -1,13 +1,13 @@
-import { View, Text, Navigator } from '@tarojs/components';
+import { View, Text } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import './TaskCard.scss';
 import { t, tf } from '../utils/i18n';
+import { fmt } from '../utils/format';
 
-// 从 herix.html 的 cardHTML() 移植，保持同样的字段/展示逻辑
-// 存 labelKey，渲染时 t() 取值（存 t() 结果会冻结在启动时语言）
 const DIFF: Record<string, { labelKey: string }> = {
-  easy: { labelKey: 'taskCard.diffEasy' },
+  easy:   { labelKey: 'taskCard.diffEasy' },
   medium: { labelKey: 'taskCard.diffMedium' },
-  hard: { labelKey: 'taskCard.diffHard' },
+  hard:   { labelKey: 'taskCard.diffHard' },
 };
 
 export interface CategoryItem {
@@ -19,6 +19,7 @@ export interface CategoryItem {
 export interface TaskCardTask {
   id: string;
   title: string;
+  creator_id?: string | null;
   category?: string | null;
   difficulty?: string | null;
   mode: string;
@@ -38,13 +39,6 @@ interface Props {
   categories: CategoryItem[];
 }
 
-function commissionLabel(amount: number | undefined, _currency?: string): string {
-  const payout = Number(amount) || 0;
-  return '¥' + payout.toLocaleString();
-  // herix.html 里这里还有个按 state.displayCurrency 做汇率换算的副标签，
-  // 那个依赖一个目前还没搬过来的独立"显示币种切换"功能，先跳过
-}
-
 export default function TaskCard({ task, categories }: Props) {
   const img = task.cover_image || task.brand_promo_image_url || '';
   const rating = parseFloat(String(task.avg_rating)) || 0;
@@ -52,48 +46,70 @@ export default function TaskCard({ task, categories }: Props) {
   const isPerformance = task.mode === 'PERFORMANCE';
   const diff = DIFF[task.difficulty || 'easy'] || DIFF.easy;
   const cat = categories.find(c => c.id === task.category);
-  const catText = [cat?.icon, cat ? tf(`category.${cat.id}`, cat.label) : task.category].filter(Boolean).join(' ');
+  const catText = [cat?.icon, cat ? tf(`category.${cat.id}`, cat.label) : task.category]
+    .filter(Boolean)
+    .join(' ');
   const price = task.payout_per_herald ?? task.commission;
 
+  function goTask() {
+    Taro.navigateTo({ url: `/pages/task/task?id=${task.id}` });
+  }
+
+  function goBrand(e: any) {
+    e.stopPropagation();
+    if (task.creator_id) {
+      Taro.navigateTo({ url: `/pages/brand/brand?id=${task.creator_id}` });
+    }
+  }
+
   return (
-    <Navigator className='task-card' url={`/pages/task/task?id=${task.id}`}>
+    <View className='task-card' onClick={goTask}>
       <View className='card-top'>
-        {catText && <Text className='tag'>{catText}</Text>}
-        <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
-          {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
-        </Text>
-        <View className='diff-tag'>
-          <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
-          <Text>{t(diff.labelKey)}</Text>
+        <View className='card-top-left'>
+          {catText && <Text className='tag'>{catText}</Text>}
+          <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
+            {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
+          </Text>
         </View>
-        {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
+        <View className='card-top-right'>
+          <View className='diff-tag'>
+            <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
+            <Text>{t(diff.labelKey)}</Text>
+          </View>
+          {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
+        </View>
       </View>
 
       <View className='card-body'>
         <View className='card-c'>
           <Text className='card-title'>{task.title}</Text>
-          <View className='brand-row'>
-            <View className='brand-icon'>
-              {task.brand_logo_url ? (
-                <View className='brand-icon-img' style={{ backgroundImage: `url(${task.brand_logo_url})` }} />
-              ) : (
-                <Text>{(task.creator_name || 'B')[0]}</Text>
-              )}
+          <View className='meta-row'>
+            <View className='brand-part' onClick={goBrand}>
+              <View className='brand-icon'>
+                {task.brand_logo_url
+                  ? <View className='brand-icon-img' style={{ backgroundImage: `url(${task.brand_logo_url})` }} />
+                  : <Text>{(task.creator_name || 'B')[0]}</Text>}
+              </View>
+              <Text className='brand-name'>{task.creator_name || ''}</Text>
+              {task.creator_id && <Text className='brand-arrow'>›</Text>}
             </View>
-            <Text className='brand-name'>{task.creator_name || ''}</Text>
+            <Text className='commission'>¥{fmt(price)}</Text>
           </View>
-          <Text className='commission'>{commissionLabel(price, task.currency)}</Text>
-          <View className='rating-row'>
-            {[1, 2, 3, 4, 5].map(s => (
-              <Text key={s} className={`star ${s <= filledStars ? 'on' : 'off'}`}>
-                {s <= filledStars ? '★' : '☆'}
-              </Text>
-            ))}
-            {rating > 0 && <Text className='rating-num'>{rating}</Text>}
-          </View>
+          {rating > 0 && (
+            <View className='rating-row'>
+              {[1, 2, 3, 4, 5].map(s => (
+                <Text key={s} className={`star ${s <= filledStars ? 'on' : 'off'}`}>
+                  {s <= filledStars ? '★' : '☆'}
+                </Text>
+              ))}
+              <Text className='rating-num'>{rating}</Text>
+            </View>
+          )}
         </View>
-        <View className='thumb' style={img ? { backgroundImage: `url(${img})` } : undefined} />
+        {img && (
+          <View className='thumb' style={{ backgroundImage: `url(${img})` }} />
+        )}
       </View>
-    </Navigator>
+    </View>
   );
 }

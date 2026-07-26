@@ -615,5 +615,18 @@
   "wx.placeholder": "WeChat ID hoặc số điện thoại",
   "wx.wechatLen": "WeChat ID cần 6-20 ký tự",
   "wx.wechatMin": "WeChat ID ít nhất 6 ký tự",
-  "wx.wechatOk": "✓ WeChat ID"
+  "wx.wechatOk": "✓ WeChat ID",
+
+  "brand.loading": "Đang tải…",
+  "brand.notFound": "Không tìm thấy trang thương hiệu",
+  "brand.loadError": "Tải thất bại. Vui lòng thử lại.",
+  "brand.agency": "Đại lý",
+  "brand.since": "Tham gia",
+  "brand.website": "Trang web",
+  "brand.websiteCopied": "Đã sao chép liên kết",
+  "brand.statTasks": "Số nhiệm vụ",
+  "brand.statHeralds": "Đại sứ",
+  "brand.statCompleted": "Hoàn thành",
+  "brand.activeJobs": "Đang tuyển",
+  "brand.noTasks": "Không có nhiệm vụ nào đang tuyển"
 }

@@ -10,6 +10,7 @@ const pages = [
   'pages/withdraw/index', // 提现（次级）
   'pages/add-method/index', // 添加收款方式（次级）
   'pages/onboard/index', // 赫使入职引导（注册后进入）
+  'pages/brand/brand', // 品牌主页（公开，任务卡品牌名点击进入）
   'pages/task-create/task-create', // ⚠️ 品牌端发任务：Phase2 不迁品牌端，此页为历史现状，暂留不动
 ];
 

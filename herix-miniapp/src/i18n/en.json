@@ -1162,5 +1162,18 @@
   "notif.ARBITRATION_OPENED.title": "Arbitration opened: {taskTitle}",
   "notif.ARBITRATION_OPENED.body": "A delivery dispute for \"{taskTitle}\" has been submitted to platform arbitration. We will review both parties' records before ruling.",
   "notif.ARBITRATION_RESOLVED.title": "Arbitration resolved: {taskTitle}",
-  "notif.ARBITRATION_RESOLVED.body": "The platform has ruled on the delivery dispute for \"{taskTitle}\"."
+  "notif.ARBITRATION_RESOLVED.body": "The platform has ruled on the delivery dispute for \"{taskTitle}\".",
+
+  "brand.loading": "Loading…",
+  "brand.notFound": "Brand page not found",
+  "brand.loadError": "Failed to load. Please try again.",
+  "brand.agency": "Agency",
+  "brand.since": "Joined",
+  "brand.website": "Website",
+  "brand.websiteCopied": "Link copied",
+  "brand.statTasks": "Tasks Posted",
+  "brand.statHeralds": "Ambassadors",
+  "brand.statCompleted": "Completed",
+  "brand.activeJobs": "Now Recruiting",
+  "brand.noTasks": "No active tasks at the moment"
 }

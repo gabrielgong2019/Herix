@@ -1,0 +1,168 @@
+.brand-page {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.bp-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 120px 40px;
+}
+
+.bp-muted {
+  color: var(--text-muted);
+  font-size: 28px;
+}
+
+.bp-error {
+  color: var(--primary);
+  font-size: 28px;
+}
+
+// ── 品牌头部 ─────────────────────────────────────────
+.bp-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 32px;
+  padding: 40px 32px 32px;
+  background: var(--card-bg);
+  border-bottom: 1PX solid var(--border);
+}
+
+.bp-logo-wrap {
+  flex-shrink: 0;
+}
+
+.bp-logo {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg);
+}
+
+.bp-logo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: 800;
+  color: #9b8b7a;
+  background-color: #f0ede8;
+}
+
+.bp-identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.bp-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.bp-name {
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.bp-badge-agency {
+  font-size: 20px;
+  font-weight: 600;
+  padding: 4px 16px;
+  border-radius: 20px;
+  background: rgba(100, 116, 139, 0.10);
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.bp-desc {
+  font-size: 26px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.bp-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bp-meta-item {
+  font-size: 22px;
+  color: var(--text-muted);
+}
+
+.bp-website {
+  color: #0369a1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ── 数据统计 ─────────────────────────────────────────
+.bp-stats {
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border-bottom: 1PX solid var(--border);
+  padding: 32px 0;
+}
+
+.bp-stat-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.bp-stat-num {
+  font-size: 44px;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.bp-stat-label {
+  font-size: 22px;
+  color: var(--text-muted);
+}
+
+.bp-stat-divider {
+  width: 1PX;
+  height: 48px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+// ── 任务列表区 ───────────────────────────────────────
+.bp-section {
+  padding: 32px 24px 48px;
+}
+
+.bp-section-title {
+  font-size: 30px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+  margin-bottom: 24px;
+}
+
+.bp-empty {
+  display: block;
+  padding: 48px 0;
+  text-align: center;
+}

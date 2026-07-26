@@ -1162,5 +1162,18 @@
   "notif.ARBITRATION_OPENED.title": "平台仲裁已开案：{taskTitle}",
   "notif.ARBITRATION_OPENED.body": "任务「{taskTitle}」的交付争议已提交平台仲裁，平台将审阅双方提交与审核记录后裁决，请留意通知。",
   "notif.ARBITRATION_RESOLVED.title": "仲裁已裁决：{taskTitle}",
-  "notif.ARBITRATION_RESOLVED.body": "平台已对任务「{taskTitle}」的交付争议作出裁决。"
+  "notif.ARBITRATION_RESOLVED.body": "平台已对任务「{taskTitle}」的交付争议作出裁决。",
+
+  "brand.loading": "加载中…",
+  "brand.notFound": "品牌主页不存在",
+  "brand.loadError": "加载失败，请稍后再试",
+  "brand.agency": "广告代理",
+  "brand.since": "入驻于",
+  "brand.website": "官网",
+  "brand.websiteCopied": "链接已复制",
+  "brand.statTasks": "发布任务",
+  "brand.statHeralds": "合作赫使",
+  "brand.statCompleted": "已完成",
+  "brand.activeJobs": "招募中",
+  "brand.noTasks": "暂无招募中的任务"
 }

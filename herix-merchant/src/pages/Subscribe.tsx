@@ -173,12 +173,113 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
   )
 }
 
+// ── 定制版洽谈表单（公司/联系人平台已有，只收营销需求与目标）──────────
+function InquiryModal({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation()
+  const qc = useQueryClient()
+  const [goals, setGoals] = useState('')
+  const [budgetRange, setBudgetRange] = useState('')
+  const [note, setNote] = useState('')
+  const [err, setErr] = useState('')
+
+  const mut = useMutation({
+    mutationFn: () => subscriptionsApi.submitInquiry({ goals: goals.trim(), budgetRange: budgetRange || undefined, note: note.trim() || undefined }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['myInquiry'] }),
+    onError: () => setErr(t('subscribe.actionFailed')),
+  })
+
+  const submit = () => {
+    if (!goals.trim()) { setErr(t('subscribe.inqGoalsRequired')); return }
+    setErr(''); mut.mutate()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6" style={{ background: 'rgba(0,0,0,.4)' }} onClick={onClose}>
+      <div className="w-full max-w-lg rounded-2xl p-6" style={{ background: '#fff' }} onClick={(e) => e.stopPropagation()}>
+        {mut.isSuccess ? (
+          <div className="text-center py-6">
+            <div className="text-3xl mb-3">✅</div>
+            <div className="text-base font-bold mb-2">{t('subscribe.inqDoneTitle')}</div>
+            <div className="text-sm mb-6" style={{ color: 'var(--muted)' }}>{t('subscribe.inqDoneDesc')}</div>
+            <button type="button" onClick={onClose}
+              className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white cursor-pointer"
+              style={{ background: 'var(--text)' }}>
+              {t('common.confirm')}
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="text-base font-bold mb-1">{t('subscribe.inqTitle')}</div>
+            <div className="text-xs mb-5" style={{ color: 'var(--muted)' }}>{t('subscribe.inqSub')}</div>
+
+            <label className="block text-xs font-medium mb-1.5">{t('subscribe.inqGoals')} *</label>
+            <textarea
+              className="w-full rounded-xl p-3 text-sm mb-4"
+              style={{ border: '1px solid var(--border)', minHeight: 96, resize: 'vertical' }}
+              placeholder={t('subscribe.inqGoalsPh')}
+              value={goals}
+              onChange={(e) => setGoals(e.target.value)}
+              maxLength={1000}
+            />
+
+            <label className="block text-xs font-medium mb-1.5">{t('subscribe.inqBudget')}</label>
+            <div className="flex gap-2 flex-wrap mb-4">
+              {['<¥300k', '¥300k-1M', '¥1M-3M', '>¥3M'].map((b) => (
+                <button key={b} type="button"
+                  onClick={() => setBudgetRange(budgetRange === b ? '' : b)}
+                  className="text-xs px-3 py-1.5 rounded-full cursor-pointer"
+                  style={budgetRange === b
+                    ? { background: 'var(--text)', color: '#fff' }
+                    : { background: '#fff', color: 'var(--muted)', border: '1px solid var(--border)' }}>
+                  {b}{t('subscribe.inqPerMonth')}
+                </button>
+              ))}
+            </div>
+
+            <label className="block text-xs font-medium mb-1.5">{t('subscribe.inqNote')}</label>
+            <textarea
+              className="w-full rounded-xl p-3 text-sm mb-2"
+              style={{ border: '1px solid var(--border)', minHeight: 60, resize: 'vertical' }}
+              placeholder={t('subscribe.inqNotePh')}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={500}
+            />
+            <div className="text-[11px] mb-4" style={{ color: 'var(--muted)' }}>{t('subscribe.inqContactHint')}</div>
+
+            {err && <div className="text-xs mb-3" style={{ color: 'var(--danger)' }}>{err}</div>}
+            <div className="flex gap-3 justify-end">
+              <button type="button" onClick={onClose}
+                className="px-4 py-2 rounded-xl text-sm cursor-pointer"
+                style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>
+                {t('common.cancel')}
+              </button>
+              <button type="button" onClick={submit} disabled={mut.isPending}
+                className="px-5 py-2 rounded-xl text-sm font-semibold text-white cursor-pointer disabled:opacity-50"
+                style={{ background: 'var(--primary)' }}>
+                {t('subscribe.inqSubmit')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── 主页面 ─────────────────────────────────────────────────────────
 export default function Subscribe() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const [cycle, setCycle] = useState<Cycle>('MONTHLY')
   const [err, setErr] = useState('')
+  const [inquiryOpen, setInquiryOpen] = useState(false)
+
+  const { data: myInq } = useQuery({
+    queryKey: ['myInquiry'],
+    queryFn: () => subscriptionsApi.myInquiry().then((r) => r.data),
+  })
+  const inquiryPending = myInq?.inquiry?.status === 'NEW'
 
   const { data: plansData } = useQuery({
     queryKey: ['subscriptionPlans'],
@@ -300,10 +401,16 @@ export default function Subscribe() {
                 </ul>
 
                 {p.code === 'custom' ? (
-                  <div className="text-center text-sm py-2.5 rounded-xl font-semibold"
-                    style={{ border: '1px solid var(--border)', color: 'var(--muted)' }}>
-                    {t('subscribe.contactUs')}
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => !inquiryPending && setInquiryOpen(true)}
+                    disabled={inquiryPending}
+                    className="w-full py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-opacity hover:opacity-85 disabled:cursor-default disabled:opacity-100"
+                    style={inquiryPending
+                      ? { background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' }
+                      : { background: '#fff', color: 'var(--text)', border: '1px solid var(--text)' }}>
+                    {inquiryPending ? `✓ ${t('subscribe.inqPendingBadge')}` : t('subscribe.contactUs')}
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -407,6 +514,8 @@ export default function Subscribe() {
             </table>
           </div>
         </div>
+
+        {inquiryOpen && <InquiryModal onClose={() => setInquiryOpen(false)} />}
 
         {/* 说明（扣款方式/宽限/取消政策，合规明示） */}
         <div className="text-xs leading-relaxed space-y-1 pb-8" style={{ color: 'var(--muted)' }}>

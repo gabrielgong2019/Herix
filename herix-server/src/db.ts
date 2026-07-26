@@ -636,8 +636,8 @@ export async function initDatabase() {
       updated_at TEXT
     )`,
     `INSERT INTO subscription_plans (code, monthly_price, benefits, sort) VALUES
-      ('basic',   50000,  '{"guaranteedTasks":8,"commissionDiscount":0.02}', 1),
-      ('premium', 150000, '{"guaranteedTasks":30,"commissionDiscount":0.05}', 2),
+      ('basic',   200000, '{"guaranteedTasks":8,"commissionDiscount":0.02}', 1),
+      ('premium', 600000, '{"guaranteedTasks":30,"commissionDiscount":0.05}', 2),
       ('custom',  NULL,   '{}', 3)
      ON CONFLICT (code) DO NOTHING`,
     // 订阅主表（状态机：PENDING_PAYMENT→ACTIVE→PAST_DUE(7天宽限)→EXPIRED / CANCELED）。
@@ -682,6 +682,20 @@ export async function initDatabase() {
      CHECK(type IN ('TOPUP','TASK_FREEZE','TASK_UNFREEZE','TASK_SETTLE','TASK_CREDIT','PLATFORM_FEE',
                     'WITHDRAWAL_FREEZE','WITHDRAWAL_DEBIT','WITHDRAWAL_UNFREEZE',
                     'SUBSCRIPTION_FEE','SUBSCRIPTION_INCOME','ADJUSTMENT'))`,
+    // 定制版洽谈线索（2026-07-26）：商户提交营销需求表单，admin 订阅页跟进。
+    // 公司/联系人信息平台已有（brand_profiles），此表只存需求本身
+    `CREATE TABLE IF NOT EXISTS subscription_inquiries (
+      id TEXT PRIMARY KEY,
+      brand_user_id TEXT NOT NULL REFERENCES users(id),
+      goals TEXT NOT NULL,
+      budget_range TEXT,
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'NEW' CHECK(status IN ('NEW','CONTACTED','CLOSED')),
+      handled_by TEXT,
+      handled_at TEXT,
+      created_at TEXT NOT NULL
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_subinq_status ON subscription_inquiries(status, created_at)`,
     `INSERT INTO platform_settings (key, value, note) VALUES
       ('sub_discount_quarterly', '0.95', '订阅季付折扣（月价×3×此系数）'),
       ('sub_discount_annual',    '0.88', '订阅年付折扣（月价×12×此系数）'),

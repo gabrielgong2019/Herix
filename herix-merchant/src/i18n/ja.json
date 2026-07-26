@@ -803,6 +803,20 @@
     "cmpBilling": "契約形態",
     "cmpBillingSelf": "オンライン",
     "cmpBillingContract": "個別契約",
-    "cmpCustomVal": "契約による"
+    "cmpCustomVal": "契約による",
+    "inqTitle": "カスタムプランのご相談",
+    "inqSub": "マーケティングのご要望をお聞かせください。専任顧問がプランとお見積りをご提案します",
+    "inqGoals": "マーケティング目標・ご要望",
+    "inqGoalsPh": "例：新商品の認知拡大のため、3ヶ月で月50件以上のクリエイター投稿を…",
+    "inqBudget": "想定月間予算（任意）",
+    "inqPerMonth": "/月",
+    "inqNote": "補足（任意）",
+    "inqNotePh": "ご希望の連絡時間帯など",
+    "inqContactHint": "会社情報・連絡先は登録済みです。ご登録の連絡先に顧問からご連絡します。",
+    "inqSubmit": "相談を送信",
+    "inqGoalsRequired": "目標を入力してください",
+    "inqDoneTitle": "ご相談を受け付けました",
+    "inqDoneDesc": "1〜2営業日以内に専任顧問からご連絡します",
+    "inqPendingBadge": "相談対応中です"
   }
 }

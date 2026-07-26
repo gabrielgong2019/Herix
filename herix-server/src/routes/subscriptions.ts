@@ -113,6 +113,34 @@ subscriptionsRouter.post('/', requireAuth, requireRole('BRAND'), async (req: Req
   }
 });
 
+/** POST /api/subscriptions/inquiries — 定制版洽谈：只收营销需求（公司/联系人平台已有）。
+ *  已有未处理线索则不重复建单，返回 existing 让前端提示"已在处理中" */
+subscriptionsRouter.post('/inquiries', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const { goals, budgetRange, note } = req.body || {};
+  if (!String(goals || '').trim()) {
+    return res.status(400).json({ error: '请填写营销目标', code: 'GOALS_REQUIRED' });
+  }
+  const existing = await findOne<any>(
+    `SELECT id FROM subscription_inquiries WHERE brand_user_id = ? AND status = 'NEW'`, [req.user!.userId]);
+  if (existing) return res.json({ ok: true, existing: true });
+  const id = await insert('subscription_inquiries', {
+    brand_user_id: req.user!.userId,
+    goals: String(goals).trim(),
+    budget_range: budgetRange ? String(budgetRange) : null,
+    note: note ? String(note).trim() : null,
+    status: 'NEW', created_at: new Date().toISOString(),
+  });
+  res.status(201).json({ ok: true, id, existing: false });
+});
+
+/** GET /api/subscriptions/inquiries/mine — 我的洽谈状态（表单显隐用） */
+subscriptionsRouter.get('/inquiries/mine', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const row = await findOne<any>(
+    `SELECT id, status, created_at FROM subscription_inquiries
+     WHERE brand_user_id = ? ORDER BY created_at DESC LIMIT 1`, [req.user!.userId]);
+  res.json({ inquiry: row || null });
+});
+
 /** PATCH /api/subscriptions/:id/auto-renew — 自动续费开关（合规：商户可随时取消自动更新） */
 subscriptionsRouter.patch('/:id/auto-renew', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
   const { autoRenew } = req.body || {};

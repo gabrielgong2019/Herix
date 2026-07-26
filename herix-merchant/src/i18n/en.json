@@ -803,6 +803,20 @@
     "cmpBilling": "Contract",
     "cmpBillingSelf": "Self-serve",
     "cmpBillingContract": "Individual contract",
-    "cmpCustomVal": "Per contract"
+    "cmpCustomVal": "Per contract",
+    "inqTitle": "Custom plan inquiry",
+    "inqSub": "Tell us your marketing needs — a dedicated advisor will tailor a plan and quote",
+    "inqGoals": "Marketing goals & needs",
+    "inqGoalsPh": "e.g. Launch awareness in 3 months, 50+ creator posts/month, focus on RED/Instagram…",
+    "inqBudget": "Estimated monthly budget (optional)",
+    "inqPerMonth": "/mo",
+    "inqNote": "Additional notes (optional)",
+    "inqNotePh": "Preferred contact time, other requests…",
+    "inqContactHint": "We already have your company and contact info on file — your advisor will reach out via your registered contacts.",
+    "inqSubmit": "Submit inquiry",
+    "inqGoalsRequired": "Please describe your goals",
+    "inqDoneTitle": "Inquiry received",
+    "inqDoneDesc": "A dedicated advisor will contact you within 1-2 business days",
+    "inqPendingBadge": "Inquiry in progress"
   }
 }

@@ -830,6 +830,30 @@ adminRouter.patch('/subscriptions/:id', async (req: Request, res: Response) => {
   res.json(await findOne('SELECT * FROM merchant_subscriptions WHERE id = ?', [req.params.id]));
 });
 
+/** GET /api/admin/subscription-inquiries — 定制版洽谈线索队列（销售跟进名单） */
+adminRouter.get('/subscription-inquiries', async (_req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT si.*, u.nickname, u.email, bp.company_name, bp.contact_name, bp.contact_phone
+     FROM subscription_inquiries si
+     JOIN users u ON u.id = si.brand_user_id
+     LEFT JOIN brand_profiles bp ON bp.user_id = si.brand_user_id
+     ORDER BY (si.status = 'NEW') DESC, si.created_at DESC`);
+  res.json(rows);
+});
+
+/** PATCH /api/admin/subscription-inquiries/:id — 跟进状态流转（NEW→CONTACTED→CLOSED） */
+adminRouter.patch('/subscription-inquiries/:id', async (req: Request, res: Response) => {
+  const { status } = req.body || {};
+  if (!['CONTACTED', 'CLOSED'].includes(String(status))) {
+    return res.status(400).json({ error: 'status 须为 CONTACTED / CLOSED' });
+  }
+  const r = await pool.query(
+    `UPDATE subscription_inquiries SET status = $1, handled_by = $2, handled_at = $3 WHERE id = $4`,
+    [status, req.user!.userId, new Date().toISOString(), req.params.id]);
+  if (r.rowCount === 0) return res.status(404).json({ error: '线索不存在' });
+  res.json({ ok: true, status });
+});
+
 /** GET/PATCH /api/admin/subscription-plans — 档位定价/权益维护 */
 adminRouter.get('/subscription-plans', async (_req: Request, res: Response) => {
   res.json(await findMany('SELECT * FROM subscription_plans ORDER BY sort'));

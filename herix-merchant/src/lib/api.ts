@@ -146,6 +146,10 @@ export const subscriptionsApi = {
     http.post<{ subscription: MerchantSubscription; invoice: SubscriptionInvoice; activated: boolean; shortfall: number; walletAvailable: number }>('/subscriptions', { planCode, billingCycle }),
   setAutoRenew: (id: string, autoRenew: boolean) => http.patch(`/subscriptions/${id}/auto-renew`, { autoRenew }),
   cancel: (id: string) => http.post(`/subscriptions/${id}/cancel`),
+  // 定制版洽谈：只收营销需求，公司/联系人平台已有
+  submitInquiry: (data: { goals: string; budgetRange?: string; note?: string }) =>
+    http.post<{ ok: boolean; existing: boolean }>('/subscriptions/inquiries', data),
+  myInquiry: () => http.get<{ inquiry: { id: string; status: string; created_at: string } | null }>('/subscriptions/inquiries/mine'),
 }
 
 // ── Wallet ────────────────────────────────────────────────────────

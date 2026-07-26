@@ -146,7 +146,7 @@ function shell(inner){
     {id:'topups',icon:'🏦',label:'充值确认',badge:Array.isArray(st.data.topups)?st.data.topups.filter(function(r){return r.status==='pending'}).length:0},
     {id:'withdrawals',icon:'💸',label:'提现打款',badge:Array.isArray(st.data.withdrawals)?st.data.withdrawals.filter(function(r){return r.status==='pending'}).length:0},
     {id:'arbitrations',icon:'⚖️',label:'仲裁',badge:Array.isArray(st.data.arbitrations)?st.data.arbitrations.filter(function(r){return r.status==='OPEN'}).length:0},
-    {id:'subscriptions',icon:'✨',label:'订阅',badge:Array.isArray(st.data.subscriptions)?st.data.subscriptions.filter(function(r){return r.status==='PENDING_PAYMENT'||r.status==='PAST_DUE'}).length:0},
+    {id:'subscriptions',icon:'✨',label:'订阅',badge:(Array.isArray(st.data.subscriptions)?st.data.subscriptions.filter(function(r){return r.status==='PENDING_PAYMENT'||r.status==='PAST_DUE'}).length:0)+(Array.isArray(st.data.subInquiries)?st.data.subInquiries.filter(function(r){return r.status==='NEW'}).length:0)},
     {id:'users',icon:'👥',label:'用户管理'},
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
@@ -778,6 +778,27 @@ function subscriptionsPage(){
   h+='<div><label style="font-size:11px;color:var(--muted);display:block">顾问备注</label><input id="ns_note" style="width:140px" placeholder="选填"></div>';
   h+='<button class="btn btn-primary btn-sm" onclick="adminCreateSub()">代开（待付款）</button></div>';
   h+='<div id="nsMsg" style="font-size:12px;margin-top:6px"></div></div>';
+  // 定制版洽谈线索（商户端表单提交，销售跟进）
+  var inqs=st.data.subInquiries||[];
+  var INQ_ST={NEW:['待跟进','#d97706'],CONTACTED:['已联系','#1d4ed8'],CLOSED:['已关闭','#9ca3af']};
+  if(inqs.length){
+    h+='<div class="tcard" style="margin-bottom:24px"><div style="font-weight:600;font-size:13px;padding:14px 16px 0">定制版洽谈线索</div>';
+    h+='<table><thead><tr><th>商家</th><th>营销目标</th><th>月预算</th><th>补充</th><th>提交时间</th><th>状态</th><th>操作</th></tr></thead><tbody>';
+    h+=inqs.map(function(q){
+      var st2=INQ_ST[q.status]||[q.status,'#6b7280'];
+      return '<tr><td><b>'+esc(q.company_name||q.nickname)+'</b><br><span style="font-size:11px;color:var(--muted)">'+esc(q.email||'')+(q.contact_phone?' · '+esc(q.contact_phone):'')+'</span></td>'
+        +'<td style="max-width:260px;font-size:12px;white-space:pre-wrap">'+esc(q.goals)+'</td>'
+        +'<td style="font-size:12px">'+esc(q.budget_range||'—')+'</td>'
+        +'<td style="max-width:160px;font-size:12px">'+esc(q.note||'—')+'</td>'
+        +'<td style="font-size:12px">'+fmtLocal(q.created_at)+'</td>'
+        +'<td><span style="color:'+st2[1]+';font-weight:600">'+st2[0]+'</span></td>'
+        +'<td style="white-space:nowrap">'
+        +(q.status==='NEW'?'<button class="btn btn-success btn-sm" onclick="markInquiry(\''+q.id+'\',\'CONTACTED\')">已联系</button> ':'')
+        +(q.status!=='CLOSED'?'<button class="btn btn-outline btn-sm" onclick="markInquiry(\''+q.id+'\',\'CLOSED\')">关闭</button>':'')
+        +'</td></tr>';
+    }).join('');
+    h+='</tbody></table></div>';
+  }
   // 队列
   if(!list.length) return h+'<div class="empty"><div class="empty-icon">✨</div>暂无订阅</div>';
   h+='<div class="tcard"><table><thead><tr><th>商家</th><th>档位/周期</th><th>状态</th><th>本期</th><th>金额/余额</th><th>自动续费</th><th>操作</th></tr></thead><tbody>';
@@ -799,6 +820,13 @@ function subscriptionsPage(){
   }).join('');
   h+='</tbody></table></div>';
   return h;
+}
+function markInquiry(id,status){
+  apiPatch('/admin/subscription-inquiries/'+id,{status:status},function(d){
+    if(d.error){showToast(d.error);return}
+    st.msg='线索已标记：'+(status==='CONTACTED'?'已联系':'已关闭');st.msgType='success';
+    load('subscriptions');render();
+  });
 }
 function savePlan(code){
   var price=document.getElementById('pl_price_'+code)?.value?.trim();
@@ -1398,6 +1426,7 @@ function load(page){
   } else if(page==='subscriptions'){
     apiGet('/admin/subscriptions',function(d){st.data.subscriptions=Array.isArray(d)?d:[];render()});
     apiGet('/admin/subscription-plans',function(d){st.data.subPlans=Array.isArray(d)?d:[];render()});
+    apiGet('/admin/subscription-inquiries',function(d){st.data.subInquiries=Array.isArray(d)?d:[];render()});
   } else if(page==='users'){
     apiGet('/admin/users',function(d){st.data.users=d;render()});
   } else if(page==='tasks'){

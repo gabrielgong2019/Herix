@@ -798,6 +798,20 @@
     "cmpBilling": "签约方式",
     "cmpBillingSelf": "在线自助",
     "cmpBillingContract": "合同单签",
-    "cmpCustomVal": "按合同"
+    "cmpCustomVal": "按合同",
+    "inqTitle": "定制版洽谈",
+    "inqSub": "告诉我们你的营销需求，专属顾问将为你定制方案与报价",
+    "inqGoals": "营销目标与需求",
+    "inqGoalsPh": "例：新品上市期望 3 个月内在日华人圈建立品牌认知，每月 50+ 篇达人内容，重点小红书/Instagram…",
+    "inqBudget": "预估月度营销预算（选填）",
+    "inqPerMonth": "/月",
+    "inqNote": "补充说明（选填）",
+    "inqNotePh": "期望的联系时间、其他要求等",
+    "inqContactHint": "公司与联系方式平台已有记录，顾问将通过账号预留的联系方式与你联系。",
+    "inqSubmit": "提交洽谈申请",
+    "inqGoalsRequired": "请填写营销目标",
+    "inqDoneTitle": "已收到你的洽谈申请",
+    "inqDoneDesc": "专属顾问将在 1-2 个工作日内与你联系",
+    "inqPendingBadge": "洽谈处理中，顾问将尽快联系"
   }
 }

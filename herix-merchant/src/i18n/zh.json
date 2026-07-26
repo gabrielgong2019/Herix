@@ -521,7 +521,8 @@
     "saving": "保存中…",
     "saveSuccess": "✓ 已保存",
     "saveFailed": "保存失败",
-    "duplicate": "复制为新任务"
+    "duplicate": "复制为新任务",
+    "contentSection": "任务内容"
   },
   "onboard": {
     "title": "品牌入驻",

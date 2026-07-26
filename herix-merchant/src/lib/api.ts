@@ -206,6 +206,7 @@ export interface Task {
   commission_rate?: number
   max_heralds: number
   target_communities: string[]
+  platform_requirements?: string | Array<{ platformId: string; minFollowers?: number }> | null
   cover_image?: string
   deadline?: string
   code_mode?: 'auto' | 'custom'

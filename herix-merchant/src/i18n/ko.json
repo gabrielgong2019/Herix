@@ -526,7 +526,8 @@
     "saving": "저장 중…",
     "saveSuccess": "✓ 저장됨",
     "saveFailed": "저장 실패",
-    "duplicate": "복제하여 새로 만들기"
+    "duplicate": "복제하여 새로 만들기",
+    "contentSection": "작업 내용"
   },
   "onboard": {
     "title": "브랜드 등록",

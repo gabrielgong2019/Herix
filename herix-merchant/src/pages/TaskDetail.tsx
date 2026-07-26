@@ -2,13 +2,101 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { parseLinks, tasksApi, type Application } from '@/lib/api'
+import { parseLinks, tasksApi, type Application, type Task } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
 import { ArrowLeft, Check, X, Copy, Download, ExternalLink, Upload } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 type Tab = 'applicants' | 'submissions' | 'codes' | 'referrals' | 'partners'
+
+const PLATFORM_NAMES: Record<string, string> = {
+  xiaohongshu: '小红书', instagram: 'Instagram', tiktok: 'TikTok',
+  youtube: 'YouTube', twitter: 'X/Twitter', facebook: 'Facebook',
+}
+
+// ── 任务内容区块：发布信息完整回显 ─────────────────────────────────
+function ContentSection({ task, onEdit }: { task: Task; onEdit: () => void }) {
+  const { t } = useTranslation()
+
+  let platforms: Array<{ platformId: string; minFollowers?: number }> = []
+  try {
+    platforms = typeof task.platform_requirements === 'string'
+      ? JSON.parse(task.platform_requirements)
+      : task.platform_requirements || []
+  } catch { platforms = [] }
+  // target_communities 服务端可能给 JSON 字符串或数组，两种都兼容
+  let communities: string[] = []
+  try {
+    communities = Array.isArray(task.target_communities)
+      ? task.target_communities
+      : JSON.parse((task.target_communities as unknown as string) || '[]')
+  } catch { communities = [] }
+  const ctLabel = { photo: t('taskForm.ctPhoto'), video: t('taskForm.ctVideo'), both: t('taskForm.ctBoth') }[task.content_type] || task.content_type
+  const isStandard = task.mode === 'STANDARD'
+
+  // 元信息网格：无值的项直接不展示，避免一排「—」
+  const metaItems: Array<{ label: string; value: React.ReactNode }> = [
+    { label: t('taskForm.fieldCategory'), value: task.category },
+    ...(task.deadline ? [{ label: t('taskForm.fieldDeadline'), value: formatDate(task.deadline) }] : []),
+    ...(isStandard ? [
+      { label: t('taskForm.fieldContentType'), value: ctLabel },
+      ...(task.min_images ? [{ label: t('taskForm.fieldMinImages'), value: task.min_images }] : []),
+      ...(task.min_video_seconds ? [{ label: t('taskForm.fieldMinVideoSecs'), value: `${task.min_video_seconds}s` }] : []),
+      { label: t('taskForm.fieldMaxRevisions'), value: task.max_revisions ?? 2 },
+      ...(task.require_draft_review ? [{ label: t('taskForm.fieldRequireDraft'), value: '✓' }] : []),
+      ...(task.submit_deadline ? [{ label: t('taskForm.fieldSubmitDeadline'), value: formatDate(task.submit_deadline) }] : []),
+    ] : []),
+    ...(communities.length ? [{
+      label: t('taskForm.fieldCommunity'),
+      // 社群存的是 id（cn-in-jp 等），有词条则按当前语言显示
+      value: communities.map((c) => { const k = `community.${c}`; const v = t(k); return v === k ? c : v }).join('、'),
+    }] : []),
+    ...(platforms.length ? [{
+      label: t('taskForm.fieldPlatform'),
+      value: platforms.map((p) => `${PLATFORM_NAMES[p.platformId] || p.platformId}${p.minFollowers ? ` ≥${p.minFollowers}` : ''}`).join('、'),
+    }] : []),
+  ]
+
+  return (
+    <div className="rounded-2xl p-6 mb-5" style={{ background: '#fff' }}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="text-sm font-semibold">{t('taskDetail.contentSection')}</div>
+        <button
+          type="button"
+          className="text-xs cursor-pointer underline"
+          style={{ color: 'var(--primary)' }}
+          onClick={onEdit}
+        >
+          {t('common.edit')}
+        </button>
+      </div>
+
+      <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldDesc')}</div>
+      <div className="text-sm whitespace-pre-wrap leading-relaxed mb-4">{task.description || '—'}</div>
+
+      {task.requirements && (
+        <>
+          <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldRequirements')}</div>
+          <div className="text-sm whitespace-pre-wrap leading-relaxed mb-4">{task.requirements}</div>
+        </>
+      )}
+
+      <div className="grid grid-cols-4 gap-x-4 gap-y-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
+        {metaItems.map(({ label, value }) => (
+          <div key={label}>
+            <div className="text-xs mb-0.5" style={{ color: 'var(--muted)' }}>{label}</div>
+            <div className="text-sm">{value}</div>
+          </div>
+        ))}
+      </div>
+
+      {task.cover_image && (
+        <img src={task.cover_image} alt="" className="mt-4 rounded-xl max-h-40 object-cover" />
+      )}
+    </div>
+  )
+}
 
 function maskName(name: string): string {
   if (!name || name.length <= 1) return name
@@ -525,6 +613,10 @@ export default function TaskDetail() {
             ))}
           </div>
         </div>
+
+        {/* 任务内容：发布信息完整回显（此前详情页只有分享入口+摘要，商家看不到自己发了什么；
+            2026-07-26 用户反馈补上）。就近给编辑入口——已发布任务走 meta 编辑（可改范围受服务端白名单限制） */}
+        <ContentSection task={task} onEdit={() => navigate(isDraft ? `/tasks/${id}/edit` : `/tasks/${id}/meta`)} />
 
         {/* Tabs */}
         <div className="flex gap-1 mb-4 p-1 rounded-xl w-fit" style={{ background: 'var(--border)' }}>

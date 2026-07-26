@@ -526,7 +526,8 @@
     "saving": "保存中…",
     "saveSuccess": "✓ 保存しました",
     "saveFailed": "保存に失敗しました",
-    "duplicate": "複製して新規作成"
+    "duplicate": "複製して新規作成",
+    "contentSection": "タスク内容"
   },
   "onboard": {
     "title": "ブランド登録",

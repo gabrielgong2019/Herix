@@ -526,7 +526,8 @@
     "saving": "Saving…",
     "saveSuccess": "✓ Saved",
     "saveFailed": "Save failed",
-    "duplicate": "Duplicate"
+    "duplicate": "Duplicate",
+    "contentSection": "Task content"
   },
   "onboard": {
     "title": "Brand Registration",

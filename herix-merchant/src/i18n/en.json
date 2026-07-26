@@ -362,13 +362,16 @@
     "zeroDesc": "Funds are held in escrow. Payment is only released after ambassadors complete tasks and you approve the results. Unused balance can be withdrawn anytime.",
     "zeroBenefit": "Funded tasks display the \"Fast Payout\" badge — ambassadors apply at a significantly higher rate",
     "totalDeposit": "Total Deposited",
-    "walletFrozen": "In Active Tasks",
+    "walletFrozen": "Frozen",
     "walletAvailable": "Available",
     "usageSub": "{{pct}}% committed",
     "lowWarning": "Running low",
     "escrowTag1": "Funds escrowed",
     "escrowTag2": "Pay after approval",
-    "escrowTag3": "Withdraw anytime"
+    "escrowTag3": "Withdraw anytime",
+    "capacityMain": "Available publishing capacity",
+    "formulaCash": "Cash",
+    "formulaUsed": "In-flight tasks"
   },
   "industry": {
     "finance": "Financial Services",

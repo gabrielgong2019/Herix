@@ -381,6 +381,7 @@ export interface BrandBalance {
     hasToppedUp: boolean
     initialCredit: number
     creditUsed: number
+    sharedUsed?: number
     creditRemaining: number
     totalCapacity: number
     trialEligible: boolean

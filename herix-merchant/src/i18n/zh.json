@@ -357,13 +357,16 @@
     "zeroDesc": "资金全程托管在平台。赫使完成任务、经您审核通过后才结算扣款，未使用余额随时可提现。",
     "zeroBenefit": "存入后任务显示「即时结算」标签，赫使报名率显著提升",
     "totalDeposit": "累计存入",
-    "walletFrozen": "任务占用",
+    "walletFrozen": "冻结中",
     "walletAvailable": "可用余额",
     "usageSub": "已占用 {{pct}}%",
     "lowWarning": "余额即将用完",
     "escrowTag1": "资金托管",
     "escrowTag2": "审核后结算",
-    "escrowTag3": "余额可提现"
+    "escrowTag3": "余额可提现",
+    "capacityMain": "还可发布任务额度",
+    "formulaCash": "现金",
+    "formulaUsed": "任务占用"
   },
   "industry": {
     "finance": "金融服务",

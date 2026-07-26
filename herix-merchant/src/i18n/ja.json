@@ -362,13 +362,16 @@
     "zeroDesc": "資金はプラットフォームが全額エスクロー保全。アンバサダーが案件を完了し、あなたが承認した後にのみ精算されます。未使用残高はいつでも出金可能です。",
     "zeroBenefit": "入金後の案件には「即時精算」バッジが付き、アンバサダーの応募率が大幅に向上します",
     "totalDeposit": "累計入金額",
-    "walletFrozen": "案件使用中",
+    "walletFrozen": "凍結中",
     "walletAvailable": "利用可能残高",
     "usageSub": "{{pct}}% 使用中",
     "lowWarning": "残高わずか",
     "escrowTag1": "エスクロー保全",
     "escrowTag2": "承認後に精算",
-    "escrowTag3": "残高出金可能"
+    "escrowTag3": "残高出金可能",
+    "capacityMain": "公開可能なタスク枠",
+    "formulaCash": "現金",
+    "formulaUsed": "タスク利用中"
   },
   "industry": {
     "finance": "金融サービス",

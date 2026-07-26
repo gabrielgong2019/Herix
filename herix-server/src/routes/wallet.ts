@@ -224,6 +224,7 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
       hasToppedUp:      creditInfo.hasToppedUp,
       initialCredit:    creditInfo.initialCredit,
       creditUsed:       creditInfo.creditUsed,
+      sharedUsed:       creditInfo.sharedUsed,
       creditRemaining:  creditInfo.creditRemaining,
       totalCapacity:    creditInfo.totalCapacity,
       trialEligible:    creditInfo.trialEligible,

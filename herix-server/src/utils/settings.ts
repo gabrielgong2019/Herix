@@ -143,6 +143,8 @@ export interface BrandCreditInfo {
   availableBalance: number;
   initialCredit:    number;  // KYB/admin 提额（credit_limit_override），未提额为 0
   creditUsed:       number;  // 全部进行中 STANDARD 任务的已承诺报酬（审核通过、未结算）
+  sharedUsed:       number;  // 占用共享池的部分 = Σ max(0, 任务占用 - 任务体验额度戳)；
+                             // totalCapacity 的扣减项，前端明细行用它才能与主数字构成严格等式
   creditRemaining:  number;  // max(0, initialCredit - 共享池占用)
   totalCapacity:    number;  // 共享池容量：发布新任务、无体验额度任务运行用这个口径
   hasToppedUp:      boolean;
@@ -227,6 +229,7 @@ export async function getBrandCreditInfo(brandUserId: string, forTaskId?: string
     availableBalance,
     initialCredit,
     creditUsed,
+    sharedUsed,
     creditRemaining,
     totalCapacity,
     hasToppedUp,

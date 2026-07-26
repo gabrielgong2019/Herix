@@ -362,13 +362,16 @@
     "zeroDesc": "자금은 플랫폼이 전액 에스크로 보관합니다. 앰배서더가 캠페인을 완료하고 귀사가 승인한 후에만 정산됩니다. 미사용 잔액은 언제든지 출금 가능합니다.",
     "zeroBenefit": "입금 후 캠페인에 '즉시정산' 배지가 표시되어 앰배서더 지원율이 크게 높아집니다",
     "totalDeposit": "누적 입금액",
-    "walletFrozen": "캠페인 사용 중",
+    "walletFrozen": "동결 중",
     "walletAvailable": "사용 가능 잔액",
     "usageSub": "{{pct}}% 사용 중",
     "lowWarning": "잔액 부족 임박",
     "escrowTag1": "에스크로 보관",
     "escrowTag2": "승인 후 정산",
-    "escrowTag3": "잔액 출금 가능"
+    "escrowTag3": "잔액 출금 가능",
+    "capacityMain": "게시 가능 한도",
+    "formulaCash": "현금",
+    "formulaUsed": "작업 사용 중"
   },
   "industry": {
     "finance": "금융 서비스",

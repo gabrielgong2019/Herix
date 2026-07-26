@@ -15,8 +15,15 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
   const creditLimit = c?.initialCredit || 0
   const available   = balance.available || 0
   const frozen      = balance.frozen || 0
-  const totalFunds  = creditLimit + available + frozen
-  const pct         = totalFunds > 0 ? Math.min(100, Math.round(frozen / totalFunds * 100)) : 0
+  // 在途任务占用（共享池口径）：还可发布 = 现金 + 信用额度 − 占用，三项严格可心算。
+  // 旧版三列(信用额度/钱包冻结/可用余额)三个口径对不上，且进度条分母混信用+现金，
+  // 小额占用四舍五入恒显示 0%（2026-07-26 用户反馈重做）
+  const used        = c?.sharedUsed ?? c?.creditUsed ?? 0
+  const capacity    = c?.totalCapacity ?? Math.max(0, creditLimit + available - used)
+  const totalFunds  = creditLimit + available
+  const rawPct      = totalFunds > 0 ? Math.min(100, used / totalFunds * 100) : 0
+  const pct         = Math.round(rawPct)
+  const pctLabel    = rawPct > 0 && rawPct < 1 ? '<1' : String(pct)
   const barColor    = pct >= 90 ? '#dc2626' : pct >= 70 ? '#f59e0b' : '#3b82f6'
   const isLow       = pct >= 70 && totalFunds > 0
 
@@ -64,11 +71,10 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
     >
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">
+        {/* 旧版此处有「·体验额度」小标——creditLimit 实为 admin 提额的信用额度，标注误导，
+            且明细行已写明构成，删除 */}
         <div className="text-sm font-semibold" style={{ color: '#1e40af' }}>
           {t('credit.bannerTitle')}
-          {creditLimit > 0 && (
-            <span className="ml-1.5 text-xs font-normal" style={{ color: '#6366f1' }}>· {t('credit.trialTag')}</span>
-          )}
         </div>
         {isLow && (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
@@ -77,28 +83,19 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
         )}
       </div>
 
-      {/* 3-column numbers */}
-      <div className="grid gap-3 mb-4" style={{ gridTemplateColumns: creditLimit > 0 ? '1fr 1fr 1fr' : '1fr 1fr 1fr' }}>
-        <div>
-          <div className="text-xs mb-1" style={{ color: '#6b7280' }}>
-            {creditLimit > 0 ? t('credit.creditLimit') : t('credit.totalDeposit')}
-          </div>
-          <div className="text-xl font-bold tabular-nums" style={{ color: '#1d4ed8' }}>
-            ¥{(creditLimit > 0 ? creditLimit : available + frozen).toLocaleString()}
-          </div>
+      {/* 主数字：商家唯一需要的行动数字（口径 = 服务端发布闸 totalCapacity） */}
+      <div className="mb-1">
+        <div className="text-xs mb-1" style={{ color: '#6b7280' }}>{t('credit.capacityMain')}</div>
+        <div className="text-3xl font-bold tabular-nums" style={{ color: capacity > 0 ? '#1d4ed8' : '#dc2626' }}>
+          ¥{capacity.toLocaleString()}
         </div>
-        <div>
-          <div className="text-xs mb-1" style={{ color: '#6b7280' }}>{t('credit.walletFrozen')}</div>
-          <div className="text-xl font-bold tabular-nums" style={{ color: frozen > 0 ? '#7c3aed' : '#9ca3af' }}>
-            ¥{frozen.toLocaleString()}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs mb-1" style={{ color: '#6b7280' }}>{t('credit.walletAvailable')}</div>
-          <div className="text-xl font-bold tabular-nums" style={{ color: available > 0 ? '#16a34a' : '#9ca3af' }}>
-            ¥{available.toLocaleString()}
-          </div>
-        </div>
+      </div>
+      {/* 明细行：现金 + 信用额度 − 任务占用，与主数字构成严格等式 */}
+      <div className="text-xs mb-4 tabular-nums" style={{ color: '#6b7280' }}>
+        {t('credit.formulaCash')} ¥{available.toLocaleString()}
+        {creditLimit > 0 && <> ＋ {t('credit.creditLimit')} ¥{creditLimit.toLocaleString()}</>}
+        {used > 0 && <> － {t('credit.formulaUsed')} ¥{used.toLocaleString()}</>}
+        {frozen > 0 && <span> · {t('credit.walletFrozen')} ¥{frozen.toLocaleString()}</span>}
       </div>
 
       {/* Progress bar */}
@@ -107,12 +104,12 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
           <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: '#e0e7ff' }}>
             <div
               className="h-full rounded-full transition-all"
-              style={{ width: `${pct}%`, background: `linear-gradient(90deg,${barColor},#7c3aed)` }}
+              style={{ width: `${rawPct > 0 ? Math.max(1, pct) : 0}%`, background: `linear-gradient(90deg,${barColor},#7c3aed)` }}
             />
           </div>
           <div className="flex items-center justify-between">
             <div className="text-xs" style={{ color: '#6b7280' }}>
-              {t('credit.usageSub', { pct })}
+              {t('credit.usageSub', { pct: pctLabel })}
             </div>
             {!isLow ? (
               <div className="text-xs" style={{ color: '#6b7280' }}>✓ {t('credit.escrowTag2')}</div>

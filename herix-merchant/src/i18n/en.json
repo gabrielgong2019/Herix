@@ -122,7 +122,9 @@
     "content": "Content",
     "emptyApplicants": "No applicants yet",
     "emptySubmissions": "No submissions yet",
-    "viewContent": "View content"
+    "viewContent": "View content",
+    "emptyTitle": "No tasks yet",
+    "emptyCta": "Create your first task"
   },
   "taskForm": {
     "createTitle": "Create Task",
@@ -376,7 +378,7 @@
     "formulaCash": "Cash",
     "formulaUsed": "In-flight tasks",
     "openTasks": "Open tasks",
-    "capacityTitle": "Publishing capacity",
+    "capacityTitle": "Tasks available",
     "subBadge": "{{plan}} active",
     "slotLow": "Slots almost full",
     "upgradeLead": "Increase your limit:",
@@ -394,7 +396,8 @@
     "tierSub": "Subscribe to advisor service",
     "viewPricing": "View pricing",
     "currentTier": "Current tier",
-    "tierSubSub": "Unlimited · guaranteed deliveries · dedicated advisor"
+    "tierSubSub": "Unlimited · guaranteed deliveries · dedicated advisor",
+    "budget": "Budget"
   },
   "industry": {
     "finance": "Financial Services",

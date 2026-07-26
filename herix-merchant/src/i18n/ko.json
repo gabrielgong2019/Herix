@@ -122,7 +122,9 @@
     "content": "콘텐츠",
     "emptyApplicants": "지원자가 없습니다",
     "emptySubmissions": "제출이 없습니다",
-    "viewContent": "콘텐츠 보기"
+    "viewContent": "콘텐츠 보기",
+    "emptyTitle": "아직 작업이 없습니다",
+    "emptyCta": "첫 작업 만들기"
   },
   "taskForm": {
     "createTitle": "태스크 만들기",
@@ -376,7 +378,7 @@
     "formulaCash": "현금",
     "formulaUsed": "작업 사용 중",
     "openTasks": "진행 중 작업",
-    "capacityTitle": "게시 능력",
+    "capacityTitle": "게시 가능 작업",
     "subBadge": "{{plan}} 구독 중",
     "slotLow": "슬롯 거의 참",
     "upgradeLead": "게시 한도 늘리기:",
@@ -394,7 +396,8 @@
     "tierSub": "마케팅 고문 구독",
     "viewPricing": "요금제 보기",
     "currentTier": "현재 단계",
-    "tierSubSub": "무제한 · 성사 보장 · 전담 고문"
+    "tierSubSub": "무제한 · 성사 보장 · 전담 고문",
+    "budget": "가용 예산"
   },
   "industry": {
     "finance": "금융 서비스",

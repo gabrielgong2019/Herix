@@ -122,7 +122,9 @@
     "content": "内容",
     "emptyApplicants": "暂无申请",
     "emptySubmissions": "暂无提交",
-    "viewContent": "查看内容"
+    "viewContent": "查看内容",
+    "emptyTitle": "还没有任务",
+    "emptyCta": "创建第一个任务"
   },
   "taskForm": {
     "createTitle": "创建任务",
@@ -371,7 +373,7 @@
     "formulaCash": "现金",
     "formulaUsed": "任务占用",
     "openTasks": "进行中任务",
-    "capacityTitle": "发布能力",
+    "capacityTitle": "可发布任务",
     "subBadge": "{{plan}} 订阅生效中",
     "slotLow": "名额将满",
     "upgradeLead": "提升发布数量：",
@@ -389,7 +391,8 @@
     "tierSub": "订阅营销顾问服务",
     "viewPricing": "查看定价方案",
     "currentTier": "当前档位",
-    "tierSubSub": "发布不限 · 每月成交兜底 · 专属顾问"
+    "tierSubSub": "发布不限 · 每月成交兜底 · 专属顾问",
+    "budget": "可用预算"
   },
   "industry": {
     "finance": "金融服务",

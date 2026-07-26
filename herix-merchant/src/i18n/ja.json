@@ -122,7 +122,9 @@
     "content": "コンテンツ",
     "emptyApplicants": "応募がありません",
     "emptySubmissions": "提出がありません",
-    "viewContent": "コンテンツを見る"
+    "viewContent": "コンテンツを見る",
+    "emptyTitle": "タスクはまだありません",
+    "emptyCta": "最初のタスクを作成"
   },
   "taskForm": {
     "createTitle": "タスク作成",
@@ -376,7 +378,7 @@
     "formulaCash": "現金",
     "formulaUsed": "タスク利用中",
     "openTasks": "進行中タスク",
-    "capacityTitle": "公開キャパシティ",
+    "capacityTitle": "公開可能タスク",
     "subBadge": "{{plan}} 契約中",
     "slotLow": "枠が残りわずか",
     "upgradeLead": "公開枠を増やす：",
@@ -394,7 +396,8 @@
     "tierSub": "マーケ顧問サービス契約",
     "viewPricing": "料金プランを見る",
     "currentTier": "現在のステップ",
-    "tierSubSub": "公開無制限 · 月間成果保証 · 専属顧問"
+    "tierSubSub": "公開無制限 · 月間成果保証 · 専属顧問",
+    "budget": "利用可能予算"
   },
   "industry": {
     "finance": "金融サービス",

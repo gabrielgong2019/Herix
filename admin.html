@@ -1217,6 +1217,40 @@ function pricingPage(){
   }
   h+='</div></div>';
 
+  // ④ 平台参数（订阅折扣/发布阶梯/交付时限/提现充值——2026-07-26 起走 /admin/platform-params，
+  //    此前这些键的 API 被 /pricing 路由遮蔽从未可调）
+  var pp=st.data.platformParams||{};
+  function ppRow(label,id,val,step,hint){return '<div style="display:flex;align-items:center;gap:8px;min-width:300px"><label style="font-size:12px;color:var(--muted);width:150px">'+label+'</label><input id="'+id+'" type="number" step="'+(step||1)+'" value="'+(val!==undefined&&val!==null&&!isNaN(val)?val:'')+'" style="width:110px;padding:6px;border:1px solid var(--border);border-radius:6px">'+(hint?'<span style="font-size:11px;color:var(--muted)">'+hint+'</span>':'')+'</div>'}
+  h+='<div class="tcard" style="padding:18px;margin-top:16px"><div style="font-weight:700;margin-bottom:4px">平台参数</div>'
+    +'<div style="font-size:12px;color:var(--muted);margin-bottom:12px">订阅周期折扣 / 发布并发阶梯 / 交付时限 / 提现充值。改动即刻生效（发布闸/报价实时读取）；订阅存量订单锁下单价不受折扣改动影响</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'
+    +'<div style="font-size:12px;font-weight:600;color:#7c3aed">订阅折扣</div>'
+    +'<div style="display:flex;gap:24px;flex-wrap:wrap">'
+    +ppRow('季付折扣系数','pp-sdq',pp.subDiscountQuarterly,0.01,'0.95=95折')
+    +ppRow('年付折扣系数','pp-sda',pp.subDiscountAnnual,0.01,'0.88=88折')
+    +'</div>'
+    +'<div style="font-size:12px;font-weight:600;color:#1d4ed8;margin-top:6px">发布并发阶梯（同时进行中任务数）</div>'
+    +'<div style="display:flex;gap:24px;flex-wrap:wrap">'
+    +ppRow('注册档','pp-mob',pp.maxOpenTasksBase,1,'')
+    +ppRow('认证档','pp-mok',pp.maxOpenTasksKyb,1,'')
+    +ppRow('注资档','pp-mof',pp.maxOpenTasksFunded,1,'')
+    +ppRow('注资门槛（累计充值JPY）','pp-ftt',pp.fundedTopupThreshold,10000,'')
+    +'</div>'
+    +'<div style="font-size:12px;font-weight:600;color:#d97706;margin-top:6px">交付时限（天）</div>'
+    +'<div style="display:flex;gap:24px;flex-wrap:wrap">'
+    +ppRow('商家审核超时自动通过','pp-rtd',pp.reviewTimeoutDays,1,'')
+    +ppRow('赫使被拒重提超时释放','pp-std',pp.resubmitTimeoutDays,1,'')
+    +'</div>'
+    +'<div style="font-size:12px;font-weight:600;color:#16a34a;margin-top:6px">提现 / 充值</div>'
+    +'<div style="display:flex;gap:24px;flex-wrap:wrap">'
+    +ppRow('提现固定手续费(JPY)','pp-wff',pp.withdrawalFeeFlat,100,'')
+    +ppRow('月提现次数上限','pp-wml',pp.withdrawalMonthlyLimit,1,'')
+    +ppRow('最低提现金额(JPY)','pp-wma',pp.withdrawalMinAmount,100,'')
+    +ppRow('信用卡充值费率','pp-tcr',pp.topupCcRate,0.005,'0.03=3%')
+    +'</div>'
+    +'<div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="savePlatformParams()">保存平台参数</button><span id="ppMsg" style="font-size:12px;margin-left:10px"></span></div>'
+    +'</div></div>';
+
   return h;
 }
 function _prReload(msg){st.msg=msg;st.msgType='success';apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});apiGet('/admin/pricing/payout-rules',function(d){st.data.payout=d;render()});apiGet('/admin/pricing/fx-history',function(d){st.data.fxHistory=Array.isArray(d)?d:[];render()})}
@@ -1242,6 +1276,21 @@ function saveOperatorEntity(){
   var v=((document.getElementById('pr-operator')||{}).value||'').trim();
   if(!v){showToast('运营主体名称不能为空');return}
   apiPatch('/admin/pricing/operator-entity',{name:v},function(d){if(d.error){_prErr(d);return}st.data.platformInfo={operatorEntity:d.operatorEntity};st.msg='运营主体已更新';st.msgType='success';render()});
+}
+function savePlatformParams(){
+  function num(id){var v=document.getElementById(id)?.value?.trim();return v===''||v===undefined?undefined:Number(v)}
+  apiPatch('/admin/platform-params',{
+    subDiscountQuarterly:num('pp-sdq'), subDiscountAnnual:num('pp-sda'),
+    maxOpenTasksBase:num('pp-mob'), maxOpenTasksKyb:num('pp-mok'), maxOpenTasksFunded:num('pp-mof'),
+    fundedTopupThreshold:num('pp-ftt'),
+    reviewTimeoutDays:num('pp-rtd'), resubmitTimeoutDays:num('pp-std'),
+    withdrawalFeeFlat:num('pp-wff'), withdrawalMonthlyLimit:num('pp-wml'), withdrawalMinAmount:num('pp-wma'),
+    topupCcRate:num('pp-tcr'),
+  },function(d){
+    var msg=document.getElementById('ppMsg');
+    if(d.error){if(msg)msg.textContent=d.error;return}
+    if(msg)msg.textContent='已保存：'+(d.updated||[]).join(', ');
+  });
 }
 function savePricingGlobal(){
   var v=parseFloat(document.getElementById('pr-global').value);
@@ -1325,6 +1374,7 @@ function fmtLocal(s) {
 function load(page){
   if(page==='pricing'){
     apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});
+    apiGet('/admin/platform-params',function(d){st.data.platformParams=d||{};render()});
     apiGet('/platform-info',function(d){st.data.platformInfo=d||{};render()});
     loadPayoutRules();
     apiGet('/admin/pricing/fx-history',function(d){st.data.fxHistory=Array.isArray(d)?d:[];render()});

@@ -614,8 +614,10 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
 
 // ── 定价管理 ──────────────────────────────────────────────────────────────────
 
-const PRICING_KEYS = [
-  'commission_rate',
+// ⚠️ 曾命名 PRICING_KEYS 挂在 GET/PATCH /pricing——被顶部 use('/pricing', pricingAdminRouter)
+// 遮蔽成不可达死代码（2026-07-26 发现：加进来的键从未能通过 API 调整）。
+// 现挂 /platform-params；commission_rate 归 pricing.ts 专管（避免双写口径），此处移除
+const PLATFORM_PARAM_KEYS = [
   'withdrawal_fee_type',
   'withdrawal_fee_flat',
   'withdrawal_schedule_mode',
@@ -628,14 +630,15 @@ const PRICING_KEYS = [
   'max_open_tasks_kyb',
   'max_open_tasks_funded',
   'funded_topup_threshold',
+  'sub_discount_quarterly',
+  'sub_discount_annual',
 ] as const;
 
 /** GET /api/admin/pricing — 读取全局定价配置 */
-adminRouter.get('/pricing', async (_req: Request, res: Response) => {
-  const entries = await Promise.all(PRICING_KEYS.map(k => getSetting(k).then(v => [k, v])));
+adminRouter.get('/platform-params', async (_req: Request, res: Response) => {
+  const entries = await Promise.all(PLATFORM_PARAM_KEYS.map(k => getSetting(k).then(v => [k, v])));
   const cfg = Object.fromEntries(entries);
   res.json({
-    commissionRate:          Number(cfg.commission_rate),
     withdrawalFeeType:       cfg.withdrawal_fee_type,
     withdrawalFeeFlat:       Number(cfg.withdrawal_fee_flat),
     withdrawalScheduleMode:  cfg.withdrawal_schedule_mode,
@@ -648,19 +651,21 @@ adminRouter.get('/pricing', async (_req: Request, res: Response) => {
     maxOpenTasksKyb:         Number(cfg.max_open_tasks_kyb),
     maxOpenTasksFunded:      Number(cfg.max_open_tasks_funded),
     fundedTopupThreshold:    Number(cfg.funded_topup_threshold),
+    subDiscountQuarterly:    Number(cfg.sub_discount_quarterly),
+    subDiscountAnnual:       Number(cfg.sub_discount_annual),
   });
 });
 
 /** PATCH /api/admin/pricing — 更新全局定价配置 */
-adminRouter.patch('/pricing', async (req: Request, res: Response) => {
+adminRouter.patch('/platform-params', async (req: Request, res: Response) => {
   const adminId = req.user!.userId;
-  const { note, commissionRate, withdrawalFeeFlat, withdrawalScheduleMode,
+  const { note, withdrawalFeeFlat, withdrawalScheduleMode,
           withdrawalMonthlyLimit, withdrawalMinAmount, topupCcRate,
           reviewTimeoutDays, resubmitTimeoutDays,
-          maxOpenTasksBase, maxOpenTasksKyb, maxOpenTasksFunded, fundedTopupThreshold } = req.body;
+          maxOpenTasksBase, maxOpenTasksKyb, maxOpenTasksFunded, fundedTopupThreshold,
+          subDiscountQuarterly, subDiscountAnnual } = req.body;
 
   const updates: [string, string][] = [];
-  if (commissionRate        !== undefined) updates.push(['commission_rate',          String(commissionRate)]);
   if (withdrawalFeeFlat     !== undefined) updates.push(['withdrawal_fee_flat',      String(withdrawalFeeFlat)]);
   if (withdrawalScheduleMode !== undefined) updates.push(['withdrawal_schedule_mode', String(withdrawalScheduleMode)]);
   if (withdrawalMonthlyLimit !== undefined) updates.push(['withdrawal_monthly_limit', String(withdrawalMonthlyLimit)]);
@@ -672,6 +677,8 @@ adminRouter.patch('/pricing', async (req: Request, res: Response) => {
   if (maxOpenTasksKyb       !== undefined) updates.push(['max_open_tasks_kyb',       String(maxOpenTasksKyb)]);
   if (maxOpenTasksFunded    !== undefined) updates.push(['max_open_tasks_funded',    String(maxOpenTasksFunded)]);
   if (fundedTopupThreshold  !== undefined) updates.push(['funded_topup_threshold',   String(fundedTopupThreshold)]);
+  if (subDiscountQuarterly  !== undefined) updates.push(['sub_discount_quarterly',    String(subDiscountQuarterly)]);
+  if (subDiscountAnnual     !== undefined) updates.push(['sub_discount_annual',       String(subDiscountAnnual)]);
 
   if (!updates.length) return res.status(400).json({ error: '未提供任何更新字段' });
 

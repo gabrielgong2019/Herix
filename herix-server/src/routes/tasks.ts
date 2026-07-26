@@ -1124,12 +1124,16 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
       stampTrial = trialGrant > 0;
     }
     if (totalCost > creditInfo.totalCapacity + trialGrant) {
+      const cap = creditInfo.totalCapacity + trialGrant;
+      // 报错带具体数字（2026-07-26 用户反馈"告诉差多少更友好"）
       return res.status(402).json({
-        error: '额度不足，请充值后再发布',
+        error: `额度不足：本任务需 ¥${totalCost.toLocaleString()}，当前可发布额度 ¥${cap.toLocaleString()}`
+          + `${trialGrant > 0 ? '（含首单体验额度）' : ''}，还差 ¥${(totalCost - cap).toLocaleString()}，请充值后再发布`,
         code: 'INSUFFICIENT_CREDIT',
         needed: totalCost,
+        shortfall: totalCost - cap,
         creditInfo: {
-          totalCapacity: creditInfo.totalCapacity + trialGrant,
+          totalCapacity: cap,
           creditUsed: creditInfo.creditUsed,
         },
       });

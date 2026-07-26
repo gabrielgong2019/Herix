@@ -130,7 +130,10 @@ function PublishBanner({ taskId }: { taskId: string }) {
     onSuccess: () => {
       setConfirm(false)
       setPubErr(null)
+      // 状态/额度都变了，三个缓存一起失效（staleTime 30s，漏失效=发布后30秒内仍显示草稿态）
       qc.invalidateQueries({ queryKey: ['task', taskId] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['wallet-balance'] })
     },
     onError: (e: unknown) => {
       const resp = (e as { response?: { data?: { error?: string; code?: string } } })?.response?.data
@@ -196,6 +199,16 @@ function PublishBanner({ taskId }: { taskId: string }) {
               style={{ background: 'linear-gradient(90deg,var(--primary),#7c3aed)' }}
             >
               🚀 {t('taskDetail.viewUpgrade')}
+            </button>
+          )}
+          {pubErr.code === 'INSUFFICIENT_CREDIT' && (
+            <button
+              type="button"
+              onClick={() => navigate('/wallet')}
+              className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white cursor-pointer transition-opacity hover:opacity-90"
+              style={{ background: '#d97706' }}
+            >
+              {t('credit.topupNow')} →
             </button>
           )}
         </div>

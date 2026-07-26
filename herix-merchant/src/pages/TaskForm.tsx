@@ -408,7 +408,10 @@ export default function TaskForm() {
       return { published: true }
     },
     onSuccess: (r) => {
+      // staleTime 30s：状态/额度都变了，相关缓存全部失效，否则发布后点进详情30秒内仍显示草稿态
       qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['task'] })
+      qc.invalidateQueries({ queryKey: ['wallet-balance'] })
       if (r && r.published === false) return // 发布被拦：已跳详情页展示原因，别覆盖导航
       navigate(fromOnboard ? '/' : '/tasks')
     },

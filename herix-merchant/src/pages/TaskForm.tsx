@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { tasksApi, metaApi, type TaskFormData, type Task } from '@/lib/api'
+import { tasksApi, metaApi, walletApi, type TaskFormData, type Task, type BrandBalance } from '@/lib/api'
 import { extractBrief, type ExtractHit } from '@/lib/extract'
 import { Topbar } from '@/components/layout/Topbar'
 import { cn } from '@/lib/utils'
@@ -136,12 +136,23 @@ function RadioCard({
 
 // ── Cost preview panel ────────────────────────────────────────────
 
-function CostPreview({ payout, maxHeralds, t }: { payout: number; maxHeralds: number; t: (k: string) => string }) {
+function CostPreview({ payout, maxHeralds, isStandard, balance, t }: {
+  payout: number; maxHeralds: number; isStandard: boolean
+  balance?: BrandBalance
+  t: (k: string, params?: Record<string, unknown>) => string
+}) {
   const base = payout * maxHeralds
   const fee = Math.ceil(base * PLATFORM_FEE_RATE)
   const total = base + fee
 
   if (!payout || !maxHeralds) return null
+
+  // 与服务端发布闸同口径：可发布额度 = totalCapacity + 首单体验额度 min(trialDefault, 任务总成本)。
+  // 这里只做预展示，动态额度以服务端 402(INSUFFICIENT_CREDIT) 为准，不做前端硬拦截
+  const credit = balance?.credit
+  const trialGrant = isStandard && credit?.trialEligible ? Math.min(credit.trialDefault, total) : 0
+  const capacity = credit ? credit.totalCapacity + trialGrant : null
+  const short = isStandard && capacity !== null && total > capacity
 
   return (
     <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--primary-light)', border: '1px solid #f7c4bb' }}>
@@ -162,6 +173,25 @@ function CostPreview({ payout, maxHeralds, t }: { payout: number; maxHeralds: nu
           <span>{t('taskForm.costTotal')}</span>
           <span style={{ color: 'var(--primary)' }}>¥{total.toLocaleString()}</span>
         </div>
+        {!isStandard && (
+          <div className="text-xs pt-1" style={{ color: 'var(--muted)' }}>{t('taskForm.capacityPerf')}</div>
+        )}
+        {isStandard && capacity !== null && (
+          <>
+            <div className="flex justify-between text-xs pt-1" style={{ color: short ? 'var(--danger)' : 'var(--muted)' }}>
+              <span>
+                {t('taskForm.capacityLine')}
+                {trialGrant > 0 && <span> · {t('taskForm.capacityTrial', { amount: trialGrant.toLocaleString() })}</span>}
+              </span>
+              <span className="font-semibold">¥{capacity.toLocaleString()}</span>
+            </div>
+            {short && (
+              <div className="text-xs font-semibold" style={{ color: 'var(--danger)' }}>
+                {t('taskForm.capacityShort', { amount: (total - capacity).toLocaleString() })}
+              </div>
+            )}
+          </>
+        )}
       </div>
     </div>
   )
@@ -258,6 +288,13 @@ export default function TaskForm() {
   const [extracted, setExtracted] = useState<ExtractHit[] | null>(null)
 
   const isStandard = form.mode === 'STANDARD'
+
+  // 当前可发布额度（成本预览里对比展示；发布闸在服务端，这里只是预警）
+  const { data: brandBalance } = useQuery({
+    queryKey: ['brandBalance'],
+    queryFn: () => walletApi.brandBalance().then((r) => r.data),
+  })
+
   // 两类型统一 1-5 段：简报 → 找谁 → 类型专属 → 时间线 → 报酬与质量
   const sn = { brief: 1, target: 2, spec: 3, time: 4, payout: 5 }
 
@@ -792,6 +829,8 @@ export default function TaskForm() {
             <CostPreview
               payout={Number(form.payoutPerHerald) || 0}
               maxHeralds={Number(form.maxHeralds) || 0}
+              isStandard={isStandard}
+              balance={brandBalance}
               t={t}
             />
 

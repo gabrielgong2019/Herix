@@ -228,7 +228,11 @@
     "requireDraftDesc": "Require ambassadors to submit a draft for approval before publishing and submitting final links",
     "requireDraftHint": "When enabled, mistakes never go live and revisions happen pre-publication. The approved draft becomes the reference version; mismatches can go to platform arbitration. Ambassadors need the latest app",
     "fieldSite": "Target Site",
-    "fieldSiteHint": "Heralds browse tasks filtered by site"
+    "fieldSiteHint": "Heralds browse tasks filtered by site",
+    "capacityLine": "Current publishing capacity",
+    "capacityTrial": "incl. first-task trial credit ¥{{amount}}",
+    "capacityShort": "Insufficient capacity: ¥{{amount}} more needed. Top up before publishing",
+    "capacityPerf": "Referral tasks are billed per conversion and do not use publishing capacity"
   },
   "site": {
     "jp": "Japan",

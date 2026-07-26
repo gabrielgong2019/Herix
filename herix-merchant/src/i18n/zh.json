@@ -228,7 +228,11 @@
     "requireDraftDesc": "要求赫使先提交草稿，审核通过后才能发布内容并提交最终链接",
     "requireDraftHint": "开启后：错误内容不会上网，改稿发生在发布前；草稿通过即定稿，发布内容与草稿不符可申请平台仲裁。需赫使使用新版 App",
     "fieldSite": "发布站点",
-    "fieldSiteHint": "赫使按站点过滤任务"
+    "fieldSiteHint": "赫使按站点过滤任务",
+    "capacityLine": "当前可发布额度",
+    "capacityTrial": "含首单体验额度 ¥{{amount}}",
+    "capacityShort": "额度不足：还差 ¥{{amount}}，请充值后再发布",
+    "capacityPerf": "邀请码任务按转化实时扣费，不占用发布额度"
   },
   "site": {
     "jp": "日本",

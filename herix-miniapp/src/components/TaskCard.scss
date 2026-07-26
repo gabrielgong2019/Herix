@@ -133,14 +133,6 @@
   overflow-wrap: break-word;
 }
 
-// 品牌名 + 价格同行
-.meta-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
 .brand-part {
   display: flex;
   align-items: center;
@@ -186,11 +178,19 @@
   line-height: 1;
 }
 
+.card-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
 .commission {
   font-size: 40px;
   font-weight: 700;
   color: var(--text-primary);
-  flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .rating-row {
@@ -216,7 +216,7 @@
 
 // 16:9 封面图，无图时整块不渲染（TaskCard.tsx 里 img && 条件渲染）
 .thumb {
-  width: 200px;
+  width: 160px;
   aspect-ratio: 16 / 9;
   border-radius: 16px;
   flex-shrink: 0;

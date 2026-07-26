@@ -3,6 +3,19 @@
   background: var(--bg);
 }
 
+.bp-back {
+  display: inline-flex;
+  align-items: center;
+  padding: 24px 32px 8px;
+}
+
+.bp-back-icon {
+  font-size: 52px;
+  line-height: 1;
+  color: var(--text-primary);
+  font-weight: 300;
+}
+
 .bp-center {
   display: flex;
   align-items: center;

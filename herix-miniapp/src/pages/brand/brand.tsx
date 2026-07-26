@@ -70,9 +70,16 @@ export default class BrandPage extends Component<{}, State> {
   render() {
     const { profile, tasks, categories, loading, error } = this.state;
 
+    const backBtn = process.env.TARO_ENV === 'h5' ? (
+      <View className='bp-back' onClick={() => Taro.navigateBack()}>
+        <Text className='bp-back-icon'>‹</Text>
+      </View>
+    ) : null;
+
     if (loading) {
       return (
         <View className='brand-page bp-center'>
+          {backBtn}
           <Text className='bp-muted'>{t('brand.loading')}</Text>
         </View>
       );
@@ -81,6 +88,7 @@ export default class BrandPage extends Component<{}, State> {
     if (error || !profile) {
       return (
         <View className='brand-page bp-center'>
+          {backBtn}
           <Text className='bp-error'>{error || t('brand.notFound')}</Text>
         </View>
       );
@@ -92,6 +100,7 @@ export default class BrandPage extends Component<{}, State> {
 
     return (
       <ScrollView scrollY className='brand-page'>
+        {backBtn}
         {/* ── 品牌头部 ── */}
         <View className='bp-header'>
           <View className='bp-logo-wrap'>

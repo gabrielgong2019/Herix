@@ -83,17 +83,14 @@ export default function TaskCard({ task, categories }: Props) {
       <View className='card-body'>
         <View className='card-c'>
           <Text className='card-title'>{task.title}</Text>
-          <View className='meta-row'>
-            <View className='brand-part' onClick={goBrand}>
-              <View className='brand-icon'>
-                {task.brand_logo_url
-                  ? <View className='brand-icon-img' style={{ backgroundImage: `url(${task.brand_logo_url})` }} />
-                  : <Text>{(task.creator_name || 'B')[0]}</Text>}
-              </View>
-              <Text className='brand-name'>{task.creator_name || ''}</Text>
-              {task.creator_id && <Text className='brand-arrow'>›</Text>}
+          <View className='brand-part' onClick={goBrand}>
+            <View className='brand-icon'>
+              {task.brand_logo_url
+                ? <View className='brand-icon-img' style={{ backgroundImage: `url(${task.brand_logo_url})` }} />
+                : <Text>{(task.creator_name || 'B')[0]}</Text>}
             </View>
-            <Text className='commission'>¥{fmt(price)}</Text>
+            <Text className='brand-name'>{task.creator_name || ''}</Text>
+            {task.creator_id && <Text className='brand-arrow'>›</Text>}
           </View>
           {rating > 0 && (
             <View className='rating-row'>
@@ -106,9 +103,10 @@ export default function TaskCard({ task, categories }: Props) {
             </View>
           )}
         </View>
-        {img && (
-          <View className='thumb' style={{ backgroundImage: `url(${img})` }} />
-        )}
+        <View className='card-right'>
+          <Text className='commission'>¥{fmt(price)}</Text>
+          {img && <View className='thumb' style={{ backgroundImage: `url(${img})` }} />}
+        </View>
       </View>
     </View>
   );

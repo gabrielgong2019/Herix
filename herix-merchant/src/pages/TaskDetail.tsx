@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { parseLinks, tasksApi, walletApi, type Application, type Task } from '@/lib/api'
@@ -112,7 +112,11 @@ function PublishBanner({ taskId }: { taskId: string }) {
   const [confirm, setConfirm] = useState(false)
   // 发布失败此前完全静默（onError 没处理，商户点完确认毫无反馈）——
   // 现在展示服务端原因；并发数被拦(OPEN_TASKS_LIMIT)是最强升级转化时刻，就地给阶梯
-  const [pubErr, setPubErr] = useState<{ msg: string; code?: string } | null>(null)
+  // 表单页点「发布任务」被闸时跳转带来的错误（内容已存草稿，在此展示原因+升级引导）
+  const location = useLocation()
+  const navState = (location.state || {}) as { publishError?: string; publishErrorCode?: string }
+  const [pubErr, setPubErr] = useState<{ msg: string; code?: string } | null>(
+    navState.publishError ? { msg: navState.publishError, code: navState.publishErrorCode } : null)
   const [ladderOpen, setLadderOpen] = useState(false)
 
   const { data: balance } = useQuery({

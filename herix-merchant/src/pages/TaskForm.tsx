@@ -380,22 +380,35 @@ export default function TaskForm() {
         submitDeadline: form.submitDeadline || undefined,
       }
       const res = isEdit ? await tasksApi.update(id!, payload) : await tasksApi.create(payload)
+      const taskId = isEdit ? id! : (res.data as Task).id
       if (coverFileRef.current) {
-        const taskIdForCover = isEdit ? id! : (res.data as Task).id
-        await tasksApi.uploadCover(taskIdForCover, coverFileRef.current)
+        await tasksApi.uploadCover(taskId, coverFileRef.current)
         coverFileRef.current = null
       }
       if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
         const codes = form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
         if (codes.length > 0) {
-          const taskId = isEdit ? id! : (res.data as Task).id
           await tasksApi.uploadCustomCodes(taskId, codes)
         }
       }
-      return res
+      // 「发布任务」= 保存 + 走发布闸（并发/额度/审核门都在服务端 publish 端点）。
+      // 此前只保存不发布——发布按钮从未真正发布过任何任务（2026-07-26 用户报编辑页点发布状态不变）
+      if (status === 'open') {
+        try {
+          await tasksApi.publish(taskId)
+        } catch (e: unknown) {
+          // 内容已存为草稿；发布被拦的原因带到详情页展示（那里有完整的 402 升级引导）。
+          // ⚠️ 必须返回 published:false 阻止 onSuccess 的列表页跳转覆盖这里的导航
+          const resp = (e as { response?: { data?: { error?: string; code?: string } } })?.response?.data
+          navigate(`/tasks/${taskId}`, { state: { publishError: resp?.error || t('taskForm.submitFailed'), publishErrorCode: resp?.code } })
+          return { published: false }
+        }
+      }
+      return { published: true }
     },
-    onSuccess: () => {
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ['tasks'] })
+      if (r && r.published === false) return // 发布被拦：已跳详情页展示原因，别覆盖导航
       navigate(fromOnboard ? '/' : '/tasks')
     },
     onError: (e: unknown) => {
@@ -931,8 +944,8 @@ export default function TaskForm() {
                 {t('taskForm.skipForNow')}
               </button>
             ) : (
-              {/* 按钮层级（2026-07-26 用户反馈灰字像禁用）：取消=放弃动作用 muted 灰，
-                  保存草稿=有效次级动作用正常文字色，发布=主色。灰字是 disabled 的视觉语言，不给可用按钮 */}
+              // 按钮层级（2026-07-26 用户反馈灰字像禁用）：取消=放弃动作 muted 灰，
+              // 保存草稿=有效次级动作黑字黑描边，发布=主色。灰字是 disabled 的视觉语言
               <button
                 type="button"
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"

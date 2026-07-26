@@ -232,7 +232,9 @@
     "capacityLine": "Current publishing capacity",
     "capacityTrial": "incl. first-task trial credit ¥{{amount}}",
     "capacityShort": "Insufficient capacity: ¥{{amount}} more needed. Top up before publishing",
-    "capacityPerf": "Referral tasks are billed per conversion and do not use publishing capacity"
+    "capacityPerf": "Referral tasks are billed per conversion and do not use publishing capacity",
+    "errorDesc": "Please enter a task brief (at least 10 characters)",
+    "submitFailed": "Submission failed, please try again later"
   },
   "site": {
     "jp": "Japan",

@@ -206,7 +206,9 @@ interface FormState {
   siteId: string
   targetCommunities: string[]
   platforms: string[]
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+  // ⚠️ 小写——服务端 zod 枚举与 DB 均为小写；此前写大写 'MEDIUM' 导致从 UI 创建任务
+  // 100% 被 400 拒（2026-07-26 用户报"带图保存失败"排查出，实与图片无关）
+  difficulty: 'easy' | 'medium' | 'hard'
   contentType: 'photo' | 'video' | 'both'
   requirements: string
   coverImage: string
@@ -230,7 +232,7 @@ const DEFAULT_STATE: FormState = {
   title: '', description: '', category: 'food',
   siteId: 'jp',
   targetCommunities: [], platforms: [],
-  difficulty: 'MEDIUM', contentType: 'photo',
+  difficulty: 'medium', contentType: 'photo',
   requirements: '', coverImage: '',
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
@@ -408,11 +410,18 @@ export default function TaskForm() {
       qc.invalidateQueries({ queryKey: ['tasks'] })
       navigate(fromOnboard ? '/' : '/tasks')
     },
-    onError: () => setError('提交失败，请稍后重试'),
+    onError: (e: unknown) => {
+      // 透出服务端真实原因（zod details / error 字符串），不再吞成笼统文案——
+      // 2026-07-26 前此处把"描述至少10字符"等校验错误全吞成"提交失败，请稍后重试"
+      const resp = (e as { response?: { data?: { error?: string; details?: Array<{ message?: string }> } } })?.response?.data
+      const detailMsg = resp?.details?.map((d) => d.message).filter(Boolean).join('；')
+      setError(detailMsg || resp?.error || t('taskForm.submitFailed'))
+    },
   })
 
   const validate = () => {
     if (!form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
+    if (form.description.trim().length < 10) { setError(t('taskForm.errorDesc')); return false }
     if (!form.payoutPerHerald) { setError(t('taskForm.errorPayout')); return false }
     if (!form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
     if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
@@ -628,10 +637,10 @@ export default function TaskForm() {
 
             <Field label={t('taskForm.fieldDifficulty')}>
               <div className="flex gap-3">
-                {(['EASY', 'MEDIUM', 'HARD'] as const).map((d) => (
+                {(['easy', 'medium', 'hard'] as const).map((d) => (
                   <Chip
                     key={d}
-                    label={t(`taskForm.diff${d[0]}${d.slice(1).toLowerCase()}`)}
+                    label={t(`taskForm.diff${d[0].toUpperCase()}${d.slice(1)}`)}
                     selected={form.difficulty === d}
                     onClick={() => set('difficulty', d)}
                   />

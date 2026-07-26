@@ -232,7 +232,9 @@
     "capacityLine": "当前可发布额度",
     "capacityTrial": "含首单体验额度 ¥{{amount}}",
     "capacityShort": "额度不足：还差 ¥{{amount}}，请充值后再发布",
-    "capacityPerf": "邀请码任务按转化实时扣费，不占用发布额度"
+    "capacityPerf": "邀请码任务按转化实时扣费，不占用发布额度",
+    "errorDesc": "请填写任务简报（至少10个字符）",
+    "submitFailed": "提交失败，请稍后重试"
   },
   "site": {
     "jp": "日本",

@@ -232,7 +232,9 @@
     "capacityLine": "현재 게시 가능 한도",
     "capacityTrial": "첫 작업 체험 한도 ¥{{amount}} 포함",
     "capacityShort": "한도 부족: ¥{{amount}} 더 필요합니다. 충전 후 게시해 주세요",
-    "capacityPerf": "초대 코드 작업은 전환별로 과금되며 게시 한도를 사용하지 않습니다"
+    "capacityPerf": "초대 코드 작업은 전환별로 과금되며 게시 한도를 사용하지 않습니다",
+    "errorDesc": "작업 개요를 입력해 주세요 (10자 이상)",
+    "submitFailed": "제출에 실패했습니다. 잠시 후 다시 시도해 주세요"
   },
   "site": {
     "jp": "일본",

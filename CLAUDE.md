@@ -164,6 +164,12 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
   类型专属字段只存 task_content_specs/task_referral_specs，发版前去掉双写代码与 COALESCE，
   主表旧列回填后 DROP。见「任务板块整体方案」（2026-07-25 定稿）。
 
+- **订阅服务 P1 正式化**（2026-07-26 记，触发条件：出现真实订阅客户）：P0 已上（brand_profiles
+  三列 + admin 手动维护 + 发布并发不限）。P1 = `merchant_subscriptions` 表（档位/专属顾问/起止/
+  **每月N次成交兜底权益台账**——平台保证接单交付，接不满顾问补位）+ admin 订阅管理页 +
+  商户端权益展示 + 订阅捆绑佣金折扣（复用 commission_rate_override）。
+  定价三档：基础版/高级版/定制版（合同单签），金额未定。
+
 - **图片存储迁移 OSS + uploads 备份**（2026-07-25 记，用户定为"正式上线后 3 个月"复查）：
   当前图片（logo/promo/cover/KYB证件）存 ECS 本地磁盘无备份，磁盘损坏即全丢。
   提前触发条件（任一满足即做，不必等 3 个月）：①真实商家开始付费入驻 ②uploads 目录超过几 GB。

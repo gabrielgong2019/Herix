@@ -199,7 +199,7 @@ export interface Task {
   mode: 'STANDARD' | 'PERFORMANCE'
   status: string // uppercase from server: DRAFT | OPEN | COMPLETED | CANCELLED
   visibility: 'PUBLIC' | 'INVITE'
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+  difficulty: 'easy' | 'medium' | 'hard'   // 服务端/DB 实际为小写（曾误标大写）
   content_type: 'photo' | 'video' | 'both'
   payout_per_herald: number
   cost_per_herald?: number
@@ -237,7 +237,7 @@ export interface TaskFormData {
   mode: 'STANDARD' | 'PERFORMANCE'
   status: 'draft' | 'open'
   visibility: 'PUBLIC' | 'INVITE'
-  difficulty: 'EASY' | 'MEDIUM' | 'HARD'
+  difficulty: 'easy' | 'medium' | 'hard'   // 服务端/DB 实际为小写（曾误标大写）
   contentType: 'photo' | 'video' | 'both'
   payoutPerHerald: number
   maxHeralds: number

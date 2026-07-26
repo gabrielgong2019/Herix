@@ -15,7 +15,7 @@ const DEFAULTS: Record<string, string> = {
   max_open_tasks_base:      '3',
   max_open_tasks_kyb:       '10',
   max_open_tasks_funded:    '20',
-  funded_topup_threshold:   '1000000',
+  funded_topup_threshold:   '300000',
 };
 
 export async function getSetting(key: string): Promise<string> {

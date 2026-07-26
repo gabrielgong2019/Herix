@@ -393,7 +393,8 @@
     "tierFundedGo": "충전하기",
     "tierSub": "마케팅 고문 구독",
     "viewPricing": "요금제 보기",
-    "currentTier": "현재 단계"
+    "currentTier": "현재 단계",
+    "tierSubSub": "무제한 · 성사 보장 · 전담 고문"
   },
   "industry": {
     "finance": "금융 서비스",
@@ -549,7 +550,8 @@
     "saveSuccess": "✓ 저장됨",
     "saveFailed": "저장 실패",
     "duplicate": "복제하여 새로 만들기",
-    "contentSection": "작업 내용"
+    "contentSection": "작업 내용",
+    "viewUpgrade": "한도 늘리는 방법"
   },
   "onboard": {
     "title": "브랜드 등록",

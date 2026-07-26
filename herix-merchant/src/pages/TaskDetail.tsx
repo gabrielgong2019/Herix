@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { parseLinks, tasksApi, type Application, type Task } from '@/lib/api'
+import { parseLinks, tasksApi, walletApi, type Application, type Task } from '@/lib/api'
+import { LadderRows } from '@/components/CapacityLadder'
 import { Topbar } from '@/components/layout/Topbar'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
 import { ArrowLeft, Check, X, Copy, Download, ExternalLink, Upload } from 'lucide-react'
@@ -107,21 +108,38 @@ function maskName(name: string): string {
 function PublishBanner({ taskId }: { taskId: string }) {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const [confirm, setConfirm] = useState(false)
+  // 发布失败此前完全静默（onError 没处理，商户点完确认毫无反馈）——
+  // 现在展示服务端原因；并发数被拦(OPEN_TASKS_LIMIT)是最强升级转化时刻，就地给阶梯
+  const [pubErr, setPubErr] = useState<{ msg: string; code?: string } | null>(null)
+  const [ladderOpen, setLadderOpen] = useState(false)
+
+  const { data: balance } = useQuery({
+    queryKey: ['wallet-balance'],
+    queryFn: () => walletApi.brandBalance().then((r) => r.data),
+  })
 
   const publishMut = useMutation({
     mutationFn: () => tasksApi.publish(taskId),
     onSuccess: () => {
       setConfirm(false)
+      setPubErr(null)
       qc.invalidateQueries({ queryKey: ['task', taskId] })
+    },
+    onError: (e: unknown) => {
+      const resp = (e as { response?: { data?: { error?: string; code?: string } } })?.response?.data
+      setPubErr({ msg: resp?.error || t('taskDetail.publishFailed'), code: resp?.code })
+      setConfirm(false)
     },
   })
 
   return (
     <div
-      className="rounded-2xl p-5 mb-5 flex items-center justify-between gap-4"
+      className="rounded-2xl p-5 mb-5 flex flex-col gap-3 relative"
       style={{ background: '#fffbeb', border: '1px solid #fde68a' }}
     >
+      <div className="flex items-center justify-between gap-4">
       <div>
         <div className="text-sm font-semibold" style={{ color: '#92400e' }}>
           {t('status.draft')}
@@ -159,9 +177,32 @@ function PublishBanner({ taskId }: { taskId: string }) {
           {t('taskDetail.publishBtn')}
         </button>
       )}
+      </div>
 
-      {publishMut.isError && (
-        <div className="text-xs" style={{ color: '#dc2626' }}>{t('taskDetail.publishFailed')}</div>
+      {pubErr && (
+        <div className="flex items-center justify-between gap-3 rounded-xl px-3.5 py-2.5 text-xs"
+          style={{ background: '#fee2e2', color: '#991b1b' }}>
+          <span>{pubErr.msg}</span>
+          {pubErr.code === 'OPEN_TASKS_LIMIT' && (
+            <button
+              type="button"
+              onClick={() => setLadderOpen(!ladderOpen)}
+              className="shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white cursor-pointer transition-opacity hover:opacity-90"
+              style={{ background: 'linear-gradient(90deg,var(--primary),#7c3aed)' }}
+            >
+              🚀 {t('taskDetail.viewUpgrade')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 被拦时刻的阶梯引导：转化率最高的位置，就地展开不跳页 */}
+      {ladderOpen && balance?.publishLimit && (
+        <div className="rounded-2xl p-4" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+          <div className="text-sm font-bold mb-1">{t('credit.ladderTitle')}</div>
+          <div className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{t('credit.ladderSub')}</div>
+          <LadderRows pl={balance.publishLimit} onAction={(to) => navigate(to)} />
+        </div>
       )}
     </div>
   )

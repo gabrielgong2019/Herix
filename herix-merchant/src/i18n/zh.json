@@ -388,7 +388,8 @@
     "tierFundedGo": "去充值",
     "tierSub": "订阅营销顾问服务",
     "viewPricing": "查看定价方案",
-    "currentTier": "当前档位"
+    "currentTier": "当前档位",
+    "tierSubSub": "发布不限 · 每月成交兜底 · 专属顾问"
   },
   "industry": {
     "finance": "金融服务",
@@ -544,7 +545,8 @@
     "saveSuccess": "✓ 已保存",
     "saveFailed": "保存失败",
     "duplicate": "复制为新任务",
-    "contentSection": "任务内容"
+    "contentSection": "任务内容",
+    "viewUpgrade": "查看提升方式"
   },
   "onboard": {
     "title": "品牌入驻",

@@ -618,7 +618,7 @@ export async function initDatabase() {
       ('max_open_tasks_base',     '3',       '同时进行中任务数上限：注册商家默认'),
       ('max_open_tasks_kyb',      '10',      '同时进行中任务数上限：KYB 认证商家'),
       ('max_open_tasks_funded',   '20',      '同时进行中任务数上限：累计充值达标商家'),
-      ('funded_topup_threshold',  '1000000', '注资档门槛：累计充值金额（JPY）')
+      ('funded_topup_threshold',  '300000', '注资档门槛：累计充值金额（JPY）。2026-07-26 由100万调至30万——30万≈2-4个任务自然累计，活跃奖励而非付费墙')
      ON CONFLICT (key) DO NOTHING`,
     // 单户 override（销售特批，复用 credit_limit_override 模式）
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS max_open_tasks_override INTEGER`,

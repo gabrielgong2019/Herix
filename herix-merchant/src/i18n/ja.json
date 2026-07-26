@@ -393,7 +393,8 @@
     "tierFundedGo": "チャージ",
     "tierSub": "マーケ顧問サービス契約",
     "viewPricing": "料金プランを見る",
-    "currentTier": "現在のステップ"
+    "currentTier": "現在のステップ",
+    "tierSubSub": "公開無制限 · 月間成果保証 · 専属顧問"
   },
   "industry": {
     "finance": "金融サービス",
@@ -549,7 +550,8 @@
     "saveSuccess": "✓ 保存しました",
     "saveFailed": "保存に失敗しました",
     "duplicate": "複製して新規作成",
-    "contentSection": "タスク内容"
+    "contentSection": "タスク内容",
+    "viewUpgrade": "枠を増やす方法"
   },
   "onboard": {
     "title": "ブランド登録",

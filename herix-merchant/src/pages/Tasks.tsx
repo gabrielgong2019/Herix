@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { Topbar } from '@/components/layout/Topbar'
 import { Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { LadderRows } from '@/components/CapacityLadder'
 
 /** 发布能力卡（2026-07-26 与用户定稿，同日按用户反馈二改）：
  *  主指标 = 进行中任务 X/Y 常显（零余额新商户注册档也能发 3 个，旧版零态卡片
@@ -32,18 +33,6 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
   const barColor    = unlimited ? '#16a34a' : slotPct >= 100 ? '#dc2626' : slotPct >= 70 ? '#f59e0b' : '#3b82f6'
   const isLow       = !unlimited && !!pl && slotPct >= 70
 
-  // 阶梯数据（弹层用）：当前档高亮，已达成的打✓，未达成的给行动按钮
-  const tiers = pl ? [
-    { key: 'BASE', label: t('credit.tierBase'), limit: String(pl.baseLimit ?? 3),
-      done: true, action: null as null | { label: string; to: string } },
-    { key: 'KYB', label: t('credit.tierKyb'), limit: String(pl.kybLimit ?? 10),
-      done: !!pl.kybApproved, action: { label: t('credit.tierKybGo'), to: '/settings' } },
-    { key: 'FUNDED', label: t('credit.tierFunded', { amount: (pl.fundedThreshold ?? 1000000).toLocaleString() }), limit: String(pl.fundedLimit ?? 20),
-      done: !!pl.funded, action: { label: t('credit.tierFundedGo'), to: '/wallet' } },
-    { key: 'SUBSCRIPTION', label: t('credit.tierSub'), limit: '∞',
-      done: unlimited, action: { label: t('credit.viewPricing'), to: '/subscribe' } },
-  ] : []
-  const currentKey = pl?.tier === 'OVERRIDE' ? 'BASE' : pl?.tier
 
   return (
     <div
@@ -71,7 +60,8 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
             className="relative text-xs font-bold px-3.5 py-1.5 rounded-full text-white cursor-pointer transition-transform hover:scale-105"
             style={{ background: 'linear-gradient(90deg,var(--primary),#7c3aed)', boxShadow: '0 2px 10px rgba(200,60,60,.35)' }}
           >
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-ping" style={{ background: '#f59e0b' }} />
+            {/* 降噪：额度紧张(≥70%)才脉冲，平时静态点——常驻闪烁对老商户是广告盲噪音 */}
+            {isLow && <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-ping" style={{ background: '#f59e0b' }} />}
             <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
             🚀 {t('credit.upgradeBubble')}
           </button>
@@ -86,40 +76,7 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
             style={{ background: '#fff', border: '1px solid var(--border)' }}>
             <div className="text-sm font-bold mb-1">{t('credit.ladderTitle')}</div>
             <div className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{t('credit.ladderSub')}</div>
-            <div className="space-y-2">
-              {tiers.map((tier) => {
-                const isCurrent = tier.key === currentKey
-                return (
-                  <div key={tier.key}
-                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
-                    style={isCurrent
-                      ? { background: '#eff6ff', border: '1px solid #bfdbfe' }
-                      : { border: '1px solid var(--border)' }}>
-                    <div className="text-lg font-bold tabular-nums w-10 text-center"
-                      style={{ color: tier.key === 'SUBSCRIPTION' ? '#16a34a' : isCurrent ? '#1d4ed8' : 'var(--muted)' }}>
-                      {tier.limit}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium">{tier.label}</div>
-                      {isCurrent && <div className="text-[11px]" style={{ color: '#1d4ed8' }}>{t('credit.currentTier')}</div>}
-                    </div>
-                    {tier.done && !isCurrent ? (
-                      <span className="text-xs" style={{ color: '#16a34a' }}>✓</span>
-                    ) : tier.action && !tier.done ? (
-                      <button
-                        type="button"
-                        onClick={() => { setLadderOpen(false); navigate(tier.action!.to) }}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap transition-opacity hover:opacity-85"
-                        style={tier.key === 'SUBSCRIPTION'
-                          ? { background: 'var(--primary)', color: '#fff' }
-                          : { background: '#fff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
-                        {tier.action.label}
-                      </button>
-                    ) : null}
-                  </div>
-                )
-              })}
-            </div>
+            <LadderRows pl={pl!} onAction={(to) => { setLadderOpen(false); navigate(to) }} />
           </div>
         </>
       )}

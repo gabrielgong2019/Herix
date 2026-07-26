@@ -393,7 +393,8 @@
     "tierFundedGo": "Top up",
     "tierSub": "Subscribe to advisor service",
     "viewPricing": "View pricing",
-    "currentTier": "Current tier"
+    "currentTier": "Current tier",
+    "tierSubSub": "Unlimited · guaranteed deliveries · dedicated advisor"
   },
   "industry": {
     "finance": "Financial Services",
@@ -549,7 +550,8 @@
     "saveSuccess": "✓ Saved",
     "saveFailed": "Save failed",
     "duplicate": "Duplicate",
-    "contentSection": "Task content"
+    "contentSection": "Task content",
+    "viewUpgrade": "See how to increase"
   },
   "onboard": {
     "title": "Brand Registration",

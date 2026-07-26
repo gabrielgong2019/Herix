@@ -110,6 +110,17 @@ function StepIndicator({ step }: { step: number }) {
   )
 }
 
+// 共享按钮样式（2026-07-27 修复：此前 className="btn btn-primary/outline" 引用的全局 CSS
+// 类在本 Tailwind 项目里从未定义过，Preflight 清空了 button 默认样式，渲染成裸文本无边框）
+const BTN_PRIMARY: React.CSSProperties = {
+  padding: '10px 20px', fontSize: 14, fontWeight: 600, borderRadius: 10, border: 'none',
+  background: 'var(--primary)', color: '#fff', cursor: 'pointer',
+}
+const BTN_OUTLINE: React.CSSProperties = {
+  padding: '10px 20px', fontSize: 14, fontWeight: 500, borderRadius: 10,
+  border: '1px solid var(--border)', background: '#fff', color: 'var(--text)', cursor: 'pointer',
+}
+
 // ── Step 1 ────────────────────────────────────────────────────────
 const PRESETS = [1000, 3000, 5000, 10000, 30000, 50000]
 
@@ -160,8 +171,8 @@ function Step1({ amount, setAmount, onNext }: { amount: number; setAmount: (n: n
 
       <div className="text-center">
         <button
-          className="btn btn-primary"
-          style={{ minWidth: 160, padding: '12px 24px', fontSize: 15, opacity: ok ? 1 : 0.5 }}
+          style={{ minWidth: 160, padding: '12px 24px', fontSize: 15, fontWeight: 600, borderRadius: 10, border: 'none',
+            background: 'var(--primary)', color: '#fff', cursor: ok ? 'pointer' : 'not-allowed', opacity: ok ? 1 : 0.5 }}
           onClick={() => ok && onNext()}
           disabled={!ok}
         >{t('wallet.nextBtn')}</button>
@@ -195,8 +206,8 @@ function Step2({ amount, onBack, onNext }: { amount: number; onBack: () => void;
       </div>
 
       <div className="flex gap-2.5 justify-center">
-        <button className="btn btn-outline" onClick={onBack}>{t('wallet.backBtn')}</button>
-        <button className="btn btn-primary" style={{ minWidth: 120 }} onClick={onNext}>{t('wallet.nextBtn')}</button>
+        <button style={BTN_OUTLINE} onClick={onBack}>{t('wallet.backBtn')}</button>
+        <button style={{ ...BTN_PRIMARY, minWidth: 120 }} onClick={onNext}>{t('wallet.nextBtn')}</button>
       </div>
     </div>
   )
@@ -261,10 +272,9 @@ function Step3({ amount, topupRef, onBack, onSubmit, submitting }: {
       </div>
 
       <div className="flex gap-2.5 justify-center">
-        <button className="btn btn-outline" onClick={onBack}>{t('wallet.backBtn')}</button>
+        <button style={BTN_OUTLINE} onClick={onBack}>{t('wallet.backBtn')}</button>
         <button
-          className="btn btn-primary"
-          style={{ padding: '12px 28px', fontSize: 14, opacity: submitting ? 0.7 : 1 }}
+          style={{ ...BTN_PRIMARY, padding: '12px 28px', fontSize: 14, cursor: submitting ? 'not-allowed' : 'pointer', opacity: submitting ? 0.7 : 1 }}
           onClick={onSubmit}
           disabled={submitting}
         >
@@ -296,7 +306,7 @@ function Step4({ amount, topupRef, onReset }: { amount: number; topupRef: string
       </div>
 
       <div className="text-xs mb-6" style={{ color: 'var(--muted)' }}>{t('wallet.supportEmail')}</div>
-      <button className="btn btn-outline" onClick={onReset}>{t('wallet.backToWallet')}</button>
+      <button style={BTN_OUTLINE} onClick={onReset}>{t('wallet.backToWallet')}</button>
     </div>
   )
 }

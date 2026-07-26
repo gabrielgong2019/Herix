@@ -140,7 +140,6 @@
     "advancedTitle": "詳細設定",
     "fieldTitle": "タスクタイトル",
     "fieldTitlePh": "例：新商品モニター募集 | リアルレビュー",
-    "fieldTitlePhDynamic": "例：{{audience}}向け | おすすめスポット紹介",
     "fieldDesc": "概要",
     "fieldDescPh": "タスクの目標とブランド背景を一言で（ヘラルドが応募前に確認します）",
     "fieldCategory": "カテゴリー",

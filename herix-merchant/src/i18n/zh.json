@@ -140,7 +140,6 @@
     "advancedTitle": "高级设置",
     "fieldTitle": "任务标题",
     "fieldTitlePh": "例：新品体验官招募 | 真实测评分享",
-    "fieldTitlePhDynamic": "例：{{audience}}探店 | 精品推荐",
     "fieldDesc": "简介",
     "fieldDescPh": "一句话描述任务目标和品牌背景（赫使会在报名前看到）",
     "fieldCategory": "分类",

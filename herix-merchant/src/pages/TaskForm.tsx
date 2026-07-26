@@ -272,7 +272,7 @@ function taskToFormState(task: Task): FormState {
 }
 
 export default function TaskForm() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const { id } = useParams<{ id?: string }>()
   const [searchParams] = useSearchParams()
@@ -300,20 +300,8 @@ export default function TaskForm() {
   // 两类型统一 1-5 段：简报 → 找谁 → 类型专属 → 时间线 → 报酬与质量
   const sn = { brief: 1, target: 2, spec: 3, time: 4, payout: 5 }
 
-  // Dynamic title placeholder: siteId × UI language → primary audience hint
-  const AUDIENCE_HINT: Record<string, Record<string, string>> = {
-    jp: { zh: '在日华人', en: 'Filipinos in Japan', ja: '在日外国人', ko: '재일 한국인' },
-    au: { zh: '在澳华人', en: 'Chinese in Australia', ja: '在豪外国人', ko: '호주 한인' },
-    us: { zh: '在美华人', en: 'Chinese in the US',   ja: '在米外国人', ko: '미주 한인' },
-    ca: { zh: '加拿大华人', en: 'Chinese in Canada', ja: '在カナダ外国人', ko: '캐나다 한인' },
-    uk: { zh: '英国华人', en: 'Chinese in the UK',   ja: '在英外国人', ko: 'UK 한인' },
-    sg: { zh: '新加坡华人', en: 'Chinese in Singapore', ja: '在シンガポール外国人', ko: '싱가포르 한인' },
-  }
-  const lang = i18n.language?.split('-')[0] || 'zh'
-  const audienceHint = AUDIENCE_HINT[form.siteId]?.[lang]
-  const titlePlaceholder = audienceHint
-    ? t('taskForm.fieldTitlePhDynamic', { audience: audienceHint })
-    : t('taskForm.fieldTitlePh')
+  // 标题占位统一用通用示例（2026-07-26 用户反馈：曾按站点×语言拼"在日华人/
+  // Filipinos in Japan"等族群提示，平台社群匹配非精确承诺，整套 AUDIENCE_HINT 机制删除）
 
   // Meta queries
   const { data: categories = [] } = useQuery({ queryKey: ['categories'], queryFn: () => metaApi.categories().then((r) => r.data) })
@@ -523,7 +511,7 @@ export default function TaskForm() {
               <Input
                 value={form.title}
                 onChange={(e) => set('title', e.target.value)}
-                placeholder={titlePlaceholder}
+                placeholder={t('taskForm.fieldTitlePh')}
               />
             </Field>
 

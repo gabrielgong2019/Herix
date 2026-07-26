@@ -140,7 +140,6 @@
     "advancedTitle": "Advanced Settings",
     "fieldTitle": "Task Title",
     "fieldTitlePh": "e.g. Product tester wanted | honest review",
-    "fieldTitlePhDynamic": "e.g. {{audience}} | Local Recommendations",
     "fieldDesc": "Brief",
     "fieldDescPh": "One-line summary of the task goal and brand background (heralds read this before applying)",
     "fieldCategory": "Category",

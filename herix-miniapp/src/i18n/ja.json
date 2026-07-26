@@ -1163,7 +1163,6 @@
   "notif.ARBITRATION_OPENED.body": "タスク「{taskTitle}」の納品争議が仲裁に付されました。双方の記録を確認のうえ裁定します。通知をお待ちください。",
   "notif.ARBITRATION_RESOLVED.title": "仲裁の裁定が出ました:{taskTitle}",
   "notif.ARBITRATION_RESOLVED.body": "タスク「{taskTitle}」の納品争議について裁定が出ました。",
-
   "brand.loading": "読み込み中…",
   "brand.notFound": "ブランドページが見つかりません",
   "brand.loadError": "読み込みに失敗しました。もう一度お試しください。",
@@ -1175,5 +1174,14 @@
   "brand.statHeralds": "アンバサダー数",
   "brand.statCompleted": "完了",
   "brand.activeJobs": "募集中",
-  "brand.noTasks": "現在募集中のタスクはありません"
+  "brand.noTasks": "現在募集中のタスクはありません",
+  "hd.stepLabel": "ステップ {step}/3",
+  "hd.draftRejectedMeta": "下書きが却下されました。修正して再提出してください",
+  "hd.draftApprovedMeta": "下書きが承認されました。本稿を提出してください",
+  "hd.submitFinalBtn": "本稿を提出",
+  "hd.submitDraftBtn": "下書きを提出",
+  "hd.draftHintFresh": "このタスクは先に下書きの提出が必要です。承認後に本稿を公開できます",
+  "hd.draftReviewing": "下書き審査中",
+  "hd.stNeedFinal": "本稿提出待ち",
+  "apply.draftApprovedIntro": "下書きが承認されました。正式に公開したコンテンツのリンクを本稿として提出してください"
 }

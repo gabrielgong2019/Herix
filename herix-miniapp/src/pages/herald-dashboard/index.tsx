@@ -72,7 +72,7 @@ export default class HeraldDashboard extends Component<{}, State> {
   };
 
   goWallet = () => Taro.navigateTo({ url: '/pages/wallet/index' });
-  openSubmit = (taskId: string) => Taro.navigateTo({ url: `/pages/apply/apply?taskId=${taskId}` });
+  openSubmit = (taskId: string, mode?: 'draft' | 'final') => Taro.navigateTo({ url: `/pages/apply/apply?taskId=${taskId}${mode ? `&mode=${mode}` : ''}` });
 
   copyCode = (code: string) => {
     Taro.setClipboardData({
@@ -149,19 +149,24 @@ export default class HeraldDashboard extends Component<{}, State> {
     );
     const balApprox = balCurrencies.length > 1;
 
-    // ── 待办任务计算（对齐 herix） ──
+    // ── 待办任务计算（对齐 herix；2026-07-27 改按 task_submissions 单据的 stage+status 分组）──
+    // task_submissions 每个(task,herald)只有一行，跨草稿/终稿复用同一行——sub.stage 就是当前所处阶段，
+    // 不能只看 status==='APPROVED'：草稿通过后 stage 仍是 DRAFT，此时"已过"但还没交终稿，仍需行动
     const approvedStdApps = myApps.filter(a => a.status === 'APPROVED' && a.mode === 'STANDARD');
-    const subForTask = (tid: string) => mySubs.find(s => s.task_id === tid && s.status === 'APPROVED');
-    const rejectedSubForTask = (tid: string) => mySubs.find(s => s.task_id === tid && s.status === 'REJECTED');
-    const pendingSubForTask = (tid: string) => mySubs.find(s => s.task_id === tid && s.status === 'PENDING_REVIEW');
-    const actionableA = approvedStdApps.filter(a => !subForTask(a.task_id) && !pendingSubForTask(a.task_id));
-    const freshA = actionableA.filter(a => !rejectedSubForTask(a.task_id));
+    const subOf = (tid: string) => mySubs.find(s => s.task_id === tid);
+    const rejectedSubForTask = (tid: string) => { const s = subOf(tid); return s && s.status === 'REJECTED' ? s : undefined; };
+    const pendingSubForTask = (tid: string) => { const s = subOf(tid); return s && s.status === 'PENDING_REVIEW' ? s : undefined; };
+    const draftApprovedSubForTask = (tid: string) => { const s = subOf(tid); return s && s.stage === 'DRAFT' && s.status === 'APPROVED' ? s : undefined; };
+    const doneSubForTask = (tid: string) => { const s = subOf(tid); return s && s.stage === 'FINAL' && s.status === 'APPROVED' ? s : undefined; };
+    const actionableA = approvedStdApps.filter(a => !doneSubForTask(a.task_id) && !pendingSubForTask(a.task_id));
     const rejectedA = actionableA.filter(a => !!rejectedSubForTask(a.task_id));
+    const draftApprovedA = actionableA.filter(a => !rejectedSubForTask(a.task_id) && !!draftApprovedSubForTask(a.task_id));
+    const freshA = actionableA.filter(a => !rejectedSubForTask(a.task_id) && !draftApprovedSubForTask(a.task_id));
     const pendingReviewA = approvedStdApps.filter(a => !!pendingSubForTask(a.task_id));
     const actionableB = myApps.filter(
       a => a.status === 'APPROVED' && a.mode === 'PERFORMANCE' && myCodes.some(c => c.task_id === a.task_id),
     );
-    const hasAction = rejectedA.length > 0 || freshA.length > 0;
+    const hasAction = rejectedA.length > 0 || freshA.length > 0 || draftApprovedA.length > 0;
     const hasInProgress = pendingReviewA.length > 0 || actionableB.length > 0;
 
     // ── 报名历史过滤 ──
@@ -169,7 +174,7 @@ export default class HeraldDashboard extends Component<{}, State> {
     if (filter === 'pending') filteredApps = myApps.filter(a => a.status === 'PENDING');
     if (filter === 'done')
       filteredApps = myApps.filter(
-        a => a.status === 'APPROVED' && mySubs.some(s => s.task_id === a.task_id && s.status === 'APPROVED'),
+        a => a.status === 'APPROVED' && mySubs.some(s => s.task_id === a.task_id && s.stage === 'FINAL' && s.status === 'APPROVED'),
       );
 
     const statusChip = (ra: any): [string, string] => {
@@ -181,7 +186,8 @@ export default class HeraldDashboard extends Component<{}, State> {
       };
       if (ra.status === 'APPROVED' && ra.mode === 'STANDARD') {
         const raSub = mySubs.find(s => s.task_id === ra.task_id);
-        if (raSub && raSub.status === 'APPROVED') stMap.APPROVED = [t('hd.done'), '#6366f1'];
+        if (raSub && raSub.stage === 'FINAL' && raSub.status === 'APPROVED') stMap.APPROVED = [t('hd.done'), '#6366f1'];
+        else if (raSub && raSub.stage === 'DRAFT' && raSub.status === 'APPROVED') stMap.APPROVED = [t('hd.stNeedFinal'), '#0369a1'];
         else if (raSub && raSub.status === 'PENDING_REVIEW') stMap.APPROVED = [t('hd.stContentReview'), '#0369a1'];
         else if (raSub && raSub.status === 'REJECTED') stMap.APPROVED = [t('hd.stResubmit'), '#dc2626'];
       }
@@ -216,22 +222,45 @@ export default class HeraldDashboard extends Component<{}, State> {
                 {hasInProgress && <Text className='sub-label'>{t('hd.actionNeeded')}</Text>}
                 {rejectedA.map(ra => {
                   const rsub = rejectedSubForTask(ra.task_id);
+                  const isDraftStage = rsub?.stage === 'DRAFT';
+                  const rMode: 'draft' | 'final' = isDraftStage ? 'draft' : 'final';
                   return this.renderTaskCard(`rej-${ra.task_id}`, {
                     title: ra.task_title,
                     accent: '#dc2626',
-                    meta: t('hd.rejectedMeta'),
+                    meta: isDraftStage ? t('hd.draftRejectedMeta') : t('hd.rejectedMeta'),
                     metaColor: '#dc2626',
-                    note: rsub && rsub.review_note ? t('task.reason', { note: rsub.review_note }) : '',
-                    right: { type: 'button', text: t('task.resubmit'), color: '#fff', bg: '#dc2626', onClick: () => this.openSubmit(ra.task_id) },
+                    note: [
+                      ra.require_draft_review ? t('hd.stepLabel', { step: isDraftStage ? 1 : 3 }) : '',
+                      rsub && rsub.review_note ? t('task.reason', { note: rsub.review_note }) : '',
+                    ].filter(Boolean).join(' · '),
+                    right: { type: 'button', text: t('task.resubmit'), color: '#fff', bg: '#dc2626', onClick: () => this.openSubmit(ra.task_id, rMode) },
                   });
                 })}
+                {draftApprovedA.map(aa =>
+                  this.renderTaskCard(`draftok-${aa.task_id}`, {
+                    title: aa.task_title,
+                    accent: 'var(--primary)',
+                    meta: t('hd.contentTaskMeta', { n: fmt(aa.payout_per_herald || aa.commission || 0) }),
+                    metaColor: 'var(--text-muted)',
+                    note: `${t('hd.stepLabel', { step: 2 })} · ${t('hd.draftApprovedMeta')}`,
+                    right: { type: 'button', text: t('hd.submitFinalBtn'), color: '#fff', bg: 'var(--primary)', onClick: () => this.openSubmit(aa.task_id, 'final') },
+                  }),
+                )}
                 {freshA.map(aa =>
                   this.renderTaskCard(`fresh-${aa.task_id}`, {
                     title: aa.task_title,
                     accent: 'var(--primary)',
                     meta: t('hd.contentTaskMeta', { n: fmt(aa.payout_per_herald || aa.commission || 0) }),
                     metaColor: 'var(--text-muted)',
-                    right: { type: 'button', text: t('task.submitWork'), color: '#fff', bg: 'var(--primary)', onClick: () => this.openSubmit(aa.task_id) },
+                    // 友情提醒：要求草稿前置的任务，交作品前先告知这里（2026-07-27 用户反馈：
+                    // 此前无任何提示，赫使/商家都以为直接发终稿，平台审核时容易误判重复内容）
+                    note: aa.require_draft_review ? `📝 ${t('hd.stepLabel', { step: 1 })} · ${t('hd.draftHintFresh')}` : '',
+                    right: {
+                      type: 'button',
+                      text: aa.require_draft_review ? t('hd.submitDraftBtn') : t('task.submitWork'),
+                      color: '#fff', bg: 'var(--primary)',
+                      onClick: () => this.openSubmit(aa.task_id, aa.require_draft_review ? 'draft' : 'final'),
+                    },
                   }),
                 )}
               </View>
@@ -240,15 +269,22 @@ export default class HeraldDashboard extends Component<{}, State> {
             {hasInProgress && (
               <View>
                 {hasAction && <Text className='sub-label gap'>{t('hd.inProgress')}</Text>}
-                {pendingReviewA.map(pra =>
-                  this.renderTaskCard(`pend-${pra.task_id}`, {
+                {pendingReviewA.map(pra => {
+                  const psub = pendingSubForTask(pra.task_id);
+                  const isDraftStage = psub?.stage === 'DRAFT';
+                  return this.renderTaskCard(`pend-${pra.task_id}`, {
                     title: pra.task_title,
                     accent: '#0369a1',
                     meta: t('hd.submittedMeta'),
                     metaColor: 'var(--text-muted)',
-                    right: { type: 'badge', text: t('hd.reviewing'), color: '#0369a1', bg: '#eff6ff' },
-                  }),
-                )}
+                    note: pra.require_draft_review ? t('hd.stepLabel', { step: isDraftStage ? 1 : 3 }) : '',
+                    right: {
+                      type: 'badge',
+                      text: pra.require_draft_review ? (isDraftStage ? t('hd.draftReviewing') : t('hd.reviewing')) : t('hd.reviewing'),
+                      color: '#0369a1', bg: '#eff6ff',
+                    },
+                  });
+                })}
                 {actionableB.map(ab => {
                   const code = myCodes.find(c => c.task_id === ab.task_id);
                   const payout = Number(code?.payout_per_herald || ab.payout_per_herald || 0);

@@ -616,7 +616,6 @@
   "wx.wechatLen": "WeChat ID cần 6-20 ký tự",
   "wx.wechatMin": "WeChat ID ít nhất 6 ký tự",
   "wx.wechatOk": "✓ WeChat ID",
-
   "brand.loading": "Đang tải…",
   "brand.notFound": "Không tìm thấy trang thương hiệu",
   "brand.loadError": "Tải thất bại. Vui lòng thử lại.",
@@ -628,5 +627,14 @@
   "brand.statHeralds": "Đại sứ",
   "brand.statCompleted": "Hoàn thành",
   "brand.activeJobs": "Đang tuyển",
-  "brand.noTasks": "Không có nhiệm vụ nào đang tuyển"
+  "brand.noTasks": "Không có nhiệm vụ nào đang tuyển",
+  "hd.stepLabel": "Bước {step}/3",
+  "hd.draftRejectedMeta": "Bản nháp bị từ chối, vui lòng chỉnh sửa và gửi lại",
+  "hd.draftApprovedMeta": "Bản nháp đã được duyệt, vui lòng nộp bản chính thức",
+  "hd.submitFinalBtn": "Nộp bản chính thức",
+  "hd.submitDraftBtn": "Nộp bản nháp",
+  "hd.draftHintFresh": "Nhiệm vụ này yêu cầu nộp bản nháp trước, chỉ được đăng bản chính thức sau khi bản nháp được duyệt",
+  "hd.draftReviewing": "Đang xét duyệt bản nháp",
+  "hd.stNeedFinal": "Cần nộp bản chính thức",
+  "apply.draftApprovedIntro": "Bản nháp của bạn đã được duyệt, vui lòng nộp liên kết nội dung đã đăng chính thức làm bản cuối"
 }

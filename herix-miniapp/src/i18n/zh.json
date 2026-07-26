@@ -1163,7 +1163,6 @@
   "notif.ARBITRATION_OPENED.body": "任务「{taskTitle}」的交付争议已提交平台仲裁，平台将审阅双方提交与审核记录后裁决，请留意通知。",
   "notif.ARBITRATION_RESOLVED.title": "仲裁已裁决：{taskTitle}",
   "notif.ARBITRATION_RESOLVED.body": "平台已对任务「{taskTitle}」的交付争议作出裁决。",
-
   "brand.loading": "加载中…",
   "brand.notFound": "品牌主页不存在",
   "brand.loadError": "加载失败，请稍后再试",
@@ -1175,5 +1174,14 @@
   "brand.statHeralds": "合作赫使",
   "brand.statCompleted": "已完成",
   "brand.activeJobs": "招募中",
-  "brand.noTasks": "暂无招募中的任务"
+  "brand.noTasks": "暂无招募中的任务",
+  "hd.stepLabel": "步骤 {step}/3",
+  "hd.draftRejectedMeta": "草稿未通过，请修改后重新提交",
+  "hd.draftApprovedMeta": "草稿已通过，请提交终稿",
+  "hd.submitFinalBtn": "提交终稿",
+  "hd.submitDraftBtn": "提交草稿",
+  "hd.draftHintFresh": "该任务需先提交草稿，通过后才能发布终稿",
+  "hd.draftReviewing": "草稿审核中",
+  "hd.stNeedFinal": "待提交终稿",
+  "apply.draftApprovedIntro": "草稿已通过，请提交正式发布内容的链接作为终稿"
 }

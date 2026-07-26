@@ -32,6 +32,7 @@ interface State {
   isResubmit: boolean;
   rejectNote: string;
   minImages: number;
+  draftApprovedFlip: boolean; // 草稿已过，这次提交是自动转入的终稿（区别于任务本来就不要求草稿）
 }
 
 export default class Apply extends Component<{}, State> {
@@ -46,6 +47,7 @@ export default class Apply extends Component<{}, State> {
     isResubmit: false,
     rejectNote: '',
     minImages: 0,
+    draftApprovedFlip: false,
   };
 
   taskId = '';
@@ -53,6 +55,10 @@ export default class Apply extends Component<{}, State> {
   componentDidMount() {
     const params = Taro.getCurrentInstance().router?.params || {};
     this.taskId = (params.taskId as string) || '';
+    // URL 的 mode 只做首屏乐观展示（避免闪一下默认态），真正准确的阶段由 loadContext
+    // 结合任务的 require_draft_review + 已有提交记录重新计算——不能只信入口传的参数
+    // （2026-07-27 修复：待办卡此前从不传 mode，导致要求草稿前置的任务直接进终稿提交界面，
+    // 完全没有"这是草稿"的提示，赫使/平台审核都可能把草稿误当重复内容）
     const mode = params.mode === 'draft' ? 'draft' : 'final';
     this.setState({ mode });
     if (this.taskId) this.loadContext(this.taskId);
@@ -74,12 +80,23 @@ export default class Apply extends Component<{}, State> {
         hints: hints.length ? hints : [DEFAULT_HINT_KEY],
         minImages: Number(taskData?.min_images) || 0,
       });
-    } catch {
-      /* 提示是辅助信息，失败用默认 */
-    }
-    // 重新提交：预填上次内容 + 显示被拒原因（多链接从 content_urls 解析，回落单链接旧字段）
-    try {
-      const subs = await submissions.my();
+
+      // 用真实数据校正阶段（权威，不再单信 URL 的 mode）——逻辑镜像服务端 decideSubmit：
+      // 没有提交记录 → 按任务是否要求草稿前置决定；DRAFT+REJECTED → 重提草稿；
+      // DRAFT+APPROVED → 草稿已过，本次自动转终稿；FINAL+REJECTED → 重提终稿
+      const requireDraft = !!taskData?.require_draft_review;
+      const subs = await submissions.my().catch(() => []);
+      const row = (subs || []).find((s: any) => s.task_id === taskId);
+      let mode: 'draft' | 'final' = requireDraft ? 'draft' : 'final';
+      let draftApprovedFlip = false;
+      if (row) {
+        if (row.stage === 'DRAFT' && row.status === 'REJECTED') mode = 'draft';
+        else if (row.stage === 'DRAFT' && row.status === 'APPROVED') { mode = 'final'; draftApprovedFlip = true; }
+        else if (row.stage === 'FINAL') mode = 'final';
+      }
+      this.setState({ mode, draftApprovedFlip });
+
+      // 重新提交：预填上次内容 + 显示被拒原因（多链接从 content_urls 解析，回落单链接旧字段）
       const prev = (subs || []).find((s: any) => s.task_id === taskId && s.status === 'REJECTED');
       if (prev) {
         let links: string[] = [];
@@ -96,7 +113,7 @@ export default class Apply extends Component<{}, State> {
         });
       }
     } catch {
-      /* 无历史提交，正常首次提交 */
+      /* 提示/阶段校正是辅助信息，失败时保留 URL 传入的乐观值，不阻塞提交 */
     }
   };
 
@@ -173,7 +190,7 @@ export default class Apply extends Component<{}, State> {
   };
 
   render() {
-    const { mode, links, screenshots, description, submitting, uploading, hints, isResubmit, rejectNote, minImages } = this.state;
+    const { mode, links, screenshots, description, submitting, uploading, hints, isResubmit, rejectNote, minImages, draftApprovedFlip } = this.state;
     const isDraft = mode === 'draft';
 
     return (
@@ -186,6 +203,7 @@ export default class Apply extends Component<{}, State> {
         </Text>
 
         {isDraft && <View className='draft-banner'>📝 {t('apply.draftIntro')}</View>}
+        {!isDraft && draftApprovedFlip && <View className='draft-banner'>🎉 {t('apply.draftApprovedIntro')}</View>}
         {isResubmit && !!rejectNote && <View className='reject-banner'>{t('apply.rejectBanner', { note: rejectNote })}</View>}
 
         <View className='form-group'>

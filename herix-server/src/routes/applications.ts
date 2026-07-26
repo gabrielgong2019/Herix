@@ -257,10 +257,14 @@ applicationRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), as
 
 /** GET /api/applications/my — 我的报名 (赫使侧) */
 applicationRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  // payout_per_herald + require_draft_review：赫使端待办卡此前只选了废弃的 commission 列，
+  // 新任务 commission 恒 0 导致价格显示¥0；require_draft_review 供前端判断是否要走草稿阶段（2026-07-27）
   const apps = await findMany<any>(
-    `SELECT ta.*, t.title as task_title, t.status as task_status, t.commission, t.mode
+    `SELECT ta.*, t.title as task_title, t.status as task_status, t.commission, t.mode,
+            t.payout_per_herald, COALESCE(tcs.require_draft_review, 0) AS require_draft_review
      FROM task_applications ta
      JOIN tasks t ON t.id = ta.task_id
+     LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id
      WHERE ta.herald_id = ?
      ORDER BY ta.created_at DESC`, [req.user!.userId]
   );

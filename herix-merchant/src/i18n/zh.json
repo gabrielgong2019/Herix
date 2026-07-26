@@ -43,15 +43,15 @@
   "herald": {
     "drawerTitle": "赫使资质",
     "platforms": "社交平台",
-    "followers": "{n} 粉丝",
+    "followers": "{{n}} 粉丝",
     "record": "Herix 记录",
     "completedTasks": "完成任务",
     "goodRate": "好评率",
     "community": "所在社群",
     "noPlatforms": "暂无平台信息",
     "noRecord": "暂无记录",
-    "tasks": "{n} 个",
-    "joinedAt": "加入于 {date}",
+    "tasks": "{{n}} 个",
+    "joinedAt": "加入于 {{date}}",
     "specialties": "擅长领域",
     "proposal": "投稿方案"
   },
@@ -226,7 +226,9 @@
     "secTimeHint": "报名截止后不再接受新报名；交稿截止是赫使提交内容的最后期限",
     "fieldRequireDraft": "草稿前置",
     "requireDraftDesc": "要求赫使先提交草稿，审核通过后才能发布内容并提交最终链接",
-    "requireDraftHint": "开启后：错误内容不会上网，改稿发生在发布前；草稿通过即定稿，发布内容与草稿不符可申请平台仲裁。需赫使使用新版 App"
+    "requireDraftHint": "开启后：错误内容不会上网，改稿发生在发布前；草稿通过即定稿，发布内容与草稿不符可申请平台仲裁。需赫使使用新版 App",
+    "fieldSite": "发布站点",
+    "fieldSiteHint": "赫使按站点过滤任务"
   },
   "site": {
     "jp": "日本",
@@ -236,8 +238,6 @@
     "uk": "英国",
     "sg": "新加坡"
   },
-  "taskForm.fieldSite": "发布站点",
-  "taskForm.fieldSiteHint": "赫使按站点过滤任务",
   "community": {
     "cn-in-jp": "在日华人",
     "vn-in-jp": "在日越南人",
@@ -587,7 +587,10 @@
     "approvedDraft": "已通过的草稿（定稿版本）",
     "draftImages": "附图 {{n}} 张",
     "noDraft": "未找到草稿记录",
-    "approveDraft": "通过草稿"
+    "approveDraft": "通过草稿",
+    "arbitrate": "申请仲裁",
+    "arbitrateReasonPrompt": "改稿额度已用尽。申请平台仲裁请填写理由（平台将审阅双方提交与审核记录后裁决）",
+    "arbitrationOpen": "仲裁中"
   },
   "auth": {
     "loginTitle": "登录商家后台",
@@ -619,7 +622,44 @@
     "errorSendCode": "发送失败，请稍后重试",
     "errorRegister": "注册失败，请稍后重试"
   },
-  "reviews.arbitrate": "申请仲裁",
-  "reviews.arbitrateReasonPrompt": "改稿额度已用尽。申请平台仲裁请填写理由（平台将审阅双方提交与审核记录后裁决）",
-  "reviews.arbitrationOpen": "仲裁中"
+  "notifBell": {
+    "title": "通知",
+    "markAll": "全部已读",
+    "empty": "暂无通知",
+    "reason": "备注：{{note}}"
+  },
+  "notif": {
+    "REVIEW_REMINDER": {
+      "title": "审核提醒:{{taskTitle}}",
+      "body": "任务《{{taskTitle}}》有提交等待审核已久，若 24 小时内仍未处理，系统将自动通过（终稿将自动结算打款）。"
+    },
+    "SETTLEMENT_BLOCKED": {
+      "title": "结算受阻 — 请充值",
+      "body": "任务《{{taskTitle}}》结算需 ¥{{needed}}，当前余额 ¥{{available}} 不足，请充值后完成打款。"
+    },
+    "ARBITRATION_OPENED": {
+      "title": "平台仲裁已开案:{{taskTitle}}",
+      "body": "任务「{{taskTitle}}」的交付争议已提交平台仲裁，平台将审阅双方提交与审核记录后裁决，请留意通知。"
+    },
+    "ARBITRATION_RESOLVED": {
+      "title": "仲裁已裁决:{{taskTitle}}",
+      "body": "平台已对任务「{{taskTitle}}」的交付争议作出裁决。"
+    },
+    "TASK_REVIEW_APPROVED": {
+      "title": "任务审核通过",
+      "body": "你的任务《{{taskTitle}}》已通过平台审核，现已对赫使公开可见。"
+    },
+    "TASK_REVIEW_REJECTED": {
+      "title": "任务审核未通过",
+      "body": "你的任务《{{taskTitle}}》未通过平台审核，已退回草稿，修改后可重新发布。"
+    },
+    "KYB_APPROVED": {
+      "title": "企业认证通过",
+      "body": "你的企业认证已通过。此后发布的任务免平台审核直接上线，并可联系运营申请提升信用额度。"
+    },
+    "KYB_REJECTED": {
+      "title": "企业认证未通过",
+      "body": "你的企业认证未通过，可在账户设置中重新提交。"
+    }
+  }
 }

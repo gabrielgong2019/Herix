@@ -121,7 +121,7 @@ export async function settleFinalSubmission(args: {
         type: 'SETTLEMENT_BLOCKED',
         title: '任务待结算 — 请充值完成打款',
         body: `任务《${task.title}》已完成，需支付 ¥${costPerHerald}（赫使到手 ¥${payout} + 平台服务费 ¥${platformFee}），当前余额 ¥${brandBal.available} 不足。`,
-        metadata: { taskId: task.id, submissionId: submission.id, needed: costPerHerald, available: brandBal.available },
+        metadata: { taskId: task.id, submissionId: submission.id, taskTitle: task.title, needed: costPerHerald, available: brandBal.available },
       }).catch((e) => console.error('[notify] SETTLEMENT_BLOCKED failed:', e));
     }
     return { ok: false, code: 'INSUFFICIENT_BALANCE', needed: costPerHerald, available: brandBal.available };

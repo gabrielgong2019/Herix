@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import i18n from '@/i18n'
+import { NotificationBell } from './NotificationBell'
 
 const LANGS = [
   { code: 'zh', label: '中文' },
@@ -29,6 +30,7 @@ export function Topbar({ title, actions }: TopbarProps) {
       <h1 className="text-base font-bold" style={{ color: 'var(--text)' }}>{title}</h1>
 
       <div className="flex items-center gap-3">
+        <NotificationBell />
         {/* Lang switcher */}
         <div
           className="flex overflow-hidden rounded-md border text-xs font-semibold"

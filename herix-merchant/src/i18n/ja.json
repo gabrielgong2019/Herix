@@ -43,15 +43,15 @@
   "herald": {
     "drawerTitle": "アンバサダー資格",
     "platforms": "SNSプラットフォーム",
-    "followers": "{n} フォロワー",
+    "followers": "{{n}} フォロワー",
     "record": "Herix 実績",
     "completedTasks": "完了案件",
     "goodRate": "好評率",
     "community": "コミュニティ",
     "noPlatforms": "プラットフォーム情報なし",
     "noRecord": "実績なし",
-    "tasks": "{n} 件",
-    "joinedAt": "{date} 参加",
+    "tasks": "{{n}} 件",
+    "joinedAt": "{{date}} 参加",
     "specialties": "得意分野",
     "proposal": "提案内容"
   },
@@ -226,7 +226,9 @@
     "secTimeHint": "応募締切以降は新規応募を受け付けません。提出締切はコンテンツ提出の期限です",
     "fieldRequireDraft": "下書き事前審査",
     "requireDraftDesc": "アンバサダーに下書きの事前提出を求め、承認後にのみ公開・最終リンク提出を許可します",
-    "requireDraftHint": "有効にすると誤った内容が公開されず、修正は公開前に行われます。承認された下書きが確定版となり、相違があればプラットフォーム仲裁を申請できます。アンバサダーは最新版アプリが必要です"
+    "requireDraftHint": "有効にすると誤った内容が公開されず、修正は公開前に行われます。承認された下書きが確定版となり、相違があればプラットフォーム仲裁を申請できます。アンバサダーは最新版アプリが必要です",
+    "fieldSite": "配信サイト",
+    "fieldSiteHint": "ヘラルドはサイト別でタスクを絞り込みます"
   },
   "site": {
     "jp": "日本",
@@ -236,8 +238,6 @@
     "uk": "イギリス",
     "sg": "シンガポール"
   },
-  "taskForm.fieldSite": "配信サイト",
-  "taskForm.fieldSiteHint": "ヘラルドはサイト別でタスクを絞り込みます",
   "community": {
     "cn-in-jp": "在日中国人",
     "vn-in-jp": "在日ベトナム人",
@@ -592,7 +592,10 @@
     "approvedDraft": "承認済み下書き（確定版）",
     "draftImages": "添付画像 {{n}} 枚",
     "noDraft": "下書き記録が見つかりません",
-    "approveDraft": "下書きを承認"
+    "approveDraft": "下書きを承認",
+    "arbitrate": "仲裁を申請",
+    "arbitrateReasonPrompt": "修正回数の上限に達しました。仲裁申請の理由を入力してください（プラットフォームが双方の記録を確認のうえ裁定します）",
+    "arbitrationOpen": "仲裁中"
   },
   "auth": {
     "loginTitle": "商家ダッシュボード",
@@ -624,7 +627,44 @@
     "errorSendCode": "送信に失敗しました。後でお試しください",
     "errorRegister": "登録に失敗しました。後でお試しください"
   },
-  "reviews.arbitrate": "仲裁を申請",
-  "reviews.arbitrateReasonPrompt": "修正回数の上限に達しました。仲裁申請の理由を入力してください（プラットフォームが双方の記録を確認のうえ裁定します）",
-  "reviews.arbitrationOpen": "仲裁中"
+  "notifBell": {
+    "title": "通知",
+    "markAll": "すべて既読",
+    "empty": "通知はありません",
+    "reason": "備考:{{note}}"
+  },
+  "notif": {
+    "REVIEW_REMINDER": {
+      "title": "審査リマインド:{{taskTitle}}",
+      "body": "タスク「{{taskTitle}}」に長期間未審査の提出があります。24時間以内に対応がない場合、自動承認されます（最終稿は自動決済されます）。"
+    },
+    "SETTLEMENT_BLOCKED": {
+      "title": "決済保留 — チャージが必要です",
+      "body": "タスク「{{taskTitle}}」の決済に ¥{{needed}} 必要ですが、残高 ¥{{available}} で不足しています。チャージ後にお支払いが完了します。"
+    },
+    "ARBITRATION_OPENED": {
+      "title": "仲裁が開始されました:{{taskTitle}}",
+      "body": "タスク「{{taskTitle}}」の納品争議が仲裁に付されました。双方の記録を確認のうえ裁定します。"
+    },
+    "ARBITRATION_RESOLVED": {
+      "title": "仲裁の裁定が出ました:{{taskTitle}}",
+      "body": "タスク「{{taskTitle}}」の納品争議について裁定が出ました。"
+    },
+    "TASK_REVIEW_APPROVED": {
+      "title": "タスク審査通過",
+      "body": "タスク「{{taskTitle}}」がプラットフォーム審査を通過し、アンバサダーに公開されました。"
+    },
+    "TASK_REVIEW_REJECTED": {
+      "title": "タスク審査不通過",
+      "body": "タスク「{{taskTitle}}」は審査を通過しませんでした。下書きに戻されたため、修正後に再公開できます。"
+    },
+    "KYB_APPROVED": {
+      "title": "企業認証が承認されました",
+      "body": "企業認証が承認されました。以降のタスクは審査なしで公開され、与信枠の引き上げも申請できます。"
+    },
+    "KYB_REJECTED": {
+      "title": "企業認証が承認されませんでした",
+      "body": "企業認証が承認されませんでした。アカウント設定から再提出できます。"
+    }
+  }
 }

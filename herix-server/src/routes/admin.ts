@@ -45,6 +45,7 @@ adminRouter.post('/task-reviews/:id/approve', async (req: Request, res: Response
     userId: task.creator_id, type: 'TASK_REVIEW_APPROVED', targetRole: 'BRAND',
     title: '任务审核通过',
     body: `你的任务《${task.title}》已通过平台审核，现已对赫使公开可见。`,
+    metadata: { taskId: task.id, taskTitle: task.title },
   });
   res.json({ success: true });
 });
@@ -61,6 +62,7 @@ adminRouter.post('/task-reviews/:id/reject', async (req: Request, res: Response)
     userId: task.creator_id, type: 'TASK_REVIEW_REJECTED', targetRole: 'BRAND',
     title: '任务审核未通过',
     body: `你的任务《${task.title}》未通过平台审核：${reason}。任务已退回草稿，修改后可重新发布。`,
+    metadata: { taskId: task.id, taskTitle: task.title, note: reason },
   });
   res.json({ success: true });
 });
@@ -138,6 +140,7 @@ adminRouter.post('/kyb/:userId/reject', async (req: Request, res: Response) => {
     userId: row.user_id, type: 'KYB_REJECTED', targetRole: 'BRAND',
     title: '企业认证未通过',
     body: `你的企业认证未通过：${reason}。可在账户设置中重新提交。`,
+    metadata: { note: reason },
   });
   res.json({ success: true });
 });

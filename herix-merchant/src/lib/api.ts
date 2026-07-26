@@ -97,6 +97,22 @@ export const reviewsApi = {
     http.post('/arbitrations', { submissionId, reason }),
 }
 
+// ── Notifications（商家端站内信，?role=BRAND 端隔离：双角色账号不串赫使侧通知）──
+export interface Notification {
+  id: string
+  type: string
+  title: string
+  body: string
+  is_read: number
+  metadata: string | null
+  created_at: string
+}
+export const notificationsApi = {
+  list: () => http.get<{ unread: number; notifications: Notification[] }>('/notifications?role=BRAND'),
+  markRead: (id: string) => http.patch(`/notifications/${id}/read`),
+  markAllRead: () => http.patch('/notifications/read-all?role=BRAND'),
+}
+
 // ── Wallet ────────────────────────────────────────────────────────
 export const walletApi = {
   brandBalance: (params?: { from?: string; to?: string }) =>

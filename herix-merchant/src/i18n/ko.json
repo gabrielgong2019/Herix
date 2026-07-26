@@ -43,15 +43,15 @@
   "herald": {
     "drawerTitle": "앰배서더 프로필",
     "platforms": "소셜 플랫폼",
-    "followers": "{n} 팔로워",
+    "followers": "{{n}} 팔로워",
     "record": "Herix 실적",
     "completedTasks": "완료 캠페인",
     "goodRate": "호평률",
     "community": "커뮤니티",
     "noPlatforms": "플랫폼 정보 없음",
     "noRecord": "실적 없음",
-    "tasks": "{n} 건",
-    "joinedAt": "{date} 가입",
+    "tasks": "{{n}} 건",
+    "joinedAt": "{{date}} 가입",
     "specialties": "전문 분야",
     "proposal": "제안 내용"
   },
@@ -226,7 +226,9 @@
     "secTimeHint": "지원 마감 이후 신규 지원을 받지 않으며, 제출 마감은 콘텐츠 제출 기한입니다",
     "fieldRequireDraft": "시안 사전 심사",
     "requireDraftDesc": "앰배서더가 시안을 먼저 제출하고, 승인 후에만 게시 및 최종 링크 제출이 가능하도록 합니다",
-    "requireDraftHint": "활성화하면 잘못된 콘텐츠가 공개되지 않고 수정은 게시 전에 이루어집니다. 승인된 시안이 기준 버전이 되며, 불일치 시 플랫폼 중재를 신청할 수 있습니다. 앰배서더는 최신 앱이 필요합니다"
+    "requireDraftHint": "활성화하면 잘못된 콘텐츠가 공개되지 않고 수정은 게시 전에 이루어집니다. 승인된 시안이 기준 버전이 되며, 불일치 시 플랫폼 중재를 신청할 수 있습니다. 앰배서더는 최신 앱이 필요합니다",
+    "fieldSite": "게시 사이트",
+    "fieldSiteHint": "헤럴드는 사이트별로 태스크를 필터링합니다"
   },
   "site": {
     "jp": "일본",
@@ -236,8 +238,6 @@
     "uk": "영국",
     "sg": "싱가포르"
   },
-  "taskForm.fieldSite": "게시 사이트",
-  "taskForm.fieldSiteHint": "헤럴드는 사이트별로 태스크를 필터링합니다",
   "community": {
     "cn-in-jp": "일본 거주 중국인",
     "vn-in-jp": "일본 거주 베트남인",
@@ -592,7 +592,10 @@
     "approvedDraft": "승인된 시안 (기준 버전)",
     "draftImages": "첨부 이미지 {{n}}장",
     "noDraft": "시안 기록을 찾을 수 없습니다",
-    "approveDraft": "시안 승인"
+    "approveDraft": "시안 승인",
+    "arbitrate": "중재 신청",
+    "arbitrateReasonPrompt": "수정 한도가 소진되었습니다. 중재 신청 사유를 입력해 주세요 (플랫폼이 양측 기록을 검토한 후 판정합니다)",
+    "arbitrationOpen": "중재 중"
   },
   "auth": {
     "loginTitle": "브랜드 대시보드",
@@ -624,7 +627,44 @@
     "errorSendCode": "발송 실패. 잠시 후 다시 시도해 주세요",
     "errorRegister": "가입 실패. 잠시 후 다시 시도해 주세요"
   },
-  "reviews.arbitrate": "중재 신청",
-  "reviews.arbitrateReasonPrompt": "수정 한도가 소진되었습니다. 중재 신청 사유를 입력해 주세요 (플랫폼이 양측 기록을 검토한 후 판정합니다)",
-  "reviews.arbitrationOpen": "중재 중"
+  "notifBell": {
+    "title": "알림",
+    "markAll": "모두 읽음",
+    "empty": "알림이 없습니다",
+    "reason": "비고: {{note}}"
+  },
+  "notif": {
+    "REVIEW_REMINDER": {
+      "title": "심사 알림: {{taskTitle}}",
+      "body": "«{{taskTitle}}» 작업에 오래 대기 중인 제출물이 있습니다. 24시간 내 처리하지 않으면 자동 승인됩니다(최종본은 자동 정산)."
+    },
+    "SETTLEMENT_BLOCKED": {
+      "title": "정산 보류 — 충전 필요",
+      "body": "«{{taskTitle}}» 정산에 ¥{{needed}}가 필요하지만 잔액이 ¥{{available}}로 부족합니다. 충전 후 지급이 완료됩니다."
+    },
+    "ARBITRATION_OPENED": {
+      "title": "중재 개시: {{taskTitle}}",
+      "body": "«{{taskTitle}}» 작업의 납품 분쟁이 플랫폼 중재에 회부되었습니다. 양측 기록을 검토한 후 판정합니다."
+    },
+    "ARBITRATION_RESOLVED": {
+      "title": "중재 판정 완료: {{taskTitle}}",
+      "body": "플랫폼이 «{{taskTitle}}» 작업의 납품 분쟁에 대해 판정했습니다."
+    },
+    "TASK_REVIEW_APPROVED": {
+      "title": "작업 심사 통과",
+      "body": "«{{taskTitle}}» 작업이 플랫폼 심사를 통과하여 앰배서더에게 공개되었습니다."
+    },
+    "TASK_REVIEW_REJECTED": {
+      "title": "작업 심사 미통과",
+      "body": "«{{taskTitle}}» 작업이 심사를 통과하지 못해 초안으로 반려되었습니다. 수정 후 다시 게시할 수 있습니다."
+    },
+    "KYB_APPROVED": {
+      "title": "기업 인증 승인",
+      "body": "기업 인증이 승인되었습니다. 이후 게시하는 작업은 심사 없이 공개되며, 신용 한도 상향을 신청할 수 있습니다."
+    },
+    "KYB_REJECTED": {
+      "title": "기업 인증 미승인",
+      "body": "기업 인증이 승인되지 않았습니다. 계정 설정에서 다시 제출할 수 있습니다."
+    }
+  }
 }

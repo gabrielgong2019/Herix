@@ -43,15 +43,15 @@
   "herald": {
     "drawerTitle": "Ambassador Profile",
     "platforms": "Social Platforms",
-    "followers": "{n} followers",
+    "followers": "{{n}} followers",
     "record": "Herix Record",
     "completedTasks": "Completed",
     "goodRate": "Good Rate",
     "community": "Community",
     "noPlatforms": "No platform info",
     "noRecord": "No record yet",
-    "tasks": "{n} tasks",
-    "joinedAt": "Joined {date}",
+    "tasks": "{{n}} tasks",
+    "joinedAt": "Joined {{date}}",
     "specialties": "Specialties",
     "proposal": "Proposal"
   },
@@ -226,7 +226,9 @@
     "secTimeHint": "Applications close at the deadline; the submission deadline is the final date for content delivery",
     "fieldRequireDraft": "Draft review first",
     "requireDraftDesc": "Require ambassadors to submit a draft for approval before publishing and submitting final links",
-    "requireDraftHint": "When enabled, mistakes never go live and revisions happen pre-publication. The approved draft becomes the reference version; mismatches can go to platform arbitration. Ambassadors need the latest app"
+    "requireDraftHint": "When enabled, mistakes never go live and revisions happen pre-publication. The approved draft becomes the reference version; mismatches can go to platform arbitration. Ambassadors need the latest app",
+    "fieldSite": "Target Site",
+    "fieldSiteHint": "Heralds browse tasks filtered by site"
   },
   "site": {
     "jp": "Japan",
@@ -236,8 +238,6 @@
     "uk": "United Kingdom",
     "sg": "Singapore"
   },
-  "taskForm.fieldSite": "Target Site",
-  "taskForm.fieldSiteHint": "Heralds browse tasks filtered by site",
   "community": {
     "cn-in-jp": "Chinese in Japan",
     "vn-in-jp": "Vietnamese in Japan",
@@ -592,7 +592,10 @@
     "approvedDraft": "Approved draft (reference version)",
     "draftImages": "{{n}} image(s) attached",
     "noDraft": "No draft record found",
-    "approveDraft": "Approve draft"
+    "approveDraft": "Approve draft",
+    "arbitrate": "Request arbitration",
+    "arbitrateReasonPrompt": "Revision budget exhausted. Enter a reason for platform arbitration (we will review both parties' records before ruling)",
+    "arbitrationOpen": "In arbitration"
   },
   "auth": {
     "loginTitle": "Merchant Dashboard",
@@ -624,7 +627,44 @@
     "errorSendCode": "Failed to send code — please try again",
     "errorRegister": "Registration failed — please try again"
   },
-  "reviews.arbitrate": "Request arbitration",
-  "reviews.arbitrateReasonPrompt": "Revision budget exhausted. Enter a reason for platform arbitration (we will review both parties' records before ruling)",
-  "reviews.arbitrationOpen": "In arbitration"
+  "notifBell": {
+    "title": "Notifications",
+    "markAll": "Mark all read",
+    "empty": "No notifications",
+    "reason": "Note: {{note}}"
+  },
+  "notif": {
+    "REVIEW_REMINDER": {
+      "title": "Review reminder: {{taskTitle}}",
+      "body": "A submission for \"{{taskTitle}}\" has been awaiting review. If not handled within 24 hours it will be auto-approved (finals settle automatically)."
+    },
+    "SETTLEMENT_BLOCKED": {
+      "title": "Settlement blocked — top up required",
+      "body": "Settling \"{{taskTitle}}\" requires ¥{{needed}} but your balance is ¥{{available}}. Please top up to complete payout."
+    },
+    "ARBITRATION_OPENED": {
+      "title": "Arbitration opened: {{taskTitle}}",
+      "body": "A delivery dispute for \"{{taskTitle}}\" has been submitted to platform arbitration. We will review both parties' records before ruling."
+    },
+    "ARBITRATION_RESOLVED": {
+      "title": "Arbitration resolved: {{taskTitle}}",
+      "body": "The platform has ruled on the delivery dispute for \"{{taskTitle}}\"."
+    },
+    "TASK_REVIEW_APPROVED": {
+      "title": "Task approved",
+      "body": "Your task \"{{taskTitle}}\" passed platform review and is now visible to ambassadors."
+    },
+    "TASK_REVIEW_REJECTED": {
+      "title": "Task not approved",
+      "body": "Your task \"{{taskTitle}}\" did not pass platform review. It was returned to draft; revise and republish."
+    },
+    "KYB_APPROVED": {
+      "title": "Business verification approved",
+      "body": "Your business verification is approved. Future tasks go live without platform review, and you can request a higher credit limit."
+    },
+    "KYB_REJECTED": {
+      "title": "Business verification not approved",
+      "body": "Your business verification was not approved. You can resubmit in account settings."
+    }
+  }
 }

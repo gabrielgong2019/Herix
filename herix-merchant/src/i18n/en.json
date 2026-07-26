@@ -126,7 +126,9 @@
     "emptySubmissions": "No submissions yet",
     "viewContent": "View content",
     "emptyTitle": "No tasks yet",
-    "emptyCta": "Create your first task"
+    "emptyCta": "Create your first task",
+    "approve": "Approve",
+    "reject": "Reject"
   },
   "taskForm": {
     "createTitle": "Create Task",

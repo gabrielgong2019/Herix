@@ -126,7 +126,9 @@
     "emptySubmissions": "暂无提交",
     "viewContent": "查看内容",
     "emptyTitle": "还没有任务",
-    "emptyCta": "创建第一个任务"
+    "emptyCta": "创建第一个任务",
+    "approve": "通过",
+    "reject": "拒绝"
   },
   "taskForm": {
     "createTitle": "创建任务",

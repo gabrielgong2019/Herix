@@ -126,7 +126,9 @@
     "emptySubmissions": "提出がありません",
     "viewContent": "コンテンツを見る",
     "emptyTitle": "タスクはまだありません",
-    "emptyCta": "最初のタスクを作成"
+    "emptyCta": "最初のタスクを作成",
+    "approve": "承認",
+    "reject": "却下"
   },
   "taskForm": {
     "createTitle": "タスク作成",

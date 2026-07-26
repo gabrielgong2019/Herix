@@ -126,7 +126,9 @@
     "emptySubmissions": "제출이 없습니다",
     "viewContent": "콘텐츠 보기",
     "emptyTitle": "아직 작업이 없습니다",
-    "emptyCta": "첫 작업 만들기"
+    "emptyCta": "첫 작업 만들기",
+    "approve": "승인",
+    "reject": "거절"
   },
   "taskForm": {
     "createTitle": "태스크 만들기",

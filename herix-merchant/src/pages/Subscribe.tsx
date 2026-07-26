@@ -6,7 +6,7 @@ import {
   subscriptionsApi, type SubscriptionPlanInfo, type MerchantSubscription, type SubscriptionInvoice,
 } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
-import { Check, Sparkles, Crown, Building2, ArrowRight, ReceiptText } from 'lucide-react'
+import { Check, Minus, Sparkles, Crown, Building2, ArrowRight, ReceiptText, ClipboardList, Banknote, Zap, Rocket } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 type Cycle = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL'
@@ -325,6 +325,88 @@ export default function Subscribe() {
         {err && (
           <div className="mb-6 px-4 py-3 rounded-lg text-sm text-center" style={{ background: '#fee2e2', color: 'var(--danger)' }}>{err}</div>
         )}
+
+        {/* 运作流程：商户第一次接触"营销顾问服务"，四步讲清怎么开始 */}
+        <div className="rounded-2xl p-6 mb-8" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+          <div className="text-sm font-bold mb-5 text-center">{t('subscribe.howTitle')}</div>
+          <div className="grid grid-cols-4 gap-4">
+            {([
+              { icon: ClipboardList, k: 'how1' },
+              { icon: Banknote, k: 'how2' },
+              { icon: Zap, k: 'how3' },
+              { icon: Rocket, k: 'how4' },
+            ] as const).map(({ icon: Icon, k }, i) => (
+              <div key={k} className="text-center">
+                <div className="w-10 h-10 rounded-full mx-auto mb-2.5 flex items-center justify-center"
+                  style={{ background: 'var(--primary-light, #fdeceb)', color: 'var(--primary)' }}>
+                  <Icon size={18} />
+                </div>
+                <div className="text-sm font-semibold mb-1">{i + 1}. {t(`subscribe.${k}Title`)}</div>
+                <div className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>{t(`subscribe.${k}Desc`)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 权益逐项对比表（行=权益，列=档位） */}
+        <div className="rounded-2xl overflow-hidden mb-8" style={{ background: '#fff', border: '1px solid var(--border)' }}>
+          <div className="text-sm font-bold px-6 pt-5 pb-3">{t('subscribe.compareTitle')}</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ background: '#fafafa' }}>
+                  <th className="text-left px-6 py-2.5 text-xs font-medium" style={{ color: 'var(--muted)', width: '34%' }}>{t('subscribe.cmpFeature')}</th>
+                  {(['basic', 'premium', 'custom'] as const).map((c) => (
+                    <th key={c} className="px-4 py-2.5 text-xs font-semibold text-center"
+                      style={{ color: c === 'premium' ? 'var(--primary)' : 'var(--text)' }}>
+                      {t(`subscribe.plan_${c}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const byCode = Object.fromEntries(plans.map((p) => [p.code, p]))
+                  const yes = <Check size={15} className="inline" style={{ color: '#16a34a' }} />
+                  const no = <Minus size={15} className="inline" style={{ color: '#d1d5db' }} />
+                  const rows: Array<{ label: string; cells: [React.ReactNode, React.ReactNode, React.ReactNode] }> = [
+                    { label: t('subscribe.cmpPrice'), cells: [
+                      byCode.basic?.monthlyPrice != null ? `¥${byCode.basic.monthlyPrice.toLocaleString()}` : '—',
+                      byCode.premium?.monthlyPrice != null ? `¥${byCode.premium.monthlyPrice.toLocaleString()}` : '—',
+                      t('subscribe.customPrice')] },
+                    { label: t('subscribe.cmpUnlimited'), cells: [yes, yes, yes] },
+                    { label: t('subscribe.cmpGuaranteed'), cells: [
+                      String(byCode.basic?.benefits.guaranteedTasks ?? 0),
+                      String(byCode.premium?.benefits.guaranteedTasks ?? 0),
+                      t('subscribe.cmpCustomVal')] },
+                    { label: t('subscribe.cmpAdvisor'), cells: [
+                      t('subscribe.cmpAdvisorShared'), t('subscribe.cmpAdvisorDedicated'), t('subscribe.cmpAdvisorTeam')] },
+                    { label: t('subscribe.cmpPlanning'), cells: [yes, yes, yes] },
+                    { label: t('subscribe.cmpCommission'), cells: [
+                      byCode.basic?.benefits.commissionDiscount ? `-${Math.round((byCode.basic.benefits.commissionDiscount) * 100)}pt` : no,
+                      byCode.premium?.benefits.commissionDiscount ? `-${Math.round((byCode.premium.benefits.commissionDiscount) * 100)}pt` : no,
+                      t('subscribe.cmpCustomVal')] },
+                    { label: t('subscribe.cmpPriority'), cells: [no, yes, yes] },
+                    { label: t('subscribe.cmpSla'), cells: [no, no, yes] },
+                    { label: t('subscribe.cmpBilling'), cells: [
+                      t('subscribe.cmpBillingSelf'), t('subscribe.cmpBillingSelf'), t('subscribe.cmpBillingContract')] },
+                  ]
+                  return rows.map((r) => (
+                    <tr key={r.label}>
+                      <td className="px-6 py-2.5 text-xs" style={{ color: 'var(--muted)', borderTop: '1px solid var(--border)' }}>{r.label}</td>
+                      {r.cells.map((cell, i) => (
+                        <td key={i} className="px-4 py-2.5 text-center text-xs"
+                          style={{ borderTop: '1px solid var(--border)', background: i === 1 ? '#fff8f7' : undefined }}>
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                })()}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* 说明（扣款方式/宽限/取消政策，合规明示） */}
         <div className="text-xs leading-relaxed space-y-1 pb-8" style={{ color: 'var(--muted)' }}>

@@ -14,7 +14,9 @@ function targetOf(n: Notification, meta: Record<string, any>): string | null {
     case 'SETTLEMENT_BLOCKED': return '/wallet'
     case 'KYB_APPROVED':
     case 'KYB_REJECTED': return '/settings'
-    default: return meta.taskId ? `/tasks/${meta.taskId}` : null
+    default:
+      if (n.type.startsWith('SUBSCRIPTION_')) return '/subscribe'
+      return meta.taskId ? `/tasks/${meta.taskId}` : null
   }
 }
 
@@ -27,10 +29,19 @@ const TYPE_ICON: Record<string, string> = {
   TASK_REVIEW_REJECTED: '❌',
   KYB_APPROVED: '🏢',
   KYB_REJECTED: '❌',
+  SUBSCRIPTION_ACTIVATED: '✨',
+  SUBSCRIPTION_RENEWED: '✨',
+  SUBSCRIPTION_RENEWAL_DUE: '⏰',
+  SUBSCRIPTION_PAST_DUE: '⚠️',
+  SUBSCRIPTION_EXPIRED: '📅',
 }
 
 /** 无参模板类型：没有 taskTitle 也可以按当前语言渲染 */
-const PARAMLESS = new Set(['KYB_APPROVED', 'KYB_REJECTED'])
+const PARAMLESS = new Set([
+  'KYB_APPROVED', 'KYB_REJECTED',
+  'SUBSCRIPTION_ACTIVATED', 'SUBSCRIPTION_RENEWED', 'SUBSCRIPTION_RENEWAL_DUE',
+  'SUBSCRIPTION_PAST_DUE', 'SUBSCRIPTION_EXPIRED',
+])
 
 function parseMeta(n: Notification): Record<string, any> {
   try { return n.metadata ? JSON.parse(n.metadata) : {} } catch { return {} }

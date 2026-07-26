@@ -632,7 +632,10 @@
     "approveDraft": "시안 승인",
     "arbitrate": "중재 신청",
     "arbitrateReasonPrompt": "수정 한도가 소진되었습니다. 중재 신청 사유를 입력해 주세요 (플랫폼이 양측 기록을 검토한 후 판정합니다)",
-    "arbitrationOpen": "중재 중"
+    "arbitrationOpen": "중재 중",
+    "pendingAppsTitle": "지원 심사 대기 ({{n}})",
+    "goReviewApp": "심사하기",
+    "submissionsTitle": "콘텐츠 제출 심사"
   },
   "auth": {
     "loginTitle": "브랜드 대시보드",

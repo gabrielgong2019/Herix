@@ -632,7 +632,10 @@
     "approveDraft": "Approve draft",
     "arbitrate": "Request arbitration",
     "arbitrateReasonPrompt": "Revision budget exhausted. Enter a reason for platform arbitration (we will review both parties' records before ruling)",
-    "arbitrationOpen": "In arbitration"
+    "arbitrationOpen": "In arbitration",
+    "pendingAppsTitle": "Applications pending review ({{n}})",
+    "goReviewApp": "Review",
+    "submissionsTitle": "Content submission reviews"
   },
   "auth": {
     "loginTitle": "Merchant Dashboard",

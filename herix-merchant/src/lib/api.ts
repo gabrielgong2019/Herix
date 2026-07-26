@@ -94,7 +94,19 @@ export const tasksApi = {
 }
 
 // ── Reviews ───────────────────────────────────────────────────────
+export interface PendingApplication {
+  id: string
+  task_id: string
+  herald_id: string
+  message?: string | null
+  created_at: string
+  task_title: string
+  herald_name: string
+  display_name?: string | null
+}
+
 export const reviewsApi = {
+  pendingApplications: () => http.get<PendingApplication[]>('/applications/pending'),
   // 2026-07-26 接到真实端点（此前 /merchant/submissions/pending 与 approve/reject POST 均不存在，页面是坏的）
   list: () => http.get<Submission[]>('/submissions/pending'),
   review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>

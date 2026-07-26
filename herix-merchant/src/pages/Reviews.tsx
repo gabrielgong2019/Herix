@@ -1,7 +1,8 @@
 import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reviewsApi, parseLinks, type Submission, type SubmissionRevision } from '@/lib/api'
+import { reviewsApi, parseLinks, type Submission, type SubmissionRevision, type PendingApplication } from '@/lib/api'
+import { useNavigate } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
 import { Check, X, FileText, Scale } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -42,9 +43,15 @@ export default function Reviews() {
   const [compareId, setCompareId] = useState<string | null>(null)
   const [err, setErr] = useState('')
 
+  const navigate = useNavigate()
   const { data: subs = [], isLoading } = useQuery({
     queryKey: ['reviews'],
     queryFn: () => reviewsApi.list().then((r) => r.data),
+  })
+  // 报名待审汇总（2026-07-26）：报名审核入口在任务详情申请人Tab，单靠那里用户找不到——本页一处看全两类待办
+  const { data: pendingApps = [] } = useQuery({
+    queryKey: ['pending-apps'],
+    queryFn: () => reviewsApi.pendingApplications().then((r) => r.data),
   })
 
   const reviewMut = useMutation({
@@ -90,6 +97,32 @@ export default function Reviews() {
         {err && (
           <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#fee2e2', color: 'var(--danger)' }}>{err}</div>
         )}
+        {pendingApps.length > 0 && (
+          <div className="rounded-2xl overflow-hidden mb-6" style={{ background: '#fff' }}>
+            <div className="px-5 py-3.5 text-sm font-semibold flex items-center gap-2" style={{ borderBottom: '1px solid var(--border)' }}>
+              🙋 {t('reviews.pendingAppsTitle', { n: pendingApps.length })}
+            </div>
+            <table className="w-full">
+              <tbody>
+                {pendingApps.map((app: PendingApplication) => (
+                  <tr key={app.id}>
+                    <td className="px-5 py-3 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{app.task_title}</td>
+                    <td className="px-5 py-3 text-sm" style={{ borderBottom: '1px solid var(--border)' }}>{app.display_name || app.herald_name}</td>
+                    <td className="px-5 py-3 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{formatDate(app.created_at)}</td>
+                    <td className="px-5 py-3 text-right" style={{ borderBottom: '1px solid var(--border)' }}>
+                      <button className="text-sm font-medium px-3 py-1.5 rounded-lg" style={{ color: '#fff', background: 'var(--primary)' }}
+                        onClick={() => navigate(`/tasks/${app.task_id}`)}>
+                        {t('reviews.goReviewApp')}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="px-1 pb-2 text-sm font-semibold">{t('reviews.submissionsTitle')}</div>
         <div className="rounded-2xl overflow-hidden" style={{ background: '#fff' }}>
           <table className="w-full">
             <thead>

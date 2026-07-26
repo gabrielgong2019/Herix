@@ -627,7 +627,10 @@
     "approveDraft": "通过草稿",
     "arbitrate": "申请仲裁",
     "arbitrateReasonPrompt": "改稿额度已用尽。申请平台仲裁请填写理由（平台将审阅双方提交与审核记录后裁决）",
-    "arbitrationOpen": "仲裁中"
+    "arbitrationOpen": "仲裁中",
+    "pendingAppsTitle": "报名待审（{{n}}）",
+    "goReviewApp": "去审核",
+    "submissionsTitle": "内容提交审核"
   },
   "auth": {
     "loginTitle": "登录商家后台",

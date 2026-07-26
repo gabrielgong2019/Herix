@@ -254,6 +254,22 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
   }
 });
 
+/** GET /api/applications/pending — 名下任务全部待审报名（商家审核队列页汇总用，2026-07-26：
+ *  报名审核入口原来只在任务详情申请人Tab，用户两次找不到——审核队列页现在汇总报名+内容两类待办） */
+applicationRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const rows = await findMany<any>(
+    `SELECT ta.id, ta.task_id, ta.herald_id, ta.message, ta.created_at,
+            t.title AS task_title, u.nickname AS herald_name, hp.display_name
+     FROM task_applications ta
+     JOIN tasks t ON t.id = ta.task_id
+     JOIN users u ON u.id = ta.herald_id
+     LEFT JOIN herald_profiles hp ON hp.user_id = ta.herald_id
+     WHERE t.creator_id = ? AND ta.status = 'PENDING'
+     ORDER BY ta.created_at ASC`, [req.user!.userId]
+  );
+  res.json(rows);
+});
+
 /** GET /api/applications/my — 我的报名 (赫使侧) */
 applicationRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
   const apps = await findMany<any>(

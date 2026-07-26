@@ -632,7 +632,10 @@
     "approveDraft": "下書きを承認",
     "arbitrate": "仲裁を申請",
     "arbitrateReasonPrompt": "修正回数の上限に達しました。仲裁申請の理由を入力してください（プラットフォームが双方の記録を確認のうえ裁定します）",
-    "arbitrationOpen": "仲裁中"
+    "arbitrationOpen": "仲裁中",
+    "pendingAppsTitle": "応募審査待ち（{{n}}）",
+    "goReviewApp": "審査する",
+    "submissionsTitle": "コンテンツ提出審査"
   },
   "auth": {
     "loginTitle": "商家ダッシュボード",

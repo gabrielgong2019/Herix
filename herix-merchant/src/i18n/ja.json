@@ -553,7 +553,9 @@
     "saveFailed": "保存に失敗しました",
     "duplicate": "複製して新規作成",
     "contentSection": "タスク内容",
-    "viewUpgrade": "枠を増やす方法"
+    "viewUpgrade": "枠を増やす方法",
+    "reviewPendingShareHint": "タスクはプラットフォーム審査中です（通常1営業日以内）。承認までシェアリンクはクリエイターに表示されません。",
+    "reviewRejectedHint": "タスクは審査を通過しませんでした：{{note}}。下書きに戻されました。修正後に再公開できます。"
   },
   "onboard": {
     "title": "ブランド登録",

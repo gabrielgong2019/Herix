@@ -548,7 +548,9 @@
     "saveFailed": "保存失败",
     "duplicate": "复制为新任务",
     "contentSection": "任务内容",
-    "viewUpgrade": "查看提升方式"
+    "viewUpgrade": "查看提升方式",
+    "reviewPendingShareHint": "任务正在平台审核中（通常 1 个工作日内）。审核通过前，分享链接对赫使暂不可见——请先不要对外分享。",
+    "reviewRejectedHint": "任务未通过平台审核：{{note}}。已退回草稿，修改后可重新发布。"
   },
   "onboard": {
     "title": "品牌入驻",

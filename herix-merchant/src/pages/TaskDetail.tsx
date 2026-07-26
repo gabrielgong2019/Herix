@@ -653,6 +653,21 @@ export default function TaskDetail() {
         {/* Publish banner */}
         {isDraft && <PublishBanner taskId={id!} />}
 
+        {/* 审核中提示：分享链接此时对赫使 404（审核门防直链绕过），商家分享出去全是"无任务"——
+            先把预期讲清楚（2026-07-26 用户实测 H5 落地页"无任务"由此） */}
+        {!isDraft && task.platform_review === 'pending' && (
+          <div className="rounded-2xl px-5 py-4 mb-5 text-sm flex items-center gap-2"
+            style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
+            ⏳ {t('taskDetail.reviewPendingShareHint')}
+          </div>
+        )}
+        {task.platform_review === 'rejected' && task.platform_review_note && (
+          <div className="rounded-2xl px-5 py-4 mb-5 text-sm"
+            style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b' }}>
+            {t('taskDetail.reviewRejectedHint', { note: task.platform_review_note })}
+          </div>
+        )}
+
         {/* Share section */}
         {!isDraft && <ShareSection taskId={id!} />}
 

@@ -589,6 +589,8 @@ export async function initDatabase() {
     // P1 双向计时器 + 仲裁（2026-07-26）
     // reminder_sent：临期催审只发一次的标记，每次新提交时归零（提交路径负责重置）
     `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0`,
+    // resubmit_warn_sent：赫使侧临期预警只发一次的标记，被拒后重提时归零
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS resubmit_warn_sent INTEGER NOT NULL DEFAULT 0`,
     // 仲裁开案：改稿额度用尽后商家/赫使任一方开案，一个提交终身只能开一案（UNIQUE）。
     // 开案期间该提交冻结超时计时（timers 跳过 OPEN 案对应的行）
     `CREATE TABLE IF NOT EXISTS arbitrations (

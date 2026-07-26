@@ -25,12 +25,12 @@ function isoDaysAgo(days: number): string {
 }
 
 /** 单轮扫描（导出供测试脚本直接调用） */
-export async function runSubmissionTimersOnce(): Promise<{ reminded: number; autoApproved: number; released: number }> {
+export async function runSubmissionTimersOnce(): Promise<{ reminded: number; autoApproved: number; released: number; warned: number }> {
   const reviewDays   = Number(await getSetting('review_timeout_days')) || 7;
   const resubmitDays = Number(await getSetting('resubmit_timeout_days')) || 7;
   const dueCutoff    = isoDaysAgo(reviewDays);
   const remindCutoff = isoDaysAgo(Math.max(reviewDays - 1, 0));
-  let reminded = 0, autoApproved = 0, released = 0;
+  let reminded = 0, autoApproved = 0, released = 0, warned = 0;
 
   // ── 1. 临期催审（剩 ≤24h 且未到期，只发一次）──
   const toRemind = await findMany<any>(
@@ -100,9 +100,36 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
     }
   }
 
-  // ── 3. 赫使超时未重提 → 释放名额 ──
+  // ── 3a. 赫使临期预警（修改期剩 ≤24h，只发一次）──
+  const toWarn = await findMany<any>(
+    `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, t.title, u.email
+     FROM task_submissions ts
+     JOIN tasks t ON t.id = ts.task_id
+     JOIN users u ON u.id = ts.herald_id
+     WHERE ts.status = 'REJECTED' AND ts.resubmit_warn_sent = 0
+       AND ts.reviewed_at < ? AND ts.reviewed_at >= ?
+       AND EXISTS (SELECT 1 FROM task_applications ta
+                   WHERE ta.task_id = ts.task_id AND ta.herald_id = ts.herald_id AND ta.status = 'APPROVED')
+       AND ${NO_OPEN_ARBITRATION}`,
+    [isoDaysAgo(resubmitDays - 1), isoDaysAgo(resubmitDays)]
+  );
+  for (const s of toWarn) {
+    await notify({
+      userId: s.herald_id,
+      email: s.email,
+      targetRole: 'HERALD',
+      type: 'RESUBMIT_EXPIRY_WARN',
+      title: `「${s.title}」修改期即将结束`,
+      body: `你在「${s.title}」的修改提交还有约 24 小时窗口，逾期名额将自动释放，请抓紧重新提交。`,
+      metadata: { taskId: s.task_id, submissionId: s.id, taskTitle: s.title },
+    }).catch((e) => console.error('[timers] RESUBMIT_EXPIRY_WARN failed:', e));
+    await update('task_submissions', { resubmit_warn_sent: 1 }, 'id = ?', [s.id]);
+    warned++;
+  }
+
+  // ── 3b. 赫使超时未重提 → 释放名额 ──
   const toRelease = await findMany<any>(
-    `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, t.title, u.email, u.nickname
+    `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, t.title, u.email
      FROM task_submissions ts
      JOIN tasks t ON t.id = ts.task_id
      JOIN users u ON u.id = ts.herald_id
@@ -123,21 +150,21 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
     await auditRevision({
       submissionId: s.id, taskId: s.task_id, heraldId: s.herald_id,
       stage: s.stage, kind: 'REVIEW', action: 'SLOT_RELEASED',
-      note: `被拒后超时未重提（${resubmitDays}天），系统释放名额`, actorId: SYSTEM_ACTOR,
+      note: `修改期已过（${resubmitDays}天），系统释放名额`, actorId: SYSTEM_ACTOR,
     });
     await notify({
       userId: s.herald_id,
       email: s.email,
       targetRole: 'HERALD',
       type: 'SLOT_RELEASED',
-      title: `任务名额已释放：${s.title}`,
-      body: `${s.nickname || ''}，您在任务「${s.title}」的提交被拒后超过 ${resubmitDays} 天未重新提交，名额已自动释放。`,
+      title: `你在「${s.title}」的参与名额已到期`,
+      body: `由于修改期已过，你在「${s.title}」的参与名额已自动结束。如有兴趣可重新报名参与。`,
       metadata: { taskId: s.task_id, submissionId: s.id, taskTitle: s.title },
     }).catch((e) => console.error('[timers] SLOT_RELEASED failed:', e));
     released++;
   }
 
-  return { reminded, autoApproved, released };
+  return { reminded, autoApproved, released, warned };
 }
 
 /** 启动：30 秒后首跑（等 DB 迁移完成），此后每小时一轮 */
@@ -145,8 +172,8 @@ export function startSubmissionTimers(): void {
   const run = () =>
     runSubmissionTimersOnce()
       .then((r) => {
-        if (r.reminded || r.autoApproved || r.released) {
-          console.log(`[timers] reminded=${r.reminded} autoApproved=${r.autoApproved} released=${r.released}`);
+        if (r.reminded || r.autoApproved || r.released || r.warned) {
+          console.log(`[timers] reminded=${r.reminded} autoApproved=${r.autoApproved} released=${r.released} warned=${r.warned}`);
         }
       })
       .catch((e) => console.error('[timers] sweep failed:', e));

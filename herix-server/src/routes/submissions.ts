@@ -87,7 +87,8 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
       review_note: null,
       reviewed_at: null,
       submitted_at: new Date().toISOString(),
-      reminder_sent: 0,   // 新提交重置临期催审标记（每个待审周期最多催一次）
+      reminder_sent: 0,        // 新提交重置临期催审标记（每个待审周期最多催一次）
+      resubmit_warn_sent: 0,   // 重提时重置，下轮被拒后重新计算预警窗口
     };
     let subId: string;
     if (row) {

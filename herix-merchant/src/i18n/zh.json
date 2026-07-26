@@ -19,7 +19,8 @@
     "preview": "预览",
     "publish": "发布",
     "draft": "草稿",
-    "new": "新建"
+    "new": "新建",
+    "remove": "移除"
   },
   "platform": {
     "xiaohongshu": "小红书",
@@ -240,7 +241,16 @@
     "capacityShort": "额度不足：还差 ¥{{amount}}，请充值后再发布",
     "capacityPerf": "邀请码任务按转化实时扣费，不占用发布额度",
     "errorDesc": "请填写任务简报（至少10个字符）",
-    "submitFailed": "提交失败，请稍后重试"
+    "submitFailed": "提交失败，请稍后重试",
+    "fieldPlatformHint": "勾选赫使必须持有账号的平台，可选填最低粉丝数门槛",
+    "minFollowersPlaceholder": "最低粉丝数（不限）",
+    "requiredToggle": "必须满足",
+    "reqModeLabel": "满足方式：",
+    "reqModeAll": "全部满足",
+    "reqModeAnyN": "满足其中 {{n}}/{{total}} 项即可",
+    "summaryRequired": "必须满足：{{list}}",
+    "summaryOptional": "仅展示（不强制）：{{list}}",
+    "summaryAnyN": "赫使需满足以下 {{total}} 项中的 {{n}} 项：{{list}}"
   },
   "site": {
     "jp": "日本",

@@ -19,7 +19,8 @@
     "preview": "미리보기",
     "publish": "게시",
     "draft": "초안",
-    "new": "새로 만들기"
+    "new": "새로 만들기",
+    "remove": "삭제"
   },
   "platform": {
     "xiaohongshu": "샤오홍수",
@@ -240,7 +241,16 @@
     "capacityShort": "한도 부족: ¥{{amount}} 더 필요합니다. 충전 후 게시해 주세요",
     "capacityPerf": "초대 코드 작업은 전환별로 과금되며 게시 한도를 사용하지 않습니다",
     "errorDesc": "작업 개요를 입력해 주세요 (10자 이상)",
-    "submitFailed": "제출에 실패했습니다. 잠시 후 다시 시도해 주세요"
+    "submitFailed": "제출에 실패했습니다. 잠시 후 다시 시도해 주세요",
+    "fieldPlatformHint": "크리에이터가 반드시 계정을 보유해야 하는 플랫폼을 선택하세요 (최소 팔로워 수는 선택 사항)",
+    "minFollowersPlaceholder": "최소 팔로워 수 (제한 없음)",
+    "requiredToggle": "필수",
+    "reqModeLabel": "충족 방식:",
+    "reqModeAll": "전체 충족",
+    "reqModeAnyN": "{{total}}개 중 {{n}}개만 충족",
+    "summaryRequired": "필수 조건: {{list}}",
+    "summaryOptional": "표시만 (강제 아님): {{list}}",
+    "summaryAnyN": "다음 {{total}}개 중 {{n}}개를 충족해야 합니다: {{list}}"
   },
   "site": {
     "jp": "일본",

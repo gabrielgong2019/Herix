@@ -19,7 +19,8 @@
     "preview": "Preview",
     "publish": "Publish",
     "draft": "Draft",
-    "new": "New"
+    "new": "New",
+    "remove": "Remove"
   },
   "platform": {
     "xiaohongshu": "Xiaohongshu (RED)",
@@ -240,7 +241,16 @@
     "capacityShort": "Insufficient capacity: ¥{{amount}} more needed. Top up before publishing",
     "capacityPerf": "Referral tasks are billed per conversion and do not use publishing capacity",
     "errorDesc": "Please enter a task brief (at least 10 characters)",
-    "submitFailed": "Submission failed, please try again later"
+    "submitFailed": "Submission failed, please try again later",
+    "fieldPlatformHint": "Select platforms creators must have an account on; minimum follower count is optional",
+    "minFollowersPlaceholder": "Min followers (no limit)",
+    "requiredToggle": "Required",
+    "reqModeLabel": "Requirement mode:",
+    "reqModeAll": "All must be met",
+    "reqModeAnyN": "Any {{n}} of {{total}}",
+    "summaryRequired": "Required: {{list}}",
+    "summaryOptional": "Shown only (not enforced): {{list}}",
+    "summaryAnyN": "Creator must meet {{n}} of the following {{total}}: {{list}}"
   },
   "site": {
     "jp": "Japan",

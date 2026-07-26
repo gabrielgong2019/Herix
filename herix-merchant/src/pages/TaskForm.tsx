@@ -22,6 +22,25 @@ const PLATFORMS = [
 
 const PLATFORM_FEE_RATE = 0.2
 
+/** 平台要求实时摘要文案（ALL：必须/展示两组；ANY_N：候选池+需满足数） */
+function platformReqSummary(form: FormState, t: (k: string, params?: Record<string, unknown>) => string): string {
+  const nameOf = (id: string) => PLATFORMS.find((p) => p.id === id)?.name || id
+  const fmt = (r: FormState['platformRequirements'][number]) =>
+    `${nameOf(r.platformId)}${r.minFollowers ? ` ≥${r.minFollowers}` : ''}`
+  if (form.reqMode === 'ANY_N') {
+    return t('taskForm.summaryAnyN', {
+      n: form.reqMinCount, total: form.platformRequirements.length,
+      list: form.platformRequirements.map(fmt).join('、'),
+    })
+  }
+  const required = form.platformRequirements.filter((r) => r.required)
+  const optional = form.platformRequirements.filter((r) => !r.required)
+  const parts: string[] = []
+  if (required.length) parts.push(t('taskForm.summaryRequired', { list: required.map(fmt).join('、') }))
+  if (optional.length) parts.push(t('taskForm.summaryOptional', { list: optional.map(fmt).join('、') }))
+  return parts.join(' · ')
+}
+
 // ── Sub-components ────────────────────────────────────────────────
 
 function SectionHeader({ num, title, hint }: { num: number; title: string; hint: string }) {
@@ -206,7 +225,9 @@ interface FormState {
   category: string
   siteId: string
   targetCommunities: string[]
-  platforms: string[]
+  platformRequirements: Array<{ platformId: string; minFollowers: number | ''; required: boolean }>
+  reqMode: 'ALL' | 'ANY_N'
+  reqMinCount: number
   // ⚠️ 小写——服务端 zod 枚举与 DB 均为小写；此前写大写 'MEDIUM' 导致从 UI 创建任务
   // 100% 被 400 拒（2026-07-26 用户报"带图保存失败"排查出，实与图片无关）
   difficulty: 'easy' | 'medium' | 'hard'
@@ -232,7 +253,7 @@ interface FormState {
 const DEFAULT_STATE: FormState = {
   title: '', description: '', category: 'food',
   siteId: 'jp',
-  targetCommunities: [], platforms: [],
+  targetCommunities: [], platformRequirements: [], reqMode: 'ALL', reqMinCount: 1,
   difficulty: 'medium', contentType: 'photo',
   requirements: '', coverImage: '',
   payoutPerHerald: '', maxHeralds: '',
@@ -240,6 +261,17 @@ const DEFAULT_STATE: FormState = {
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
+}
+
+function parseTaskPlatformRequirements(raw: Task['platform_requirements']): FormState['platformRequirements'] {
+  if (!raw) return []
+  let arr: Array<{ platformId: string; minFollowers?: number | null; required?: boolean }> = []
+  try { arr = typeof raw === 'string' ? JSON.parse(raw) : raw } catch { return [] }
+  return arr.filter((r) => r.platformId).map((r) => ({
+    platformId: r.platformId,
+    minFollowers: r.minFollowers != null ? r.minFollowers : '',
+    required: r.required !== false,
+  }))
 }
 
 function taskToFormState(task: Task): FormState {
@@ -250,7 +282,9 @@ function taskToFormState(task: Task): FormState {
     category: task.category,
     siteId: (task as any).site_id || 'jp',
     targetCommunities: task.target_communities || [],
-    platforms: [],
+    platformRequirements: parseTaskPlatformRequirements(task.platform_requirements),
+    reqMode: task.req_mode === 'ANY_N' ? 'ANY_N' : 'ALL',
+    reqMinCount: task.req_min_count || 1,
     difficulty: task.difficulty,
     contentType: task.content_type === 'referral' ? 'photo' : task.content_type, // referral=邀请码占位值，表单无此选项
     requirements: task.requirements || '',
@@ -345,11 +379,29 @@ export default function TaskForm() {
   // 封面原始文件：dataURL(form.coverImage)仅用于本地预览，真正上传走 multipart(见 saveMut)
   const coverFileRef = useRef<File | null>(null)
 
-  const toggleList = useCallback((key: 'targetCommunities' | 'platforms', val: string) => {
+  const toggleList = useCallback((key: 'targetCommunities', val: string) => {
     setForm((prev) => {
       const list = prev[key] as string[]
       return { ...prev, [key]: list.includes(val) ? list.filter((x) => x !== val) : [...list, val] }
     })
+  }, [])
+
+  // 平台要求：加入/移除 + 单项粉丝数/必须开关（2026-07-27 补——此前 chip 选完从不提交，是无效 UI）
+  const togglePlatformReq = useCallback((platformId: string) => {
+    setForm((prev) => {
+      const exists = prev.platformRequirements.some((r) => r.platformId === platformId)
+      const list = exists
+        ? prev.platformRequirements.filter((r) => r.platformId !== platformId)
+        : [...prev.platformRequirements, { platformId, minFollowers: '' as const, required: true }]
+      const reqMinCount = prev.reqMode === 'ANY_N' ? Math.min(prev.reqMinCount, Math.max(1, list.length)) : prev.reqMinCount
+      return { ...prev, platformRequirements: list, reqMinCount }
+    })
+  }, [])
+  const updatePlatformReq = useCallback((platformId: string, patch: Partial<{ minFollowers: number | ''; required: boolean }>) => {
+    setForm((prev) => ({
+      ...prev,
+      platformRequirements: prev.platformRequirements.map((r) => r.platformId === platformId ? { ...r, ...patch } : r),
+    }))
   }, [])
 
   // Mutations
@@ -379,6 +431,15 @@ export default function TaskForm() {
         requireProposal: form.requireProposal,
         requireDraftReview: form.requireDraftReview,
         submitDeadline: form.submitDeadline || undefined,
+        platformRequirements: form.platformRequirements.length
+          ? form.platformRequirements.map((r) => ({
+              platformId: r.platformId,
+              minFollowers: r.minFollowers === '' ? undefined : Number(r.minFollowers),
+              required: form.reqMode === 'ANY_N' ? true : r.required, // ANY_N 模式服务端忽略单项 required，统一传 true
+            }))
+          : undefined,
+        reqMode: form.platformRequirements.length ? form.reqMode : undefined,
+        reqMinCount: form.reqMode === 'ANY_N' ? form.reqMinCount : undefined,
       }
       const res = isEdit ? await tasksApi.update(id!, payload) : await tasksApi.create(payload)
       const taskId = isEdit ? id! : (res.data as Task).id
@@ -627,17 +688,80 @@ export default function TaskForm() {
               </div>
             </Field>
 
-            <Field label={t('taskForm.fieldPlatform')}>
-              <div className="flex flex-wrap gap-2">
-                {PLATFORMS.map((p) => (
-                  <Chip
-                    key={p.id}
-                    label={`${p.icon} ${p.name}`}
-                    selected={form.platforms.includes(p.id)}
-                    onClick={() => toggleList('platforms', p.id)}
-                  />
-                ))}
+            <Field label={t('taskForm.fieldPlatform')} hint={t('taskForm.fieldPlatformHint')}>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {PLATFORMS.map((p) => {
+                  const active = form.platformRequirements.some((r) => r.platformId === p.id)
+                  return (
+                    <Chip
+                      key={p.id}
+                      label={`${p.icon} ${p.name}`}
+                      selected={active}
+                      onClick={() => togglePlatformReq(p.id)}
+                    />
+                  )
+                })}
               </div>
+
+              {form.platformRequirements.length > 0 && (
+                <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                  {form.platformRequirements.map((r, i) => {
+                    const meta = PLATFORMS.find((p) => p.id === r.platformId)
+                    return (
+                      <div key={r.platformId} className="flex items-center gap-3 px-3 py-2.5"
+                        style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined, background: '#fafafa' }}>
+                        <span className="text-sm font-medium flex-shrink-0" style={{ minWidth: 92 }}>
+                          {meta ? `${meta.icon} ${meta.name}` : r.platformId}
+                        </span>
+                        <input
+                          type="number" min={0} placeholder={t('taskForm.minFollowersPlaceholder')}
+                          value={r.minFollowers}
+                          onChange={(e) => updatePlatformReq(r.platformId, { minFollowers: e.target.value === '' ? '' : Number(e.target.value) })}
+                          className="text-sm rounded-lg"
+                          style={{ width: 110, padding: '6px 10px', border: '1px solid var(--border)', background: '#fff' }}
+                        />
+                        <label className="flex items-center gap-1.5 text-xs cursor-pointer flex-shrink-0" style={{ color: 'var(--muted)' }}>
+                          <input type="checkbox" checked={r.required}
+                            disabled={form.reqMode === 'ANY_N'}
+                            onChange={(e) => updatePlatformReq(r.platformId, { required: e.target.checked })} />
+                          {t('taskForm.requiredToggle')}
+                        </label>
+                        <button type="button" onClick={() => togglePlatformReq(r.platformId)}
+                          className="ml-auto text-xs" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                          {t('common.remove')}
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {form.platformRequirements.length >= 2 && (
+                <div className="mt-3 flex items-center gap-3 flex-wrap">
+                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.reqModeLabel')}</span>
+                  <Chip label={t('taskForm.reqModeAll')} selected={form.reqMode === 'ALL'} onClick={() => set('reqMode', 'ALL')} />
+                  <Chip
+                    label={t('taskForm.reqModeAnyN', { n: form.reqMinCount, total: form.platformRequirements.length })}
+                    selected={form.reqMode === 'ANY_N'}
+                    onClick={() => set('reqMode', 'ANY_N')}
+                  />
+                  {form.reqMode === 'ANY_N' && (
+                    <div className="flex items-center gap-1.5">
+                      <button type="button" onClick={() => set('reqMinCount', Math.max(1, form.reqMinCount - 1))}
+                        style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer' }}>−</button>
+                      <span className="text-sm font-semibold" style={{ minWidth: 16, textAlign: 'center' }}>{form.reqMinCount}</span>
+                      <button type="button" onClick={() => set('reqMinCount', Math.min(form.platformRequirements.length, form.reqMinCount + 1))}
+                        style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer' }}>+</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {form.platformRequirements.length > 0 && (
+                <div className="mt-2.5 text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
+                  {platformReqSummary(form, t)}
+                </div>
+              )}
             </Field>
 
             <Field label={t('taskForm.fieldDifficulty')}>

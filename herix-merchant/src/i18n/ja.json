@@ -19,7 +19,8 @@
     "preview": "プレビュー",
     "publish": "公開",
     "draft": "下書き",
-    "new": "新規"
+    "new": "新規",
+    "remove": "削除"
   },
   "platform": {
     "xiaohongshu": "小紅書",
@@ -240,7 +241,16 @@
     "capacityShort": "枠が不足しています：あと ¥{{amount}} 必要です。チャージ後に公開してください",
     "capacityPerf": "招待コードタスクはコンバージョンごとに課金され、公開枠を消費しません",
     "errorDesc": "タスク概要を入力してください（10文字以上）",
-    "submitFailed": "送信に失敗しました。しばらくしてから再試行してください"
+    "submitFailed": "送信に失敗しました。しばらくしてから再試行してください",
+    "fieldPlatformHint": "クリエイターが必ず持つべきプラットフォームを選択（最低フォロワー数は任意）",
+    "minFollowersPlaceholder": "最低フォロワー数（制限なし）",
+    "requiredToggle": "必須",
+    "reqModeLabel": "満たし方：",
+    "reqModeAll": "全て満たす",
+    "reqModeAnyN": "{{n}}/{{total}} 項目を満たせばOK",
+    "summaryRequired": "必須条件：{{list}}",
+    "summaryOptional": "参考表示のみ（必須ではない）：{{list}}",
+    "summaryAnyN": "以下 {{total}} 項目中 {{n}} 項目を満たす必要があります：{{list}}"
   },
   "site": {
     "jp": "日本",

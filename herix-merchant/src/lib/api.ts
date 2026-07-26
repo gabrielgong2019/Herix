@@ -254,7 +254,9 @@ export interface Task {
   commission_rate?: number
   max_heralds: number
   target_communities: string[]
-  platform_requirements?: string | Array<{ platformId: string; minFollowers?: number }> | null
+  platform_requirements?: string | Array<{ platformId: string; minFollowers?: number | null; required?: boolean }> | null
+  req_mode?: 'ALL' | 'ANY_N'
+  req_min_count?: number | null
   cover_image?: string
   deadline?: string
   code_mode?: 'auto' | 'custom'
@@ -301,6 +303,9 @@ export interface TaskFormData {
   requireProposal: boolean
   requireDraftReview?: boolean
   submitDeadline?: string | null
+  platformRequirements?: Array<{ platformId: string; minFollowers?: number; required: boolean }>
+  reqMode?: 'ALL' | 'ANY_N'
+  reqMinCount?: number
 }
 
 export interface Application {

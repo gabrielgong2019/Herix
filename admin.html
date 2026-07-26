@@ -443,6 +443,32 @@ function brandEditPage(){
   h+='<div id="creditLimitMsg" style="font-size:12px;margin-top:8px"></div>';
   h+='</div>';
 
+  // 发布并发特批 + 营销顾问订阅（四级阶梯：注册3/KYB10/注资20/订阅不限，settings 可调）
+  var hasPubOverride=p.max_open_tasks_override!==null&&p.max_open_tasks_override!==undefined;
+  var subActive=p.subscription_expires_at&&p.subscription_expires_at>new Date().toISOString();
+  h+='<div class="panel" style="max-width:640px;border:1px solid #bfdbfe;background:#eff6ff">';
+  h+='<div class="panel-title" style="color:#1e40af">发布并发 / 订阅服务</div>';
+  h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">';
+  h+='<div style="flex:1;min-width:160px"><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">并发数特批（同时进行中任务上限）</label>';
+  h+='<input id="be_pub_limit" type="number" min="0" step="1" value="'+(hasPubOverride?p.max_open_tasks_override:'')+'" placeholder="留空 = 按阶梯（注册3/认证10/注资20）" style="width:100%"></div>';
+  h+='<button class="btn btn-sm" style="background:#1d4ed8;color:#fff;white-space:nowrap" onclick="savePubLimit(\''+p.user_id+'\')">保存</button>';
+  h+='<button class="btn btn-outline btn-sm" style="white-space:nowrap;color:#9ca3af" onclick="document.getElementById(\'be_pub_limit\').value=\'\';savePubLimit(\''+p.user_id+'\')">清除特批</button>';
+  h+='</div>';
+  h+='<div style="border-top:1px solid #bfdbfe;padding-top:12px">';
+  h+='<div style="font-size:12px;font-weight:600;color:'+(subActive?'#16a34a':'#9ca3af')+';margin-bottom:8px">'+(subActive?('✅ 订阅生效中：'+({basic:'基础版',premium:'高级版',custom:'定制版'}[p.subscription_plan]||p.subscription_plan)+' · 至 '+String(p.subscription_expires_at).slice(0,10)):'⬜ 未订阅营销顾问服务')+'</div>';
+  h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">';
+  h+='<div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">档位</label>';
+  h+='<select id="be_sub_plan"><option value="basic"'+(p.subscription_plan==='basic'?' selected':'')+'>基础版</option><option value="premium"'+(p.subscription_plan==='premium'?' selected':'')+'>高级版</option><option value="custom"'+(p.subscription_plan==='custom'?' selected':'')+'>定制版（合同单签）</option></select></div>';
+  h+='<div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">有效期至</label>';
+  h+='<input id="be_sub_expires" type="date" value="'+(p.subscription_expires_at?String(p.subscription_expires_at).slice(0,10):'')+'"></div>';
+  h+='<button class="btn btn-sm" style="background:#16a34a;color:#fff;white-space:nowrap" onclick="saveSubscription(\''+p.user_id+'\')">开通/续期</button>';
+  h+=(subActive?'<button class="btn btn-outline btn-sm" style="white-space:nowrap;color:var(--danger)" onclick="cancelSubscription(\''+p.user_id+'\')">取消订阅</button>':'');
+  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--muted);margin-top:6px">订阅期内发布不限并发；线下签约收款后在此维护。每月N次成交兜底权益的台账化在 P1 订阅表实现</div>';
+  h+='</div>';
+  h+='<div id="pubLimitMsg" style="font-size:12px;margin-top:8px"></div>';
+  h+='</div>';
+
   // 广告代理设置
   var isAgency=!!p.is_agency;
   h+='<div class="panel" style="max-width:640px;border:1px solid #fed7aa;background:#fff7ed">';
@@ -527,6 +553,44 @@ function saveCreditLimit(userId){
 function clearCreditLimit(userId){
   document.getElementById('be_credit_limit').value='';
   saveCreditLimit(userId);
+}
+
+function savePubLimit(userId){
+  var val=document.getElementById('be_pub_limit')?.value?.trim();
+  var limit=val===''||val===undefined?null:Number(val);
+  if(limit!==null&&(!Number.isInteger(limit)||limit<0)){
+    document.getElementById('pubLimitMsg').textContent='请输入非负整数';return;
+  }
+  apiPatch('/admin/brands/'+userId+'/publish-limit',{maxOpenTasks:limit},function(d){
+    var msg=document.getElementById('pubLimitMsg');
+    if(d.error){if(msg)msg.textContent=d.error;return}
+    st.data.brandEdit.max_open_tasks_override=limit;
+    if(msg)msg.textContent=limit===null?'已恢复阶梯默认':'已保存，并发上限 '+limit;
+    render();
+  });
+}
+function saveSubscription(userId){
+  var plan=document.getElementById('be_sub_plan')?.value;
+  var expires=document.getElementById('be_sub_expires')?.value;
+  var msg=document.getElementById('pubLimitMsg');
+  if(!expires){if(msg)msg.textContent='请选择有效期';return;}
+  apiPatch('/admin/brands/'+userId+'/subscription',{plan:plan,expiresAt:expires+'T23:59:59+09:00'},function(d){
+    if(d.error){if(msg)msg.textContent=d.error;return}
+    st.data.brandEdit.subscription_plan=d.plan;
+    st.data.brandEdit.subscription_expires_at=d.expiresAt;
+    st.msg='订阅已更新：'+({basic:'基础版',premium:'高级版',custom:'定制版'}[d.plan]||d.plan)+' 至 '+String(d.expiresAt).slice(0,10);st.msgType='success';
+    render();
+  });
+}
+function cancelSubscription(userId){
+  if(!confirm('确认取消该商家的订阅？发布并发将回落到阶梯默认。'))return;
+  apiPatch('/admin/brands/'+userId+'/subscription',{},function(d){
+    if(d.error){showToast(d.error);return}
+    st.data.brandEdit.subscription_plan=null;
+    st.data.brandEdit.subscription_expires_at=null;
+    st.msg='订阅已取消';st.msgType='success';
+    render();
+  });
 }
 
 function setAgency(userId, isAgency){

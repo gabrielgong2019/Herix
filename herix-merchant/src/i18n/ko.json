@@ -371,7 +371,8 @@
     "escrowTag3": "잔액 출금 가능",
     "capacityMain": "게시 가능 한도",
     "formulaCash": "현금",
-    "formulaUsed": "작업 사용 중"
+    "formulaUsed": "작업 사용 중",
+    "openTasks": "진행 중 작업"
   },
   "industry": {
     "finance": "금융 서비스",

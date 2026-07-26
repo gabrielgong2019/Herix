@@ -371,7 +371,8 @@
     "escrowTag3": "残高出金可能",
     "capacityMain": "公開可能なタスク枠",
     "formulaCash": "現金",
-    "formulaUsed": "タスク利用中"
+    "formulaUsed": "タスク利用中",
+    "openTasks": "進行中タスク"
   },
   "industry": {
     "finance": "金融サービス",

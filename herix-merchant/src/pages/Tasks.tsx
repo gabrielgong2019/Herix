@@ -96,6 +96,9 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
         {creditLimit > 0 && <> ＋ {t('credit.creditLimit')} ¥{creditLimit.toLocaleString()}</>}
         {used > 0 && <> － {t('credit.formulaUsed')} ¥{used.toLocaleString()}</>}
         {frozen > 0 && <span> · {t('credit.walletFrozen')} ¥{frozen.toLocaleString()}</span>}
+        {balance.publishLimit && (
+          <span> · {t('credit.openTasks')} {balance.publishLimit.current}/{balance.publishLimit.limit === null ? '∞' : balance.publishLimit.limit}</span>
+        )}
       </div>
 
       {/* Progress bar */}

@@ -9,7 +9,7 @@ import { createNotification } from './notifications';
 import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
-import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate } from '../utils/settings';
+import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate, getPublishLimitInfo } from '../utils/settings';
 import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
 import { VALID_SITES } from '../constants/sites';
 import pool from '../db';
@@ -1083,6 +1083,24 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   }
   if (task.status !== 'DRAFT') {
     return res.status(400).json({ error: '只有草稿状态可以发布' });
+  }
+
+  // 并发数闸（四级阶梯：注册/KYB/注资/订阅，两种任务类型都计数）。
+  // 资金敞口由报名批准闸兜底，这里防"0报名空任务无限刷屏"；402 文案即升级引导
+  const pubLimit = await getPublishLimitInfo(task.creator_id);
+  if (pubLimit.limit !== null && pubLimit.current >= pubLimit.limit) {
+    const nextHint = !pubLimit.kybApproved
+      ? `完成企业认证可提升至 ${pubLimit.kybLimit} 个`
+      : !pubLimit.funded
+        ? `累计充值满 ¥${pubLimit.fundedThreshold.toLocaleString()} 可提升至 ${pubLimit.fundedLimit} 个`
+        : '订阅营销顾问服务可不限数量发布';
+    return res.status(402).json({
+      error: `同时进行中的任务已达上限（${pubLimit.current}/${pubLimit.limit}），完成或关闭现有任务后再发布。${nextHint}`,
+      code: 'OPEN_TASKS_LIMIT',
+      current: pubLimit.current,
+      limit: pubLimit.limit,
+      tier: pubLimit.tier,
+    });
   }
 
   // 发布时计算费率快照和单人成本（含服务费）

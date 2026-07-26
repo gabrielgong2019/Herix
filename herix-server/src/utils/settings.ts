@@ -12,6 +12,10 @@ const DEFAULTS: Record<string, string> = {
   fast_payout_threshold:    '100000',
   review_timeout_days:      '7',
   resubmit_timeout_days:    '7',
+  max_open_tasks_base:      '3',
+  max_open_tasks_kyb:       '10',
+  max_open_tasks_funded:    '20',
+  funded_topup_threshold:   '1000000',
 };
 
 export async function getSetting(key: string): Promise<string> {
@@ -289,4 +293,61 @@ export async function getEffectiveCommissionRate(brandUserId: string): Promise<{
   }
 
   return { rate, isOverride: source === 'brand_override', source };
+}
+
+// ── 发布并发闸四级阶梯（2026-07-26）─────────────────────────────────
+// 注册(base) → KYB认证(kyb) → 累计充值达标(funded) → 订阅(不限)，各级取 max 不叠加。
+// 资金敞口由报名批准闸兜底（capacityForTask），这里只防"0报名空任务无限刷屏"。
+
+export interface PublishLimitInfo {
+  current: number;              // 进行中任务数（OPEN/IN_PROGRESS，两种类型都算）
+  limit: number | null;         // null = 不限（订阅期内）
+  tier: 'BASE' | 'KYB' | 'FUNDED' | 'SUBSCRIPTION' | 'OVERRIDE';
+  kybApproved: boolean;
+  funded: boolean;              // 累计充值 ≥ funded_topup_threshold
+  fundedThreshold: number;
+  kybLimit: number;             // 下一档提示文案用
+  fundedLimit: number;
+  subscriptionPlan: string | null;
+}
+
+export async function getPublishLimitInfo(brandUserId: string): Promise<PublishLimitInfo> {
+  const [bp, cnt, topup, baseS, kybS, fundedS, thresholdS] = await Promise.all([
+    pool.query(
+      `SELECT kyb_status, max_open_tasks_override, subscription_plan, subscription_expires_at
+       FROM brand_profiles WHERE user_id = $1`, [brandUserId]),
+    pool.query(
+      `SELECT COUNT(*)::int AS n FROM tasks
+       WHERE creator_id = $1 AND status IN ('OPEN', 'IN_PROGRESS')`, [brandUserId]),
+    pool.query(
+      `SELECT COALESCE(SUM(we.amount), 0) AS s FROM wallet_entries we
+       JOIN wallets w ON w.id = we.wallet_id
+       WHERE w.user_id = $1 AND w.wallet_type = 'brand' AND we.type = 'TOPUP'`, [brandUserId]),
+    getSetting('max_open_tasks_base'),
+    getSetting('max_open_tasks_kyb'),
+    getSetting('max_open_tasks_funded'),
+    getSetting('funded_topup_threshold'),
+  ]);
+  const row = bp.rows[0] || {};
+  const current = cnt.rows[0]?.n ?? 0;
+  const kybLimit = Number(kybS) || 10;
+  const fundedLimit = Number(fundedS) || 20;
+  const fundedThreshold = Number(thresholdS) || 1000000;
+  const kybApproved = row.kyb_status === 'approved';
+  const funded = Number(topup.rows[0]?.s) >= fundedThreshold;
+  const common = { current, kybApproved, funded, fundedThreshold, kybLimit, fundedLimit,
+                   subscriptionPlan: row.subscription_plan || null };
+
+  // 订阅期内不限（到期即自动回落，无需清理任务）
+  if (row.subscription_expires_at && row.subscription_expires_at > new Date().toISOString()) {
+    return { ...common, limit: null, tier: 'SUBSCRIPTION' };
+  }
+  if (row.max_open_tasks_override !== null && row.max_open_tasks_override !== undefined) {
+    return { ...common, limit: Number(row.max_open_tasks_override), tier: 'OVERRIDE' };
+  }
+  let limit = Number(baseS) || 3;
+  let tier: PublishLimitInfo['tier'] = 'BASE';
+  if (kybApproved && kybLimit > limit) { limit = kybLimit; tier = 'KYB'; }
+  if (funded && fundedLimit > limit)   { limit = fundedLimit; tier = 'FUNDED'; }
+  return { ...common, limit, tier };
 }

@@ -3,7 +3,7 @@ import db from '../db';
 import { findOne, findMany, insert, update, remove, genId } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
 import { getBalance, freezeWithdrawal, ENTRY_DIRECTION, WalletType } from '../utils/wallet';
-import { calcWithdrawalFee, getSetting, getBrandCreditInfo } from '../utils/settings';
+import { calcWithdrawalFee, getSetting, getBrandCreditInfo, getPublishLimitInfo } from '../utils/settings';
 
 export const walletRouter = Router();
 
@@ -189,8 +189,9 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { from, to } = getPeriodRange(req.query);
 
-  const [creditInfo, bal, flow] = await Promise.all([
+  const [creditInfo, pubLimit, bal, flow] = await Promise.all([
     getBrandCreditInfo(userId),
+    getPublishLimitInfo(userId),
     getBalance(userId, 'brand'),
     db.query(
       `SELECT we.type, we.amount FROM wallet_entries we
@@ -231,6 +232,13 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
       trialDefault:     creditInfo.trialDefault,
       fastPayoutEligible,
       fastPayoutThreshold: fpThreshold,
+    },
+    // 发布并发阶梯（注册/KYB/注资/订阅），limit=null 表示订阅期内不限
+    publishLimit: {
+      current: pubLimit.current,
+      limit: pubLimit.limit,
+      tier: pubLimit.tier,
+      subscriptionPlan: pubLimit.subscriptionPlan,
     },
   });
 });

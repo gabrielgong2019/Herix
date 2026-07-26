@@ -366,7 +366,8 @@
     "escrowTag3": "余额可提现",
     "capacityMain": "还可发布任务额度",
     "formulaCash": "现金",
-    "formulaUsed": "任务占用"
+    "formulaUsed": "任务占用",
+    "openTasks": "进行中任务"
   },
   "industry": {
     "finance": "金融服务",

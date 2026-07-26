@@ -390,6 +390,12 @@ export interface BrandBalance {
     fastPayoutEligible: boolean
     fastPayoutThreshold: number
   }
+  publishLimit?: {
+    current: number
+    limit: number | null   // null = 订阅期内不限
+    tier: 'BASE' | 'KYB' | 'FUNDED' | 'SUBSCRIPTION' | 'OVERRIDE'
+    subscriptionPlan: string | null
+  }
 }
 
 export interface WalletEntry {

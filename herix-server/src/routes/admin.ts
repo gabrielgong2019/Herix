@@ -623,6 +623,10 @@ const PRICING_KEYS = [
   'topup_cc_rate',
   'review_timeout_days',
   'resubmit_timeout_days',
+  'max_open_tasks_base',
+  'max_open_tasks_kyb',
+  'max_open_tasks_funded',
+  'funded_topup_threshold',
 ] as const;
 
 /** GET /api/admin/pricing — 读取全局定价配置 */
@@ -639,6 +643,10 @@ adminRouter.get('/pricing', async (_req: Request, res: Response) => {
     topupCcRate:             Number(cfg.topup_cc_rate),
     reviewTimeoutDays:       Number(cfg.review_timeout_days),
     resubmitTimeoutDays:     Number(cfg.resubmit_timeout_days),
+    maxOpenTasksBase:        Number(cfg.max_open_tasks_base),
+    maxOpenTasksKyb:         Number(cfg.max_open_tasks_kyb),
+    maxOpenTasksFunded:      Number(cfg.max_open_tasks_funded),
+    fundedTopupThreshold:    Number(cfg.funded_topup_threshold),
   });
 });
 
@@ -647,7 +655,8 @@ adminRouter.patch('/pricing', async (req: Request, res: Response) => {
   const adminId = req.user!.userId;
   const { note, commissionRate, withdrawalFeeFlat, withdrawalScheduleMode,
           withdrawalMonthlyLimit, withdrawalMinAmount, topupCcRate,
-          reviewTimeoutDays, resubmitTimeoutDays } = req.body;
+          reviewTimeoutDays, resubmitTimeoutDays,
+          maxOpenTasksBase, maxOpenTasksKyb, maxOpenTasksFunded, fundedTopupThreshold } = req.body;
 
   const updates: [string, string][] = [];
   if (commissionRate        !== undefined) updates.push(['commission_rate',          String(commissionRate)]);
@@ -658,6 +667,10 @@ adminRouter.patch('/pricing', async (req: Request, res: Response) => {
   if (topupCcRate           !== undefined) updates.push(['topup_cc_rate',            String(topupCcRate)]);
   if (reviewTimeoutDays     !== undefined) updates.push(['review_timeout_days',      String(reviewTimeoutDays)]);
   if (resubmitTimeoutDays   !== undefined) updates.push(['resubmit_timeout_days',    String(resubmitTimeoutDays)]);
+  if (maxOpenTasksBase      !== undefined) updates.push(['max_open_tasks_base',      String(maxOpenTasksBase)]);
+  if (maxOpenTasksKyb       !== undefined) updates.push(['max_open_tasks_kyb',       String(maxOpenTasksKyb)]);
+  if (maxOpenTasksFunded    !== undefined) updates.push(['max_open_tasks_funded',    String(maxOpenTasksFunded)]);
+  if (fundedTopupThreshold  !== undefined) updates.push(['funded_topup_threshold',   String(fundedTopupThreshold)]);
 
   if (!updates.length) return res.status(400).json({ error: '未提供任何更新字段' });
 
@@ -683,6 +696,46 @@ adminRouter.patch('/brands/:userId/credit-limit', async (req: Request, res: Resp
     await pool.query('UPDATE brand_profiles SET credit_limit_override = $1 WHERE user_id = $2', [limit, req.params.userId]);
     res.json({ userId: req.params.userId, creditLimitOverride: limit });
   }
+});
+
+/** PATCH /api/admin/brands/:userId/publish-limit — 单户发布并发数特批（null=恢复阶梯默认） */
+adminRouter.patch('/brands/:userId/publish-limit', async (req: Request, res: Response) => {
+  const { maxOpenTasks } = req.body;
+  const profile = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!profile) return res.status(404).json({ error: '品牌账户不存在' });
+
+  if (maxOpenTasks === null || maxOpenTasks === undefined) {
+    await pool.query('UPDATE brand_profiles SET max_open_tasks_override = NULL WHERE user_id = $1', [req.params.userId]);
+    return res.json({ maxOpenTasksOverride: null, note: '已恢复阶梯默认' });
+  }
+  const limit = Number(maxOpenTasks);
+  if (!Number.isInteger(limit) || limit < 0) return res.status(400).json({ error: '并发数须为非负整数' });
+  await pool.query('UPDATE brand_profiles SET max_open_tasks_override = $1 WHERE user_id = $2', [limit, req.params.userId]);
+  res.json({ userId: req.params.userId, maxOpenTasksOverride: limit });
+});
+
+/** PATCH /api/admin/brands/:userId/subscription — 营销顾问订阅开通/续期/取消
+ *  （P0：线下签约收款后 admin 手动维护；plan: basic/premium/custom；到期自动回落阶梯） */
+adminRouter.patch('/brands/:userId/subscription', async (req: Request, res: Response) => {
+  const { plan, expiresAt } = req.body;
+  const profile = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  if (!profile) return res.status(404).json({ error: '品牌账户不存在' });
+
+  if (!plan && !expiresAt) {
+    await pool.query(
+      'UPDATE brand_profiles SET subscription_plan = NULL, subscription_expires_at = NULL WHERE user_id = $1',
+      [req.params.userId]);
+    return res.json({ subscription: null, note: '订阅已取消' });
+  }
+  if (!['basic', 'premium', 'custom'].includes(String(plan))) {
+    return res.status(400).json({ error: 'plan 须为 basic / premium / custom' });
+  }
+  const exp = new Date(String(expiresAt));
+  if (isNaN(exp.getTime())) return res.status(400).json({ error: 'expiresAt 无效' });
+  await pool.query(
+    'UPDATE brand_profiles SET subscription_plan = $1, subscription_expires_at = $2 WHERE user_id = $3',
+    [plan, exp.toISOString(), req.params.userId]);
+  res.json({ userId: req.params.userId, plan, expiresAt: exp.toISOString() });
 });
 
 /** PATCH /api/admin/brands/:userId/agency — 设置广告代理商标识 */

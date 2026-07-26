@@ -612,6 +612,19 @@ export async function initDatabase() {
       ('review_timeout_days',   '7', '商家审核时限（天）：待审超时自动通过（终稿=自动结算打款），临期24h先发催审通知'),
       ('resubmit_timeout_days', '7', '赫使重提时限（天）：被拒后超时未重新提交，自动释放任务名额')
      ON CONFLICT (key) DO NOTHING`,
+    // 发布并发闸四级阶梯（2026-07-26）：注册3/KYB10/累计充值达标20/订阅不限。
+    // 资金闸（批准报名占额度）不动，这里只限"同时进行中任务数"防空任务刷屏
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('max_open_tasks_base',     '3',       '同时进行中任务数上限：注册商家默认'),
+      ('max_open_tasks_kyb',      '10',      '同时进行中任务数上限：KYB 认证商家'),
+      ('max_open_tasks_funded',   '20',      '同时进行中任务数上限：累计充值达标商家'),
+      ('funded_topup_threshold',  '1000000', '注资档门槛：累计充值金额（JPY）')
+     ON CONFLICT (key) DO NOTHING`,
+    // 单户 override（销售特批，复用 credit_limit_override 模式）+ 订阅字段（P0 admin 手动开通，
+    // 线下签约收款；档位 basic/premium/custom；到期时间之内发布不限并发）
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS max_open_tasks_override INTEGER`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS subscription_plan TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS subscription_expires_at TEXT`,
     // 报名状态新增 EXPIRED（名额释放：被拒超时未重提 / 仲裁判商家胜）——幂等重建约束
     `ALTER TABLE task_applications DROP CONSTRAINT IF EXISTS task_applications_status_check`,
     `ALTER TABLE task_applications ADD CONSTRAINT task_applications_status_check

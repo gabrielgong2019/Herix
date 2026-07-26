@@ -191,7 +191,6 @@ export const metaApi = {
   communities: (site?: string) =>
     http.get<Community[]>('/communities', { params: site ? { site } : undefined }),
   sites: () => http.get<Site[]>('/sites'),
-  platforms: () => http.get<Platform[]>('/platforms'),
 }
 
 // ── Settings ──────────────────────────────────────────────────────
@@ -521,12 +520,6 @@ export interface Site {
   labelKey: string
   country: string
   currency: string
-}
-
-export interface Platform {
-  id: string
-  name: string
-  icon?: string
 }
 
 export interface BrandProfile {

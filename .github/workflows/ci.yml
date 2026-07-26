@@ -43,3 +43,5 @@ jobs:
 
       - name: check-terms（术语 + i18n 键集奇偶校验）
         run: node scripts/check-terms.js
+      - name: route-audit（前端调用 ↔ 服务端路由契约）
+        run: python3 scripts/audit-fe-routes.py

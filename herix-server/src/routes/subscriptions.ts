@@ -12,6 +12,7 @@ import {
   cycleAmount, getActiveSubscription, ensureInvoice, addMonths,
   activateOrRenew, type MerchantSubscription, type SubscriptionPlan,
 } from '../utils/subscriptions';
+import { BILLING_CYCLES, CYCLE_MONTHS, type BillingCycle } from '../shared/contracts';
 import pool from '../db';
 
 export const subscriptionsRouter = Router();
@@ -58,7 +59,7 @@ subscriptionsRouter.get('/mine', requireAuth, requireRole('BRAND'), async (req: 
 subscriptionsRouter.post('/', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
   try {
     const { planCode, billingCycle } = req.body || {};
-    if (!['MONTHLY', 'QUARTERLY', 'ANNUAL'].includes(String(billingCycle))) {
+    if (!BILLING_CYCLES.includes(billingCycle)) {
       return res.status(400).json({ error: 'billingCycle 须为 MONTHLY / QUARTERLY / ANNUAL' });
     }
     const plan = await findOne<SubscriptionPlan>(
@@ -85,7 +86,7 @@ subscriptionsRouter.post('/', requireAuth, requireRole('BRAND'), async (req: Req
         `UPDATE subscription_invoices SET status = 'VOID' WHERE subscription_id = $1 AND status = 'PENDING'`, [existing.id]);
     }
 
-    const amount = await cycleAmount(Number(plan.monthly_price), String(billingCycle));
+    const amount = await cycleAmount(Number(plan.monthly_price), billingCycle as BillingCycle);
     const now = new Date().toISOString();
     const subId = await insert('merchant_subscriptions', {
       brand_user_id: req.user!.userId, plan_code: plan.code,
@@ -93,7 +94,7 @@ subscriptionsRouter.post('/', requireAuth, requireRole('BRAND'), async (req: Req
       status: 'PENDING_PAYMENT', auto_renew: 1, created_at: now,
     });
     // 首期发票即刻开出（周期从激活时刻起算，发票 period 先按下单时点占位，激活时以实际为准展示）
-    const invoice = await ensureInvoice(subId, now, addMonths(now, { MONTHLY: 1, QUARTERLY: 3, ANNUAL: 12 }[String(billingCycle)] || 1), amount);
+    const invoice = await ensureInvoice(subId, now, addMonths(now, CYCLE_MONTHS[billingCycle as BillingCycle]), amount);
 
     // 余额已够则立即激活（不用等下一轮 sweep）——充值在先的商户零等待
     const sub = await findOne<MerchantSubscription>('SELECT * FROM merchant_subscriptions WHERE id = ?', [subId]);

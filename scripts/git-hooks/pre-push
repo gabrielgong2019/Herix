@@ -1,0 +1,15 @@
+#!/bin/zsh
+# 推送前挡门（2026-07-26 立）：tsc×3 + merchant build + check-terms 全绿才放行。
+# 由 `git config core.hooksPath scripts/git-hooks` 启用（clone 后需执行一次，见 CLAUDE.md）。
+# 背景：曾有带 TS 语法错误的 commit 因校验管道 exit code 被吞而推上 main。
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+echo "[pre-push] server tsc..."
+(cd "$ROOT/herix-server" && npx tsc --noEmit)
+echo "[pre-push] merchant tsc + build..."
+(cd "$ROOT/herix-merchant" && npx tsc --noEmit && npm run build --silent >/dev/null)
+echo "[pre-push] miniapp tsc..."
+(cd "$ROOT/herix-miniapp" && npx tsc --noEmit)
+echo "[pre-push] check-terms..."
+(cd "$ROOT" && node scripts/check-terms.js)
+echo "[pre-push] ✅ all green"

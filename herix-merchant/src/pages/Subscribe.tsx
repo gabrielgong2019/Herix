@@ -9,8 +9,7 @@ import { Topbar } from '@/components/layout/Topbar'
 import { Check, Minus, Sparkles, Crown, Building2, ArrowRight, ReceiptText, ClipboardList, Banknote, Zap, Rocket } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-type Cycle = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL'
-const CYCLE_MONTHS: Record<Cycle, number> = { MONTHLY: 1, QUARTERLY: 3, ANNUAL: 12 }
+import { CYCLE_MONTHS, BILLING_CYCLES, type BillingCycle as Cycle } from '@contracts'
 
 const PLAN_ICON: Record<string, typeof Sparkles> = { basic: Sparkles, premium: Crown, custom: Building2 }
 
@@ -322,7 +321,7 @@ export default function Subscribe() {
         {/* 周期切换（业内惯例：省额徽章挂在切换器上） */}
         <div className="flex justify-center mb-8">
           <div className="flex p-1 rounded-xl" style={{ background: 'var(--border)' }}>
-            {(['MONTHLY', 'QUARTERLY', 'ANNUAL'] as Cycle[]).map((c) => (
+            {BILLING_CYCLES.map((c) => (
               <button
                 key={c}
                 type="button"

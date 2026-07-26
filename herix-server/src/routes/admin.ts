@@ -7,6 +7,7 @@ import { topupBrand, debitWithdrawal, creditPlatformFee, PLATFORM_USER_ID } from
 import pool from '../db';
 import { getSetting, setSetting, getEffectiveCommissionRate } from '../utils/settings';
 import { activateOrRenew, ensureInvoice, addMonths } from '../utils/subscriptions';
+import { BILLING_CYCLES, CYCLE_MONTHS, type BillingCycle } from '../shared/contracts';
 import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo } from '../utils/image';
 import { saveBrandAsset } from '../utils/uploads';
@@ -751,7 +752,7 @@ adminRouter.post('/subscriptions', async (req: Request, res: Response) => {
   const { brandUserId, planCode, billingCycle, price } = req.body || {};
   const user = await findOne('SELECT id FROM users WHERE id = ?', [brandUserId]);
   if (!user) return res.status(404).json({ error: '商家不存在' });
-  if (!['MONTHLY', 'QUARTERLY', 'ANNUAL'].includes(String(billingCycle))) {
+  if (!BILLING_CYCLES.includes(billingCycle)) {
     return res.status(400).json({ error: 'billingCycle 无效' });
   }
   const plan = await findOne<any>('SELECT * FROM subscription_plans WHERE code = ?', [planCode]);
@@ -775,7 +776,7 @@ adminRouter.post('/subscriptions', async (req: Request, res: Response) => {
     price_snapshot: amount, status: 'PENDING_PAYMENT', auto_renew: 1,
     advisor_note: req.body.advisorNote || null, created_at: now,
   });
-  const months = ({ MONTHLY: 1, QUARTERLY: 3, ANNUAL: 12 } as Record<string, number>)[String(billingCycle)] || 1;
+  const months = CYCLE_MONTHS[billingCycle as BillingCycle];
   await ensureInvoice(subId, now, addMonths(now, months), amount);
   res.status(201).json(await findOne('SELECT * FROM merchant_subscriptions WHERE id = ?', [subId]));
 });

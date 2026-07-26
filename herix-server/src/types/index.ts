@@ -1,4 +1,6 @@
 import { z } from 'zod';
+// 枚举唯一事实源：shared/contracts.ts（前后端共享，勿在此处重复字面量）
+import { TASK_MODES, CONTENT_TYPES, DIFFICULTIES, TASK_VISIBILITIES } from '../shared/contracts';
 
 // ── 段位阈值（粉丝数） ──
 export const TIER_THRESHOLDS = {
@@ -52,7 +54,7 @@ export const LoginSchema = z.object({
 // ── 任务 ──
 
 export const CreateTaskSchema = z.object({
-  mode: z.enum(['STANDARD', 'PERFORMANCE']).default('STANDARD'),
+  mode: z.enum(TASK_MODES).default('STANDARD'),
   title: z.string().min(2, '标题至少2字符').max(100),
   description: z.string().min(10, '描述至少10字符'),
   requirements: z.string().optional(),
@@ -60,14 +62,14 @@ export const CreateTaskSchema = z.object({
   maxHeralds: z.number().int().min(1).default(1),
   deadline: z.string().optional(),
   category: z.string().min(1, '请选择任务分类'),
-  contentType: z.enum(['photo', 'video', 'both', 'referral']).default('photo'),
-  difficulty: z.enum(['easy', 'medium', 'hard']).default('easy'),
+  contentType: z.enum(CONTENT_TYPES).default('photo'),
+  difficulty: z.enum(DIFFICULTIES).default('easy'),
   // 拒绝 base64 dataURL：封面必须走 /uploads/task/:id/cover multipart(压缩+存文件+DB只存URL)，
   // base64 进 JSON 会撞 express.json 100KB 上限(413)，进 DB 会拖垮所有任务列表接口(2026-07-20 实测)
   coverImage: z.string().refine((v) => !v.startsWith('data:'), { message: '封面请使用图片上传接口，不支持 base64 内嵌' }).optional(),
   userBenefit: z.string().optional(),
   codeMode: z.enum(['auto', 'custom']).default('auto'),
-  visibility: z.enum(['PUBLIC', 'INVITE']).default('PUBLIC'),
+  visibility: z.enum(TASK_VISIBILITIES).default('PUBLIC'),
   platformRequirements: z.array(z.object({
     platformId: z.string(),
     minFollowers: z.number().int().min(0).nullish(),

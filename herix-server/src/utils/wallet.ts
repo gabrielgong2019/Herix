@@ -15,19 +15,9 @@ import { genId } from './db';
 export type WalletType = 'brand' | 'herald' | 'platform';
 export type SourceEntity = 'JP' | 'HK' | 'CN';
 
-export type WalletEntryType =
-  | 'TOPUP'               // 品牌充值
-  | 'TASK_FREEZE'         // 任务发布：可用→冻结
-  | 'TASK_UNFREEZE'       // 任务退款：冻结→可用
-  | 'TASK_SETTLE'         // 任务结算：冻结清零（对应赫使收款）
-  | 'TASK_CREDIT'         // 赫使收入
-  | 'PLATFORM_FEE'        // 平台服务费
-  | 'WITHDRAWAL_FREEZE'   // 提现申请：可用→冻结
-  | 'WITHDRAWAL_DEBIT'    // 提现完成：冻结清零
-  | 'WITHDRAWAL_UNFREEZE' // 提现取消：冻结→可用
-  | 'SUBSCRIPTION_FEE'    // 订阅费扣款（商家可用余额支出）
-  | 'SUBSCRIPTION_INCOME' // 订阅费收入（平台钱包）
-  | 'ADJUSTMENT';         // 人工调整
+// 类型唯一事实源：shared/contracts.ts（加值须同步 db.ts 的 wallet_entries CHECK 约束）
+import { type WalletEntryType } from '../shared/contracts';
+export { type WalletEntryType };
 
 /** 流水方向：用于钱包流水的"流入/流出/内部转移"分类（相对于 available+frozen 总额）*/
 export type EntryDirection = 'in' | 'out' | 'transfer' | 'adjustment';

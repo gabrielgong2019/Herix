@@ -1,4 +1,10 @@
 import axios from 'axios'
+// 枚举/状态值唯一事实源：前后端共享契约（@contracts → herix-server/src/shared/contracts.ts）。
+// 此前两边手写互抄导致 difficulty 大小写漂移(创建全挂)、content_type 漏值等一整类 bug
+import type {
+  TaskMode, Difficulty, ContentType, TaskStatus, TaskVisibility,
+  SubmissionStage, BillingCycle, SubscriptionStatus, PublishTier,
+} from '@contracts'
 
 const BASE = import.meta.env.VITE_API_URL || '/api'
 
@@ -123,9 +129,9 @@ export interface SubscriptionPlanInfo {
 export interface MerchantSubscription {
   id: string
   plan_code: string
-  billing_cycle: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL'
+  billing_cycle: BillingCycle
   price_snapshot: number
-  status: 'PENDING_PAYMENT' | 'ACTIVE' | 'PAST_DUE' | 'EXPIRED' | 'CANCELED'
+  status: SubscriptionStatus
   current_period_start: string | null
   current_period_end: string | null
   auto_renew: number
@@ -235,11 +241,11 @@ export interface Task {
   description: string
   requirements?: string
   category: string
-  mode: 'STANDARD' | 'PERFORMANCE'
-  status: string // uppercase from server: DRAFT | OPEN | COMPLETED | CANCELLED
-  visibility: 'PUBLIC' | 'INVITE'
-  difficulty: 'easy' | 'medium' | 'hard'   // 服务端/DB 实际为小写（曾误标大写）
-  content_type: 'photo' | 'video' | 'both'
+  mode: TaskMode
+  status: TaskStatus | string // 服务端大写状态（历史数据可能有例外，宽松收）
+  visibility: TaskVisibility
+  difficulty: Difficulty
+  content_type: ContentType
   payout_per_herald: number
   cost_per_herald?: number
   commission_rate?: number
@@ -273,10 +279,10 @@ export interface TaskFormData {
   description: string
   requirements?: string
   category: string
-  mode: 'STANDARD' | 'PERFORMANCE'
-  status: 'draft' | 'open'
-  visibility: 'PUBLIC' | 'INVITE'
-  difficulty: 'easy' | 'medium' | 'hard'   // 服务端/DB 实际为小写（曾误标大写）
+  mode: TaskMode
+  status: 'draft' | 'open'  // 仅前端流程标记：发布走 PATCH /publish，服务端不读此字段
+  visibility: TaskVisibility
+  difficulty: Difficulty
   contentType: 'photo' | 'video' | 'both'
   payoutPerHerald: number
   maxHeralds: number
@@ -321,7 +327,7 @@ export interface Submission {
   task_id: string
   herald_id?: string
   user_id?: string
-  stage?: 'DRAFT' | 'FINAL'
+  stage?: SubmissionStage
   status: string // 服务端大写: PENDING_REVIEW | APPROVED | REJECTED
   content_url?: string
   content_urls?: string | null // JSON 数组字符串，parseLinks() 解析
@@ -432,7 +438,7 @@ export interface BrandBalance {
   publishLimit?: {
     current: number
     limit: number | null   // null = 订阅期内不限
-    tier: 'BASE' | 'KYB' | 'FUNDED' | 'SUBSCRIPTION' | 'OVERRIDE'
+    tier: PublishTier
     subscriptionPlan: string | null
     kybApproved?: boolean
     funded?: boolean

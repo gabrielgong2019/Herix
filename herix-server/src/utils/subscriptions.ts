@@ -44,10 +44,10 @@ export interface MerchantSubscription {
   commission_backup: string | null;
 }
 
-const CYCLE_MONTHS: Record<string, number> = { MONTHLY: 1, QUARTERLY: 3, ANNUAL: 12 };
+import { CYCLE_MONTHS, BILLING_CYCLES, type BillingCycle } from '../shared/contracts';
 
 /** 周期应付金额 = 月价 × 月数 × 周期折扣（季95折/年88折，settings 可调），四舍五入到整円 */
-export async function cycleAmount(monthlyPrice: number, cycle: string): Promise<number> {
+export async function cycleAmount(monthlyPrice: number, cycle: BillingCycle): Promise<number> {
   const months = CYCLE_MONTHS[cycle] || 1;
   const discount = cycle === 'QUARTERLY'
     ? Number(await getSetting('sub_discount_quarterly')) || 1

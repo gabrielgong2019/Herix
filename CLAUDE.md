@@ -181,6 +181,20 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 ## 工作准则
 
+### 工程挡门（2026-07-26 立，源自当日 bug 复盘）
+
+- **pre-push hook**：`git config core.hooksPath scripts/git-hooks`（新 clone 后执行一次）。
+  推送前自动跑 tsc×3 + merchant build + check-terms，全绿才放行（~8秒）。
+  GitHub Actions（.github/workflows/ci.yml）做第二道网。
+- **共享契约**：枚举/状态值唯一事实源 = `herix-server/src/shared/contracts.ts`
+  （零依赖纯类型，merchant 经 `@contracts` 别名引入）。新增枚举值：改契约 →
+  两端编译期自动对齐 → **带 DB-CHECK 标记的还须同步 db.ts 幂等重建约束**。
+  禁止在两端重新手写字面量 union。
+- **测试守则**：e2e 的写路径必须打真实 API，禁止 SQL 直改绕过（曾致 admin
+  参数 API 被路由遮蔽成死代码多日未暴露）；每个新流程至少测一条失败分支；
+  校验命令别用 `cmd | head` 形式吞 exit code（曾致带语法错误的 commit 推上 main）。
+
+
 ### 文档联动（2026-07-16 立）
 
 **产品决策**（金额/规则/口径，如"最低提现 ¥1000"）和**架构变更**（载体切换/技术栈迁移/表结构语义变化）落码时，

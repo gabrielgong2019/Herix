@@ -1,0 +1,45 @@
+# CI 第二道网（2026-07-26 立）：本地 pre-push hook 为主挡门，这里兜底
+# （新 clone 忘配 hooksPath、或绕过 hook 推送时仍能在 GitHub 上看到红叉）
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            herix-server/package-lock.json
+            herix-merchant/package-lock.json
+            herix-miniapp/package-lock.json
+
+      - name: server deps + tsc + build
+        working-directory: herix-server
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run build
+
+      - name: merchant deps + tsc + build
+        working-directory: herix-merchant
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run build
+
+      - name: miniapp deps + tsc
+        working-directory: herix-miniapp
+        run: |
+          npm ci
+          npx tsc --noEmit
+
+      - name: check-terms（术语 + i18n 键集奇偶校验）
+        run: node scripts/check-terms.js

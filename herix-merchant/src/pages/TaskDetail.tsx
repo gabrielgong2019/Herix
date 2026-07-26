@@ -33,7 +33,8 @@ function ContentSection({ task, onEdit }: { task: Task; onEdit: () => void }) {
       ? task.target_communities
       : JSON.parse((task.target_communities as unknown as string) || '[]')
   } catch { communities = [] }
-  const ctLabel = { photo: t('taskForm.ctPhoto'), video: t('taskForm.ctVideo'), both: t('taskForm.ctBoth') }[task.content_type] || task.content_type
+  // referral 是邀请码任务的占位 content_type（契约接入后编译器抓出前端从未处理它）
+  const ctLabel = ({ photo: t('taskForm.ctPhoto'), video: t('taskForm.ctVideo'), both: t('taskForm.ctBoth') } as Record<string, string>)[task.content_type] || task.content_type
   const isStandard = task.mode === 'STANDARD'
 
   // 元信息网格：无值的项直接不展示，避免一排「—」

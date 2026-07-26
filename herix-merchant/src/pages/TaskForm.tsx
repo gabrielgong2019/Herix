@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksApi, metaApi, walletApi, type TaskFormData, type Task, type BrandBalance } from '@/lib/api'
 import { extractBrief, type ExtractHit } from '@/lib/extract'
+import { DIFFICULTIES } from '@contracts'
 import { Topbar } from '@/components/layout/Topbar'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronUp, ImagePlus, X } from 'lucide-react'
@@ -251,7 +252,7 @@ function taskToFormState(task: Task): FormState {
     targetCommunities: task.target_communities || [],
     platforms: [],
     difficulty: task.difficulty,
-    contentType: task.content_type,
+    contentType: task.content_type === 'referral' ? 'photo' : task.content_type, // referral=邀请码占位值，表单无此选项
     requirements: task.requirements || '',
     coverImage: task.cover_image || '',
     payoutPerHerald: task.payout_per_herald,
@@ -638,7 +639,7 @@ export default function TaskForm() {
 
             <Field label={t('taskForm.fieldDifficulty')}>
               <div className="flex gap-3">
-                {(['easy', 'medium', 'hard'] as const).map((d) => (
+                {DIFFICULTIES.map((d) => (
                   <Chip
                     key={d}
                     label={t(`taskForm.diff${d[0].toUpperCase()}${d.slice(1)}`)}

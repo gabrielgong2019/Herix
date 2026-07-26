@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { tasksApi, walletApi } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
+import { useAuth } from '@/contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { formatDate } from '@/lib/utils'
 
@@ -32,10 +33,12 @@ function StatusTag({ status }: { status: string }) {
 export default function Dashboard() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const { data: tasksData } = useQuery({
-    queryKey: ['tasks', 'dashboard'],
-    queryFn: () => tasksApi.list({ page: 1 }).then((r) => r.data),
+    queryKey: ['tasks', 'dashboard', user?.id],
+    queryFn: () => tasksApi.list({ page: 1, creator: user?.id }).then((r) => r.data),
+    enabled: !!user?.id,
   })
   const { data: walletData } = useQuery({
     queryKey: ['wallet-balance'],

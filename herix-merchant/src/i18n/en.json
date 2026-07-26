@@ -77,7 +77,8 @@
     "csv": "Data Upload",
     "settings": "Settings",
     "logout": "Log out",
-    "partner": "Partner Tasks"
+    "partner": "Partner Tasks",
+    "subscribe": "Advisor"
   },
   "status": {
     "open": "Active",
@@ -374,7 +375,14 @@
     "capacityMain": "Available publishing capacity",
     "formulaCash": "Cash",
     "formulaUsed": "In-flight tasks",
-    "openTasks": "Open tasks"
+    "openTasks": "Open tasks",
+    "capacityTitle": "Publishing capacity",
+    "subBadge": "{{plan}} active",
+    "slotLow": "Slots almost full",
+    "upgradeLead": "Increase your limit:",
+    "upKyb": "Verify business → {{n}} slots",
+    "upFund": "Top up ¥{{amount}} total → {{n}} slots",
+    "upSub": "Subscribe → unlimited"
   },
   "industry": {
     "finance": "Financial Services",
@@ -676,6 +684,86 @@
     "KYB_REJECTED": {
       "title": "Business verification not approved",
       "body": "Your business verification was not approved. You can resubmit in account settings."
+    },
+    "SUBSCRIPTION_ACTIVATED": {
+      "title": "Advisor service activated",
+      "body": "Your subscription is active — unlimited publishing and benefits are on."
+    },
+    "SUBSCRIPTION_RENEWED": {
+      "title": "Subscription renewed",
+      "body": "Your subscription renewed automatically; the fee was deducted from your balance."
+    },
+    "SUBSCRIPTION_RENEWAL_DUE": {
+      "title": "Subscription renewing soon",
+      "body": "Please keep sufficient balance for auto-renewal (including in-flight task settlements)."
+    },
+    "SUBSCRIPTION_PAST_DUE": {
+      "title": "Subscription renewal failed",
+      "body": "Insufficient balance — top up within the grace period to renew automatically."
+    },
+    "SUBSCRIPTION_EXPIRED": {
+      "title": "Subscription expired",
+      "body": "Publishing limits returned to standard tiers; in-flight tasks are unaffected."
     }
+  },
+  "subscribe": {
+    "title": "Marketing Advisor Service",
+    "heroTitle": "Let a professional advisor make your campaigns work",
+    "heroSub": "Unlimited publishing · guaranteed monthly deliveries · tailored marketing plans · commission discount",
+    "cycleMONTHLY": "Monthly",
+    "cycleQUARTERLY": "Quarterly",
+    "cycleANNUAL": "Annual",
+    "mostPopular": "Most popular",
+    "plan_basic": "Basic",
+    "plan_premium": "Premium",
+    "plan_custom": "Custom",
+    "plan_basic_desc": "For brands getting started with creator content",
+    "plan_premium_desc": "For brands scaling up, with a dedicated advisor",
+    "plan_custom_desc": "For enterprises & agencies, contracted individually",
+    "perMonth": "mo",
+    "billedAs": "Billed ¥{{amount}} per {{cycle}}",
+    "customPrice": "Let's talk",
+    "customPriceSub": "Scope and pricing tailored to you",
+    "fUnlimited": "Unlimited task publishing",
+    "fGuaranteed": "{{n}} guaranteed deliveries per month",
+    "fAdvisorShared": "Marketing advisor support",
+    "fAdvisorDedicated": "Dedicated marketing advisor",
+    "fPlan": "Marketing plans & campaign design",
+    "fCommission": "Commission discount -{{n}}pt",
+    "fPriority": "Priority review & featured placement",
+    "fCustomAll": "Everything in Premium",
+    "fCustomAdvisor": "Embedded advisor team",
+    "fCustomSla": "Custom guarantees & SLA",
+    "fCustomContract": "Individual contract & corporate billing",
+    "subscribeCta": "Subscribe",
+    "currentPlan": "Current plan",
+    "hasLiveHint": "Subscription in progress",
+    "contactUs": "Contact us",
+    "stPENDING_PAYMENT": "Awaiting payment",
+    "stACTIVE": "Active",
+    "stPAST_DUE": "Past due",
+    "stEXPIRED": "Expired",
+    "stCANCELED": "Canceled",
+    "periodUntil": "Current period ends {{date}}",
+    "autoRenew": "Auto-renew",
+    "cancelConfirm": "Cancel? An active subscription ends at the period end; no prorated refunds.",
+    "cancelOrder": "Cancel order",
+    "cancelSub": "Cancel subscription",
+    "invoiceTitle": "Invoice (activates automatically once funded)",
+    "invoiceNo": "Invoice no.",
+    "invoiceAmount": "Amount due",
+    "walletNow": "Current balance",
+    "shortfallHint": "¥{{amount}} more needed — activates automatically after top-up",
+    "activatingSoon": "Balance sufficient — activating within minutes",
+    "goTopup": "Top up",
+    "pastDueHint": "Renewal failed: top up ¥{{amount}} within the grace period to auto-renew",
+    "invoiceHistory": "Billing history",
+    "invPAID": "Paid",
+    "invPENDING": "Pending",
+    "invVOID": "Void",
+    "actionFailed": "Action failed, please retry",
+    "noteBilling": "Subscription fees are deducted from your account balance (funded via invoice bank transfer). Keep enough balance to cover both fees and in-flight task settlements.",
+    "noteGrace": "Email reminder 10 days before expiry; a 7-day grace period applies if the balance is short — top up within it and benefits continue uninterrupted.",
+    "noteCancel": "Turn off auto-renew or cancel anytime; active subscriptions end at the period end and in-flight tasks are unaffected."
   }
 }

@@ -3,6 +3,7 @@ import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { tasksApi, type Task, type CsvRecord, type CsvUploadResult } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
+import { useAuth } from '@/contexts/AuthContext'
 
 // ── CSV parsing ────────────────────────────────────────────────────
 
@@ -233,11 +234,13 @@ export default function DataUpload() {
   const [csvText, setCsvText] = useState('')
   const [parseErrorKey, setParseErrorKey] = useState('')
   const [uploadResult, setUploadResult] = useState<any>(null)
+  const { user } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
 
   const { data: tasksData } = useQuery({
-    queryKey: ['tasks', 'performance'],
-    queryFn: () => tasksApi.list({ page: 1 }).then((r) => r.data),
+    queryKey: ['tasks', 'performance', user?.id],
+    queryFn: () => tasksApi.list({ page: 1, creator: user?.id }).then((r) => r.data),
+    enabled: !!user?.id,
   })
 
   const perfTasks = (tasksData?.tasks || []).filter((task) => {

@@ -11,6 +11,7 @@ import TaskDetail from './pages/TaskDetail'
 import TaskMetaEdit from './pages/TaskMetaEdit'
 import Reviews from './pages/Reviews'
 import Wallet from './pages/Wallet'
+import Subscribe from './pages/Subscribe'
 import Settings from './pages/Settings'
 import DataUpload from './pages/DataUpload'
 import Onboard from './pages/Onboard'
@@ -41,6 +42,7 @@ export default function App() {
               <Route path="/partner/:id" element={<PartnerTaskDetail />} />
               <Route path="/reviews" element={<Reviews />} />
               <Route path="/wallet" element={<Wallet />} />
+              <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/csv" element={<DataUpload />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

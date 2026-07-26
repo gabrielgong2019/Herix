@@ -6,6 +6,7 @@ import { payoutProvider } from '../services/payout';
 import { topupBrand, debitWithdrawal, creditPlatformFee, PLATFORM_USER_ID } from '../utils/wallet';
 import pool from '../db';
 import { getSetting, setSetting, getEffectiveCommissionRate } from '../utils/settings';
+import { activateOrRenew, ensureInvoice, addMonths } from '../utils/subscriptions';
 import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo } from '../utils/image';
 import { saveBrandAsset } from '../utils/uploads';
@@ -714,28 +715,131 @@ adminRouter.patch('/brands/:userId/publish-limit', async (req: Request, res: Res
   res.json({ userId: req.params.userId, maxOpenTasksOverride: limit });
 });
 
-/** PATCH /api/admin/brands/:userId/subscription — 营销顾问订阅开通/续期/取消
- *  （P0：线下签约收款后 admin 手动维护；plan: basic/premium/custom；到期自动回落阶梯） */
-adminRouter.patch('/brands/:userId/subscription', async (req: Request, res: Response) => {
-  const { plan, expiresAt } = req.body;
-  const profile = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
-  if (!profile) return res.status(404).json({ error: '品牌账户不存在' });
+// ── 订阅管理（P1 正式化：merchant_subscriptions 为唯一来源，P0 的 brand_profiles 快照列已删）──
 
-  if (!plan && !expiresAt) {
-    await pool.query(
-      'UPDATE brand_profiles SET subscription_plan = NULL, subscription_expires_at = NULL WHERE user_id = $1',
-      [req.params.userId]);
-    return res.json({ subscription: null, note: '订阅已取消' });
+/** GET /api/admin/subscriptions — 订阅队列（?status= 可筛；PENDING_PAYMENT 即销售跟进名单） */
+adminRouter.get('/subscriptions', async (req: Request, res: Response) => {
+  const status = req.query.status ? String(req.query.status) : null;
+  const rows = await findMany<any>(
+    `SELECT ms.*, u.nickname, u.email, bp.company_name, bp.contact_phone,
+            (SELECT COALESCE(w.available_balance, 0) FROM wallets w
+             WHERE w.user_id = ms.brand_user_id AND w.wallet_type = 'brand') AS wallet_available,
+            (SELECT si.invoice_no FROM subscription_invoices si
+             WHERE si.subscription_id = ms.id AND si.status = 'PENDING'
+             ORDER BY si.created_at DESC LIMIT 1) AS pending_invoice_no,
+            (SELECT si.amount FROM subscription_invoices si
+             WHERE si.subscription_id = ms.id AND si.status = 'PENDING'
+             ORDER BY si.created_at DESC LIMIT 1) AS pending_amount
+     FROM merchant_subscriptions ms
+     JOIN users u ON u.id = ms.brand_user_id
+     LEFT JOIN brand_profiles bp ON bp.user_id = ms.brand_user_id
+     ${status ? 'WHERE ms.status = ?' : ''}
+     ORDER BY (ms.status = 'PENDING_PAYMENT') DESC, (ms.status = 'PAST_DUE') DESC, ms.created_at DESC`,
+    status ? [status] : []);
+  res.json(rows);
+});
+
+/** POST /api/admin/subscriptions — admin 代开订阅（定制版合同签订后录入实价） */
+adminRouter.post('/subscriptions', async (req: Request, res: Response) => {
+  const { brandUserId, planCode, billingCycle, price } = req.body || {};
+  const user = await findOne('SELECT id FROM users WHERE id = ?', [brandUserId]);
+  if (!user) return res.status(404).json({ error: '商家不存在' });
+  if (!['MONTHLY', 'QUARTERLY', 'ANNUAL'].includes(String(billingCycle))) {
+    return res.status(400).json({ error: 'billingCycle 无效' });
   }
-  if (!['basic', 'premium', 'custom'].includes(String(plan))) {
-    return res.status(400).json({ error: 'plan 须为 basic / premium / custom' });
+  const plan = await findOne<any>('SELECT * FROM subscription_plans WHERE code = ?', [planCode]);
+  if (!plan) return res.status(404).json({ error: '档位不存在' });
+  const amount = Number(price);
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: '请录入本期实价（正数）' });
+  const existing = await findOne<any>(
+    `SELECT id, status FROM merchant_subscriptions WHERE brand_user_id = ?
+     AND status IN ('PENDING_PAYMENT', 'ACTIVE', 'PAST_DUE')`, [brandUserId]);
+  if (existing && existing.status !== 'PENDING_PAYMENT') {
+    return res.status(409).json({ error: '该商家已有进行中的订阅' });
   }
-  const exp = new Date(String(expiresAt));
-  if (isNaN(exp.getTime())) return res.status(400).json({ error: 'expiresAt 无效' });
+  if (existing) { // 未付款旧单自动作废换新（与商户端下单同规则）
+    await pool.query(`UPDATE merchant_subscriptions SET status = 'CANCELED', updated_at = $1 WHERE id = $2 AND status = 'PENDING_PAYMENT'`,
+      [new Date().toISOString(), existing.id]);
+    await pool.query(`UPDATE subscription_invoices SET status = 'VOID' WHERE subscription_id = $1 AND status = 'PENDING'`, [existing.id]);
+  }
+  const now = new Date().toISOString();
+  const subId = await insert('merchant_subscriptions', {
+    brand_user_id: brandUserId, plan_code: planCode, billing_cycle: billingCycle,
+    price_snapshot: amount, status: 'PENDING_PAYMENT', auto_renew: 1,
+    advisor_note: req.body.advisorNote || null, created_at: now,
+  });
+  const months = ({ MONTHLY: 1, QUARTERLY: 3, ANNUAL: 12 } as Record<string, number>)[String(billingCycle)] || 1;
+  await ensureInvoice(subId, now, addMonths(now, months), amount);
+  res.status(201).json(await findOne('SELECT * FROM merchant_subscriptions WHERE id = ?', [subId]));
+});
+
+/** POST /api/admin/subscriptions/:id/activate — 手动触发扣款激活（余额不足会明确报错） */
+adminRouter.post('/subscriptions/:id/activate', async (req: Request, res: Response) => {
+  const sub = await findOne<any>('SELECT * FROM merchant_subscriptions WHERE id = ?', [req.params.id]);
+  if (!sub) return res.status(404).json({ error: '订阅不存在' });
+  if (!['PENDING_PAYMENT', 'PAST_DUE', 'ACTIVE'].includes(sub.status)) {
+    return res.status(400).json({ error: `当前状态 ${sub.status} 不可激活` });
+  }
+  const r = await activateOrRenew(sub, { actor: req.user!.userId });
+  if (!r.ok) {
+    return res.status(402).json({
+      error: `商家余额不足：需 ¥${r.needed.toLocaleString()}，当前 ¥${r.available.toLocaleString()}，请先跟进充值`,
+      code: r.code, needed: r.needed, available: r.available,
+    });
+  }
+  res.json(await findOne('SELECT * FROM merchant_subscriptions WHERE id = ?', [req.params.id]));
+});
+
+/** POST /api/admin/subscriptions/:id/cancel — admin 取消（待付→CANCELED；生效中→关自动续费） */
+adminRouter.post('/subscriptions/:id/cancel', async (req: Request, res: Response) => {
+  const sub = await findOne<any>('SELECT * FROM merchant_subscriptions WHERE id = ?', [req.params.id]);
+  if (!sub) return res.status(404).json({ error: '订阅不存在' });
+  const now = new Date().toISOString();
+  if (sub.status === 'PENDING_PAYMENT') {
+    await pool.query(`UPDATE merchant_subscriptions SET status = 'CANCELED', updated_at = $1 WHERE id = $2`, [now, sub.id]);
+    await pool.query(`UPDATE subscription_invoices SET status = 'VOID' WHERE subscription_id = $1 AND status = 'PENDING'`, [sub.id]);
+    return res.json({ ok: true, status: 'CANCELED' });
+  }
+  await pool.query(`UPDATE merchant_subscriptions SET auto_renew = 0, updated_at = $1 WHERE id = $2`, [now, sub.id]);
+  res.json({ ok: true, autoRenew: false });
+});
+
+/** PATCH /api/admin/subscriptions/:id — 改价（下期生效）/顾问备注 */
+adminRouter.patch('/subscriptions/:id', async (req: Request, res: Response) => {
+  const { price, advisorNote } = req.body || {};
+  const sub = await findOne<any>('SELECT * FROM merchant_subscriptions WHERE id = ?', [req.params.id]);
+  if (!sub) return res.status(404).json({ error: '订阅不存在' });
+  const sets: string[] = []; const vals: any[] = [];
+  if (price !== undefined) {
+    const p = Number(price);
+    if (!Number.isFinite(p) || p <= 0) return res.status(400).json({ error: '价格须为正数' });
+    sets.push(`price_snapshot = $${vals.push(p)}`);
+  }
+  if (advisorNote !== undefined) sets.push(`advisor_note = $${vals.push(advisorNote || null)}`);
+  if (!sets.length) return res.status(400).json({ error: '未提供更新字段' });
+  sets.push(`updated_at = $${vals.push(new Date().toISOString())}`);
+  vals.push(req.params.id);
+  await pool.query(`UPDATE merchant_subscriptions SET ${sets.join(', ')} WHERE id = $${vals.length}`, vals);
+  res.json(await findOne('SELECT * FROM merchant_subscriptions WHERE id = ?', [req.params.id]));
+});
+
+/** GET/PATCH /api/admin/subscription-plans — 档位定价/权益维护 */
+adminRouter.get('/subscription-plans', async (_req: Request, res: Response) => {
+  res.json(await findMany('SELECT * FROM subscription_plans ORDER BY sort'));
+});
+adminRouter.patch('/subscription-plans/:code', async (req: Request, res: Response) => {
+  const { monthlyPrice, guaranteedTasks, commissionDiscount } = req.body || {};
+  const plan = await findOne<any>('SELECT * FROM subscription_plans WHERE code = ?', [req.params.code]);
+  if (!plan) return res.status(404).json({ error: '档位不存在' });
+  let benefits: Record<string, unknown> = {};
+  try { benefits = JSON.parse(plan.benefits || '{}'); } catch { benefits = {}; }
+  if (guaranteedTasks !== undefined) benefits.guaranteedTasks = Number(guaranteedTasks) || 0;
+  if (commissionDiscount !== undefined) benefits.commissionDiscount = Number(commissionDiscount) || 0;
   await pool.query(
-    'UPDATE brand_profiles SET subscription_plan = $1, subscription_expires_at = $2 WHERE user_id = $3',
-    [plan, exp.toISOString(), req.params.userId]);
-  res.json({ userId: req.params.userId, plan, expiresAt: exp.toISOString() });
+    `UPDATE subscription_plans SET monthly_price = $1, benefits = $2, updated_at = $3 WHERE code = $4`,
+    [monthlyPrice === undefined ? plan.monthly_price : (monthlyPrice === null ? null : Number(monthlyPrice)),
+     JSON.stringify(benefits), new Date().toISOString(), req.params.code]);
+  res.json(await findOne('SELECT * FROM subscription_plans WHERE code = ?', [req.params.code]));
 });
 
 /** PATCH /api/admin/brands/:userId/agency — 设置广告代理商标识 */

@@ -77,7 +77,8 @@
     "csv": "データ送信",
     "settings": "アカウント設定",
     "logout": "ログアウト",
-    "partner": "提携タスク"
+    "partner": "提携タスク",
+    "subscribe": "マーケ顧問"
   },
   "status": {
     "open": "公開中",
@@ -374,7 +375,14 @@
     "capacityMain": "公開可能なタスク枠",
     "formulaCash": "現金",
     "formulaUsed": "タスク利用中",
-    "openTasks": "進行中タスク"
+    "openTasks": "進行中タスク",
+    "capacityTitle": "公開キャパシティ",
+    "subBadge": "{{plan}} 契約中",
+    "slotLow": "枠が残りわずか",
+    "upgradeLead": "公開枠を増やす：",
+    "upKyb": "企業認証で {{n}} 枠に",
+    "upFund": "累計チャージ ¥{{amount}} で {{n}} 枠に",
+    "upSub": "マーケ顧問契約で無制限"
   },
   "industry": {
     "finance": "金融サービス",
@@ -676,6 +684,86 @@
     "KYB_REJECTED": {
       "title": "企業認証が承認されませんでした",
       "body": "企業認証が承認されませんでした。アカウント設定から再提出できます。"
+    },
+    "SUBSCRIPTION_ACTIVATED": {
+      "title": "マーケ顧問サービスが有効になりました",
+      "body": "ご契約が有効になりました。公開無制限と特典をご利用いただけます。"
+    },
+    "SUBSCRIPTION_RENEWED": {
+      "title": "契約が自動更新されました",
+      "body": "マーケ顧問契約が自動更新され、料金は残高から引き落とされました。"
+    },
+    "SUBSCRIPTION_RENEWAL_DUE": {
+      "title": "契約はまもなく自動更新されます",
+      "body": "自動更新のため残高をご確認ください（進行中タスクの決済資金も含めて）。"
+    },
+    "SUBSCRIPTION_PAST_DUE": {
+      "title": "契約更新の決済に失敗しました",
+      "body": "残高不足です。猶予期間内のチャージで自動更新されます。"
+    },
+    "SUBSCRIPTION_EXPIRED": {
+      "title": "契約が終了しました",
+      "body": "公開枠は通常に戻りました。進行中のタスクに影響はありません。"
     }
+  },
+  "subscribe": {
+    "title": "マーケティング顧問サービス",
+    "heroTitle": "プロの顧問がタスクの成果まで伴走",
+    "heroSub": "公開無制限 · 月間成果保証 · 専属マーケ提案 · 手数料優遇",
+    "cycleMONTHLY": "月払い",
+    "cycleQUARTERLY": "四半期払い",
+    "cycleANNUAL": "年払い",
+    "mostPopular": "一番人気",
+    "plan_basic": "ベーシック",
+    "plan_premium": "プレミアム",
+    "plan_custom": "カスタム",
+    "plan_basic_desc": "立ち上げ期のブランドに。安定的にクリエイター投稿を獲得",
+    "plan_premium_desc": "継続投資するブランドに。専属顧問が深く伴走",
+    "plan_custom_desc": "大口顧客・代理店向け。個別契約",
+    "perMonth": "月",
+    "billedAs": "{{cycle}}で ¥{{amount}} 一括請求",
+    "customPrice": "応相談",
+    "customPriceSub": "内容と価格は個別にご提案",
+    "fUnlimited": "タスク公開数無制限",
+    "fGuaranteed": "月 {{n}} 件の成果保証（プラットフォームが完遂を保証）",
+    "fAdvisorShared": "マーケ顧問サポート",
+    "fAdvisorDedicated": "専属マーケ顧問",
+    "fPlan": "マーケ提案とタスク企画",
+    "fCommission": "手数料 -{{n}}pt 優遇",
+    "fPriority": "審査優先＆おすすめ枠",
+    "fCustomAll": "プレミアムの全特典を含む",
+    "fCustomAdvisor": "顧問チームの常駐級サポート",
+    "fCustomSla": "成果保証とSLAを個別設計",
+    "fCustomContract": "個別契約・法人決済",
+    "subscribeCta": "今すぐ契約",
+    "currentPlan": "現在のプラン",
+    "hasLiveHint": "契約が進行中です",
+    "contactUs": "プラットフォームへご相談",
+    "stPENDING_PAYMENT": "支払い待ち",
+    "stACTIVE": "有効",
+    "stPAST_DUE": "猶予期間",
+    "stEXPIRED": "期限切れ",
+    "stCANCELED": "キャンセル済み",
+    "periodUntil": "{{date}} まで有効",
+    "autoRenew": "自動更新",
+    "cancelConfirm": "キャンセルしますか？有効な契約は今期末で終了し、日割返金はありません。",
+    "cancelOrder": "注文をキャンセル",
+    "cancelSub": "契約をキャンセル",
+    "invoiceTitle": "請求書（入金確認後に自動で有効化）",
+    "invoiceNo": "請求書番号",
+    "invoiceAmount": "お支払金額",
+    "walletNow": "現在の残高",
+    "shortfallHint": "あと ¥{{amount}}：チャージ完了後、自動で決済・有効化されます",
+    "activatingSoon": "残高が足りています。まもなく自動で有効化されます",
+    "goTopup": "チャージする",
+    "pastDueHint": "更新の決済に失敗しました。猶予期間内に ¥{{amount}} をチャージすると自動更新されます",
+    "invoiceHistory": "請求履歴",
+    "invPAID": "支払済み",
+    "invPENDING": "未払い",
+    "invVOID": "無効",
+    "actionFailed": "操作に失敗しました",
+    "noteBilling": "契約料はアカウント残高から引き落とされます（請求書による銀行振込チャージ）。残高は契約料と進行中タスクの決済資金の両方をカバーしてください。",
+    "noteGrace": "期限10日前にメールでお知らせ。残高不足時は7日間の猶予があり、期間内の入金で自動更新・特典は途切れません。",
+    "noteCancel": "自動更新の停止・キャンセルはいつでも可能。有効な契約は今期末で終了し、進行中のタスクには影響しません。"
   }
 }

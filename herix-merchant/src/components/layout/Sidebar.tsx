@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, ListTodo, ClipboardCheck, Wallet, Settings, LogOut, Upload, Handshake,
+  LayoutDashboard, ListTodo, ClipboardCheck, Wallet, Settings, LogOut, Upload, Handshake, Sparkles,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { key: 'tasks', path: '/tasks', icon: ListTodo },
   { key: 'reviews', path: '/reviews', icon: ClipboardCheck },
   { key: 'wallet', path: '/wallet', icon: Wallet },
+  { key: 'subscribe', path: '/subscribe', icon: Sparkles },
   { key: 'csv', path: '/csv', icon: Upload },
   { key: 'settings', path: '/settings', icon: Settings },
 ]

@@ -77,7 +77,8 @@
     "csv": "데이터 업로드",
     "settings": "계정 설정",
     "logout": "로그아웃",
-    "partner": "파트너 태스크"
+    "partner": "파트너 태스크",
+    "subscribe": "마케팅 고문"
   },
   "status": {
     "open": "진행 중",
@@ -374,7 +375,14 @@
     "capacityMain": "게시 가능 한도",
     "formulaCash": "현금",
     "formulaUsed": "작업 사용 중",
-    "openTasks": "진행 중 작업"
+    "openTasks": "진행 중 작업",
+    "capacityTitle": "게시 능력",
+    "subBadge": "{{plan}} 구독 중",
+    "slotLow": "슬롯 거의 참",
+    "upgradeLead": "게시 한도 늘리기:",
+    "upKyb": "기업 인증 → {{n}}개",
+    "upFund": "누적 충전 ¥{{amount}} → {{n}}개",
+    "upSub": "구독 → 무제한"
   },
   "industry": {
     "finance": "금융 서비스",
@@ -676,6 +684,86 @@
     "KYB_REJECTED": {
       "title": "기업 인증 미승인",
       "body": "기업 인증이 승인되지 않았습니다. 계정 설정에서 다시 제출할 수 있습니다."
+    },
+    "SUBSCRIPTION_ACTIVATED": {
+      "title": "고문 서비스 활성화",
+      "body": "구독이 활성화되어 무제한 게시와 혜택이 적용됩니다."
+    },
+    "SUBSCRIPTION_RENEWED": {
+      "title": "구독 갱신 완료",
+      "body": "구독이 자동 갱신되었으며 요금은 잔액에서 차감되었습니다."
+    },
+    "SUBSCRIPTION_RENEWAL_DUE": {
+      "title": "구독 곧 갱신",
+      "body": "자동 갱신을 위해 잔액을 확인해 주세요(진행 중 작업 정산금 포함)."
+    },
+    "SUBSCRIPTION_PAST_DUE": {
+      "title": "구독 갱신 실패",
+      "body": "잔액 부족 — 유예 기간 내 충전 시 자동 갱신됩니다."
+    },
+    "SUBSCRIPTION_EXPIRED": {
+      "title": "구독 만료",
+      "body": "게시 한도가 기본 단계로 돌아갔습니다. 진행 중 작업은 영향받지 않습니다."
     }
+  },
+  "subscribe": {
+    "title": "마케팅 고문 서비스",
+    "heroTitle": "전문 고문이 캠페인 성과까지 함께합니다",
+    "heroSub": "무제한 게시 · 월 성사 보장 · 전담 마케팅 제안 · 수수료 우대",
+    "cycleMONTHLY": "월간",
+    "cycleQUARTERLY": "분기",
+    "cycleANNUAL": "연간",
+    "mostPopular": "가장 인기",
+    "plan_basic": "베이직",
+    "plan_premium": "프리미엄",
+    "plan_custom": "맞춤형",
+    "plan_basic_desc": "크리에이터 콘텐츠를 시작하는 브랜드에",
+    "plan_premium_desc": "지속 투자 브랜드에, 전담 고문 밀착 지원",
+    "plan_custom_desc": "대형 고객·대행사, 개별 계약",
+    "perMonth": "월",
+    "billedAs": "{{cycle}} ¥{{amount}} 일괄 청구",
+    "customPrice": "협의",
+    "customPriceSub": "범위와 가격 맞춤 제안",
+    "fUnlimited": "무제한 작업 게시",
+    "fGuaranteed": "월 {{n}}건 성사 보장",
+    "fAdvisorShared": "마케팅 고문 지원",
+    "fAdvisorDedicated": "전담 마케팅 고문",
+    "fPlan": "마케팅 제안·캠페인 기획",
+    "fCommission": "수수료 -{{n}}pt 우대",
+    "fPriority": "우선 심사·추천 노출",
+    "fCustomAll": "프리미엄 전체 혜택 포함",
+    "fCustomAdvisor": "고문팀 상주급 지원",
+    "fCustomSla": "맞춤 보장·SLA",
+    "fCustomContract": "개별 계약·법인 정산",
+    "subscribeCta": "구독하기",
+    "currentPlan": "현재 플랜",
+    "hasLiveHint": "구독 진행 중",
+    "contactUs": "플랫폼에 문의",
+    "stPENDING_PAYMENT": "결제 대기",
+    "stACTIVE": "이용 중",
+    "stPAST_DUE": "유예 기간",
+    "stEXPIRED": "만료",
+    "stCANCELED": "취소됨",
+    "periodUntil": "이번 기간 {{date}}까지",
+    "autoRenew": "자동 갱신",
+    "cancelConfirm": "취소하시겠습니까? 이용 중인 구독은 기간 종료 시 해지되며 중도 환불은 없습니다.",
+    "cancelOrder": "주문 취소",
+    "cancelSub": "구독 취소",
+    "invoiceTitle": "청구서 (입금 확인 후 자동 활성화)",
+    "invoiceNo": "청구서 번호",
+    "invoiceAmount": "결제 금액",
+    "walletNow": "현재 잔액",
+    "shortfallHint": "¥{{amount}} 부족 — 충전 후 자동 활성화",
+    "activatingSoon": "잔액 충분 — 곧 자동 활성화됩니다",
+    "goTopup": "충전하기",
+    "pastDueHint": "갱신 결제 실패: 유예 기간 내 ¥{{amount}} 충전 시 자동 갱신",
+    "invoiceHistory": "청구 내역",
+    "invPAID": "결제됨",
+    "invPENDING": "대기",
+    "invVOID": "무효",
+    "actionFailed": "작업 실패, 다시 시도해 주세요",
+    "noteBilling": "구독료는 계정 잔액에서 차감됩니다(청구서 은행 이체 충전). 구독료와 진행 중 작업 정산금을 모두 충당할 잔액을 유지하세요.",
+    "noteGrace": "만료 10일 전 이메일 알림. 잔액 부족 시 7일 유예 기간 내 충전하면 혜택 중단 없이 자동 갱신됩니다.",
+    "noteCancel": "자동 갱신 해제·취소는 언제든 가능. 이용 중 구독은 기간 종료 시 해지되며 진행 중 작업은 영향받지 않습니다."
   }
 }

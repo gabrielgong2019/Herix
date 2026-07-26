@@ -25,6 +25,8 @@ export type WalletEntryType =
   | 'WITHDRAWAL_FREEZE'   // 提现申请：可用→冻结
   | 'WITHDRAWAL_DEBIT'    // 提现完成：冻结清零
   | 'WITHDRAWAL_UNFREEZE' // 提现取消：冻结→可用
+  | 'SUBSCRIPTION_FEE'    // 订阅费扣款（商家可用余额支出）
+  | 'SUBSCRIPTION_INCOME' // 订阅费收入（平台钱包）
   | 'ADJUSTMENT';         // 人工调整
 
 /** 流水方向：用于钱包流水的"流入/流出/内部转移"分类（相对于 available+frozen 总额）*/
@@ -40,6 +42,8 @@ export const ENTRY_DIRECTION: Record<WalletEntryType, EntryDirection> = {
   WITHDRAWAL_FREEZE: 'transfer',
   WITHDRAWAL_DEBIT: 'out',
   WITHDRAWAL_UNFREEZE: 'transfer',
+  SUBSCRIPTION_FEE: 'out',
+  SUBSCRIPTION_INCOME: 'in',
   ADJUSTMENT: 'adjustment',
 };
 
@@ -53,6 +57,8 @@ export const ENTRY_TYPE_LABELS: Record<WalletEntryType, string> = {
   WITHDRAWAL_FREEZE: '提现申请（冻结）',
   WITHDRAWAL_DEBIT: '提现到账',
   WITHDRAWAL_UNFREEZE: '提现取消（解冻）',
+  SUBSCRIPTION_FEE: '订阅服务费',
+  SUBSCRIPTION_INCOME: '订阅费收入',
   ADJUSTMENT: '人工调整',
 };
 
@@ -186,6 +192,8 @@ export const settleTask        = (p: CallerParams, client?: any) => applyWalletE
 export const settleCreditTask  = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'TASK_SETTLE'         }, -p.amount,  0        , client);
 export const creditHerald      = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'TASK_CREDIT'         },  p.amount,  0        , client);
 export const creditPlatformFee = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'platform', type: 'PLATFORM_FEE'        },  p.amount,  0        , client);
+export const chargeSubscription= (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'brand',    type: 'SUBSCRIPTION_FEE'    }, -p.amount,  0        , client);
+export const creditSubIncome   = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'platform', type: 'SUBSCRIPTION_INCOME' },  p.amount,  0        , client);
 export const freezeWithdrawal  = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_FREEZE'   }, -p.amount,  p.amount , client);
 export const debitWithdrawal   = (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_DEBIT'    },  0,        -p.amount , client);
 export const unfreezeWithdrawal= (p: CallerParams, client?: any) => applyWalletEntry({ ...p, walletType: 'herald',   type: 'WITHDRAWAL_UNFREEZE' },  p.amount, -p.amount , client);

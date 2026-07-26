@@ -25,6 +25,7 @@ import { communitiesRouter } from './routes/communities';
 import { sitesRouter } from './routes/sites';
 import { i18nPublicRouter } from './routes/i18n';
 import { arbitrationsRouter } from './routes/arbitrations';
+import { subscriptionsRouter } from './routes/subscriptions';
 import { UPLOADS_DIR } from './utils/uploads';
 
 (async () => {
@@ -81,6 +82,7 @@ app.use('/api/communities', communitiesRouter);
 app.use('/api/sites', sitesRouter);
 app.use('/api/i18n', i18nPublicRouter);
 app.use('/api/arbitrations', arbitrationsRouter);
+app.use('/api/subscriptions', subscriptionsRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);
@@ -100,6 +102,10 @@ startFxSync();
 // 交付双向计时器（催审/超时自动通过/名额释放），启动30秒后首跑+每小时
 import { startSubmissionTimers } from './utils/submissionTimers';
 startSubmissionTimers();
+
+// 订阅生命周期（待付激活/到期续费/宽限重试/提醒），启动45秒后首跑+每小时
+import { startSubscriptionSweep } from './utils/subscriptions';
+startSubscriptionSweep();
 
 app.listen(PORT, () => {
   console.log(`Herix server running on http://localhost:${PORT}`);

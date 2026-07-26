@@ -46,7 +46,7 @@ export const authApi = {
 
 // ── Tasks ─────────────────────────────────────────────────────────
 export const tasksApi = {
-  list: (params?: { status?: string; page?: number }) =>
+  list: (params?: { status?: string; page?: number; creator?: string }) =>
     http.get<{ tasks: Task[]; total: number }>('/tasks', { params }),
   get: (id: string) => http.get<Task>(`/tasks/${id}`),
   create: (data: TaskFormData) => http.post<Task>('/tasks', data),
@@ -111,6 +111,41 @@ export const notificationsApi = {
   list: () => http.get<{ unread: number; notifications: Notification[] }>('/notifications?role=BRAND'),
   markRead: (id: string) => http.patch(`/notifications/${id}/read`),
   markAllRead: () => http.patch('/notifications/read-all?role=BRAND'),
+}
+
+// ── Subscriptions（营销顾问订阅：钱包余额扣款，无支付网关）──────────
+export interface SubscriptionPlanInfo {
+  code: string
+  monthlyPrice: number | null   // null = 定制版（联系我们）
+  benefits: { guaranteedTasks?: number; commissionDiscount?: number }
+  pricing: { MONTHLY: number; QUARTERLY: number; ANNUAL: number } | null
+}
+export interface MerchantSubscription {
+  id: string
+  plan_code: string
+  billing_cycle: 'MONTHLY' | 'QUARTERLY' | 'ANNUAL'
+  price_snapshot: number
+  status: 'PENDING_PAYMENT' | 'ACTIVE' | 'PAST_DUE' | 'EXPIRED' | 'CANCELED'
+  current_period_start: string | null
+  current_period_end: string | null
+  auto_renew: number
+  created_at: string
+}
+export interface SubscriptionInvoice {
+  id: string
+  invoice_no: string
+  amount: number
+  status: 'PENDING' | 'PAID' | 'VOID'
+  created_at: string
+  paid_at: string | null
+}
+export const subscriptionsApi = {
+  plans: () => http.get<{ plans: SubscriptionPlanInfo[]; discounts: { quarterly: number; annual: number } }>('/subscriptions/plans'),
+  mine: () => http.get<{ subscription: MerchantSubscription | null; invoices: SubscriptionInvoice[]; walletAvailable?: number }>('/subscriptions/mine'),
+  subscribe: (planCode: string, billingCycle: string) =>
+    http.post<{ subscription: MerchantSubscription; invoice: SubscriptionInvoice; activated: boolean; shortfall: number; walletAvailable: number }>('/subscriptions', { planCode, billingCycle }),
+  setAutoRenew: (id: string, autoRenew: boolean) => http.patch(`/subscriptions/${id}/auto-renew`, { autoRenew }),
+  cancel: (id: string) => http.post(`/subscriptions/${id}/cancel`),
 }
 
 // ── Wallet ────────────────────────────────────────────────────────
@@ -395,6 +430,11 @@ export interface BrandBalance {
     limit: number | null   // null = 订阅期内不限
     tier: 'BASE' | 'KYB' | 'FUNDED' | 'SUBSCRIPTION' | 'OVERRIDE'
     subscriptionPlan: string | null
+    kybApproved?: boolean
+    funded?: boolean
+    kybLimit?: number
+    fundedLimit?: number
+    fundedThreshold?: number
   }
 }
 

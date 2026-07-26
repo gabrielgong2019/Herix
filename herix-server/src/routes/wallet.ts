@@ -233,12 +233,18 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
       fastPayoutEligible,
       fastPayoutThreshold: fpThreshold,
     },
-    // 发布并发阶梯（注册/KYB/注资/订阅），limit=null 表示订阅期内不限
+    // 发布并发阶梯（注册/KYB/注资/订阅），limit=null 表示订阅期内不限；
+    // 下一档数字给前端升级引导 chips 用
     publishLimit: {
       current: pubLimit.current,
       limit: pubLimit.limit,
       tier: pubLimit.tier,
       subscriptionPlan: pubLimit.subscriptionPlan,
+      kybApproved: pubLimit.kybApproved,
+      funded: pubLimit.funded,
+      kybLimit: pubLimit.kybLimit,
+      fundedLimit: pubLimit.fundedLimit,
+      fundedThreshold: pubLimit.fundedThreshold,
     },
   });
 });

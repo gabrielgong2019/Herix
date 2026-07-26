@@ -620,11 +620,74 @@ export async function initDatabase() {
       ('max_open_tasks_funded',   '20',      '同时进行中任务数上限：累计充值达标商家'),
       ('funded_topup_threshold',  '1000000', '注资档门槛：累计充值金额（JPY）')
      ON CONFLICT (key) DO NOTHING`,
-    // 单户 override（销售特批，复用 credit_limit_override 模式）+ 订阅字段（P0 admin 手动开通，
-    // 线下签约收款；档位 basic/premium/custom；到期时间之内发布不限并发）
+    // 单户 override（销售特批，复用 credit_limit_override 模式）
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS max_open_tasks_override INTEGER`,
-    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS subscription_plan TEXT`,
-    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS subscription_expires_at TEXT`,
+    // ── 营销顾问订阅（2026-07-26 P1 正式化，未上线直接终态）────────────────────
+    // 订阅状态唯一来源 = merchant_subscriptions（P0 曾在 brand_profiles 放两列快照，删除）
+    `ALTER TABLE brand_profiles DROP COLUMN IF EXISTS subscription_plan`,
+    `ALTER TABLE brand_profiles DROP COLUMN IF EXISTS subscription_expires_at`,
+    // 档位定义（admin 可改价/权益；custom 无标价，合同签订后 admin 在订阅上录实价）
+    `CREATE TABLE IF NOT EXISTS subscription_plans (
+      code TEXT PRIMARY KEY,
+      monthly_price DOUBLE PRECISION,
+      benefits TEXT NOT NULL DEFAULT '{}',
+      active INTEGER NOT NULL DEFAULT 1,
+      sort INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT
+    )`,
+    `INSERT INTO subscription_plans (code, monthly_price, benefits, sort) VALUES
+      ('basic',   50000,  '{"guaranteedTasks":8,"commissionDiscount":0.02}', 1),
+      ('premium', 150000, '{"guaranteedTasks":30,"commissionDiscount":0.05}', 2),
+      ('custom',  NULL,   '{}', 3)
+     ON CONFLICT (code) DO NOTHING`,
+    // 订阅主表（状态机：PENDING_PAYMENT→ACTIVE→PAST_DUE(7天宽限)→EXPIRED / CANCELED）。
+    // 订阅费从商家钱包余额扣（复用请求书充值链路，不接支付网关），激活/续期由 sweep 驱动。
+    // commission_backup: 激活时套用佣金折扣前备份原 override，到期/取消忠实还原
+    `CREATE TABLE IF NOT EXISTS merchant_subscriptions (
+      id TEXT PRIMARY KEY,
+      brand_user_id TEXT NOT NULL REFERENCES users(id),
+      plan_code TEXT NOT NULL REFERENCES subscription_plans(code),
+      billing_cycle TEXT NOT NULL CHECK(billing_cycle IN ('MONTHLY','QUARTERLY','ANNUAL')),
+      price_snapshot DOUBLE PRECISION NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT'
+        CHECK(status IN ('PENDING_PAYMENT','ACTIVE','PAST_DUE','EXPIRED','CANCELED')),
+      current_period_start TEXT,
+      current_period_end TEXT,
+      auto_renew INTEGER NOT NULL DEFAULT 1,
+      advisor_note TEXT,
+      renewal_reminded_at TEXT,
+      commission_backup TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_msub_brand ON merchant_subscriptions(brand_user_id, status)`,
+    `CREATE INDEX IF NOT EXISTS idx_msub_status ON merchant_subscriptions(status, current_period_end)`,
+    // 请求书/扣款审计（append-only）：每期一张，PAID 后关联钱包账目构成铁证链
+    `CREATE TABLE IF NOT EXISTS subscription_invoices (
+      id TEXT PRIMARY KEY,
+      subscription_id TEXT NOT NULL REFERENCES merchant_subscriptions(id),
+      invoice_no TEXT NOT NULL UNIQUE,
+      period_start TEXT NOT NULL,
+      period_end TEXT NOT NULL,
+      amount DOUBLE PRECISION NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','PAID','VOID')),
+      wallet_entry_id TEXT,
+      created_at TEXT NOT NULL,
+      paid_at TEXT
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_subinv_sub ON subscription_invoices(subscription_id, status)`,
+    // 钱包流水类型扩订阅两类（幂等重建 CHECK，模式同 applications status）
+    `ALTER TABLE wallet_entries DROP CONSTRAINT IF EXISTS wallet_entries_type_check`,
+    `ALTER TABLE wallet_entries ADD CONSTRAINT wallet_entries_type_check
+     CHECK(type IN ('TOPUP','TASK_FREEZE','TASK_UNFREEZE','TASK_SETTLE','TASK_CREDIT','PLATFORM_FEE',
+                    'WITHDRAWAL_FREEZE','WITHDRAWAL_DEBIT','WITHDRAWAL_UNFREEZE',
+                    'SUBSCRIPTION_FEE','SUBSCRIPTION_INCOME','ADJUSTMENT'))`,
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('sub_discount_quarterly', '0.95', '订阅季付折扣（月价×3×此系数）'),
+      ('sub_discount_annual',    '0.88', '订阅年付折扣（月价×12×此系数）'),
+      ('sub_grace_days',         '7',    '订阅到期扣款失败宽限天数（PAST_DUE 每日重试）'),
+      ('sub_remind_days',        '10',   '订阅到期前提醒天数（邮件+站内信，只发一次）')
+     ON CONFLICT (key) DO NOTHING`,
     // 报名状态新增 EXPIRED（名额释放：被拒超时未重提 / 仲裁判商家胜）——幂等重建约束
     `ALTER TABLE task_applications DROP CONSTRAINT IF EXISTS task_applications_status_check`,
     `ALTER TABLE task_applications ADD CONSTRAINT task_applications_status_check

@@ -146,6 +146,7 @@ function shell(inner){
     {id:'topups',icon:'🏦',label:'充值确认',badge:Array.isArray(st.data.topups)?st.data.topups.filter(function(r){return r.status==='pending'}).length:0},
     {id:'withdrawals',icon:'💸',label:'提现打款',badge:Array.isArray(st.data.withdrawals)?st.data.withdrawals.filter(function(r){return r.status==='pending'}).length:0},
     {id:'arbitrations',icon:'⚖️',label:'仲裁',badge:Array.isArray(st.data.arbitrations)?st.data.arbitrations.filter(function(r){return r.status==='OPEN'}).length:0},
+    {id:'subscriptions',icon:'✨',label:'订阅',badge:Array.isArray(st.data.subscriptions)?st.data.subscriptions.filter(function(r){return r.status==='PENDING_PAYMENT'||r.status==='PAST_DUE'}).length:0},
     {id:'users',icon:'👥',label:'用户管理'},
     {id:'tasks',icon:'📋',label:'任务管理'},
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
@@ -164,7 +165,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',arbitrations:'仲裁',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',i18n:'本地化',pricing:'定价'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',arbitrations:'仲裁',subscriptions:'订阅管理',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',i18n:'本地化',pricing:'定价'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -177,6 +178,7 @@ function pageCont(){
     case 'topups': return topupsPage();
     case 'withdrawals': return withdrawalsPage();
     case 'arbitrations': return arbitrationsPage();
+    case 'subscriptions': return subscriptionsPage();
     case 'users': return usersPage();
     case 'brand-edit': return brandEditPage();
     case 'tasks': return tasksPage();
@@ -443,29 +445,18 @@ function brandEditPage(){
   h+='<div id="creditLimitMsg" style="font-size:12px;margin-top:8px"></div>';
   h+='</div>';
 
-  // 发布并发特批 + 营销顾问订阅（四级阶梯：注册3/KYB10/注资20/订阅不限，settings 可调）
+  // 发布并发特批（四级阶梯：注册3/KYB10/注资20/订阅不限，settings 可调）。
+  // 订阅管理已迁至「订阅」页（P1 正式化：merchant_subscriptions 为唯一来源）
   var hasPubOverride=p.max_open_tasks_override!==null&&p.max_open_tasks_override!==undefined;
-  var subActive=p.subscription_expires_at&&p.subscription_expires_at>new Date().toISOString();
   h+='<div class="panel" style="max-width:640px;border:1px solid #bfdbfe;background:#eff6ff">';
-  h+='<div class="panel-title" style="color:#1e40af">发布并发 / 订阅服务</div>';
-  h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">';
+  h+='<div class="panel-title" style="color:#1e40af">发布并发特批</div>';
+  h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:6px">';
   h+='<div style="flex:1;min-width:160px"><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">并发数特批（同时进行中任务上限）</label>';
   h+='<input id="be_pub_limit" type="number" min="0" step="1" value="'+(hasPubOverride?p.max_open_tasks_override:'')+'" placeholder="留空 = 按阶梯（注册3/认证10/注资20）" style="width:100%"></div>';
   h+='<button class="btn btn-sm" style="background:#1d4ed8;color:#fff;white-space:nowrap" onclick="savePubLimit(\''+p.user_id+'\')">保存</button>';
   h+='<button class="btn btn-outline btn-sm" style="white-space:nowrap;color:#9ca3af" onclick="document.getElementById(\'be_pub_limit\').value=\'\';savePubLimit(\''+p.user_id+'\')">清除特批</button>';
   h+='</div>';
-  h+='<div style="border-top:1px solid #bfdbfe;padding-top:12px">';
-  h+='<div style="font-size:12px;font-weight:600;color:'+(subActive?'#16a34a':'#9ca3af')+';margin-bottom:8px">'+(subActive?('✅ 订阅生效中：'+({basic:'基础版',premium:'高级版',custom:'定制版'}[p.subscription_plan]||p.subscription_plan)+' · 至 '+String(p.subscription_expires_at).slice(0,10)):'⬜ 未订阅营销顾问服务')+'</div>';
-  h+='<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">';
-  h+='<div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">档位</label>';
-  h+='<select id="be_sub_plan"><option value="basic"'+(p.subscription_plan==='basic'?' selected':'')+'>基础版</option><option value="premium"'+(p.subscription_plan==='premium'?' selected':'')+'>高级版</option><option value="custom"'+(p.subscription_plan==='custom'?' selected':'')+'>定制版（合同单签）</option></select></div>';
-  h+='<div><label style="font-size:12px;color:var(--muted);display:block;margin-bottom:4px">有效期至</label>';
-  h+='<input id="be_sub_expires" type="date" value="'+(p.subscription_expires_at?String(p.subscription_expires_at).slice(0,10):'')+'"></div>';
-  h+='<button class="btn btn-sm" style="background:#16a34a;color:#fff;white-space:nowrap" onclick="saveSubscription(\''+p.user_id+'\')">开通/续期</button>';
-  h+=(subActive?'<button class="btn btn-outline btn-sm" style="white-space:nowrap;color:var(--danger)" onclick="cancelSubscription(\''+p.user_id+'\')">取消订阅</button>':'');
-  h+='</div>';
-  h+='<div style="font-size:11px;color:var(--muted);margin-top:6px">订阅期内发布不限并发；线下签约收款后在此维护。每月N次成交兜底权益的台账化在 P1 订阅表实现</div>';
-  h+='</div>';
+  h+='<div style="font-size:11px;color:var(--muted)">营销顾问订阅在左侧「订阅」页管理（队列/定价/代开）</div>';
   h+='<div id="pubLimitMsg" style="font-size:12px;margin-top:8px"></div>';
   h+='</div>';
 
@@ -569,30 +560,6 @@ function savePubLimit(userId){
     render();
   });
 }
-function saveSubscription(userId){
-  var plan=document.getElementById('be_sub_plan')?.value;
-  var expires=document.getElementById('be_sub_expires')?.value;
-  var msg=document.getElementById('pubLimitMsg');
-  if(!expires){if(msg)msg.textContent='请选择有效期';return;}
-  apiPatch('/admin/brands/'+userId+'/subscription',{plan:plan,expiresAt:expires+'T23:59:59+09:00'},function(d){
-    if(d.error){if(msg)msg.textContent=d.error;return}
-    st.data.brandEdit.subscription_plan=d.plan;
-    st.data.brandEdit.subscription_expires_at=d.expiresAt;
-    st.msg='订阅已更新：'+({basic:'基础版',premium:'高级版',custom:'定制版'}[d.plan]||d.plan)+' 至 '+String(d.expiresAt).slice(0,10);st.msgType='success';
-    render();
-  });
-}
-function cancelSubscription(userId){
-  if(!confirm('确认取消该商家的订阅？发布并发将回落到阶梯默认。'))return;
-  apiPatch('/admin/brands/'+userId+'/subscription',{},function(d){
-    if(d.error){showToast(d.error);return}
-    st.data.brandEdit.subscription_plan=null;
-    st.data.brandEdit.subscription_expires_at=null;
-    st.msg='订阅已取消';st.msgType='success';
-    render();
-  });
-}
-
 function setAgency(userId, isAgency){
   var msg=document.getElementById('agencyMsg');
   if(msg) msg.textContent='保存中...';
@@ -779,6 +746,100 @@ function resolveArb(id,winner){
   post('/arbitrations/'+id+'/resolve',{winner:winner,note:note.trim()},function(d){
     if(d.error){showToast(d.error);return;}
     st.msg='已裁决';st.msgType='success';load('arbitrations');render();
+  });
+}
+
+/* ── Subscriptions Page（营销顾问订阅：档位定价 + 队列 + 定制版代开）── */
+var SUB_PLAN_NAMES={basic:'基础版',premium:'高级版',custom:'定制版'};
+var SUB_ST={PENDING_PAYMENT:['待付款','#d97706'],ACTIVE:['生效中','#16a34a'],PAST_DUE:['宽限期','#dc2626'],EXPIRED:['已到期','#9ca3af'],CANCELED:['已取消','#9ca3af']};
+function subscriptionsPage(){
+  var plans=st.data.subPlans||[];
+  var list=st.data.subscriptions||[];
+  var h='';
+  // 档位定价维护
+  h+='<div class="tcard" style="margin-bottom:24px"><div style="font-weight:600;font-size:13px;padding:14px 16px 0">档位定价（月价；季付95折/年付88折在「定价」页 settings 调）</div>';
+  h+='<table><thead><tr><th>档位</th><th>月价（JPY）</th><th>每月成交兜底（次）</th><th>佣金优惠（如0.05=-5pt）</th><th></th></tr></thead><tbody>';
+  h+=plans.map(function(p){
+    var b={};try{b=JSON.parse(p.benefits||'{}')}catch(e){}
+    return '<tr><td><b>'+(SUB_PLAN_NAMES[p.code]||p.code)+'</b></td>'
+      +'<td><input id="pl_price_'+p.code+'" type="number" min="0" step="1000" value="'+(p.monthly_price!==null?p.monthly_price:'')+'" placeholder="面议" style="width:120px"></td>'
+      +'<td><input id="pl_gt_'+p.code+'" type="number" min="0" value="'+(b.guaranteedTasks||0)+'" style="width:80px"></td>'
+      +'<td><input id="pl_cd_'+p.code+'" type="number" min="0" max="0.2" step="0.01" value="'+(b.commissionDiscount||0)+'" style="width:80px"></td>'
+      +'<td><button class="btn btn-sm btn-outline" onclick="savePlan(\''+p.code+'\')">保存</button></td></tr>';
+  }).join('');
+  h+='</tbody></table><div id="planMsg" style="font-size:12px;padding:8px 16px"></div></div>';
+  // 定制版代开
+  h+='<div class="tcard" style="margin-bottom:24px;padding:14px 16px"><div style="font-weight:600;font-size:13px;margin-bottom:10px">代开订阅（定制版合同签订后录入）</div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">';
+  h+='<div><label style="font-size:11px;color:var(--muted);display:block">商家 userId</label><input id="ns_uid" style="width:220px" placeholder="用户管理页可查"></div>';
+  h+='<div><label style="font-size:11px;color:var(--muted);display:block">档位</label><select id="ns_plan"><option value="custom">定制版</option><option value="basic">基础版</option><option value="premium">高级版</option></select></div>';
+  h+='<div><label style="font-size:11px;color:var(--muted);display:block">周期</label><select id="ns_cycle"><option value="MONTHLY">月付</option><option value="QUARTERLY">季付</option><option value="ANNUAL">年付</option></select></div>';
+  h+='<div><label style="font-size:11px;color:var(--muted);display:block">本期实价（JPY）</label><input id="ns_price" type="number" min="1" style="width:120px"></div>';
+  h+='<div><label style="font-size:11px;color:var(--muted);display:block">顾问备注</label><input id="ns_note" style="width:140px" placeholder="选填"></div>';
+  h+='<button class="btn btn-primary btn-sm" onclick="adminCreateSub()">代开（待付款）</button></div>';
+  h+='<div id="nsMsg" style="font-size:12px;margin-top:6px"></div></div>';
+  // 队列
+  if(!list.length) return h+'<div class="empty"><div class="empty-icon">✨</div>暂无订阅</div>';
+  h+='<div class="tcard"><table><thead><tr><th>商家</th><th>档位/周期</th><th>状态</th><th>本期</th><th>金额/余额</th><th>自动续费</th><th>操作</th></tr></thead><tbody>';
+  h+=list.map(function(r){
+    var s=SUB_ST[r.status]||[r.status,'#6b7280'];
+    var needFollow=r.status==='PENDING_PAYMENT'||r.status==='PAST_DUE';
+    return '<tr><td><b>'+esc(r.company_name||r.nickname)+'</b><br><span style="font-size:11px;color:var(--muted)">'+esc(r.email||'')+(r.contact_phone?' · '+esc(r.contact_phone):'')+'</span>'
+      +(r.advisor_note?'<br><span style="font-size:11px;color:#7c3aed">顾问：'+esc(r.advisor_note)+'</span>':'')+'</td>'
+      +'<td>'+(SUB_PLAN_NAMES[r.plan_code]||r.plan_code)+'<br><span style="font-size:11px;color:var(--muted)">'+({MONTHLY:'月付',QUARTERLY:'季付',ANNUAL:'年付'}[r.billing_cycle]||r.billing_cycle)+'</span></td>'
+      +'<td><span style="color:'+s[1]+';font-weight:600">'+s[0]+'</span></td>'
+      +'<td style="font-size:12px">'+(r.current_period_end?('至 '+String(r.current_period_end).slice(0,10)):'—')+'</td>'
+      +'<td style="font-size:12px">¥'+Number(r.price_snapshot).toLocaleString()
+      +(needFollow?'<br><span style="color:'+(Number(r.wallet_available)>=Number(r.pending_amount||r.price_snapshot)?'#16a34a':'#dc2626')+'">余额 ¥'+Number(r.wallet_available||0).toLocaleString()+'</span>':'')+'</td>'
+      +'<td>'+(r.auto_renew?'✅':'⬜')+'</td>'
+      +'<td style="white-space:nowrap">'
+      +(needFollow?'<button class="btn btn-success btn-sm" onclick="adminActivateSub(\''+r.id+'\')">扣款激活</button> ':'')
+      +((r.status==='PENDING_PAYMENT'||r.status==='ACTIVE'||r.status==='PAST_DUE')?'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="adminCancelSub(\''+r.id+'\',\''+r.status+'\')">取消</button>':'')
+      +'</td></tr>';
+  }).join('');
+  h+='</tbody></table></div>';
+  return h;
+}
+function savePlan(code){
+  var price=document.getElementById('pl_price_'+code)?.value?.trim();
+  apiPatch('/admin/subscription-plans/'+code,{
+    monthlyPrice:price===''?null:Number(price),
+    guaranteedTasks:Number(document.getElementById('pl_gt_'+code)?.value||0),
+    commissionDiscount:Number(document.getElementById('pl_cd_'+code)?.value||0),
+  },function(d){
+    var msg=document.getElementById('planMsg');
+    if(d.error){if(msg)msg.textContent=d.error;return}
+    if(msg)msg.textContent=(SUB_PLAN_NAMES[code]||code)+' 已保存（存量订阅价格不变，新订单生效）';
+    load('subscriptions');
+  });
+}
+function adminCreateSub(){
+  var msg=document.getElementById('nsMsg');
+  post('/admin/subscriptions',{
+    brandUserId:document.getElementById('ns_uid')?.value?.trim(),
+    planCode:document.getElementById('ns_plan')?.value,
+    billingCycle:document.getElementById('ns_cycle')?.value,
+    price:Number(document.getElementById('ns_price')?.value),
+    advisorNote:document.getElementById('ns_note')?.value?.trim()||undefined,
+  },function(d){
+    if(d.error){if(msg)msg.textContent=d.error;return}
+    st.msg='已代开（待付款），商家充值到账后自动生效';st.msgType='success';
+    load('subscriptions');render();
+  });
+}
+function adminActivateSub(id){
+  if(!confirm('立即从商家余额扣款并激活？余额不足会报错。'))return;
+  post('/admin/subscriptions/'+id+'/activate',{},function(d){
+    if(d.error){showToast(d.error);return}
+    st.msg='已扣款激活';st.msgType='success';load('subscriptions');render();
+  });
+}
+function adminCancelSub(id,status){
+  var tip=status==='PENDING_PAYMENT'?'取消该待付订单？':'关闭自动续费（本期结束后停止）？';
+  if(!confirm(tip))return;
+  post('/admin/subscriptions/'+id+'/cancel',{},function(d){
+    if(d.error){showToast(d.error);return}
+    st.msg='已处理';st.msgType='success';load('subscriptions');render();
   });
 }
 
@@ -1284,6 +1345,9 @@ function load(page){
     apiGet('/admin/withdrawal-requests',function(d){st.data.withdrawals=Array.isArray(d)?d:[];render()});
   } else if(page==='arbitrations'){
     apiGet('/arbitrations',function(d){st.data.arbitrations=Array.isArray(d)?d:[];render()});
+  } else if(page==='subscriptions'){
+    apiGet('/admin/subscriptions',function(d){st.data.subscriptions=Array.isArray(d)?d:[];render()});
+    apiGet('/admin/subscription-plans',function(d){st.data.subPlans=Array.isArray(d)?d:[];render()});
   } else if(page==='users'){
     apiGet('/admin/users',function(d){st.data.users=d;render()});
   } else if(page==='tasks'){

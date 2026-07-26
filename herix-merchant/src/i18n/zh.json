@@ -77,7 +77,8 @@
     "csv": "数据上传",
     "settings": "账号设置",
     "logout": "退出登录",
-    "partner": "合作任务"
+    "partner": "合作任务",
+    "subscribe": "营销顾问"
   },
   "status": {
     "open": "进行中",
@@ -369,7 +370,14 @@
     "capacityMain": "还可发布任务额度",
     "formulaCash": "现金",
     "formulaUsed": "任务占用",
-    "openTasks": "进行中任务"
+    "openTasks": "进行中任务",
+    "capacityTitle": "发布能力",
+    "subBadge": "{{plan}} 订阅生效中",
+    "slotLow": "名额将满",
+    "upgradeLead": "提升发布数量：",
+    "upKyb": "完成企业认证 → {{n}} 个",
+    "upFund": "累计充值满 ¥{{amount}} → {{n}} 个",
+    "upSub": "订阅营销顾问 → 不限"
   },
   "industry": {
     "finance": "金融服务",
@@ -671,6 +679,86 @@
     "KYB_REJECTED": {
       "title": "企业认证未通过",
       "body": "你的企业认证未通过，可在账户设置中重新提交。"
+    },
+    "SUBSCRIPTION_ACTIVATED": {
+      "title": "营销顾问服务已生效",
+      "body": "您的订阅已生效，发布数量不限，专属权益已开启。"
+    },
+    "SUBSCRIPTION_RENEWED": {
+      "title": "订阅已自动续期",
+      "body": "您的营销顾问订阅已自动续期，费用已从余额扣除。"
+    },
+    "SUBSCRIPTION_RENEWAL_DUE": {
+      "title": "订阅即将自动续期",
+      "body": "请确保余额充足以完成自动续期（需同时覆盖进行中任务的结算备付金）。"
+    },
+    "SUBSCRIPTION_PAST_DUE": {
+      "title": "订阅续期扣款失败",
+      "body": "余额不足，宽限期内充值到账将自动续期，逾期订阅将到期。"
+    },
+    "SUBSCRIPTION_EXPIRED": {
+      "title": "订阅已到期",
+      "body": "发布数量已回落至阶梯默认，进行中任务不受影响，可随时重新订阅。"
     }
+  },
+  "subscribe": {
+    "title": "营销顾问服务",
+    "heroTitle": "让专业顾问帮你把任务做成",
+    "heroSub": "发布不限数量 · 每月保底成交 · 专属营销方案 · 佣金优惠",
+    "cycleMONTHLY": "月付",
+    "cycleQUARTERLY": "季付",
+    "cycleANNUAL": "年付",
+    "mostPopular": "最受欢迎",
+    "plan_basic": "基础版",
+    "plan_premium": "高级版",
+    "plan_custom": "定制版",
+    "plan_basic_desc": "适合刚起步的品牌，稳定获得达人内容",
+    "plan_premium_desc": "适合持续投放的品牌，专属顾问深度共创",
+    "plan_custom_desc": "大客户与代理商，合同单独签订",
+    "perMonth": "月",
+    "billedAs": "按{{cycle}}整期支付 ¥{{amount}}",
+    "customPrice": "面议",
+    "customPriceSub": "按需求定制服务内容与价格",
+    "fUnlimited": "任务发布不限数量",
+    "fGuaranteed": "每月 {{n}} 次成交兜底（平台保证接单交付）",
+    "fAdvisorShared": "营销顾问支持",
+    "fAdvisorDedicated": "专属营销顾问",
+    "fPlan": "营销方案建议与任务策划",
+    "fCommission": "平台服务费 -{{n}}pt 优惠",
+    "fPriority": "任务优先审核与推荐位",
+    "fCustomAll": "包含高级版全部权益",
+    "fCustomAdvisor": "顾问团队驻场级支持",
+    "fCustomSla": "定制成交保底与 SLA",
+    "fCustomContract": "合同单独签订、对公结算",
+    "subscribeCta": "立即订阅",
+    "currentPlan": "当前方案",
+    "hasLiveHint": "已有进行中订阅",
+    "contactUs": "联系平台顾问洽谈",
+    "stPENDING_PAYMENT": "待付款",
+    "stACTIVE": "生效中",
+    "stPAST_DUE": "宽限期",
+    "stEXPIRED": "已到期",
+    "stCANCELED": "已取消",
+    "periodUntil": "本期至 {{date}}",
+    "autoRenew": "自动续费",
+    "cancelConfirm": "确认取消？生效中的订阅将在本期结束后停止，费用不中途退还。",
+    "cancelOrder": "取消订单",
+    "cancelSub": "取消订阅",
+    "invoiceTitle": "请求书（余额到账后自动生效）",
+    "invoiceNo": "请求书号",
+    "invoiceAmount": "应付金额",
+    "walletNow": "当前余额",
+    "shortfallHint": "还差 ¥{{amount}}：完成充值后系统自动扣款并生效，无需再操作",
+    "activatingSoon": "余额已足够，系统将在数分钟内自动扣款生效",
+    "goTopup": "去充值",
+    "pastDueHint": "续期扣款失败：请充值 ¥{{amount}}，宽限期内到账将自动续期，逾期订阅到期回落",
+    "invoiceHistory": "账单记录",
+    "invPAID": "已支付",
+    "invPENDING": "待支付",
+    "invVOID": "已作废",
+    "actionFailed": "操作失败，请稍后重试",
+    "noteBilling": "订阅费从账户余额中扣除（请求书银行转账充值）；请确保余额同时覆盖订阅费与进行中任务的结算备付金。",
+    "noteGrace": "到期前 10 天邮件提醒；余额不足时有 7 天宽限期，期内补足自动续期，权益不中断。",
+    "noteCancel": "可随时关闭自动续费或取消订阅；生效中的订阅在本期结束后停止，进行中的任务不受影响。"
   }
 }

@@ -314,8 +314,7 @@ export interface PublishLimitInfo {
 export async function getPublishLimitInfo(brandUserId: string): Promise<PublishLimitInfo> {
   const [bp, cnt, topup, baseS, kybS, fundedS, thresholdS] = await Promise.all([
     pool.query(
-      `SELECT kyb_status, max_open_tasks_override, subscription_plan, subscription_expires_at
-       FROM brand_profiles WHERE user_id = $1`, [brandUserId]),
+      `SELECT kyb_status, max_open_tasks_override FROM brand_profiles WHERE user_id = $1`, [brandUserId]),
     pool.query(
       `SELECT COUNT(*)::int AS n FROM tasks
        WHERE creator_id = $1 AND status IN ('OPEN', 'IN_PROGRESS')`, [brandUserId]),
@@ -336,11 +335,15 @@ export async function getPublishLimitInfo(brandUserId: string): Promise<PublishL
   const kybApproved = row.kyb_status === 'approved';
   const funded = Number(topup.rows[0]?.s) >= fundedThreshold;
   const common = { current, kybApproved, funded, fundedThreshold, kybLimit, fundedLimit,
-                   subscriptionPlan: row.subscription_plan || null };
+                   subscriptionPlan: null as string | null };
 
-  // 订阅期内不限（到期即自动回落，无需清理任务）
-  if (row.subscription_expires_at && row.subscription_expires_at > new Date().toISOString()) {
-    return { ...common, limit: null, tier: 'SUBSCRIPTION' };
+  // 订阅期内不限（ACTIVE + 宽限期 PAST_DUE 都算，到期即自动回落，无需清理任务）。
+  // 订阅状态唯一来源 = merchant_subscriptions（P1 正式化后 brand_profiles 快照列已删）
+  const sub = await pool.query(
+    `SELECT plan_code FROM merchant_subscriptions
+     WHERE brand_user_id = $1 AND status IN ('ACTIVE', 'PAST_DUE') LIMIT 1`, [brandUserId]);
+  if (sub.rows[0]) {
+    return { ...common, subscriptionPlan: sub.rows[0].plan_code, limit: null, tier: 'SUBSCRIPTION' };
   }
   if (row.max_open_tasks_override !== null && row.max_open_tasks_override !== undefined) {
     return { ...common, limit: Number(row.max_open_tasks_override), tier: 'OVERRIDE' };

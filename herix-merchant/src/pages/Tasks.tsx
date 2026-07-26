@@ -3,29 +3,38 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { tasksApi, walletApi, type BrandBalance } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import { Topbar } from '@/components/layout/Topbar'
 import { Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
+/** 发布能力卡（2026-07-26 与用户定稿）：主指标 = 进行中任务 X/Y，
+ *  三条升级路径(KYB/充值/订阅)做成引导 chips——限制即转化入口；资金降为次要信息行 */
 function CreditBanner({ balance }: { balance: BrandBalance }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const c = balance.credit
+  const pl = balance.publishLimit
 
   const creditLimit = c?.initialCredit || 0
   const available   = balance.available || 0
   const frozen      = balance.frozen || 0
-  // 在途任务占用（共享池口径）：还可发布 = 现金 + 信用额度 − 占用，三项严格可心算。
-  // 旧版三列(信用额度/钱包冻结/可用余额)三个口径对不上，且进度条分母混信用+现金，
-  // 小额占用四舍五入恒显示 0%（2026-07-26 用户反馈重做）
+  // 在途任务占用（共享池口径）：还可发布 = 现金 + 信用额度 − 占用，三项严格可心算
   const used        = c?.sharedUsed ?? c?.creditUsed ?? 0
   const capacity    = c?.totalCapacity ?? Math.max(0, creditLimit + available - used)
-  const totalFunds  = creditLimit + available
-  const rawPct      = totalFunds > 0 ? Math.min(100, used / totalFunds * 100) : 0
-  const pct         = Math.round(rawPct)
-  const pctLabel    = rawPct > 0 && rawPct < 1 ? '<1' : String(pct)
-  const barColor    = pct >= 90 ? '#dc2626' : pct >= 70 ? '#f59e0b' : '#3b82f6'
-  const isLow       = pct >= 70 && totalFunds > 0
+
+  const unlimited   = pl?.limit === null && pl !== undefined
+  const slotPct     = pl && pl.limit ? Math.min(100, Math.round(pl.current / pl.limit * 100)) : 0
+  const barColor    = unlimited ? '#16a34a' : slotPct >= 100 ? '#dc2626' : slotPct >= 70 ? '#f59e0b' : '#3b82f6'
+  const isLow       = !unlimited && !!pl && slotPct >= 70
+
+  // 升级路径 chips：只展示还没达成的下一档
+  const upgrades: Array<{ key: string; label: string; to: string }> = []
+  if (pl && !unlimited) {
+    if (!pl.kybApproved) upgrades.push({ key: 'kyb', label: t('credit.upKyb', { n: pl.kybLimit ?? 10 }), to: '/settings' })
+    if (!pl.funded) upgrades.push({ key: 'fund', label: t('credit.upFund', { amount: (pl.fundedThreshold ?? 1000000).toLocaleString(), n: pl.fundedLimit ?? 20 }), to: '/wallet' })
+    upgrades.push({ key: 'sub', label: t('credit.upSub'), to: '/subscribe' })
+  }
 
   // Zero state: no balance, no credit — new merchant onboarding
   if (available === 0 && frozen === 0 && creditLimit === 0) {
@@ -71,62 +80,64 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
     >
       {/* Header row */}
       <div className="flex items-center justify-between mb-4">
-        {/* 旧版此处有「·体验额度」小标——creditLimit 实为 admin 提额的信用额度，标注误导，
-            且明细行已写明构成，删除 */}
         <div className="text-sm font-semibold" style={{ color: '#1e40af' }}>
-          {t('credit.bannerTitle')}
+          {t('credit.capacityTitle')}
         </div>
-        {isLow && (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
-            {t('credit.lowWarning')}
+        {unlimited ? (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>
+            ✨ {t('credit.subBadge', { plan: t(`subscribe.plan_${pl?.subscriptionPlan || 'basic'}`) })}
           </span>
-        )}
+        ) : isLow ? (
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
+            {t('credit.slotLow')}
+          </span>
+        ) : null}
       </div>
 
-      {/* 主数字：商家唯一需要的行动数字（口径 = 服务端发布闸 totalCapacity） */}
-      <div className="mb-1">
-        <div className="text-xs mb-1" style={{ color: '#6b7280' }}>{t('credit.capacityMain')}</div>
-        <div className="text-3xl font-bold tabular-nums" style={{ color: capacity > 0 ? '#1d4ed8' : '#dc2626' }}>
-          ¥{capacity.toLocaleString()}
+      {/* 主指标：进行中任务 X/Y（订阅=∞）——商家最先要知道的是还能不能发 */}
+      {pl && (
+        <div className="mb-1">
+          <div className="text-xs mb-1" style={{ color: '#6b7280' }}>{t('credit.openTasks')}</div>
+          <div className="text-3xl font-bold tabular-nums" style={{ color: unlimited ? '#16a34a' : slotPct >= 100 ? '#dc2626' : '#1d4ed8' }}>
+            {pl.current}
+            <span className="text-xl font-semibold" style={{ color: '#9ca3af' }}> / {unlimited ? '∞' : pl.limit}</span>
+          </div>
         </div>
-      </div>
-      {/* 明细行：现金 + 信用额度 − 任务占用，与主数字构成严格等式 */}
+      )}
+      {!unlimited && pl?.limit ? (
+        <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: '#e0e7ff' }}>
+          <div className="h-full rounded-full transition-all"
+            style={{ width: `${pl.current > 0 ? Math.max(2, slotPct) : 0}%`, background: `linear-gradient(90deg,${barColor},#7c3aed)` }} />
+        </div>
+      ) : <div className="mb-3" />}
+
+      {/* 资金次要信息行：还可发布额度 = 现金 + 信用 − 占用（严格等式），完整资金看钱包页 */}
       <div className="text-xs mb-4 tabular-nums" style={{ color: '#6b7280' }}>
-        {t('credit.formulaCash')} ¥{available.toLocaleString()}
+        {t('credit.capacityMain')} <span className="font-semibold" style={{ color: capacity > 0 ? '#374151' : '#dc2626' }}>¥{capacity.toLocaleString()}</span>
+        <span> · {t('credit.formulaCash')} ¥{available.toLocaleString()}</span>
         {creditLimit > 0 && <> ＋ {t('credit.creditLimit')} ¥{creditLimit.toLocaleString()}</>}
         {used > 0 && <> － {t('credit.formulaUsed')} ¥{used.toLocaleString()}</>}
         {frozen > 0 && <span> · {t('credit.walletFrozen')} ¥{frozen.toLocaleString()}</span>}
-        {balance.publishLimit && (
-          <span> · {t('credit.openTasks')} {balance.publishLimit.current}/{balance.publishLimit.limit === null ? '∞' : balance.publishLimit.limit}</span>
-        )}
       </div>
 
-      {/* Progress bar */}
-      {totalFunds > 0 && (
-        <>
-          <div className="h-1.5 rounded-full overflow-hidden mb-2" style={{ background: '#e0e7ff' }}>
-            <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${rawPct > 0 ? Math.max(1, pct) : 0}%`, background: `linear-gradient(90deg,${barColor},#7c3aed)` }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-xs" style={{ color: '#6b7280' }}>
-              {t('credit.usageSub', { pct: pctLabel })}
-            </div>
-            {!isLow ? (
-              <div className="text-xs" style={{ color: '#6b7280' }}>✓ {t('credit.escrowTag2')}</div>
-            ) : (
-              <button
-                onClick={() => navigate('/wallet')}
-                className="text-xs font-semibold px-3 py-1 rounded-lg text-white transition-opacity hover:opacity-90"
-                style={{ background: 'var(--primary)' }}
-              >
-                {t('credit.topupNow')} →
-              </button>
-            )}
-          </div>
-        </>
+      {/* 升级引导 chips：限制即转化入口 */}
+      {upgrades.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap pt-3 border-t" style={{ borderColor: '#bfdbfe' }}>
+          <span className="text-xs" style={{ color: '#6b7280' }}>{t('credit.upgradeLead')}</span>
+          {upgrades.map((u) => (
+            <button
+              key={u.key}
+              type="button"
+              onClick={() => navigate(u.to)}
+              className="text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-opacity hover:opacity-80"
+              style={u.key === 'sub'
+                ? { background: 'var(--primary)', color: '#fff' }
+                : { background: '#fff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
+            >
+              {u.label} →
+            </button>
+          ))}
+        </div>
       )}
     </div>
   )
@@ -154,9 +165,12 @@ export default function Tasks() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
 
+  const { user } = useAuth()
   const { data, isLoading } = useQuery({
-    queryKey: ['tasks', statusFilter],
-    queryFn: () => tasksApi.list({ status: statusFilter || undefined }).then((r) => r.data),
+    queryKey: ['tasks', statusFilter, user?.id],
+    // creator 必传：不传时服务端返回全平台公开任务列表（「我的任务」曾误显示他人任务）
+    queryFn: () => tasksApi.list({ status: statusFilter || undefined, creator: user?.id }).then((r) => r.data),
+    enabled: !!user?.id,
   })
   const { data: balance } = useQuery({
     queryKey: ['wallet-balance'],

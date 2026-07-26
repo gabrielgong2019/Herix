@@ -242,6 +242,7 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
       subscriptionPlan: pubLimit.subscriptionPlan,
       kybApproved: pubLimit.kybApproved,
       funded: pubLimit.funded,
+      baseLimit: pubLimit.baseLimit,
       kybLimit: pubLimit.kybLimit,
       fundedLimit: pubLimit.fundedLimit,
       fundedThreshold: pubLimit.fundedThreshold,

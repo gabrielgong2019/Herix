@@ -8,11 +8,14 @@ import { Topbar } from '@/components/layout/Topbar'
 import { Plus } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-/** 发布能力卡（2026-07-26 与用户定稿）：主指标 = 进行中任务 X/Y，
- *  三条升级路径(KYB/充值/订阅)做成引导 chips——限制即转化入口；资金降为次要信息行 */
+/** 发布能力卡（2026-07-26 与用户定稿，同日按用户反馈二改）：
+ *  主指标 = 进行中任务 X/Y 常显（零余额新商户注册档也能发 3 个，旧版零态卡片
+ *  只让人充值、连额度都不显示是误导）；右上角脉冲气泡吸引点击，弹层展示
+ *  四级阶梯（当前档高亮）+ 认证/充值/订阅三条提升路径，订阅直达定价方案 */
 function CreditBanner({ balance }: { balance: BrandBalance }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const [ladderOpen, setLadderOpen] = useState(false)
   const c = balance.credit
   const pl = balance.publishLimit
 
@@ -22,77 +25,104 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
   // 在途任务占用（共享池口径）：还可发布 = 现金 + 信用额度 − 占用，三项严格可心算
   const used        = c?.sharedUsed ?? c?.creditUsed ?? 0
   const capacity    = c?.totalCapacity ?? Math.max(0, creditLimit + available - used)
+  const zeroFunds   = available === 0 && frozen === 0 && creditLimit === 0
 
   const unlimited   = pl?.limit === null && pl !== undefined
   const slotPct     = pl && pl.limit ? Math.min(100, Math.round(pl.current / pl.limit * 100)) : 0
   const barColor    = unlimited ? '#16a34a' : slotPct >= 100 ? '#dc2626' : slotPct >= 70 ? '#f59e0b' : '#3b82f6'
   const isLow       = !unlimited && !!pl && slotPct >= 70
 
-  // 升级路径 chips：只展示还没达成的下一档
-  const upgrades: Array<{ key: string; label: string; to: string }> = []
-  if (pl && !unlimited) {
-    if (!pl.kybApproved) upgrades.push({ key: 'kyb', label: t('credit.upKyb', { n: pl.kybLimit ?? 10 }), to: '/settings' })
-    if (!pl.funded) upgrades.push({ key: 'fund', label: t('credit.upFund', { amount: (pl.fundedThreshold ?? 1000000).toLocaleString(), n: pl.fundedLimit ?? 20 }), to: '/wallet' })
-    upgrades.push({ key: 'sub', label: t('credit.upSub'), to: '/subscribe' })
-  }
+  // 阶梯数据（弹层用）：当前档高亮，已达成的打✓，未达成的给行动按钮
+  const tiers = pl ? [
+    { key: 'BASE', label: t('credit.tierBase'), limit: String(pl.baseLimit ?? 3),
+      done: true, action: null as null | { label: string; to: string } },
+    { key: 'KYB', label: t('credit.tierKyb'), limit: String(pl.kybLimit ?? 10),
+      done: !!pl.kybApproved, action: { label: t('credit.tierKybGo'), to: '/settings' } },
+    { key: 'FUNDED', label: t('credit.tierFunded', { amount: (pl.fundedThreshold ?? 1000000).toLocaleString() }), limit: String(pl.fundedLimit ?? 20),
+      done: !!pl.funded, action: { label: t('credit.tierFundedGo'), to: '/wallet' } },
+    { key: 'SUBSCRIPTION', label: t('credit.tierSub'), limit: '∞',
+      done: unlimited, action: { label: t('credit.viewPricing'), to: '/subscribe' } },
+  ] : []
+  const currentKey = pl?.tier === 'OVERRIDE' ? 'BASE' : pl?.tier
 
-  // Zero state: no balance, no credit — new merchant onboarding
-  if (available === 0 && frozen === 0 && creditLimit === 0) {
-    return (
-      <div
-        className="rounded-2xl p-5 mb-5"
-        style={{ background: 'linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%)', border: '1px solid #fde68a' }}
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold mb-1" style={{ color: '#92400e' }}>
-              {t('credit.zeroTitle')}
-            </div>
-            <div className="text-xs leading-relaxed mb-2.5" style={{ color: '#78350f' }}>
-              {t('credit.zeroDesc')}
-            </div>
-            <div className="text-xs font-medium" style={{ color: '#b45309' }}>
-              ⚡ {t('credit.zeroBenefit')}
-            </div>
-          </div>
-          <button
-            onClick={() => navigate('/wallet')}
-            className="flex-shrink-0 text-sm px-4 py-2 rounded-xl font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: '#d97706' }}
-          >
-            {t('credit.topupNow')}
-          </button>
-        </div>
-        <div className="mt-3 pt-3 flex gap-4 text-xs" style={{ borderTop: '1px solid #fde68a', color: '#92400e' }}>
-          {['credit.escrowTag1', 'credit.escrowTag2', 'credit.escrowTag3'].map((key) => (
-            <span key={key}>✓ {t(key)}</span>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Active state: has balance or credit
   return (
     <div
-      className="rounded-2xl p-5 mb-5"
+      className="rounded-2xl p-5 mb-5 relative"
       style={{ background: 'linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%)', border: `1px solid ${isLow ? '#fca5a5' : '#bfdbfe'}` }}
     >
-      {/* Header row */}
+      {/* Header row：右侧订阅徽章 或 提升气泡（脉冲吸引点击） */}
       <div className="flex items-center justify-between mb-4">
         <div className="text-sm font-semibold" style={{ color: '#1e40af' }}>
           {t('credit.capacityTitle')}
+          {isLow && (
+            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
+              {t('credit.slotLow')}
+            </span>
+          )}
         </div>
         {unlimited ? (
           <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#dcfce7', color: '#16a34a' }}>
             ✨ {t('credit.subBadge', { plan: t(`subscribe.plan_${pl?.subscriptionPlan || 'basic'}`) })}
           </span>
-        ) : isLow ? (
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full" style={{ background: '#fee2e2', color: '#dc2626' }}>
-            {t('credit.slotLow')}
-          </span>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            onClick={() => setLadderOpen(!ladderOpen)}
+            className="relative text-xs font-bold px-3.5 py-1.5 rounded-full text-white cursor-pointer transition-transform hover:scale-105"
+            style={{ background: 'linear-gradient(90deg,var(--primary),#7c3aed)', boxShadow: '0 2px 10px rgba(200,60,60,.35)' }}
+          >
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full animate-ping" style={{ background: '#f59e0b' }} />
+            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full" style={{ background: '#f59e0b' }} />
+            🚀 {t('credit.upgradeBubble')}
+          </button>
+        )}
       </div>
+
+      {/* 阶梯弹层：当前档高亮 + 三条提升路径，订阅直达定价方案 */}
+      {ladderOpen && !unlimited && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setLadderOpen(false)} />
+          <div className="absolute right-4 top-14 z-50 w-96 rounded-2xl p-4 shadow-xl"
+            style={{ background: '#fff', border: '1px solid var(--border)' }}>
+            <div className="text-sm font-bold mb-1">{t('credit.ladderTitle')}</div>
+            <div className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{t('credit.ladderSub')}</div>
+            <div className="space-y-2">
+              {tiers.map((tier) => {
+                const isCurrent = tier.key === currentKey
+                return (
+                  <div key={tier.key}
+                    className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+                    style={isCurrent
+                      ? { background: '#eff6ff', border: '1px solid #bfdbfe' }
+                      : { border: '1px solid var(--border)' }}>
+                    <div className="text-lg font-bold tabular-nums w-10 text-center"
+                      style={{ color: tier.key === 'SUBSCRIPTION' ? '#16a34a' : isCurrent ? '#1d4ed8' : 'var(--muted)' }}>
+                      {tier.limit}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium">{tier.label}</div>
+                      {isCurrent && <div className="text-[11px]" style={{ color: '#1d4ed8' }}>{t('credit.currentTier')}</div>}
+                    </div>
+                    {tier.done && !isCurrent ? (
+                      <span className="text-xs" style={{ color: '#16a34a' }}>✓</span>
+                    ) : tier.action && !tier.done ? (
+                      <button
+                        type="button"
+                        onClick={() => { setLadderOpen(false); navigate(tier.action!.to) }}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg cursor-pointer whitespace-nowrap transition-opacity hover:opacity-85"
+                        style={tier.key === 'SUBSCRIPTION'
+                          ? { background: 'var(--primary)', color: '#fff' }
+                          : { background: '#fff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}>
+                        {tier.action.label}
+                      </button>
+                    ) : null}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 主指标：进行中任务 X/Y（订阅=∞）——商家最先要知道的是还能不能发 */}
       {pl && (
@@ -112,7 +142,7 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
       ) : <div className="mb-3" />}
 
       {/* 资金次要信息行：还可发布额度 = 现金 + 信用 − 占用（严格等式），完整资金看钱包页 */}
-      <div className="text-xs mb-4 tabular-nums" style={{ color: '#6b7280' }}>
+      <div className="text-xs tabular-nums" style={{ color: '#6b7280' }}>
         {t('credit.capacityMain')} <span className="font-semibold" style={{ color: capacity > 0 ? '#374151' : '#dc2626' }}>¥{capacity.toLocaleString()}</span>
         <span> · {t('credit.formulaCash')} ¥{available.toLocaleString()}</span>
         {creditLimit > 0 && <> ＋ {t('credit.creditLimit')} ¥{creditLimit.toLocaleString()}</>}
@@ -120,23 +150,21 @@ function CreditBanner({ balance }: { balance: BrandBalance }) {
         {frozen > 0 && <span> · {t('credit.walletFrozen')} ¥{frozen.toLocaleString()}</span>}
       </div>
 
-      {/* 升级引导 chips：限制即转化入口 */}
-      {upgrades.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap pt-3 border-t" style={{ borderColor: '#bfdbfe' }}>
-          <span className="text-xs" style={{ color: '#6b7280' }}>{t('credit.upgradeLead')}</span>
-          {upgrades.map((u) => (
-            <button
-              key={u.key}
-              type="button"
-              onClick={() => navigate(u.to)}
-              className="text-xs font-semibold px-3 py-1.5 rounded-full cursor-pointer transition-opacity hover:opacity-80"
-              style={u.key === 'sub'
-                ? { background: 'var(--primary)', color: '#fff' }
-                : { background: '#fff', color: '#1d4ed8', border: '1px solid #bfdbfe' }}
-            >
-              {u.label} →
-            </button>
-          ))}
+      {/* 零余额新商户：托管信任文案 + 充值入口（发布能力照常显示——注册档即可发首单，体验额度兜底） */}
+      {zeroFunds && (
+        <div className="mt-3 pt-3 flex items-center justify-between gap-4 flex-wrap" style={{ borderTop: '1px solid #bfdbfe' }}>
+          <div className="flex gap-4 text-xs" style={{ color: '#6b7280' }}>
+            {['credit.escrowTag1', 'credit.escrowTag2', 'credit.escrowTag3'].map((key) => (
+              <span key={key}>✓ {t(key)}</span>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate('/wallet')}
+            className="text-xs font-semibold px-3.5 py-1.5 rounded-lg text-white cursor-pointer transition-opacity hover:opacity-90"
+            style={{ background: '#d97706' }}
+          >
+            {t('credit.topupNow')} →
+          </button>
         </div>
       )}
     </div>

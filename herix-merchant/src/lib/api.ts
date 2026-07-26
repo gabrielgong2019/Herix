@@ -432,6 +432,7 @@ export interface BrandBalance {
     subscriptionPlan: string | null
     kybApproved?: boolean
     funded?: boolean
+    baseLimit?: number
     kybLimit?: number
     fundedLimit?: number
     fundedThreshold?: number

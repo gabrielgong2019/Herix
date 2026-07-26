@@ -306,6 +306,7 @@ export interface PublishLimitInfo {
   kybApproved: boolean;
   funded: boolean;              // 累计充值 ≥ funded_topup_threshold
   fundedThreshold: number;
+  baseLimit: number;            // 阶梯展示用（注册档）
   kybLimit: number;             // 下一档提示文案用
   fundedLimit: number;
   subscriptionPlan: string | null;
@@ -334,7 +335,8 @@ export async function getPublishLimitInfo(brandUserId: string): Promise<PublishL
   const fundedThreshold = Number(thresholdS) || 1000000;
   const kybApproved = row.kyb_status === 'approved';
   const funded = Number(topup.rows[0]?.s) >= fundedThreshold;
-  const common = { current, kybApproved, funded, fundedThreshold, kybLimit, fundedLimit,
+  const baseLimit = Number(baseS) || 3;
+  const common = { current, kybApproved, funded, fundedThreshold, baseLimit, kybLimit, fundedLimit,
                    subscriptionPlan: null as string | null };
 
   // 订阅期内不限（ACTIVE + 宽限期 PAST_DUE 都算，到期即自动回落，无需清理任务）。
@@ -348,7 +350,7 @@ export async function getPublishLimitInfo(brandUserId: string): Promise<PublishL
   if (row.max_open_tasks_override !== null && row.max_open_tasks_override !== undefined) {
     return { ...common, limit: Number(row.max_open_tasks_override), tier: 'OVERRIDE' };
   }
-  let limit = Number(baseS) || 3;
+  let limit = baseLimit;
   let tier: PublishLimitInfo['tier'] = 'BASE';
   if (kybApproved && kybLimit > limit) { limit = kybLimit; tier = 'KYB'; }
   if (funded && fundedLimit > limit)   { limit = fundedLimit; tier = 'FUNDED'; }

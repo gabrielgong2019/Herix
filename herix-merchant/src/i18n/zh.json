@@ -377,7 +377,18 @@
     "upgradeLead": "提升发布数量：",
     "upKyb": "完成企业认证 → {{n}} 个",
     "upFund": "累计充值满 ¥{{amount}} → {{n}} 个",
-    "upSub": "订阅营销顾问 → 不限"
+    "upSub": "订阅营销顾问 → 不限",
+    "upgradeBubble": "提升发布数量",
+    "ladderTitle": "发布数量阶梯",
+    "ladderSub": "同时进行中的任务数量上限，按下列方式逐级提升",
+    "tierBase": "注册即可发布",
+    "tierKyb": "完成企业认证",
+    "tierKybGo": "去认证",
+    "tierFunded": "累计充值满 ¥{{amount}}",
+    "tierFundedGo": "去充值",
+    "tierSub": "订阅营销顾问服务",
+    "viewPricing": "查看定价方案",
+    "currentTier": "当前档位"
   },
   "industry": {
     "finance": "金融服务",

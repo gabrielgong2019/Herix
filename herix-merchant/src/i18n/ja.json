@@ -382,7 +382,18 @@
     "upgradeLead": "公開枠を増やす：",
     "upKyb": "企業認証で {{n}} 枠に",
     "upFund": "累計チャージ ¥{{amount}} で {{n}} 枠に",
-    "upSub": "マーケ顧問契約で無制限"
+    "upSub": "マーケ顧問契約で無制限",
+    "upgradeBubble": "公開枠を増やす",
+    "ladderTitle": "公開枠のステップ",
+    "ladderSub": "同時進行タスク数の上限は以下の方法で引き上げられます",
+    "tierBase": "登録ですぐ公開",
+    "tierKyb": "企業認証を完了",
+    "tierKybGo": "認証する",
+    "tierFunded": "累計チャージ ¥{{amount}}",
+    "tierFundedGo": "チャージ",
+    "tierSub": "マーケ顧問サービス契約",
+    "viewPricing": "料金プランを見る",
+    "currentTier": "現在のステップ"
   },
   "industry": {
     "finance": "金融サービス",

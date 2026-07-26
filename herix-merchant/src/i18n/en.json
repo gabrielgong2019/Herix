@@ -382,7 +382,18 @@
     "upgradeLead": "Increase your limit:",
     "upKyb": "Verify business → {{n}} slots",
     "upFund": "Top up ¥{{amount}} total → {{n}} slots",
-    "upSub": "Subscribe → unlimited"
+    "upSub": "Subscribe → unlimited",
+    "upgradeBubble": "Increase limit",
+    "ladderTitle": "Publishing limit tiers",
+    "ladderSub": "Your concurrent task limit grows with each step below",
+    "tierBase": "Included with signup",
+    "tierKyb": "Verify your business",
+    "tierKybGo": "Verify",
+    "tierFunded": "Top up ¥{{amount}} total",
+    "tierFundedGo": "Top up",
+    "tierSub": "Subscribe to advisor service",
+    "viewPricing": "View pricing",
+    "currentTier": "Current tier"
   },
   "industry": {
     "finance": "Financial Services",

@@ -931,10 +931,12 @@ export default function TaskForm() {
                 {t('taskForm.skipForNow')}
               </button>
             ) : (
+              {/* 按钮层级（2026-07-26 用户反馈灰字像禁用）：取消=放弃动作用 muted 灰，
+                  保存草稿=有效次级动作用正常文字色，发布=主色。灰字是 disabled 的视觉语言，不给可用按钮 */}
               <button
                 type="button"
                 className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
-                style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--text)' }}
+                style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}
                 onClick={() => navigate('/tasks')}
               >
                 {t('common.cancel')}
@@ -943,7 +945,7 @@ export default function TaskForm() {
             <button
               type="button"
               className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
-              style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}
+              style={{ borderColor: 'var(--text)', background: '#fff', color: 'var(--text)' }}
               onClick={() => handleSubmit('draft')}
               disabled={saveMut.isPending}
             >

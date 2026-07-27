@@ -62,6 +62,7 @@ export const tasksApi = {
     coverImage?: string; maxHeralds?: number
   }) => http.patch<Task>(`/tasks/${id}/meta`, data),
   publish: (id: string) => http.patch<{ success: boolean }>(`/tasks/${id}/publish`),
+  complete: (id: string) => http.patch<Task>(`/tasks/${id}/complete`),
   applications: (id: string) => http.get<Application[]>(`/tasks/${id}/applications`),
   uploadCsv: (id: string, records: CsvRecord[]) =>
     http.post<CsvUploadResult>(`/tasks/${id}/csv`, { records }),

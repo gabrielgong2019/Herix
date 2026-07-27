@@ -566,6 +566,8 @@
     "saveSuccess": "✓ 保存しました",
     "saveFailed": "保存に失敗しました",
     "duplicate": "複製して新規作成",
+    "closeTask": "案件を終了",
+    "confirmClose": "終了すると新規募集が停止されます。コード保持者は30日間のデータ猶予期間があります。確認しますか？",
     "contentSection": "タスク内容",
     "viewUpgrade": "枠を増やす方法",
     "reviewPendingShareHint": "タスクはプラットフォーム審査中です（通常1営業日以内）。承認までシェアリンクはクリエイターに表示されません。",

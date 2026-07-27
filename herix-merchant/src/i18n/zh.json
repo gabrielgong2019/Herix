@@ -561,6 +561,8 @@
     "saveSuccess": "✓ 已保存",
     "saveFailed": "保存失败",
     "duplicate": "复制为新任务",
+    "closeTask": "关闭任务",
+    "confirmClose": "关闭后任务将停止招募，持码赫使仍有 30 天数据缓冲期。确认关闭？",
     "contentSection": "任务内容",
     "viewUpgrade": "查看提升方式",
     "reviewPendingShareHint": "任务正在平台审核中（通常 1 个工作日内）。审核通过前，分享链接对赫使暂不可见——请先不要对外分享。",

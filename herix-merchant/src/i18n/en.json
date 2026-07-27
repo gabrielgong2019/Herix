@@ -566,6 +566,8 @@
     "saveSuccess": "✓ Saved",
     "saveFailed": "Save failed",
     "duplicate": "Duplicate",
+    "closeTask": "Close Task",
+    "confirmClose": "Closing stops new recruitment. Existing code holders have a 30-day data grace period. Confirm?",
     "contentSection": "Task content",
     "viewUpgrade": "See how to increase",
     "reviewPendingShareHint": "This task is under platform review (usually within 1 business day). Share links are not visible to creators until approved.",

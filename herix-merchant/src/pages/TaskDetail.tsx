@@ -574,6 +574,11 @@ export default function TaskDetail() {
     enabled: !!id && tab === 'submissions',
   })
 
+  const completeMut = useMutation({
+    mutationFn: () => tasksApi.complete(id!),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', id] }),
+  })
+
   const approveMut = useMutation({
     mutationFn: (appId: string) => tasksApi.approveApp(id!, appId),
     onSuccess: () => {
@@ -593,6 +598,7 @@ export default function TaskDetail() {
   if (!task) return null
 
   const isDraft = task.status.toUpperCase() === 'DRAFT'
+  const isOpen = task.status.toUpperCase() === 'OPEN'
   const isPerformance = task.mode === 'PERFORMANCE'
   const parties = task.brand_parties || []
 
@@ -635,6 +641,18 @@ export default function TaskDetail() {
                 onClick={() => navigate(`/tasks/${id}/meta`)}
               >
                 {t('taskDetail.metaEditTitle')}
+              </button>
+            )}
+            {isOpen && (
+              <button
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors disabled:opacity-40"
+                style={{ borderColor: '#fca5a5', color: '#dc2626' }}
+                disabled={completeMut.isPending}
+                onClick={() => {
+                  if (window.confirm(t('taskDetail.confirmClose'))) completeMut.mutate()
+                }}
+              >
+                {t('taskDetail.closeTask')}
               </button>
             )}
           </div>

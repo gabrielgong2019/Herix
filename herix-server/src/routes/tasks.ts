@@ -85,7 +85,8 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
-            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count
+            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count,
+            (SELECT trs.data_mode FROM task_referral_specs trs WHERE trs.task_id = t.id) as data_mode
      FROM tasks t
      JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id

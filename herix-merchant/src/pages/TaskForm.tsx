@@ -21,6 +21,9 @@ const PLATFORMS = [
 ]
 
 const PLATFORM_FEE_RATE = 0.2
+// 与服务端 MAX_CUSTOM_CODES_PER_UPLOAD 同步（herix-server/src/routes/tasks.ts）
+const MAX_CUSTOM_CODES = 2000
+const AVG_CONVERSIONS_PER_CODE = 5
 
 /** 平台要求实时摘要文案（ALL：必须/展示两组；ANY_N：候选池+需满足数） */
 function platformReqSummary(form: FormState, t: (k: string, params?: Record<string, unknown>) => string): string {
@@ -156,29 +159,25 @@ function RadioCard({
 
 // ── Cost preview panel ────────────────────────────────────────────
 
-function CostPreview({ payout, maxHeralds, isStandard, balance, t }: {
-  payout: number; maxHeralds: number; isStandard: boolean
+// ── 标准任务：确定性成本，发布时锁定金额 ────────────────────────────
+function StandardCostPreview({ payout, maxHeralds, balance, t }: {
+  payout: number; maxHeralds: number
   balance?: BrandBalance
   t: (k: string, params?: Record<string, unknown>) => string
 }) {
+  if (!payout || !maxHeralds) return null
   const base = payout * maxHeralds
   const fee = Math.ceil(base * PLATFORM_FEE_RATE)
   const total = base + fee
 
-  if (!payout || !maxHeralds) return null
-
-  // 与服务端发布闸同口径：可发布额度 = totalCapacity + 首单体验额度 min(trialDefault, 任务总成本)。
-  // 这里只做预展示，动态额度以服务端 402(INSUFFICIENT_CREDIT) 为准，不做前端硬拦截
   const credit = balance?.credit
-  const trialGrant = isStandard && credit?.trialEligible ? Math.min(credit.trialDefault, total) : 0
+  const trialGrant = credit?.trialEligible ? Math.min(credit.trialDefault, total) : 0
   const capacity = credit ? credit.totalCapacity + trialGrant : null
-  const short = isStandard && capacity !== null && total > capacity
+  const short = capacity !== null && total > capacity
 
   return (
     <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--primary-light)', border: '1px solid #f7c4bb' }}>
-      <div className="text-xs font-semibold mb-3" style={{ color: 'var(--primary)' }}>
-        {t('taskForm.costPreview')}
-      </div>
+      <div className="text-xs font-semibold mb-3" style={{ color: 'var(--primary)' }}>{t('taskForm.costPreview')}</div>
       <div className="space-y-1.5">
         {[
           { label: `${t('taskForm.costBase')} (${maxHeralds} ${t('taskForm.costPerHerald')})`, value: `¥${base.toLocaleString()}` },
@@ -193,10 +192,7 @@ function CostPreview({ payout, maxHeralds, isStandard, balance, t }: {
           <span>{t('taskForm.costTotal')}</span>
           <span style={{ color: 'var(--primary)' }}>¥{total.toLocaleString()}</span>
         </div>
-        {!isStandard && (
-          <div className="text-xs pt-1" style={{ color: 'var(--muted)' }}>{t('taskForm.capacityPerf')}</div>
-        )}
-        {isStandard && capacity !== null && (
+        {capacity !== null && (
           <>
             <div className="flex justify-between text-xs pt-1" style={{ color: short ? 'var(--danger)' : 'var(--muted)' }}>
               <span>
@@ -212,6 +208,41 @@ function CostPreview({ payout, maxHeralds, isStandard, balance, t }: {
             )}
           </>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ── 邀请码任务：概率估算，按转化实时结算 ────────────────────────────
+function PerformanceBudgetEstimate({ payout, codeCount, t }: {
+  payout: number; codeCount: number
+  t: (k: string, params?: Record<string, unknown>) => string
+}) {
+  if (!payout || !codeCount) return null
+  const estConversions = codeCount * AVG_CONVERSIONS_PER_CODE
+  const estPayout = payout * estConversions
+  const estFee = Math.ceil(estPayout * PLATFORM_FEE_RATE)
+  const estTotal = estPayout + estFee
+
+  return (
+    <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--primary-light)', border: '1px solid #f7c4bb' }}>
+      <div className="text-xs font-semibold mb-3" style={{ color: 'var(--primary)' }}>{t('taskForm.perfEstTitle')}</div>
+      <div className="space-y-1.5">
+        {[
+          { label: t('taskForm.perfEstCodesRow', { codes: codeCount, convs: estConversions }), value: `${estConversions} ${t('taskForm.perfEstConvUnit')}` },
+          { label: t('taskForm.perfEstPayoutRow'), value: `¥${estPayout.toLocaleString()}` },
+          { label: t('taskForm.costFee'), value: `¥${estFee.toLocaleString()}` },
+        ].map(({ label, value }) => (
+          <div key={label} className="flex justify-between text-xs" style={{ color: 'var(--text)' }}>
+            <span style={{ color: 'var(--muted)' }}>{label}</span>
+            <span>{value}</span>
+          </div>
+        ))}
+        <div className="flex justify-between text-sm font-bold pt-2 border-t mt-2" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
+          <span>{t('taskForm.perfEstTotal')}</span>
+          <span style={{ color: 'var(--primary)' }}>¥{estTotal.toLocaleString()}</span>
+        </div>
+        <div className="text-xs pt-1" style={{ color: 'var(--muted)' }}>{t('taskForm.perfEstNote')}</div>
       </div>
     </div>
   )
@@ -494,6 +525,7 @@ export default function TaskForm() {
     if (!form.payoutPerHerald) { setError(t('taskForm.errorPayout')); return false }
     if (!isCustomCodes && !form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
     if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
+    if (isCustomCodes && customCodeList.length > MAX_CUSTOM_CODES) { setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: MAX_CUSTOM_CODES })); return false }
     return true
   }
 
@@ -964,13 +996,10 @@ export default function TaskForm() {
           <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
             <SectionHeader num={sn.payout} title={t('taskForm.sec4Title')} hint={t('taskForm.sec4Hint')} />
 
-            <CostPreview
-              payout={Number(form.payoutPerHerald) || 0}
-              maxHeralds={effectiveMaxHeralds}
-              isStandard={isStandard}
-              balance={brandBalance}
-              t={t}
-            />
+            {isStandard
+              ? <StandardCostPreview payout={Number(form.payoutPerHerald) || 0} maxHeralds={effectiveMaxHeralds} balance={brandBalance} t={t} />
+              : <PerformanceBudgetEstimate payout={Number(form.payoutPerHerald) || 0} codeCount={effectiveMaxHeralds} t={t} />
+            }
 
             <div className={`grid gap-4 ${isCustomCodes ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>

@@ -180,7 +180,7 @@
     "sec3PerfTitle": "Referral Code Setup",
     "sec3PerfHint": "Code source and data reporting mode",
     "customCodesLabel": "Referral Code List",
-    "customCodesHint": "One per line — imported into code pool on submit",
+    "customCodesHint": "One per line, imported into the code pool on submit (max 2000 per upload)",
     "customCodesPh": "CODE001\nCODE002\nCODE003",
     "errorCustomCodes": "Please enter at least one referral code",
     "visPublic": "Public",
@@ -240,6 +240,12 @@
     "capacityTrial": "incl. first-task trial credit ¥{{amount}}",
     "capacityShort": "Insufficient capacity: ¥{{amount}} more needed. Top up before publishing",
     "capacityPerf": "Referral tasks are billed per conversion and do not use publishing capacity",
+    "perfEstTitle": "Budget Estimate",
+    "perfEstCodesRow": "{{codes}} codes × avg 5 conversions = {{convs}}",
+    "perfEstConvUnit": "conversions",
+    "perfEstPayoutRow": "Ambassador payout (estimated)",
+    "perfEstTotal": "Estimated total spend",
+    "perfEstNote": "Based on avg 5 conversions per code. Actual billing is per conversion.",
     "errorDesc": "Please enter a task brief (at least 10 characters)",
     "submitFailed": "Submission failed, please try again later",
     "fieldPlatformHint": "Select platforms creators must have an account on; minimum follower count is optional",
@@ -250,7 +256,8 @@
     "reqModeAnyN": "Any {{n}} of {{total}}",
     "summaryRequired": "Required: {{list}}",
     "summaryOptional": "Shown only (not enforced): {{list}}",
-    "summaryAnyN": "Creator must meet {{n}} of the following {{total}}: {{list}}"
+    "summaryAnyN": "Creator must meet {{n}} of the following {{total}}: {{list}}",
+    "errorTooManyCodes": "Max {{max}} codes per upload (currently {{n}}) — please split into batches"
   },
   "site": {
     "jp": "Japan",

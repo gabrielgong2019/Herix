@@ -214,31 +214,50 @@ tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'),
   res.send('﻿' + csv); // BOM for Excel compatibility
 });
 
+// 单次上传数量上限：express.json() 默认 100KB 请求体，短码(~12字符/条)约几千条就会撞 413。
+// 给一个明确、留足余量的数字，好过让商家撞一个不可预期的"请求体过大"（2026-07-27 排查坐实）
+const MAX_CUSTOM_CODES_PER_UPLOAD = 2000;
+
 /** POST /api/tasks/:id/codes/upload — 商家上传自定义推广码 */
 tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<any>('SELECT id, creator_id, mode, code_mode, max_heralds FROM tasks WHERE id = ?', [req.params.id]);
-  if (!task) return res.status(404).json({ error: '任务不存在' });
-  if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
-  if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '仅成果报酬任务支持推广码' });
+  try {
+    // 2026-07-25 code_mode/data_mode 迁移进 task_referral_specs 后 tasks 表已删该列，
+    // 这里当时漏改，SELECT 撞 42703 未捕获异常——Express 4 对未 catch 的 async 异常不会自动
+    // 500，请求直接挂死到客户端超时，商家侧只看到"提交失败，请稍后重试"（2026-07-27 用户报）
+    const task = await findOne<any>('SELECT id, creator_id, mode, max_heralds FROM tasks WHERE id = ?', [req.params.id]);
+    if (!task) return res.status(404).json({ error: '任务不存在' });
+    if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
+    if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '仅成果报酬任务支持推广码' });
 
-  const { codes } = req.body as { codes: string[] };
-  if (!Array.isArray(codes) || codes.length === 0) return res.status(400).json({ error: 'codes 数组不能为空' });
+    const { codes } = req.body as { codes: string[] };
+    if (!Array.isArray(codes) || codes.length === 0) return res.status(400).json({ error: 'codes 数组不能为空' });
+    if (codes.length > MAX_CUSTOM_CODES_PER_UPLOAD) {
+      return res.status(400).json({
+        error: `单次最多上传 ${MAX_CUSTOM_CODES_PER_UPLOAD} 个推广码（本次 ${codes.length} 个），请分批上传`,
+        code: 'MAX_CODES_EXCEEDED',
+        limit: MAX_CUSTOM_CODES_PER_UPLOAD,
+      });
+    }
 
-  const cleaned = [...new Set(codes.map((c: string) => c.trim()).filter(Boolean))];
+    const cleaned = [...new Set(codes.map((c: string) => c.trim()).filter(Boolean))];
 
-  let added = 0, skipped = 0;
-  for (const code of cleaned) {
-    const exists = await findOne('SELECT id FROM task_promo_codes WHERE code = ?', [code]);
-    if (exists) { skipped++; continue; }
-    await insert('task_promo_codes', { task_id: task.id, code });
-    added++;
+    let added = 0, skipped = 0;
+    for (const code of cleaned) {
+      const exists = await findOne('SELECT id FROM task_promo_codes WHERE code = ?', [code]);
+      if (exists) { skipped++; continue; }
+      await insert('task_promo_codes', { task_id: task.id, code });
+      added++;
+    }
+
+    // 自定义码的数量即招募容量，上传后同步更新 max_heralds
+    const totalInPool = await findOne<{ cnt: number }>('SELECT COUNT(*)::int as cnt FROM task_promo_codes WHERE task_id = ?', [task.id]);
+    await update('tasks', { max_heralds: totalInPool?.cnt ?? cleaned.length }, 'id = ?', [task.id]);
+
+    res.json({ added, skipped, total: cleaned.length, maxHeralds: totalInPool?.cnt ?? cleaned.length });
+  } catch (err) {
+    console.error('Codes upload error:', err);
+    res.status(500).json({ error: '推广码上传失败' });
   }
-
-  // 自定义码的数量即招募容量，上传后同步更新 max_heralds
-  const totalInPool = await findOne<{ cnt: number }>('SELECT COUNT(*)::int as cnt FROM task_promo_codes WHERE task_id = ?', [task.id]);
-  await update('tasks', { max_heralds: totalInPool?.cnt ?? cleaned.length }, 'id = ?', [task.id]);
-
-  res.json({ added, skipped, total: cleaned.length, maxHeralds: totalInPool?.cnt ?? cleaned.length });
 });
 
 /** GET /api/tasks/:id/upload-info — 品牌上传页用，token 鉴权，返回任务基本信息 */

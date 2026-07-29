@@ -180,7 +180,7 @@
     "sec3PerfTitle": "추천 코드 설정",
     "sec3PerfHint": "코드 제공 방식 및 데이터 연동 방식",
     "customCodesLabel": "추천 코드 목록",
-    "customCodesHint": "한 줄에 하나씩 — 제출 시 코드 풀에 추가",
+    "customCodesHint": "한 줄에 하나씩, 제출 시 코드 풀에 등록됩니다 (1회 최대 2000개)",
     "customCodesPh": "CODE001\nCODE002\nCODE003",
     "errorCustomCodes": "추천 코드를 최소 하나 입력해 주세요",
     "visPublic": "공개 모집",
@@ -250,7 +250,8 @@
     "reqModeAnyN": "{{total}}개 중 {{n}}개만 충족",
     "summaryRequired": "필수 조건: {{list}}",
     "summaryOptional": "표시만 (강제 아님): {{list}}",
-    "summaryAnyN": "다음 {{total}}개 중 {{n}}개를 충족해야 합니다: {{list}}"
+    "summaryAnyN": "다음 {{total}}개 중 {{n}}개를 충족해야 합니다: {{list}}",
+    "errorTooManyCodes": "1회 최대 {{max}}개까지 업로드 가능합니다 (현재 {{n}}개). 나눠서 제출해 주세요"
   },
   "site": {
     "jp": "일본",

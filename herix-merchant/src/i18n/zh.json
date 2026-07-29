@@ -180,7 +180,7 @@
     "sec3PerfTitle": "邀请码设置",
     "sec3PerfHint": "推广码来源和数据回传方式",
     "customCodesLabel": "推广码列表",
-    "customCodesHint": "每行一个，提交后导入码池",
+    "customCodesHint": "每行一个，提交后导入码池（单次最多 2000 个）",
     "customCodesPh": "CODE001\nCODE002\nCODE003",
     "errorCustomCodes": "请至少输入一个推广码",
     "visPublic": "公开招募",
@@ -240,6 +240,12 @@
     "capacityTrial": "含首单体验额度 ¥{{amount}}",
     "capacityShort": "额度不足：还差 ¥{{amount}}，请充值后再发布",
     "capacityPerf": "邀请码任务按转化实时扣费，不占用发布额度",
+    "perfEstTitle": "预算估算",
+    "perfEstCodesRow": "{{codes}} 个码 × 均值 5 次转化 = {{convs}} 次",
+    "perfEstConvUnit": "次转化",
+    "perfEstPayoutRow": "赫使报酬（预估）",
+    "perfEstTotal": "预估总支出",
+    "perfEstNote": "按每码均值 5 次转化估算，实际扣费以转化结算为准",
     "errorDesc": "请填写任务简报（至少10个字符）",
     "submitFailed": "提交失败，请稍后重试",
     "fieldPlatformHint": "勾选赫使必须持有账号的平台，可选填最低粉丝数门槛",
@@ -250,7 +256,8 @@
     "reqModeAnyN": "满足其中 {{n}}/{{total}} 项即可",
     "summaryRequired": "必须满足：{{list}}",
     "summaryOptional": "仅展示（不强制）：{{list}}",
-    "summaryAnyN": "赫使需满足以下 {{total}} 项中的 {{n}} 项：{{list}}"
+    "summaryAnyN": "赫使需满足以下 {{total}} 项中的 {{n}} 项：{{list}}",
+    "errorTooManyCodes": "单次最多上传 {{max}} 个推广码（当前 {{n}} 个），请分批提交"
   },
   "site": {
     "jp": "日本",

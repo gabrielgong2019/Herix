@@ -180,7 +180,7 @@
     "sec3PerfTitle": "紹介コード設定",
     "sec3PerfHint": "コードの提供方法とデータ連携モード",
     "customCodesLabel": "紹介コードリスト",
-    "customCodesHint": "1行1コード — 送信時にコードプールへ追加",
+    "customCodesHint": "1行に1つ、提出後にコードプールへ登録（1回最大2000件）",
     "customCodesPh": "CODE001\nCODE002\nCODE003",
     "errorCustomCodes": "紹介コードを1つ以上入力してください",
     "visPublic": "公開募集",
@@ -240,6 +240,12 @@
     "capacityTrial": "初回体験枠 ¥{{amount}} を含む",
     "capacityShort": "枠が不足しています：あと ¥{{amount}} 必要です。チャージ後に公開してください",
     "capacityPerf": "招待コードタスクはコンバージョンごとに課金され、公開枠を消費しません",
+    "perfEstTitle": "予算見積もり",
+    "perfEstCodesRow": "{{codes}} 個のコード × 平均 5 回転換 = {{convs}} 回",
+    "perfEstConvUnit": "回転換",
+    "perfEstPayoutRow": "アンバサダー報酬（見積もり）",
+    "perfEstTotal": "予想総支出",
+    "perfEstNote": "1コードあたり平均5回転換で試算。実際の請求はコンバージョン毎に発生します。",
     "errorDesc": "タスク概要を入力してください（10文字以上）",
     "submitFailed": "送信に失敗しました。しばらくしてから再試行してください",
     "fieldPlatformHint": "クリエイターが必ず持つべきプラットフォームを選択（最低フォロワー数は任意）",
@@ -250,7 +256,8 @@
     "reqModeAnyN": "{{n}}/{{total}} 項目を満たせばOK",
     "summaryRequired": "必須条件：{{list}}",
     "summaryOptional": "参考表示のみ（必須ではない）：{{list}}",
-    "summaryAnyN": "以下 {{total}} 項目中 {{n}} 項目を満たす必要があります：{{list}}"
+    "summaryAnyN": "以下 {{total}} 項目中 {{n}} 項目を満たす必要があります：{{list}}",
+    "errorTooManyCodes": "1回の提出は最大 {{max}} 件まで（現在 {{n}} 件）。分割して提出してください"
   },
   "site": {
     "jp": "日本",

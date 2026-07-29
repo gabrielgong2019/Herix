@@ -90,7 +90,10 @@ adminRouter.get('/kyb-reviews', async (_req: Request, res: Response) => {
   const rows = await findMany<any>(
     `SELECT bp.user_id, bp.company_name, bp.industry, bp.website, bp.country, bp.is_agency,
             bp.kyb_doc_url, bp.kyb_submitted_at, u.nickname, u.email,
-            (SELECT COUNT(*) FROM kyb_submissions ks WHERE ks.user_id = bp.user_id) AS submission_count
+            (SELECT COUNT(*) FROM kyb_submissions ks WHERE ks.user_id = bp.user_id) AS submission_count,
+            (SELECT ks2.corporate_number FROM kyb_submissions ks2 WHERE ks2.user_id = bp.user_id ORDER BY ks2.submitted_at DESC LIMIT 1) AS corporate_number,
+            (SELECT ks2.country FROM kyb_submissions ks2 WHERE ks2.user_id = bp.user_id ORDER BY ks2.submitted_at DESC LIMIT 1) AS kyb_country,
+            (SELECT ks2.auto_checks FROM kyb_submissions ks2 WHERE ks2.user_id = bp.user_id ORDER BY ks2.submitted_at DESC LIMIT 1) AS auto_checks
      FROM brand_profiles bp JOIN users u ON u.id = bp.user_id
      WHERE bp.kyb_status = 'pending' ORDER BY bp.kyb_submitted_at ASC`
   );

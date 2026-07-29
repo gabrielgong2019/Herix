@@ -919,6 +919,14 @@ export async function initDatabase() {
                         r.tbl, r.col, r.newtype, r.col, r.newtype);
        END LOOP;
      END $$`,
+    // KYB 流程化（2026-07-29）：结构化提交字段 + 自动核验结果留痕
+    `ALTER TABLE kyb_submissions ADD COLUMN IF NOT EXISTS company_name TEXT`,
+    `ALTER TABLE kyb_submissions ADD COLUMN IF NOT EXISTS country TEXT`,
+    `ALTER TABLE kyb_submissions ADD COLUMN IF NOT EXISTS corporate_number TEXT`,
+    `ALTER TABLE kyb_submissions ADD COLUMN IF NOT EXISTS auto_checks TEXT`,
+    `INSERT INTO platform_settings (key, value, note) VALUES
+      ('kyb_auto_approve', '0', 'KYB全自动通过开关：1=法人番号校验+国税厅名称比对全过即自动通过（需配置HOUJIN_API_ID），0=机器核验结果仅辅助人工')
+     ON CONFLICT (key) DO NOTHING`,
     `ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check`,
     `ALTER TABLE tasks ADD CONSTRAINT tasks_status_check
      CHECK(status IN ('DRAFT','PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED','CANCELLED'))`,

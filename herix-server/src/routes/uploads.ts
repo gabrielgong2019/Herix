@@ -35,22 +35,15 @@ uploadsRouter.post('/brand/promo', requireAuth, requireRole('BRAND'), imageUploa
   }
 });
 
-/** POST /api/uploads/brand/kyb-doc — 商家认证证件上传（登記簿謄本/营业执照，上传即提交审核） */
+/** POST /api/uploads/brand/kyb-doc — 商家认证证件上传（纯上传返回URL；
+ *  2026-07-29 流程化改造：提交动作移交 POST /api/brands/kyb（带公司名/法人番号结构化信息+自动核验），
+ *  本路由不再有"传图即提交"副作用） */
 uploadsRouter.post('/brand/kyb-doc', requireAuth, requireRole('BRAND'), imageUpload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: '未提供文件' });
   try {
     const processed = await processPromo(req.file.buffer); // 文档照片沿用宣传图压缩参数（长边保留较大，文字可读）
     const url = saveBrandAsset(req.user!.userId, 'kyb', processed);
-    const submittedAt = new Date().toISOString();
-    // 写业务发生源：每次提交一行审计记录（write-once，永久保留），
-    // brand_profiles.kyb_* 只是"当前状态"快照，两者不冲突（快照给审核页筛选用，
-    // 审计表给"这是第几次提交/历史拒绝原因"用）
-    await insert('kyb_submissions', { user_id: req.user!.userId, doc_url: url, status: 'pending', submitted_at: submittedAt });
-    await update('brand_profiles', {
-      kyb_doc_url: url, kyb_status: 'pending', kyb_note: null,
-      kyb_submitted_at: submittedAt,
-    }, 'user_id = ?', [req.user!.userId]);
-    res.json({ success: true, url, kybStatus: 'pending' });
+    res.json({ success: true, url });
   } catch (err) {
     console.error('KYB doc upload error:', err);
     res.status(500).json({ error: '图片处理失败' });

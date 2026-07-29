@@ -259,6 +259,24 @@ function statCard(label,val,color,icon,unit){
 }
 
 /* ── Reviews ── */
+/* 机器核验结果徽章（法人番号校验位 + 国税厅名称比对，来自 kyb_submissions.auto_checks） */
+function kybChecksHTML(r){
+  if(!r.corporate_number) return '';
+  var c={};try{c=r.auto_checks?JSON.parse(r.auto_checks):{};}catch(e){}
+  function badge(txt,okv){var col=okv===true?'#15803d':okv===false?'#dc2626':'#92400e';
+    var bg=okv===true?'#f0fdf4':okv===false?'#fef2f2':'#fffbeb';
+    return '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:'+bg+';color:'+col+';margin-right:6px">'+txt+'</span>';}
+  var h='<div style="margin:6px 0">'
+    +badge('法人番号 '+esc(r.corporate_number),null)
+    +badge(c.checksumValid===true?'✓ 校验位有效':c.checksumValid===false?'✗ 校验位不符':'校验位未验',c.checksumValid);
+  if(c.apiAvailable){
+    h+=badge(c.nameMatch===true?'✓ 名称与国税厅一致':'✗ 名称不一致：'+esc(c.officialName||''),c.nameMatch);
+  } else {
+    h+=badge('国税厅API未配置（仅校验位）',null);
+  }
+  return h+'</div>';
+}
+
 function kybPage(){
   var kybRv=st.data.kybReviews||[];
   var h='<div style="font-size:13px;color:var(--muted);margin-bottom:14px">商家企业认证（KYB）审核与首单体验额度配置。认证通过后该商家发布任务免平台审核，并可申请信用提额。</div>';
@@ -272,7 +290,8 @@ function kybPage(){
     return h+kybRv.map(function(r){
       return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.company_name||r.nickname||'')+(r.is_agency?' <span style="font-size:11px;color:#c2410c">[广告代理]</span>':'')+'</span>'
         +'<span style="font-size:11px;color:var(--muted)">'+(r.kyb_submitted_at?fmtLocal(r.kyb_submitted_at):'')+'</span></div>'
-        +'<div class="acard-sub">'+esc(r.email||'')+' · 注册地：'+esc(r.country||'')+(r.website?' · '+esc(r.website):'')+'</div>'
+        +'<div class="acard-sub">'+esc(r.email||'')+' · 注册地：'+esc(r.kyb_country||r.country||'')+(r.website?' · '+esc(r.website):'')+'</div>'
+        +kybChecksHTML(r)
         +(r.kyb_doc_url?'<a href="'+esc(r.kyb_doc_url)+'" target="_blank"><img src="'+esc(r.kyb_doc_url)+'" style="max-width:260px;max-height:180px;border:1px solid var(--border);border-radius:8px;margin:8px 0;object-fit:contain"></a>':'<div style="font-size:12px;color:var(--danger);margin:8px 0">⚠️ 无证件图</div>')
         +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doKyb(\''+r.user_id+'\',true)">✓ 通过认证</button>'
         +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doKyb(\''+r.user_id+'\',false)">✗ 拒绝</button></div></div>';

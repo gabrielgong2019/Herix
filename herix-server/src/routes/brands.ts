@@ -1,8 +1,70 @@
 import { Router, Request, Response } from 'express';
-import { findOne, findMany } from '../utils/db';
-import { optionalAuth } from '../middleware/auth';
+import { findOne, findMany, insert, update } from '../utils/db';
+import { optionalAuth, requireAuth, requireRole } from '../middleware/auth';
+import { runKybAutoChecks, qualifiesForAutoApprove } from '../utils/kyb';
+import { getSetting } from '../utils/settings';
+import { createNotification } from './notifications';
 
 export const brandsRouter = Router();
+
+/** POST /api/brands/kyb — 结构化提交企业认证（2026-07-29 流程化改造）
+ *  取代"传图即提交"：公司名/注册国/法人番号 + 证件图 URL 一起提交，
+ *  提交时跑自动核验（校验位恒开；国税厅名称比对需 HOUJIN_API_ID）；
+ *  核验全过 + admin 开了 kyb_auto_approve 才自动通过，否则带核验结果进人工队列。
+ *  ⚠️ 必须注册在 GET /:userId 之前，防止路径被参数路由吃掉 */
+brandsRouter.post('/kyb', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  try {
+    const { companyName, country, corporateNumber, docUrl } = req.body as {
+      companyName?: string; country?: string; corporateNumber?: string; docUrl?: string;
+    };
+    if (!companyName?.trim()) return res.status(400).json({ error: '请填写公司名称', code: 'COMPANY_NAME_REQUIRED' });
+    if (!docUrl?.trim()) return res.status(400).json({ error: '请先上传证件（登記簿謄本/营业执照）', code: 'DOC_REQUIRED' });
+
+    const bp = await findOne<any>('SELECT kyb_status FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    if (!bp) return res.status(404).json({ error: '商家档案不存在' });
+    if (bp.kyb_status === 'approved') return res.status(400).json({ error: '已通过认证，无需重复提交', code: 'ALREADY_APPROVED' });
+    if (bp.kyb_status === 'pending') return res.status(409).json({ error: '已有认证申请在审核中', code: 'ALREADY_PENDING' });
+
+    // 日本公司填了法人番号先做格式硬校验（校验位不过直接打回，不产生提交记录）
+    const num = (corporateNumber || '').replace(/[^\d]/g, '');
+    const checks = await runKybAutoChecks({ corporateNumber: num, companyName, country });
+    if (num && checks.checksumValid === false) {
+      return res.status(400).json({
+        error: '法人番号校验位不符，请核对后重新输入（13位，来自登記簿謄本或国税厅法人番号公表サイト）',
+        code: 'CORPORATE_NUMBER_INVALID',
+      });
+    }
+
+    const submittedAt = new Date().toISOString();
+    const autoApproveEnabled = (await getSetting('kyb_auto_approve')) === '1';
+    const autoApproved = autoApproveEnabled && qualifiesForAutoApprove(checks);
+    const status = autoApproved ? 'approved' : 'pending';
+
+    await insert('kyb_submissions', {
+      user_id: req.user!.userId, doc_url: docUrl, status,
+      company_name: companyName.trim(), country: country || null,
+      corporate_number: num || null, auto_checks: JSON.stringify(checks),
+      submitted_at: submittedAt,
+      ...(autoApproved ? { reviewed_at: submittedAt, note: '自动通过：法人番号校验+国税厅名称比对一致' } : {}),
+    });
+    await update('brand_profiles', {
+      company_name: companyName.trim(),
+      kyb_doc_url: docUrl, kyb_status: status, kyb_note: null, kyb_submitted_at: submittedAt,
+    }, 'user_id = ?', [req.user!.userId]);
+
+    if (autoApproved) {
+      await createNotification({
+        userId: req.user!.userId, type: 'KYB_APPROVED', targetRole: 'BRAND',
+        title: '企业认证通过',
+        body: '法人番号与国税厅登记信息核验一致，企业认证已自动通过。此后发布的任务免平台审核直接上线。',
+      });
+    }
+    res.json({ success: true, kybStatus: status, autoChecks: checks, autoApproved });
+  } catch (err) {
+    console.error('KYB submit error:', err);
+    res.status(500).json({ error: '认证提交失败' });
+  }
+});
 
 /** GET /api/brands/:userId — 公开品牌主页（无需登录） */
 brandsRouter.get('/:userId', optionalAuth, async (req: Request, res: Response) => {

@@ -204,11 +204,16 @@ export const settingsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     })
   },
+  // 纯上传返回 URL；提交走 submitKyb（2026-07-29 KYB 流程化）
   uploadKybDoc: (file: File) => {
     const fd = new FormData()
     fd.append('file', file)
-    return http.post('/uploads/brand/kyb-doc', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+    return http.post<{ success: boolean; url: string }>('/uploads/brand/kyb-doc', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
+  submitKyb: (data: { companyName: string; country: string; corporateNumber?: string; docUrl: string }) =>
+    http.post<{ success: boolean; kybStatus: string; autoApproved: boolean; autoChecks: {
+      checksumValid: boolean | null; apiAvailable: boolean; officialName: string | null; nameMatch: boolean | null
+    } }>('/brands/kyb', data),
 }
 
 // ── Types ─────────────────────────────────────────────────────────
@@ -233,6 +238,7 @@ export interface MerchantUser {
   is_agency?: boolean
   brand_country?: string
   kyb_status?: 'none' | 'pending' | 'approved' | 'rejected'
+  kyb_submitted_at?: string
   kyb_note?: string
   kyb_reject_reason?: string
   brand_logo_url?: string

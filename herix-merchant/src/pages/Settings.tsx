@@ -133,27 +133,64 @@ function BrandImageSection() {
   )
 }
 
+/** 法人番号校验位（与服务端 utils/kyb.ts 同算法）：13位，第1位=9−(Σ Pn×Qn mod 9) */
+function validateCorpNum(num: string): boolean {
+  if (!/^\d{13}$/.test(num)) return false
+  const check = Number(num[0]); const base = num.slice(1)
+  let sum = 0
+  for (let n = 1; n <= 12; n++) sum += Number(base[12 - n]) * (n % 2 === 1 ? 1 : 2)
+  return check === 9 - (sum % 9)
+}
+
 function KybSection() {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const fileRef = useRef<HTMLInputElement>(null)
   const [kybMsg, setKybMsg] = useState('')
+  const [msgKind, setMsgKind] = useState<'ok' | 'err'>('ok')
 
   const { data: profile } = useQuery({
     queryKey: ['merchant-profile'],
     queryFn: () => settingsApi.profile().then((r) => r.data),
   })
 
+  // 表单态（步骤：①填公司信息 ②传证件 ③提交）
+  const [companyName, setCompanyName] = useState('')
+  const [country, setCountry] = useState('jp')
+  const [corpNum, setCorpNum] = useState('')
+  const [docUrl, setDocUrl] = useState('')
+  const [prefilled, setPrefilled] = useState(false)
+  if (profile && !prefilled) { setCompanyName(profile.company_name || ''); setPrefilled(true) }
+
+  const corpNumClean = corpNum.replace(/[^\d]/g, '')
+  const corpNumState: 'empty' | 'partial' | 'valid' | 'invalid' =
+    !corpNumClean ? 'empty' : corpNumClean.length < 13 ? 'partial' : validateCorpNum(corpNumClean) ? 'valid' : 'invalid'
+
   const uploadMut = useMutation({
     mutationFn: (file: File) => settingsApi.uploadKybDoc(file),
-    onSuccess: () => {
-      setKybMsg(t('kyb.submitted'))
+    onSuccess: (r) => { setDocUrl(r.data.url); setKybMsg(''); },
+    onError: () => { setMsgKind('err'); setKybMsg(t('kyb.uploadFailed')) },
+  })
+  const submitMut = useMutation({
+    mutationFn: () => settingsApi.submitKyb({ companyName: companyName.trim(), country, corporateNumber: corpNumClean || undefined, docUrl }),
+    onSuccess: (r) => {
+      const d = r.data
+      setMsgKind('ok')
+      if (d.autoApproved) setKybMsg(t('kyb.autoApproved'))
+      else if (d.autoChecks?.checksumValid && d.autoChecks?.apiAvailable && d.autoChecks?.nameMatch === false)
+        setKybMsg(t('kyb.submittedNameMismatch', { name: d.autoChecks.officialName || '' }))
+      else if (d.autoChecks?.checksumValid) setKybMsg(t('kyb.submittedChecksumOk'))
+      else setKybMsg(t('kyb.submitted'))
       qc.invalidateQueries({ queryKey: ['merchant-profile'] })
     },
-    onError: () => setKybMsg(t('kyb.uploadFailed')),
+    onError: (e: unknown) => {
+      const msg = (e as { response?: { data?: { error?: string } } })?.response?.data?.error
+      setMsgKind('err'); setKybMsg(msg || t('kyb.submitFailed'))
+    },
   })
 
   const status = profile?.kyb_status || 'none'
+  const canSubmit = !!companyName.trim() && !!docUrl && corpNumState !== 'invalid' && corpNumState !== 'partial' && !submitMut.isPending
 
   return (
     <div className="rounded-2xl p-6" style={{ background: '#fff' }}>
@@ -180,6 +217,11 @@ function KybSection() {
             {t('kyb.pending')}
           </div>
           <div className="text-xs" style={{ color: 'var(--muted)' }}>{t('kyb.pendingHint')}</div>
+          {profile?.kyb_submitted_at && (
+            <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>
+              {t('kyb.submittedAt', { date: String(profile.kyb_submitted_at).slice(0, 10) })}
+            </div>
+          )}
         </div>
       )}
 
@@ -194,31 +236,76 @@ function KybSection() {
             </div>
           )}
           <p className="text-xs mb-4" style={{ color: 'var(--muted)', lineHeight: 1.7 }}>{t('kyb.benefit')}</p>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) { setKybMsg(''); uploadMut.mutate(f) }
-            }}
-          />
+
+          {/* ① 公司信息 */}
+          <div className="mb-3">
+            <div className="text-xs font-medium mb-1.5">{t('kyb.step1')}</div>
+            <div className="flex flex-wrap gap-2">
+              <input
+                value={companyName} onChange={(e) => setCompanyName(e.target.value)}
+                placeholder={t('kyb.companyNamePh')}
+                className="text-sm rounded-lg" style={{ flex: '1 1 200px', padding: '8px 12px', border: '1px solid var(--border)' }}
+              />
+              <select
+                value={country} onChange={(e) => setCountry(e.target.value)}
+                className="text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)', background: '#fff' }}
+              >
+                <option value="jp">{t('kyb.countryJp')}</option>
+                <option value="cn">{t('kyb.countryCn')}</option>
+                <option value="other">{t('kyb.countryOther')}</option>
+              </select>
+            </div>
+            {country === 'jp' && (
+              <div className="mt-2">
+                <input
+                  value={corpNum} onChange={(e) => setCorpNum(e.target.value)}
+                  placeholder={t('kyb.corpNumPh')} maxLength={13} inputMode="numeric"
+                  className="text-sm rounded-lg w-full"
+                  style={{ padding: '8px 12px', border: `1px solid ${corpNumState === 'invalid' ? '#fca5a5' : corpNumState === 'valid' ? '#86efac' : 'var(--border)'}` }}
+                />
+                {corpNumState === 'valid' && <div className="text-xs mt-1" style={{ color: '#15803d' }}>✓ {t('kyb.corpNumValid')}</div>}
+                {corpNumState === 'invalid' && <div className="text-xs mt-1" style={{ color: '#dc2626' }}>✗ {t('kyb.corpNumInvalid')}</div>}
+                {corpNumState === 'partial' && <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t('kyb.corpNumPartial', { n: corpNumClean.length })}</div>}
+                {corpNumState === 'empty' && <div className="text-xs mt-1" style={{ color: 'var(--muted)' }}>{t('kyb.corpNumHint')}</div>}
+              </div>
+            )}
+          </div>
+
+          {/* ② 证件上传 */}
+          <div className="mb-4">
+            <div className="text-xs font-medium mb-1.5">{t('kyb.step2')}</div>
+            <input
+              ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadMut.mutate(f) }}
+            />
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileRef.current?.click()} disabled={uploadMut.isPending}
+                className="px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-50"
+                style={{ border: '1px solid var(--border)', background: '#fff' }}
+              >
+                {uploadMut.isPending ? t('kyb.uploading') : docUrl ? t('kyb.reupload') : t('kyb.upload')}
+              </button>
+              {docUrl && <span className="text-xs" style={{ color: '#15803d' }}>✓ {t('kyb.docReady')}</span>}
+            </div>
+          </div>
+
+          {/* ③ 提交 */}
           <button
-            onClick={() => fileRef.current?.click()}
-            disabled={uploadMut.isPending}
-            className="px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-50"
+            onClick={() => submitMut.mutate()} disabled={!canSubmit}
+            className="px-5 py-2 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-40"
             style={{ background: 'var(--primary)' }}
           >
-            {uploadMut.isPending ? t('kyb.uploading') : t('kyb.upload')}
+            {submitMut.isPending ? t('kyb.submitting') : t('kyb.submitBtn')}
           </button>
+
           {kybMsg && (
             <div
               className="mt-3 text-xs rounded-xl px-3 py-2"
               style={{
-                background: uploadMut.isError ? '#fef2f2' : '#f0fdf4',
-                border: `1px solid ${uploadMut.isError ? '#fecaca' : '#bbf7d0'}`,
-                color: uploadMut.isError ? '#dc2626' : '#15803d',
+                background: msgKind === 'err' ? '#fef2f2' : '#f0fdf4',
+                border: `1px solid ${msgKind === 'err' ? '#fecaca' : '#bbf7d0'}`,
+                color: msgKind === 'err' ? '#dc2626' : '#15803d',
               }}
             >
               {kybMsg}

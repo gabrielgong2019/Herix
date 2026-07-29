@@ -20,6 +20,7 @@ export interface CategoryItem {
 export interface TaskCardTask {
   id: string;
   title: string;
+  description?: string | null;
   creator_id?: string | null;
   category?: string | null;
   difficulty?: string | null;
@@ -42,10 +43,9 @@ interface Props {
 }
 
 /**
- * 图上文下大图卡（2026-07-29 重设计，设计对比稿三案取中）：
- * 封面 16:9 通栏置顶（发布已强制封面，存量无图任务纯文字卡兜底），
- * 文字信息不覆盖在图上——商家实拍图质量不可控，白字压图的可读性赌不起；
- * 决策信息（口径化报酬/难度/品牌）保持列表卡的完整度。
+ * 紧凑信息卡（2026-07-29 定稿：方案1形态，用户否决大图卡"空间利用效率太低"）。
+ * 吸收对比稿方案1的可取点：右图放大到约1/3卡宽·4:3饱满比例、标题下描述摘要行、
+ * 底部"品牌+评分"与口径化报酬同行收尾。无图任务纯文字排布，价格恒在右下不悬空。
  */
 export default function TaskCard({ task, categories }: Props) {
   const img = task.cover_image || task.brand_promo_image_url || '';
@@ -74,52 +74,49 @@ export default function TaskCard({ task, categories }: Props) {
 
   return (
     <View className='task-card' onClick={goTask}>
-      {img && <View className='card-cover' style={{ backgroundImage: `url(${assetUrl(img)})` }} />}
-
-      <View className='card-content'>
-        <View className='card-top'>
-          <View className='card-top-left'>
-            {catText && <Text className='tag'>{catText}</Text>}
-            <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
-              {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
-            </Text>
-          </View>
-          <View className='card-top-right'>
-            <View className='diff-tag'>
-              <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
-              <Text>{t(diff.labelKey)}</Text>
-            </View>
-            {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
-          </View>
+      <View className='card-top'>
+        <View className='card-top-left'>
+          {catText && <Text className='tag'>{catText}</Text>}
+          <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
+            {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
+          </Text>
         </View>
-
-        <Text className='card-title'>{task.title}</Text>
-
-        {rating > 0 && (
-          <View className='rating-row'>
-            {[1, 2, 3, 4, 5].map(s => (
-              <Text key={s} className={`star ${s <= filledStars ? 'on' : 'off'}`}>
-                {s <= filledStars ? '★' : '☆'}
-              </Text>
-            ))}
-            <Text className='rating-num'>{rating}</Text>
+        <View className='card-top-right'>
+          <View className='diff-tag'>
+            <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
+            <Text>{t(diff.labelKey)}</Text>
           </View>
-        )}
+          {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
+        </View>
+      </View>
 
-        <View className='card-foot'>
-          <View className='brand-part' onClick={goBrand}>
-            <View className='brand-icon'>
-              {task.brand_logo_url
-                ? <View className='brand-icon-img' style={{ backgroundImage: `url(${assetUrl(task.brand_logo_url)})` }} />
-                : <Text>{(brandName || 'B')[0]}</Text>}
+      <View className='card-mid'>
+        <View className='card-c'>
+          <Text className='card-title'>{task.title}</Text>
+          {task.description && <Text className='card-desc'>{task.description}</Text>}
+        </View>
+        {img && <View className='thumb' style={{ backgroundImage: `url(${assetUrl(img)})` }} />}
+      </View>
+
+      <View className='card-foot'>
+        <View className='brand-part' onClick={goBrand}>
+          <View className='brand-icon'>
+            {task.brand_logo_url
+              ? <View className='brand-icon-img' style={{ backgroundImage: `url(${assetUrl(task.brand_logo_url)})` }} />
+              : <Text>{(brandName || 'B')[0]}</Text>}
+          </View>
+          <Text className='brand-name'>{brandName}</Text>
+          {task.creator_id && <Text className='brand-arrow'>›</Text>}
+          {rating > 0 && (
+            <View className='rating-inline'>
+              <Text className='star on'>★</Text>
+              <Text className='rating-num'>{rating}</Text>
             </View>
-            <Text className='brand-name'>{brandName}</Text>
-            {task.creator_id && <Text className='brand-arrow'>›</Text>}
-          </View>
-          <View className='price-part'>
-            <Text className='commission'>¥{fmt(price)}</Text>
-            <Text className='price-unit'>{isPerformance ? t('taskCard.unitConv') : t('taskCard.unitPerson')}</Text>
-          </View>
+          )}
+        </View>
+        <View className='price-part'>
+          <Text className='commission'>¥{fmt(price)}</Text>
+          <Text className='price-unit'>{isPerformance ? t('taskCard.unitConv') : t('taskCard.unitPerson')}</Text>
         </View>
       </View>
     </View>

@@ -5,21 +5,8 @@
   background: var(--card-bg);
   border-radius: 28px;
   margin-bottom: 20px;
-  overflow: hidden; // 封面通栏顶格，圆角由卡片裁切
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-
-// 图上文下大图卡（2026-07-29）：封面 16:9 通栏，文字信息在下方白底区不压图
-.card-cover {
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background-color: var(--bg);
-  background-size: cover;
-  background-position: center;
-}
-
-.card-content {
   padding: 24px 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
 }
 
 @include bp.desktop {
@@ -42,6 +29,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  row-gap: 8px;
+  flex-wrap: wrap; // 长徽章组合（Referral+Performance-based 等）窄屏溢出时换行，不重叠
   margin-bottom: 18px;
 }
 
@@ -121,13 +110,55 @@
   white-space: nowrap;
 }
 
-// ── 底部行：品牌（左）+ 口径化报酬（右）────────────────────
+// ── 主体区：左（标题+描述摘要）右（大缩略图，约1/3卡宽·4:3）──
+.card-mid {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.card-c {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-desc {
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+// 对比稿方案1的可取点：图占约1/3卡宽（原160px小图存在感太弱）；比例保持16:9与上传规格一致
+.thumb {
+  width: 216px;
+  aspect-ratio: 16 / 9;
+  border-radius: 16px;
+  flex-shrink: 0;
+  background-color: var(--bg);
+  background-size: cover;
+  background-position: center;
+}
+
+// ── 底部行：品牌+评分（左）· 口径化报酬（右）────────────────
 .card-foot {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-top: 6px;
+}
+
+.rating-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+  flex-shrink: 0;
 }
 
 .price-part {

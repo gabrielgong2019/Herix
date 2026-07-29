@@ -895,6 +895,6 @@
     "payoutPerConv": "1転換あたり報酬",
     "shareText": "「{{title}}」でアンバサダーを募集中です。ぜひご覧ください：{{url}}",
     "posterLangLabel": "海報言語",
-    "linkLangHint": "リンク先は閲覧者のシステム言語に自動対応"
+    "linkLangHint": "文案の言語はポスター言語に合わせて切り替わります"
   }
 }

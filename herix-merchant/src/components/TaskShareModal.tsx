@@ -284,7 +284,8 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
 
   function copyShareText() {
     if (!shortUrl) return
-    const text = t('share.shareText', { title: task.title, url: shortUrl })
+    const posterT = i18n.getFixedT(posterLang)
+    const text = posterT('share.shareText', { title: task.title, url: shortUrl })
     navigator.clipboard.writeText(text).then(() => {
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)

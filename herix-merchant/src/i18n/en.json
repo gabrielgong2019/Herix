@@ -893,6 +893,8 @@
     "typePerf": "Referral Code",
     "payoutPerHerald": "Payout per ambassador",
     "payoutPerConv": "Payout per conversion",
-    "shareText": "\"{{title}}\" is recruiting ambassadors on Herix. Interested? {{url}}"
+    "shareText": "\"{{title}}\" is recruiting ambassadors on Herix. Interested? {{url}}",
+    "posterLangLabel": "Poster language",
+    "linkLangHint": "Landing page adapts to the viewer's system language"
   }
 }

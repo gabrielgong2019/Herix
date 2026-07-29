@@ -195,12 +195,30 @@ async function generatePosterBlob(
   )
 }
 
+// ── Language options for poster ───────────────────────────────────
+
+const POSTER_LANGS = [
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'en', label: 'EN' },
+  { code: 'ko', label: '한국어' },
+] as const
+type PosterLang = typeof POSTER_LANGS[number]['code']
+
 // ── Modal component ───────────────────────────────────────────────
 
 export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => void }) {
-  const { t } = useTranslation()
-  const config = buildTaskShareConfig(task, t)
+  const { t, i18n } = useTranslation()
 
+  const defaultLang = ((): PosterLang => {
+    const l = i18n.language
+    if (l.startsWith('ja')) return 'ja'
+    if (l.startsWith('ko')) return 'ko'
+    if (l.startsWith('en')) return 'en'
+    return 'zh'
+  })()
+
+  const [posterLang, setPosterLang] = useState<PosterLang>(defaultLang)
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [generating, setGenerating] = useState(true)
   const [shortUrl, setShortUrl] = useState<string | null>(null)
@@ -211,13 +229,20 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
   const h5QrUrl = `/api/qr?data=${encodeURIComponent(h5Url)}`
 
   useEffect(() => {
-    // 短链（幂等，已存在则复用）
+    // 短链（幂等，已存在则复用）— 只跑一次
     tasksApi.getShortLink(task.id)
       .then(r => setShortUrl(r.data.url))
       .catch(() => setShortUrl(h5Url))
+  }, [task.id])
 
-    // 生成海报：优先用小程序码，失败则用 H5 二维码
+  useEffect(() => {
+    // 生成海报：用目标语言的 t 函数渲染标签
+    const posterT = i18n.getFixedT(posterLang)
+    const posterConfig = buildTaskShareConfig(task, posterT)
     const token = localStorage.getItem('herix-merchant-token') ?? ''
+
+    setGenerating(true)
+    setPosterUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null })
 
     async function build() {
       let qrSrc = h5QrUrl
@@ -232,9 +257,9 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
       } catch { /* fall through to H5 QR */ }
 
       const blob = await generatePosterBlob(
-        config, qrSrc,
-        t('share.scanHint'),
-        t('share.poweredBy'),
+        posterConfig, qrSrc,
+        posterT('share.scanHint'),
+        posterT('share.poweredBy'),
       )
       if (qrSrc.startsWith('blob:')) URL.revokeObjectURL(qrSrc)
       return URL.createObjectURL(blob)
@@ -247,13 +272,13 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
       .finally(() => setGenerating(false))
 
     return () => { if (objUrl) URL.revokeObjectURL(objUrl) }
-  }, [task.id])
+  }, [task.id, posterLang])
 
   function savePoster() {
     if (!posterUrl) return
     const a = document.createElement('a')
     a.href = posterUrl
-    a.download = `herix-task-${task.id}.png`
+    a.download = `herix-task-${task.id}-${posterLang}.png`
     a.click()
   }
 
@@ -284,8 +309,30 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
           </button>
         </div>
 
+        {/* Poster language selector */}
+        <div className="flex items-center gap-2 px-5 pt-4">
+          <span className="text-xs shrink-0" style={{ color: 'var(--muted)' }}>
+            {t('share.posterLangLabel')}
+          </span>
+          <div className="flex gap-1.5 flex-wrap">
+            {POSTER_LANGS.map(({ code, label }) => (
+              <button
+                key={code}
+                onClick={() => setPosterLang(code)}
+                className="px-2.5 py-0.5 rounded-full text-xs font-medium transition-all"
+                style={posterLang === code
+                  ? { background: 'var(--primary)', color: '#fff' }
+                  : { background: 'var(--surface-2, #f3f4f6)', color: 'var(--muted)' }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Poster preview */}
-        <div className="px-5 pt-4 pb-2">
+        <div className="px-5 pt-3 pb-2">
           <div
             className="w-full rounded-xl overflow-hidden flex items-center justify-center"
             style={{ background: '#f3f4f6', aspectRatio: '3/4', maxHeight: 320 }}
@@ -325,6 +372,9 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
               : <Copy size={15} />}
             {copiedLink ? t('share.copied') : t('share.copyLink')}
           </button>
+          <p className="text-center text-xs" style={{ color: 'var(--muted)' }}>
+            {t('share.linkLangHint')}
+          </p>
         </div>
       </div>
     </div>

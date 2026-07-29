@@ -893,6 +893,8 @@
     "typePerf": "초대 코드",
     "payoutPerHerald": "1인당 보수",
     "payoutPerConv": "전환당 보수",
-    "shareText": "「{{title}}」에서 앰배서더를 모집 중입니다. 확인해보세요：{{url}}"
+    "shareText": "「{{title}}」에서 앰배서더를 모집 중입니다. 확인해보세요：{{url}}",
+    "posterLangLabel": "포스터 언어",
+    "linkLangHint": "랜딩 페이지 언어는 사용자 시스템 설정에 맞게 자동 전환"
   }
 }

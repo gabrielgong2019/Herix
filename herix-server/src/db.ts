@@ -1,4 +1,9 @@
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
+
+// NUMERIC(OID 1700)：node-postgres 默认返回字符串防精度丢失；本项目 JS 侧一直按 number
+// 运算（列原为 double precision）。金额列迁 NUMERIC 后精确性收益在 DB 存储与聚合层
+// （SUM/比较无浮点误差），JS 层 float64 对 15 位内金额精度足够，保持 number 行为不变
+types.setTypeParser(1700, parseFloat);
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -73,8 +78,8 @@ export async function initDatabase() {
       title TEXT NOT NULL,
       description TEXT NOT NULL,
       requirements TEXT,
-      budget DOUBLE PRECISION NOT NULL DEFAULT 0,
-      commission DOUBLE PRECISION NOT NULL DEFAULT 0,
+      budget NUMERIC(15,2) NOT NULL DEFAULT 0,
+      commission NUMERIC(15,2) NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'JPY',
       max_heralds INTEGER NOT NULL DEFAULT 1,
       deadline TEXT,
@@ -87,7 +92,7 @@ export async function initDatabase() {
       status TEXT NOT NULL DEFAULT 'DRAFT' CHECK(status IN ('DRAFT','PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED','CANCELLED')),
       published_at TEXT,
       completed_at TEXT,
-      escrow_amount DOUBLE PRECISION NOT NULL DEFAULT 0,
+      escrow_amount NUMERIC(15,2) NOT NULL DEFAULT 0,
       is_escrowed INTEGER NOT NULL DEFAULT 0,
       code_mode TEXT NOT NULL DEFAULT 'auto',
       platform_requirements TEXT,
@@ -121,7 +126,7 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL REFERENCES tasks(id),
       herald_id TEXT NOT NULL REFERENCES users(id),
-      unique_code TEXT NOT NULL UNIQUE,
+      unique_code TEXT NOT NULL UNIQUE REFERENCES task_promo_codes(code),
       status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','completed','suspended')),
       joined_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       completed_at TEXT DEFAULT NULL,
@@ -161,9 +166,9 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL REFERENCES tasks(id),
       type TEXT NOT NULL CHECK(type IN ('TASK_LOCK','TASK_RELEASE','PLATFORM_FEE','TASK_REFUND')),
-      task_amount DOUBLE PRECISION NOT NULL DEFAULT 0,   -- 任务总金额快照
-      amount DOUBLE PRECISION NOT NULL DEFAULT 0,        -- 赫使实得/品牌支出
-      platform_fee DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 平台服务费
+      task_amount NUMERIC(15,2) NOT NULL DEFAULT 0,   -- 任务总金额快照
+      amount NUMERIC(15,2) NOT NULL DEFAULT 0,        -- 赫使实得/品牌支出
+      platform_fee NUMERIC(15,2) NOT NULL DEFAULT 0,  -- 平台服务费
       from_user_id TEXT REFERENCES users(id),            -- 品牌方
       to_user_id TEXT REFERENCES users(id),              -- 赫使（TASK_RELEASE 时有值）
       parent_txn_id TEXT REFERENCES task_transactions(id), -- 对冲链
@@ -180,8 +185,8 @@ export async function initDatabase() {
       user_id TEXT NOT NULL REFERENCES users(id),
       wallet_type TEXT NOT NULL CHECK(wallet_type IN ('brand','herald','platform')),
       currency TEXT NOT NULL DEFAULT 'JPY',
-      available_balance DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 可用余额
-      frozen_balance DOUBLE PRECISION NOT NULL DEFAULT 0,     -- 冻结余额（任务锁定/提现中）
+      available_balance NUMERIC(15,2) NOT NULL DEFAULT 0,  -- 可用余额
+      frozen_balance NUMERIC(15,2) NOT NULL DEFAULT 0,     -- 冻结余额（任务锁定/提现中）
       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
       UNIQUE(user_id, wallet_type, currency)
@@ -192,10 +197,10 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       idempotency_key TEXT NOT NULL UNIQUE,              -- 幂等键防重复（PayPal 早期没有这个吃了大亏）
       wallet_id TEXT NOT NULL REFERENCES wallets(id),
-      amount DOUBLE PRECISION NOT NULL,                  -- 正=入账 负=出账
+      amount NUMERIC(15,2) NOT NULL,                  -- 正=入账 负=出账
       currency TEXT NOT NULL DEFAULT 'JPY',
-      available_after DOUBLE PRECISION NOT NULL,         -- 操作后可用余额快照（微信/支付宝做法）
-      frozen_after DOUBLE PRECISION NOT NULL DEFAULT 0,  -- 操作后冻结余额快照
+      available_after NUMERIC(15,2) NOT NULL,         -- 操作后可用余额快照（微信/支付宝做法）
+      frozen_after NUMERIC(15,2) NOT NULL DEFAULT 0,  -- 操作后冻结余额快照
       type TEXT NOT NULL CHECK(type IN (
         'TOPUP',               -- 品牌充值入账
         'TASK_FREEZE',         -- 任务发布，可用→冻结
@@ -228,7 +233,7 @@ export async function initDatabase() {
     CREATE TABLE IF NOT EXISTS topup_requests (
       id TEXT PRIMARY KEY,
       brand_id TEXT NOT NULL REFERENCES users(id),
-      amount DOUBLE PRECISION NOT NULL,
+      amount NUMERIC(15,2) NOT NULL,
       currency TEXT NOT NULL DEFAULT 'JPY',
       status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','confirmed','rejected')),
       note TEXT,
@@ -240,7 +245,7 @@ export async function initDatabase() {
     CREATE TABLE IF NOT EXISTS withdrawal_requests (
       id TEXT PRIMARY KEY,
       herald_id TEXT NOT NULL REFERENCES users(id),
-      amount DOUBLE PRECISION NOT NULL,
+      amount NUMERIC(15,2) NOT NULL,
       currency TEXT NOT NULL DEFAULT 'JPY',
       method TEXT NOT NULL,
       account_details TEXT NOT NULL DEFAULT '{}',
@@ -281,7 +286,7 @@ export async function initDatabase() {
       id TEXT PRIMARY KEY,
       scope TEXT NOT NULL CHECK(scope IN ('global','brand')),
       brand_id TEXT REFERENCES users(id),
-      rate DOUBLE PRECISION NOT NULL,
+      rate NUMERIC(18,8) NOT NULL,
       starts_at TEXT NOT NULL,
       ends_at TEXT NOT NULL,
       note TEXT,
@@ -333,7 +338,7 @@ export async function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS platform_requirements TEXT`,
     `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS tier_snapshot TEXT`,
     `ALTER TABLE herald_profiles ADD COLUMN IF NOT EXISTS social_platforms_updated_at TEXT`,
-    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS commission_amount DOUBLE PRECISION`,
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS commission_amount NUMERIC(15,2)`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS lock_txn_id TEXT`,
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS registered_count INTEGER DEFAULT 0`,
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0`,
@@ -349,7 +354,7 @@ export async function initDatabase() {
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS currency TEXT NOT NULL DEFAULT 'JPY'`,
     // source_entity + tax_withheld：追踪付款法人实体和代扣税（2026-07-08）
     `ALTER TABLE wallet_entries ADD COLUMN IF NOT EXISTS source_entity TEXT NOT NULL DEFAULT 'JP'`,
-    `ALTER TABLE wallet_entries ADD COLUMN IF NOT EXISTS tax_withheld DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE wallet_entries ADD COLUMN IF NOT EXISTS tax_withheld NUMERIC(15,2) NOT NULL DEFAULT 0`,
     // wallet_entries 索引
     `CREATE INDEX IF NOT EXISTS idx_wallet_entries_wallet ON wallet_entries(wallet_id)`,
     `CREATE INDEX IF NOT EXISTS idx_wallet_entries_type ON wallet_entries(type)`,
@@ -412,10 +417,10 @@ export async function initDatabase() {
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS country TEXT NOT NULL DEFAULT 'JP'`,
     // 提现申请的跨境快照（锁定的汇率/加点/目标币金额，审计与打款执行依据）
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS to_country TEXT`,
-    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fx_mid_rate DOUBLE PRECISION`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fx_mid_rate NUMERIC(18,8)`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fx_markup_bps INTEGER`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS target_currency TEXT`,
-    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS target_amount DOUBLE PRECISION`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS target_amount NUMERIC(15,2)`,
     // 小程序 URL Link 缓存（30天有效，过期重新生成）（2026-07-17）
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS weapp_link TEXT`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS weapp_link_expires TEXT`,
@@ -520,20 +525,20 @@ export async function initDatabase() {
     `ALTER TABLE i18n_entries DROP CONSTRAINT IF EXISTS i18n_entries_locale_check`,
     `ALTER TABLE i18n_entries ADD CONSTRAINT i18n_entries_locale_check CHECK(locale IN ('zh','ja','en','vi','ko'))`,
     // withdrawal_requests 新增字段：手续费快照 + 预计打款日
-    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fee DOUBLE PRECISION NOT NULL DEFAULT 0`,
-    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS net_amount DOUBLE PRECISION`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS fee NUMERIC(15,2) NOT NULL DEFAULT 0`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS net_amount NUMERIC(15,2)`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS payout_date TEXT`,
     // task_transactions 费率快照
-    `ALTER TABLE task_transactions ADD COLUMN IF NOT EXISTS platform_fee_rate DOUBLE PRECISION`,
+    `ALTER TABLE task_transactions ADD COLUMN IF NOT EXISTS platform_fee_rate NUMERIC(18,8)`,
     // brand_profiles 账户协议费率
-    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override DOUBLE PRECISION`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override NUMERIC(18,8)`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override_note TEXT`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override_by TEXT`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS commission_rate_override_at TEXT`,
     // 商户信用额度 + 充值状态（2026-07-10）
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS has_topped_up BOOLEAN NOT NULL DEFAULT FALSE`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS first_publish_reminder_sent BOOLEAN NOT NULL DEFAULT FALSE`,
-    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS credit_limit_override DOUBLE PRECISION`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS credit_limit_override NUMERIC(15,2)`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS is_agency BOOLEAN NOT NULL DEFAULT FALSE`,
     // 任务极速打款标签 + 信用托管标记
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS fast_payout BOOLEAN NOT NULL DEFAULT FALSE`,
@@ -635,7 +640,7 @@ export async function initDatabase() {
     // 档位定义（admin 可改价/权益；custom 无标价，合同签订后 admin 在订阅上录实价）
     `CREATE TABLE IF NOT EXISTS subscription_plans (
       code TEXT PRIMARY KEY,
-      monthly_price DOUBLE PRECISION,
+      monthly_price NUMERIC(15,2),
       benefits TEXT NOT NULL DEFAULT '{}',
       active INTEGER NOT NULL DEFAULT 1,
       sort INTEGER NOT NULL DEFAULT 0,
@@ -654,7 +659,7 @@ export async function initDatabase() {
       brand_user_id TEXT NOT NULL REFERENCES users(id),
       plan_code TEXT NOT NULL REFERENCES subscription_plans(code),
       billing_cycle TEXT NOT NULL CHECK(billing_cycle IN ('MONTHLY','QUARTERLY','ANNUAL')),
-      price_snapshot DOUBLE PRECISION NOT NULL,
+      price_snapshot NUMERIC(15,2) NOT NULL,
       status TEXT NOT NULL DEFAULT 'PENDING_PAYMENT'
         CHECK(status IN ('PENDING_PAYMENT','ACTIVE','PAST_DUE','EXPIRED','CANCELED')),
       current_period_start TEXT,
@@ -675,7 +680,7 @@ export async function initDatabase() {
       invoice_no TEXT NOT NULL UNIQUE,
       period_start TEXT NOT NULL,
       period_end TEXT NOT NULL,
-      amount DOUBLE PRECISION NOT NULL,
+      amount NUMERIC(15,2) NOT NULL,
       status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','PAID','VOID')),
       wallet_entry_id TEXT,
       created_at TEXT NOT NULL,
@@ -713,12 +718,12 @@ export async function initDatabase() {
     `ALTER TABLE task_applications ADD CONSTRAINT task_applications_status_check
      CHECK(status IN ('PENDING','APPROVED','REJECTED','WITHDRAWN','EXPIRED'))`,
     // 首单体验额度（2026-07-18）：戳在任务行上 write-once，生命周期随任务状态派生
-    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS trial_credit_amount DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS trial_credit_amount NUMERIC(15,2) NOT NULL DEFAULT 0`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS trial_task_id TEXT`,
     `ALTER TABLE task_applications ADD COLUMN IF NOT EXISTS review_note TEXT`,
     `ALTER TABLE notifications ADD COLUMN IF NOT EXISTS target_role TEXT`,
     // 任务报酬字段语义重构（commission 废弃，拆分为三个明确字段）
-    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS payout_per_herald DOUBLE PRECISION NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS payout_per_herald NUMERIC(15,2) NOT NULL DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS cost_per_herald   DOUBLE PRECISION NOT NULL DEFAULT 0`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS commission_rate   DOUBLE PRECISION NOT NULL DEFAULT 0`,
     // 数据迁移：旧 commission = cost_per_herald，payout 按各商家实际费率反推
@@ -882,6 +887,38 @@ export async function initDatabase() {
     // 任务状态机补 PENDING_REVIEW 真状态（2026-07-26，contracts.ts TASK_STATUSES DB-CHECK）：
     // 此前用 OPEN+platform_review 正交列表达"待审核"，报名闸只看 status 导致未过审任务可被报名。
     // 幂等重建 CHECK + 存量数据迁移（platform_review 列保留做审计记录）
+    // ── DB 评审修复（2026-07-29，用户确认不考虑存量）────────────────────
+    // 码池设计（v?）之前的老测试数据：码未入池的 ambassador_tasks 直接删（不回填）
+    `DELETE FROM ambassador_tasks WHERE NOT EXISTS (
+       SELECT 1 FROM task_promo_codes pc WHERE pc.code = ambassador_tasks.unique_code)`,
+    // 码的单一事实源：unique_code 必须存在于码池，消除两表字符串对齐漂移（幂等重建，模式同 CHECK）
+    `ALTER TABLE ambassador_tasks DROP CONSTRAINT IF EXISTS ambassador_tasks_unique_code_fkey`,
+    `ALTER TABLE ambassador_tasks ADD CONSTRAINT ambassador_tasks_unique_code_fkey
+     FOREIGN KEY (unique_code) REFERENCES task_promo_codes(code)`,
+    // 码池按任务查询（分配/计数）此前全表扫描：PG 的 FK 不自动建索引
+    `CREATE INDEX IF NOT EXISTS idx_promo_codes_task ON task_promo_codes(task_id)`,
+    // 金额 DOUBLE PRECISION → NUMERIC：金额(15,2)/比率汇率(18,8)。信息模式守卫幂等，
+    // 已收敛的列跳过（裸 ALTER TYPE 每次启动都会全表重写+排他锁）。列清单与 CREATE 终态定义对齐
+    `DO $$
+     DECLARE r RECORD;
+     BEGIN
+       FOR r IN
+         SELECT c.table_name AS tbl, c.column_name AS col,
+                CASE WHEN c.column_name IN ('commission_rate_override','rate','commission_rate','platform_fee_rate','fx_mid_rate')
+                     THEN 'numeric(18,8)' ELSE 'numeric(15,2)' END AS newtype
+         FROM information_schema.columns c
+         WHERE c.table_schema = 'public' AND c.data_type = 'double precision'
+           AND c.column_name IN (
+             'credit_limit_override','price_snapshot','amount','monthly_price','commission_amount',
+             'platform_fee','task_amount','budget','commission','cost_per_herald','escrow_amount',
+             'payout_per_herald','trial_credit_amount','available_after','frozen_after','tax_withheld',
+             'available_balance','frozen_balance','fee','net_amount','target_amount',
+             'commission_rate_override','rate','commission_rate','platform_fee_rate','fx_mid_rate')
+       LOOP
+         EXECUTE format('ALTER TABLE %I ALTER COLUMN %I TYPE %s USING %I::%s',
+                        r.tbl, r.col, r.newtype, r.col, r.newtype);
+       END LOOP;
+     END $$`,
     `ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_status_check`,
     `ALTER TABLE tasks ADD CONSTRAINT tasks_status_check
      CHECK(status IN ('DRAFT','PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED','CANCELLED'))`,

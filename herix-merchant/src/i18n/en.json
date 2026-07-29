@@ -156,7 +156,7 @@
     "fieldRequirements": "Detailed Requirements",
     "fieldRequirementsPh": "Platform, keywords, post duration, brand tone, etc.",
     "fieldCover": "Cover Image",
-    "fieldCoverHint": "Optional · 16:9 recommended",
+    "fieldCoverHint": "Required to publish · 16:9 scene photo works best",
     "fieldPayout": "Payout per Herald",
     "fieldPayoutUnit": "¥ / person",
     "fieldMaxHeralds": "Max Heralds",
@@ -258,7 +258,9 @@
     "summaryRequired": "Required: {{list}}",
     "summaryOptional": "Shown only (not enforced): {{list}}",
     "summaryAnyN": "Creator must meet {{n}} of the following {{total}}: {{list}}",
-    "errorTooManyCodes": "Max {{max}} codes per upload (currently {{n}}) — please split into batches"
+    "errorTooManyCodes": "Max {{max}} codes per upload (currently {{n}}) — please split into batches",
+    "coverClickUpload": "Click to upload cover image",
+    "errorCover": "Please upload a cover image (required to publish; drafts can skip)"
   },
   "site": {
     "jp": "Japan",
@@ -878,5 +880,19 @@
     "inqDoneTitle": "Inquiry received",
     "inqDoneDesc": "A dedicated advisor will contact you within 1-2 business days",
     "inqPendingBadge": "Inquiry in progress"
+  },
+  "share": {
+    "modalTitle": "Share Task",
+    "savePoster": "Save Poster",
+    "copyLink": "Copy Promo Text",
+    "copied": "Copied",
+    "generating": "Generating…",
+    "scanHint": "Scan to view details",
+    "poweredBy": "Powered by Herix",
+    "typeStandard": "Content Creation",
+    "typePerf": "Referral Code",
+    "payoutPerHerald": "Payout per ambassador",
+    "payoutPerConv": "Payout per conversion",
+    "shareText": "\"{{title}}\" is recruiting ambassadors on Herix. Interested? {{url}}"
   }
 }

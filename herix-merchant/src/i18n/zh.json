@@ -156,7 +156,7 @@
     "fieldRequirements": "具体要求",
     "fieldRequirementsPh": "发布平台要求、内容关键词、存续时间、品牌调性等",
     "fieldCover": "任务封面图",
-    "fieldCoverHint": "选填 · 16:9 场景图效果最佳",
+    "fieldCoverHint": "发布必填 · 16:9 场景图效果最佳",
     "fieldPayout": "每人报酬",
     "fieldPayoutUnit": "¥ / 人",
     "fieldMaxHeralds": "招募人数",
@@ -258,7 +258,9 @@
     "summaryRequired": "必须满足：{{list}}",
     "summaryOptional": "仅展示（不强制）：{{list}}",
     "summaryAnyN": "赫使需满足以下 {{total}} 项中的 {{n}} 项：{{list}}",
-    "errorTooManyCodes": "单次最多上传 {{max}} 个推广码（当前 {{n}} 个），请分批提交"
+    "errorTooManyCodes": "单次最多上传 {{max}} 个推广码（当前 {{n}} 个），请分批提交",
+    "coverClickUpload": "点击上传封面图",
+    "errorCover": "请上传任务封面图（发布必填，保存草稿可先跳过）"
   },
   "site": {
     "jp": "日本",
@@ -873,5 +875,19 @@
     "inqDoneTitle": "已收到你的洽谈申请",
     "inqDoneDesc": "专属顾问将在 1-2 个工作日内与你联系",
     "inqPendingBadge": "洽谈处理中，顾问将尽快联系"
+  },
+  "share": {
+    "modalTitle": "分享任务",
+    "savePoster": "保存海报",
+    "copyLink": "复制推广文案",
+    "copied": "已复制",
+    "generating": "生成中…",
+    "scanHint": "扫码了解详情",
+    "poweredBy": "Powered by Herix",
+    "typeStandard": "内容创作",
+    "typePerf": "邀请码激励",
+    "payoutPerHerald": "每人报酬",
+    "payoutPerConv": "每次转化报酬",
+    "shareText": "「{{title}}」正在招募赫使，感兴趣来看看：{{url}}"
   }
 }

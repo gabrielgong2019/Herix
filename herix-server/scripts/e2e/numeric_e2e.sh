@@ -38,7 +38,7 @@ assert_eq "available 是 number 且值精确" "$TYPECHK" "float:100000.55"
 
 echo "— ② 任务创建/发布：payout NUMERIC 读回 + 额度闸 SUM 路径 —"
 TID=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"NUMERIC回归任务","description":"金额类型迁移回归测试任务描述内容","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"NUMERIC回归任务","description":"金额类型迁移回归测试任务描述内容","mode":"STANDARD",
   "payoutPerHerald":2500,"maxHeralds":3,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC"}' | python3 -c "import json,sys;print(json.load(sys.stdin).get('id',''))")
 [ -n "$TID" ] && ok "任务创建" || bad "任务创建" "empty"

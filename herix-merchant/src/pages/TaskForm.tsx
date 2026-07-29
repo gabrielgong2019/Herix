@@ -519,20 +519,67 @@ export default function TaskForm() {
     },
   })
 
-  const validate = () => {
+  const validate = (status: 'draft' | 'open') => {
     if (!form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
     if (form.description.trim().length < 10) { setError(t('taskForm.errorDesc')); return false }
     if (!form.payoutPerHerald) { setError(t('taskForm.errorPayout')); return false }
     if (!isCustomCodes && !form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
+    // 发布必须有封面（服务端 publish 闸同款规则，前端先挡一道）；存草稿不强制
+    if (status === 'open' && !form.coverImage && !coverFileRef.current) { setError(t('taskForm.errorCover')); return false }
     if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
     if (isCustomCodes && customCodeList.length > MAX_CUSTOM_CODES) { setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: MAX_CUSTOM_CODES })); return false }
     return true
   }
 
   const handleSubmit = (status: 'draft' | 'open') => {
-    if (!validate()) return
+    if (!validate(status)) return
     saveMut.mutate(status)
   }
+
+  // 封面上传块（2026-07-29 用户决策：所有任务类型发布必填）——两种任务类型共用，
+  // 此前只在内容任务分支渲染，邀请码任务压根没有上传入口
+  const coverField = (
+    <Field label={t('taskForm.fieldCover')} hint={t('taskForm.fieldCoverHint')}>
+      <div
+        className="relative rounded-xl border-2 border-dashed overflow-hidden cursor-pointer transition-colors"
+        style={{
+          borderColor: 'var(--border)', aspectRatio: '16/7',
+          background: form.coverImage ? 'transparent' : '#fafafa',
+        }}
+        onClick={() => document.getElementById('cover-input')?.click()}
+      >
+        {form.coverImage ? (
+          <>
+            <img src={form.coverImage} className="w-full h-full object-cover" alt="cover" />
+            <button
+              type="button"
+              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white"
+              onClick={(e) => { e.stopPropagation(); set('coverImage', ''); coverFileRef.current = null }}
+            >
+              <X size={14} />
+            </button>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ color: 'var(--muted)' }}>
+            <ImagePlus size={24} />
+            <span className="text-xs">{t('taskForm.coverClickUpload')}</span>
+          </div>
+        )}
+      </div>
+      <input
+        id="cover-input" type="file" accept="image/*" className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) {
+            coverFileRef.current = file
+            const reader = new FileReader()
+            reader.onload = (ev) => set('coverImage', ev.target?.result as string)
+            reader.readAsDataURL(file)
+          }
+        }}
+      />
+    </Field>
+  )
 
   const pageTitle = fromOnboard ? t('taskForm.onboardTitle') : isEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')
 
@@ -872,46 +919,7 @@ export default function TaskForm() {
                 )}
               </Field>
 
-              <Field label={t('taskForm.fieldCover')} hint={t('taskForm.fieldCoverHint')}>
-                <div
-                  className="relative rounded-xl border-2 border-dashed overflow-hidden cursor-pointer transition-colors"
-                  style={{
-                    borderColor: 'var(--border)', aspectRatio: '16/7',
-                    background: form.coverImage ? 'transparent' : '#fafafa',
-                  }}
-                  onClick={() => document.getElementById('cover-input')?.click()}
-                >
-                  {form.coverImage ? (
-                    <>
-                      <img src={form.coverImage} className="w-full h-full object-cover" alt="cover" />
-                      <button
-                        type="button"
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white"
-                        onClick={(e) => { e.stopPropagation(); set('coverImage', ''); coverFileRef.current = null }}
-                      >
-                        <X size={14} />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ color: 'var(--muted)' }}>
-                      <ImagePlus size={24} />
-                      <span className="text-xs">点击上传封面图</span>
-                    </div>
-                  )}
-                </div>
-                <input
-                  id="cover-input" type="file" accept="image/*" className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file) {
-                      coverFileRef.current = file
-                      const reader = new FileReader()
-                      reader.onload = (ev) => set('coverImage', ev.target?.result as string)
-                      reader.readAsDataURL(file)
-                    }
-                  }}
-                />
-              </Field>
+              {coverField}
             </div>
           )}
 
@@ -919,6 +927,8 @@ export default function TaskForm() {
           {!isStandard && (
             <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
               <SectionHeader num={sn.spec} title={t('taskForm.sec3PerfTitle')} hint={t('taskForm.sec3PerfHint')} />
+
+              {coverField}
 
               <Field label={t('taskForm.fieldCodeSource')}>
                 <div className="flex flex-col gap-2">

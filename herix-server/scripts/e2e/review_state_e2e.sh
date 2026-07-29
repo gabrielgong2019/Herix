@@ -35,7 +35,7 @@ TA=$(mktoken $(psql $DB -tAc "SELECT id FROM users WHERE email='admin@herix.com'
 
 echo "— 阶段1：发布 → PENDING_REVIEW —"
 TID=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"契约e2e任务","description":"这是一个契约修复端到端测试任务描述","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"契约e2e任务","description":"这是一个契约修复端到端测试任务描述","mode":"STANDARD",
   "payoutPerHerald":3000,"maxHeralds":2,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC"}' | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('id') or 'ERR:'+str(d))")
 [[ "$TID" != ERR:* ]] && ok "任务创建 $TID" || { bad "任务创建" "$TID"; exit 1 }
@@ -87,7 +87,7 @@ assert_eq "商家审核通过报名" "$RV" "APPROVED"
 
 echo "— 阶段5：审核拒绝路径 —"
 TID2=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"契约e2e拒绝任务","description":"这是审核拒绝路径的端到端测试任务","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"契约e2e拒绝任务","description":"这是审核拒绝路径的端到端测试任务","mode":"STANDARD",
   "payoutPerHerald":3000,"maxHeralds":1,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC"}' | python3 -c "import json,sys;print(json.load(sys.stdin).get('id',''))")
 curl -s -X PATCH $API/tasks/$TID2/publish -H "Authorization: Bearer $TB" >/dev/null

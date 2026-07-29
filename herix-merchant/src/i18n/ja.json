@@ -156,7 +156,7 @@
     "fieldRequirements": "詳細要件",
     "fieldRequirementsPh": "投稿プラットフォーム・キーワード・投稿期間・ブランドトーンなど",
     "fieldCover": "カバー画像",
-    "fieldCoverHint": "任意 · 16:9の画像が最適",
+    "fieldCoverHint": "公開時必須 · 16:9 のシーン写真が最適",
     "fieldPayout": "一人当たり報酬",
     "fieldPayoutUnit": "¥ / 人",
     "fieldMaxHeralds": "募集人数",
@@ -258,7 +258,9 @@
     "summaryRequired": "必須条件：{{list}}",
     "summaryOptional": "参考表示のみ（必須ではない）：{{list}}",
     "summaryAnyN": "以下 {{total}} 項目中 {{n}} 項目を満たす必要があります：{{list}}",
-    "errorTooManyCodes": "1回の提出は最大 {{max}} 件まで（現在 {{n}} 件）。分割して提出してください"
+    "errorTooManyCodes": "1回の提出は最大 {{max}} 件まで（現在 {{n}} 件）。分割して提出してください",
+    "coverClickUpload": "クリックしてカバー画像をアップロード",
+    "errorCover": "タスクのカバー画像をアップロードしてください（公開時必須、下書き保存はスキップ可）"
   },
   "site": {
     "jp": "日本",
@@ -878,5 +880,19 @@
     "inqDoneTitle": "ご相談を受け付けました",
     "inqDoneDesc": "1〜2営業日以内に専任顧問からご連絡します",
     "inqPendingBadge": "相談対応中です"
+  },
+  "share": {
+    "modalTitle": "案件シェア",
+    "savePoster": "ポスターを保存",
+    "copyLink": "紹介文をコピー",
+    "copied": "コピーしました",
+    "generating": "生成中…",
+    "scanHint": "スキャンして詳細を確認",
+    "poweredBy": "Powered by Herix",
+    "typeStandard": "コンテンツ制作",
+    "typePerf": "紹介コード",
+    "payoutPerHerald": "1人あたり報酬",
+    "payoutPerConv": "1転換あたり報酬",
+    "shareText": "「{{title}}」でアンバサダーを募集中です。ぜひご覧ください：{{url}}"
   }
 }

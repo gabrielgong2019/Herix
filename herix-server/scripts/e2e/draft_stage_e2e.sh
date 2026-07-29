@@ -31,7 +31,7 @@ TA=$(mktoken $(psql $DB -tAc "SELECT id FROM users WHERE email='admin@herix.com'
 
 echo "— 建草稿前置任务 + 审核报名 —"
 TID=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"草稿e2e任务","description":"验证草稿前置流程端到端测试任务描述","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"草稿e2e任务","description":"验证草稿前置流程端到端测试任务描述","mode":"STANDARD",
   "payoutPerHerald":2500,"maxHeralds":3,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC","requireDraftReview":true}' | python3 -c "import json,sys;print(json.load(sys.stdin).get('id',''))")
 curl -s -X PATCH $API/tasks/$TID/publish -H "Authorization: Bearer $TB" >/dev/null

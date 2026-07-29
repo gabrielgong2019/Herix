@@ -36,7 +36,7 @@ P0=$(psql $DB -tAc "SELECT COALESCE(available_balance,0) FROM wallets WHERE user
 
 echo "═══ A1 [商家] 创建任务（草稿前置 + Instagram≥5000）→ 发布 → 待平台审核 ═══"
 TID=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"旅程A内容任务","description":"内容任务全生命周期旅程测试任务描述","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"旅程A内容任务","description":"内容任务全生命周期旅程测试任务描述","mode":"STANDARD",
   "payoutPerHerald":3000,"maxHeralds":2,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC","requireDraftReview":true,
   "platformRequirements":[{"platformId":"instagram","minFollowers":5000,"required":true}],"reqMode":"ALL"

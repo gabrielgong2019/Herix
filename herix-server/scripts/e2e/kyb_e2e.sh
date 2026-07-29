@@ -62,7 +62,7 @@ assert_eq "商家收到 KYB_APPROVED 通知" "$(psql $DB -tAc "SELECT count(*) F
 
 echo "— ④ 过审后发任务免平台审核（直接 OPEN）—"
 TID=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"KYB后免审任务","description":"KYB通过后发布任务应免平台审核直接上线","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"KYB后免审任务","description":"KYB通过后发布任务应免平台审核直接上线","mode":"STANDARD",
   "payoutPerHerald":2000,"maxHeralds":1,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC"}' | python3 -c "import json,sys;print(json.load(sys.stdin).get('id',''))")
 curl -s -X PATCH $API/tasks/$TID/publish -H "Authorization: Bearer $TB" >/dev/null

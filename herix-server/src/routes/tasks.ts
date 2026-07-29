@@ -217,6 +217,31 @@ tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'),
 // 单次上传数量上限：express.json() 默认 100KB 请求体，短码(~12字符/条)约几千条就会撞 413。
 // 给一个明确、留足余量的数字，好过让商家撞一个不可预期的"请求体过大"（2026-07-27 排查坐实）
 const MAX_CUSTOM_CODES_PER_UPLOAD = 2000;
+const SHORT_LINK_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+const BASE_URL = process.env.BASE_URL || 'https://herix.huaxuex.com';
+
+/** POST /api/tasks/:id/short-link — 创建或返回已有短链（幂等，一个任务一个码） */
+tasksRouter.post('/:id/short-link', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  try {
+    const task = await findOne<{ id: string; creator_id: string }>('SELECT id, creator_id FROM tasks WHERE id = ?', [req.params.id]);
+    if (!task) return res.status(404).json({ error: '任务不存在' });
+    if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
+
+    const existing = await findOne<{ code: string }>('SELECT code FROM short_links WHERE task_id = ?', [task.id]);
+    if (existing) return res.json({ code: existing.code, url: `${BASE_URL}/t/${existing.code}` });
+
+    let code: string;
+    do {
+      code = Array.from({ length: 6 }, () => SHORT_LINK_CHARS[Math.floor(Math.random() * SHORT_LINK_CHARS.length)]).join('');
+    } while (await findOne('SELECT code FROM short_links WHERE code = ?', [code]));
+
+    await insert('short_links', { code, task_id: task.id, created_at: new Date().toISOString() });
+    res.json({ code, url: `${BASE_URL}/t/${code}` });
+  } catch (err) {
+    console.error('Short link error:', err);
+    res.status(500).json({ error: '短链生成失败' });
+  }
+});
 
 /** POST /api/tasks/:id/codes/upload — 商家上传自定义推广码 */
 tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
@@ -1088,7 +1113,7 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, trial_credit_amount FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, trial_credit_amount, cover_image FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -1097,6 +1122,11 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   }
   if (task.status !== 'DRAFT') {
     return res.status(400).json({ error: '只有草稿状态可以发布' });
+  }
+  // 封面闸（2026-07-29 用户决策：所有任务类型发布必须有封面图；草稿不强制）——
+  // 赫使侧任务卡/详情/落地页均以封面为第一视觉，无封面任务转化差且拉低列表观感
+  if (!task.cover_image) {
+    return res.status(400).json({ error: '请先上传任务封面图再发布', code: 'COVER_REQUIRED' });
   }
 
   // 并发数闸（四级阶梯：注册/KYB/注资/订阅，两种任务类型都计数）。

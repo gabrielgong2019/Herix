@@ -40,7 +40,7 @@ TA=$(mktoken $(psql $DB -tAc "SELECT id FROM users WHERE email='admin@herix.com'
 
 echo "— ALL 模式：Instagram ≥5000 粉丝 必须 —"
 TID=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"平台要求e2e-ALL","description":"验证ALL模式平台粉丝要求端到端测试","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"平台要求e2e-ALL","description":"验证ALL模式平台粉丝要求端到端测试","mode":"STANDARD",
   "payoutPerHerald":3000,"maxHeralds":5,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC",
   "platformRequirements":[{"platformId":"instagram","minFollowers":5000,"required":true}],
@@ -74,7 +74,7 @@ assert_eq "GET 详情正确回显 minFollowers" "$GOT" "5000"
 
 echo "— ANY_N 模式：3选2 —"
 TID2=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "title":"平台要求e2e-ANYN","description":"验证ANY_N模式任意N项满足端到端测试","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"平台要求e2e-ANYN","description":"验证ANY_N模式任意N项满足端到端测试","mode":"STANDARD",
   "payoutPerHerald":3000,"maxHeralds":5,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC",
   "platformRequirements":[{"platformId":"instagram","required":true},{"platformId":"xiaohongshu","required":true},{"platformId":"tiktok","required":true}],

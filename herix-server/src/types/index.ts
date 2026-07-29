@@ -59,7 +59,7 @@ export const CreateTaskSchema = z.object({
   description: z.string().min(10, '描述至少10字符'),
   requirements: z.string().optional(),
   payoutPerHerald: z.number().positive('赫使报酬必须大于0'),
-  maxHeralds: z.number().int().min(1).default(1),
+  maxHeralds: z.number().int().min(0).default(1),
   deadline: z.string().optional(),
   category: z.string().min(1, '请选择任务分类'),
   contentType: z.enum(CONTENT_TYPES).default('photo'),

@@ -225,9 +225,6 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
   if (!Array.isArray(codes) || codes.length === 0) return res.status(400).json({ error: 'codes 数组不能为空' });
 
   const cleaned = [...new Set(codes.map((c: string) => c.trim()).filter(Boolean))];
-  if (cleaned.length > task.max_heralds) {
-    return res.status(400).json({ error: `推广码数量（${cleaned.length}）超过任务名额（${task.max_heralds}）` });
-  }
 
   let added = 0, skipped = 0;
   for (const code of cleaned) {
@@ -237,7 +234,11 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
     added++;
   }
 
-  res.json({ added, skipped, total: cleaned.length, maxHeralds: task.max_heralds });
+  // 自定义码的数量即招募容量，上传后同步更新 max_heralds
+  const totalInPool = await findOne<{ cnt: number }>('SELECT COUNT(*)::int as cnt FROM task_promo_codes WHERE task_id = ?', [task.id]);
+  await update('tasks', { max_heralds: totalInPool?.cnt ?? cleaned.length }, 'id = ?', [task.id]);
+
+  res.json({ added, skipped, total: cleaned.length, maxHeralds: totalInPool?.cnt ?? cleaned.length });
 });
 
 /** GET /api/tasks/:id/upload-info — 品牌上传页用，token 鉴权，返回任务基本信息 */

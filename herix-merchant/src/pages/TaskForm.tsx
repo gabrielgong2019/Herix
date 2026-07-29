@@ -325,6 +325,12 @@ export default function TaskForm() {
   const [extracted, setExtracted] = useState<ExtractHit[] | null>(null)
 
   const isStandard = form.mode === 'STANDARD'
+  const isCustomCodes = !isStandard && form.codeMode === 'custom'
+  // custom 模式：招募名额由码数量决定，表单不单独填写
+  const customCodeList = isCustomCodes
+    ? form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
+    : []
+  const effectiveMaxHeralds = isCustomCodes ? customCodeList.length : Number(form.maxHeralds) || 0
 
   // 当前可发布额度（成本预览里对比展示；发布闸在服务端，这里只是预警）
   const { data: brandBalance } = useQuery({
@@ -417,7 +423,7 @@ export default function TaskForm() {
         difficulty: form.difficulty,
         contentType: form.contentType,
         payoutPerHerald: Number(form.payoutPerHerald),
-        maxHeralds: Number(form.maxHeralds),
+        maxHeralds: effectiveMaxHeralds,
         targetCommunities: form.targetCommunities,
         siteId: form.siteId,
         // dataURL 不进 JSON(413+DB膨胀双坑)；编辑态已有的服务器 URL 原样保留
@@ -447,11 +453,8 @@ export default function TaskForm() {
         await tasksApi.uploadCover(taskId, coverFileRef.current)
         coverFileRef.current = null
       }
-      if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
-        const codes = form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
-        if (codes.length > 0) {
-          await tasksApi.uploadCustomCodes(taskId, codes)
-        }
+      if (isCustomCodes && customCodeList.length > 0) {
+        await tasksApi.uploadCustomCodes(taskId, customCodeList)
       }
       // 「发布任务」= 保存 + 走发布闸（并发/额度/审核门都在服务端 publish 端点）。
       // 此前只保存不发布——发布按钮从未真正发布过任何任务（2026-07-26 用户报编辑页点发布状态不变）
@@ -489,11 +492,8 @@ export default function TaskForm() {
     if (!form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
     if (form.description.trim().length < 10) { setError(t('taskForm.errorDesc')); return false }
     if (!form.payoutPerHerald) { setError(t('taskForm.errorPayout')); return false }
-    if (!form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
-    if (form.mode === 'PERFORMANCE' && form.codeMode === 'custom') {
-      const codes = form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean)
-      if (codes.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
-    }
+    if (!isCustomCodes && !form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
+    if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
     return true
   }
 
@@ -688,7 +688,7 @@ export default function TaskForm() {
               </div>
             </Field>
 
-            <Field label={t('taskForm.fieldPlatform')} hint={t('taskForm.fieldPlatformHint')}>
+            {isStandard && <Field label={t('taskForm.fieldPlatform')} hint={t('taskForm.fieldPlatformHint')}>
               <div className="flex flex-wrap gap-2 mb-3">
                 {PLATFORMS.map((p) => {
                   const active = form.platformRequirements.some((r) => r.platformId === p.id)
@@ -762,7 +762,7 @@ export default function TaskForm() {
                   {platformReqSummary(form, t)}
                 </div>
               )}
-            </Field>
+            </Field>}
 
             <Field label={t('taskForm.fieldDifficulty')}>
               <div className="flex gap-3">
@@ -912,9 +912,9 @@ export default function TaskForm() {
                     placeholder={t('taskForm.customCodesPh')}
                     style={{ fontFamily: 'monospace', fontSize: 13 }}
                   />
-                  {form.customCodes.trim() && (
+                  {customCodeList.length > 0 && (
                     <div className="mt-1.5 text-xs" style={{ color: 'var(--muted)' }}>
-                      {form.customCodes.split('\n').map((s) => s.trim()).filter(Boolean).length} 个推广码
+                      {customCodeList.length} 个推广码
                     </div>
                   )}
                 </Field>
@@ -966,13 +966,13 @@ export default function TaskForm() {
 
             <CostPreview
               payout={Number(form.payoutPerHerald) || 0}
-              maxHeralds={Number(form.maxHeralds) || 0}
+              maxHeralds={effectiveMaxHeralds}
               isStandard={isStandard}
               balance={brandBalance}
               t={t}
             />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className={`grid gap-4 ${isCustomCodes ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>
                 <Input
                   type="number"
@@ -982,15 +982,17 @@ export default function TaskForm() {
                   placeholder="0"
                 />
               </Field>
-              <Field label={t('taskForm.fieldMaxHeralds')} required>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.maxHeralds}
-                  onChange={(e) => set('maxHeralds', e.target.value === '' ? '' : Number(e.target.value))}
-                  placeholder="10"
-                />
-              </Field>
+              {!isCustomCodes && (
+                <Field label={t('taskForm.fieldMaxHeralds')} required>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={form.maxHeralds}
+                    onChange={(e) => set('maxHeralds', e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="10"
+                  />
+                </Field>
+              )}
             </div>
 
             {isStandard && (

@@ -152,9 +152,6 @@ function PublishBanner({ taskId }: { taskId: string }) {
         <div className="text-sm font-semibold" style={{ color: '#92400e' }}>
           {t('status.draft')}
         </div>
-        <div className="text-xs mt-0.5" style={{ color: '#a16207' }}>
-          {t('taskDetail.lockedFields')}
-        </div>
       </div>
 
       {confirm ? (

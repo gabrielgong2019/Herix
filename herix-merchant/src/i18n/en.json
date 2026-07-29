@@ -568,7 +568,7 @@
     "unbindConfirm": "Confirm unbind this brand account?",
     "boundAt": "Bound At",
     "metaEditTitle": "Edit Task Info",
-    "lockedFields": "After publish, payout/type/code mode cannot be changed",
+    "lockedFields": "Payout per conversion, task type, and code mode are locked — ambassadors applied based on these terms. Title, brief, and other details can be updated anytime.",
     "saveChanges": "Save Changes",
     "saving": "Saving…",
     "saveSuccess": "✓ Saved",

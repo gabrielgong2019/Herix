@@ -563,7 +563,7 @@
     "unbindConfirm": "确认解绑该品牌账号？",
     "boundAt": "绑定时间",
     "metaEditTitle": "编辑任务信息",
-    "lockedFields": "发布后，分成比例/任务类型/码模式不可修改",
+    "lockedFields": "报酬单价、任务类型和推广码模式已锁定（赫使基于这些条件报名）。标题、简报等其他内容可随时修改。",
     "saveChanges": "保存修改",
     "saving": "保存中…",
     "saveSuccess": "✓ 已保存",

@@ -160,6 +160,13 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 
 ### 运维待办（有触发条件的延期项）
 
+- **KYB 增强**（2026-07-29 用户决策"先这样就可以"，地基已完成：结构化提交+法人番号校验位+
+  国税厅名称比对代码就绪）：①申请国税厅法人番号 Web-API 利用届出拿アプリケーションID →
+  ECS .env 配 `HOUJIN_API_ID` 即启用名称比对；想全自动过审再开 platform_settings
+  `kyb_auto_approve=1`（严格条件：校验位+名称比对全过才自动）。②图片验证四层方案已评估未做
+  （触发=真实商家量起来）：AI读图抽取三方交叉比对（Claude Haiku，性价比最高）→ 充值汇款人
+  名义比对（最强信号零依赖）→ 图片哈希去重 → 登記情報提供サービス官方直读（¥330/件需开户）；
+  不做 PS 痕迹检测（投入产出比差）
 - ~~task spec 表双写日落~~（2026-07-25 用户决策否决过渡态）：CTI 重构未上线，**不做双写，直接终态**——
   类型专属字段只存 task_content_specs/task_referral_specs，发版前去掉双写代码与 COALESCE，
   主表旧列回填后 DROP。见「任务板块整体方案」（2026-07-25 定稿）。

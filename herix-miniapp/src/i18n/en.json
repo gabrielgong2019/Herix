@@ -1183,5 +1183,7 @@
   "hd.draftHintFresh": "This task requires a draft first — the final version can only go live after it's approved",
   "hd.draftReviewing": "Draft under review",
   "hd.stNeedFinal": "Final submission needed",
-  "apply.draftApprovedIntro": "Your draft was approved — please submit the link to your published content as the final version"
+  "apply.draftApprovedIntro": "Your draft was approved — please submit the link to your published content as the final version",
+  "taskCard.unitPerson": "/person",
+  "taskCard.unitConv": "/conv."
 }

@@ -1183,5 +1183,7 @@
   "hd.draftHintFresh": "このタスクは先に下書きの提出が必要です。承認後に本稿を公開できます",
   "hd.draftReviewing": "下書き審査中",
   "hd.stNeedFinal": "本稿提出待ち",
-  "apply.draftApprovedIntro": "下書きが承認されました。正式に公開したコンテンツのリンクを本稿として提出してください"
+  "apply.draftApprovedIntro": "下書きが承認されました。正式に公開したコンテンツのリンクを本稿として提出してください",
+  "taskCard.unitPerson": "/人",
+  "taskCard.unitConv": "/回"
 }

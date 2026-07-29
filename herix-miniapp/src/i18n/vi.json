@@ -636,5 +636,7 @@
   "hd.draftHintFresh": "Nhiệm vụ này yêu cầu nộp bản nháp trước, chỉ được đăng bản chính thức sau khi bản nháp được duyệt",
   "hd.draftReviewing": "Đang xét duyệt bản nháp",
   "hd.stNeedFinal": "Cần nộp bản chính thức",
-  "apply.draftApprovedIntro": "Bản nháp của bạn đã được duyệt, vui lòng nộp liên kết nội dung đã đăng chính thức làm bản cuối"
+  "apply.draftApprovedIntro": "Bản nháp của bạn đã được duyệt, vui lòng nộp liên kết nội dung đã đăng chính thức làm bản cuối",
+  "taskCard.unitPerson": "/người",
+  "taskCard.unitConv": "/lượt"
 }

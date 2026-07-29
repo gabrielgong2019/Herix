@@ -165,7 +165,7 @@
   "index.slogan": "不止于赫",
   "index.empty": "暂无任务",
   "taskCard.diffEasy": "轻松",
-  "taskCard.diffMedium": "刚好",
+  "taskCard.diffMedium": "中等",
   "taskCard.diffHard": "挑战",
   "taskCard.perf": "成果报酬",
   "taskCard.std": "体验任务",
@@ -1183,5 +1183,7 @@
   "hd.draftHintFresh": "该任务需先提交草稿，通过后才能发布终稿",
   "hd.draftReviewing": "草稿审核中",
   "hd.stNeedFinal": "待提交终稿",
-  "apply.draftApprovedIntro": "草稿已通过，请提交正式发布内容的链接作为终稿"
+  "apply.draftApprovedIntro": "草稿已通过，请提交正式发布内容的链接作为终稿",
+  "taskCard.unitPerson": "/人",
+  "taskCard.unitConv": "/次"
 }

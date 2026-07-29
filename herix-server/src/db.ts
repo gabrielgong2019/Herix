@@ -106,6 +106,8 @@ export async function initDatabase() {
       reviewed_at TEXT DEFAULT NULL
     );
 
+    -- 单次上传上限 2000 条是应用层限制（routes/tasks.ts MAX_CUSTOM_CODES_PER_UPLOAD），
+    -- 表结构本身不限数量，schema 层看不出这条业务规则，故在此注明（2026-07-29）
     CREATE TABLE IF NOT EXISTS task_promo_codes (
       id TEXT PRIMARY KEY,
       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,

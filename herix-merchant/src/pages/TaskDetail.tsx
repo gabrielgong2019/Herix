@@ -6,7 +6,8 @@ import { parseLinks, tasksApi, walletApi, type Application, type Task } from '@/
 import { LadderRows } from '@/components/CapacityLadder'
 import { Topbar } from '@/components/layout/Topbar'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
-import { ArrowLeft, Check, X, Copy, Download, ExternalLink, Upload } from 'lucide-react'
+import { ArrowLeft, Check, X, Upload, Share2 } from 'lucide-react'
+import { TaskShareModal } from '@/components/TaskShareModal'
 import { formatDate } from '@/lib/utils'
 
 type Tab = 'applicants' | 'submissions' | 'codes' | 'referrals' | 'partners'
@@ -223,123 +224,6 @@ function PublishBanner({ taskId }: { taskId: string }) {
   )
 }
 
-// ── Share section ─────────────────────────────────────────────────
-function ShareSection({ taskId }: { taskId: string }) {
-  const { t } = useTranslation()
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
-  const h5Url = `${window.location.origin}/app/#/pages/landing/index?task=${taskId}`
-
-  const { data: weappLink } = useQuery({
-    queryKey: ['weapp-link', taskId],
-    queryFn: () => tasksApi.getWeappLink(taskId).then((r) => r.data),
-  })
-
-  const qrUrl = tasksApi.getWeappQrUrl(taskId)
-
-  function copy(text: string, key: string) {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopiedKey(key)
-      setTimeout(() => setCopiedKey(null), 2000)
-    })
-  }
-
-  return (
-    <div className="rounded-2xl p-6 mb-5" style={{ background: '#fff' }}>
-      <div className="text-sm font-semibold mb-4">{t('taskDetail.shareTitle')}</div>
-
-      <div className="space-y-3">
-        {/* H5 link */}
-        <div className="flex items-center gap-2">
-          <div className="text-xs font-medium w-28 shrink-0" style={{ color: 'var(--muted)' }}>
-            {t('taskDetail.h5Link')}
-          </div>
-          <div
-            className="flex-1 text-xs px-3 py-2 rounded-xl font-mono truncate"
-            style={{ background: '#f8fafc', border: '1px solid var(--border)', color: 'var(--text)' }}
-          >
-            {h5Url}
-          </div>
-          <button
-            className="shrink-0 flex items-center gap-1 text-xs px-3 py-2 rounded-xl font-medium transition-colors"
-            style={{ background: '#f3f4f6', color: 'var(--text)' }}
-            onClick={() => copy(h5Url, 'h5')}
-          >
-            <Copy size={12} />
-            {copiedKey === 'h5' ? t('taskDetail.copied') : t('taskDetail.copy')}
-          </button>
-          <a
-            href={h5Url}
-            target="_blank"
-            rel="noreferrer"
-            className="shrink-0 flex items-center gap-1 text-xs px-3 py-2 rounded-xl font-medium"
-            style={{ background: '#f3f4f6', color: 'var(--text)' }}
-          >
-            <ExternalLink size={12} />
-          </a>
-        </div>
-
-        {/* WeApp link */}
-        <div className="flex items-center gap-2">
-          <div className="text-xs font-medium w-28 shrink-0" style={{ color: 'var(--muted)' }}>
-            {t('taskDetail.weappLink')}
-          </div>
-          {weappLink?.available && weappLink.link ? (
-            <>
-              <div
-                className="flex-1 text-xs px-3 py-2 rounded-xl font-mono truncate"
-                style={{ background: '#f8fafc', border: '1px solid var(--border)', color: 'var(--text)' }}
-              >
-                {weappLink.link}
-              </div>
-              <button
-                className="shrink-0 flex items-center gap-1 text-xs px-3 py-2 rounded-xl font-medium"
-                style={{ background: '#f3f4f6', color: 'var(--text)' }}
-                onClick={() => copy(weappLink.link!, 'weapp')}
-              >
-                <Copy size={12} />
-                {copiedKey === 'weapp' ? t('taskDetail.copied') : t('taskDetail.copy')}
-              </button>
-            </>
-          ) : (
-            <div className="flex-1 text-xs px-3 py-2 rounded-xl" style={{ background: '#f8fafc', border: '1px solid var(--border)', color: 'var(--muted)' }}>
-              {t('taskDetail.weappLinkNA')}
-            </div>
-          )}
-        </div>
-
-        {/* WeApp QR */}
-        <div className="flex items-start gap-2">
-          <div className="text-xs font-medium w-28 shrink-0 pt-2" style={{ color: 'var(--muted)' }}>
-            {t('taskDetail.weappQr')}
-          </div>
-          {weappLink?.available ? (
-            <div className="flex items-center gap-2">
-              <img
-                src={qrUrl}
-                alt="WeApp QR"
-                className="w-24 h-24 rounded-xl border"
-                style={{ borderColor: 'var(--border)' }}
-                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
-              <a
-                href={qrUrl}
-                download={`task-${taskId}-qr.png`}
-                className="flex items-center gap-1 text-xs px-3 py-2 rounded-xl font-medium"
-                style={{ background: '#f3f4f6', color: 'var(--text)' }}
-              >
-                <Download size={12} /> {t('taskDetail.download')}
-              </a>
-            </div>
-          ) : (
-            <div className="text-xs pt-2" style={{ color: 'var(--muted)' }}>
-              {t('taskDetail.weappLinkNA')}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-}
 
 // ── Code pool tab ─────────────────────────────────────────────────
 function CodesTab({ taskId }: { taskId: string }) {
@@ -552,6 +436,7 @@ export default function TaskDetail() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('applicants')
   const [drawerApp, setDrawerApp] = useState<Application | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
 
   const { data: task } = useQuery({
     queryKey: ['task', id],
@@ -615,6 +500,16 @@ export default function TaskDetail() {
         title={task.title}
         actions={
           <div className="flex items-center gap-2">
+            {!isDraft && task.status !== 'PENDING_REVIEW' && (
+              <button
+                className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
+                style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                onClick={() => setShareOpen(true)}
+              >
+                <Share2 size={14} />
+                {t('share.modalTitle')}
+              </button>
+            )}
             {/* 复制为新任务：按类型白名单预填（排除日期/推广码），投放是重复性工作 */}
             <button
               className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors"
@@ -683,8 +578,7 @@ export default function TaskDetail() {
           </div>
         )}
 
-        {/* Share section：审核中不展示——链接对赫使 404，上方横幅已说明 */}
-        {!isDraft && task.status !== 'PENDING_REVIEW' && <ShareSection taskId={id!} />}
+        {shareOpen && <TaskShareModal task={task} onClose={() => setShareOpen(false)} />}
 
         {/* Task summary */}
         <div className="rounded-2xl p-6 mb-5" style={{ background: '#fff' }}>

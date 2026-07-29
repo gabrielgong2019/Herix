@@ -27,6 +27,7 @@ import { i18nPublicRouter } from './routes/i18n';
 import { arbitrationsRouter } from './routes/arbitrations';
 import { subscriptionsRouter } from './routes/subscriptions';
 import { brandsRouter } from './routes/brands';
+import { shortLinksRouter } from './routes/shortLinks';
 import { UPLOADS_DIR } from './utils/uploads';
 
 (async () => {
@@ -85,6 +86,7 @@ app.use('/api/i18n', i18nPublicRouter);
 app.use('/api/arbitrations', arbitrationsRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/brands', brandsRouter);
+app.use('/t', shortLinksRouter);
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);

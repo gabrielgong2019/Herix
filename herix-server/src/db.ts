@@ -931,6 +931,13 @@ export async function initDatabase() {
     `ALTER TABLE tasks ADD CONSTRAINT tasks_status_check
      CHECK(status IN ('DRAFT','PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED','CANCELLED'))`,
     `UPDATE tasks SET status = 'PENDING_REVIEW' WHERE status = 'OPEN' AND platform_review = 'pending'`,
+    // 任务短链（2026-07-29）：一个任务一个永久短码，/t/:code 重定向到 H5 落地页
+    `CREATE TABLE IF NOT EXISTS short_links (
+       code VARCHAR(8) PRIMARY KEY,
+       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+       created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_short_links_task ON short_links(task_id)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

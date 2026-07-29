@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import './TaskCard.scss';
 import { t, tf } from '../utils/i18n';
 import { fmt } from '../utils/format';
+import { assetUrl } from '../utils/api';
 
 const DIFF: Record<string, { labelKey: string }> = {
   easy:   { labelKey: 'taskCard.diffEasy' },
@@ -27,6 +28,7 @@ export interface TaskCardTask {
   cover_image?: string | null;
   brand_promo_image_url?: string | null;
   brand_logo_url?: string | null;
+  brand_company_name?: string | null;
   creator_name?: string;
   payout_per_herald?: number;
   commission?: number;
@@ -39,6 +41,12 @@ interface Props {
   categories: CategoryItem[];
 }
 
+/**
+ * 图上文下大图卡（2026-07-29 重设计，设计对比稿三案取中）：
+ * 封面 16:9 通栏置顶（发布已强制封面，存量无图任务纯文字卡兜底），
+ * 文字信息不覆盖在图上——商家实拍图质量不可控，白字压图的可读性赌不起；
+ * 决策信息（口径化报酬/难度/品牌）保持列表卡的完整度。
+ */
 export default function TaskCard({ task, categories }: Props) {
   const img = task.cover_image || task.brand_promo_image_url || '';
   const rating = parseFloat(String(task.avg_rating)) || 0;
@@ -50,6 +58,8 @@ export default function TaskCard({ task, categories }: Props) {
     .filter(Boolean)
     .join(' ');
   const price = task.payout_per_herald ?? task.commission;
+  // 赫使决策看品牌不看昵称：公司名优先，昵称兜底
+  const brandName = task.brand_company_name || task.creator_name || '';
 
   function goTask() {
     Taro.navigateTo({ url: `/pages/task/task?id=${task.id}` });
@@ -64,48 +74,52 @@ export default function TaskCard({ task, categories }: Props) {
 
   return (
     <View className='task-card' onClick={goTask}>
-      <View className='card-top'>
-        <View className='card-top-left'>
-          {catText && <Text className='tag'>{catText}</Text>}
-          <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
-            {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
-          </Text>
-        </View>
-        <View className='card-top-right'>
-          <View className='diff-tag'>
-            <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
-            <Text>{t(diff.labelKey)}</Text>
-          </View>
-          {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
-        </View>
-      </View>
+      {img && <View className='card-cover' style={{ backgroundImage: `url(${assetUrl(img)})` }} />}
 
-      <View className='card-body'>
-        <View className='card-c'>
-          <Text className='card-title'>{task.title}</Text>
+      <View className='card-content'>
+        <View className='card-top'>
+          <View className='card-top-left'>
+            {catText && <Text className='tag'>{catText}</Text>}
+            <Text className={`mode-tag ${isPerformance ? 'mode-perf' : 'mode-std'}`}>
+              {isPerformance ? t('taskCard.perf') : t('taskCard.std')}
+            </Text>
+          </View>
+          <View className='card-top-right'>
+            <View className='diff-tag'>
+              <View className={`diff-dot d-${task.difficulty || 'easy'}`} />
+              <Text>{t(diff.labelKey)}</Text>
+            </View>
+            {task.fast_payout && <Text className='fp-tag'>{t('taskCard.fastPayout')}</Text>}
+          </View>
+        </View>
+
+        <Text className='card-title'>{task.title}</Text>
+
+        {rating > 0 && (
+          <View className='rating-row'>
+            {[1, 2, 3, 4, 5].map(s => (
+              <Text key={s} className={`star ${s <= filledStars ? 'on' : 'off'}`}>
+                {s <= filledStars ? '★' : '☆'}
+              </Text>
+            ))}
+            <Text className='rating-num'>{rating}</Text>
+          </View>
+        )}
+
+        <View className='card-foot'>
           <View className='brand-part' onClick={goBrand}>
             <View className='brand-icon'>
               {task.brand_logo_url
-                ? <View className='brand-icon-img' style={{ backgroundImage: `url(${task.brand_logo_url})` }} />
-                : <Text>{(task.creator_name || 'B')[0]}</Text>}
+                ? <View className='brand-icon-img' style={{ backgroundImage: `url(${assetUrl(task.brand_logo_url)})` }} />
+                : <Text>{(brandName || 'B')[0]}</Text>}
             </View>
-            <Text className='brand-name'>{task.creator_name || ''}</Text>
+            <Text className='brand-name'>{brandName}</Text>
             {task.creator_id && <Text className='brand-arrow'>›</Text>}
           </View>
-          {rating > 0 && (
-            <View className='rating-row'>
-              {[1, 2, 3, 4, 5].map(s => (
-                <Text key={s} className={`star ${s <= filledStars ? 'on' : 'off'}`}>
-                  {s <= filledStars ? '★' : '☆'}
-                </Text>
-              ))}
-              <Text className='rating-num'>{rating}</Text>
-            </View>
-          )}
-        </View>
-        <View className='card-right'>
-          <Text className='commission'>¥{fmt(price)}</Text>
-          {img && <View className='thumb' style={{ backgroundImage: `url(${img})` }} />}
+          <View className='price-part'>
+            <Text className='commission'>¥{fmt(price)}</Text>
+            <Text className='price-unit'>{isPerformance ? t('taskCard.unitConv') : t('taskCard.unitPerson')}</Text>
+          </View>
         </View>
       </View>
     </View>

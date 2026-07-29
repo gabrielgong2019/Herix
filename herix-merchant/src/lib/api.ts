@@ -86,6 +86,7 @@ export const tasksApi = {
   downloadCodesUrl: (id: string) => `${BASE}/tasks/${id}/codes/export`,
   getWeappLink: (id: string) => http.get<WeappLinkResult>(`/tasks/${id}/weapp-link`),
   getWeappQrUrl: (id: string) => `${BASE}/tasks/${id}/weapp-qrcode`,
+  getShortLink: (id: string) => http.post<{ code: string; url: string }>(`/tasks/${id}/short-link`),
   getReferrals: (id: string) => http.get<ReferralData>(`/tasks/${id}/referrals`),
   unbindBrand: (taskId: string, userId: string) =>
     http.post(`/tasks/${taskId}/brand-unbind`, { userId }),
@@ -284,6 +285,9 @@ export interface Task {
   platform_review_note?: string
   brand_parties?: Array<{ user_id: string; nickname: string; email: string; bound_at: string }>
   applications?: Application[]
+  brand_logo_url?: string
+  brand_promo_image_url?: string
+  creator_name?: string
 }
 
 export interface TaskFormData {

@@ -223,6 +223,7 @@
     "secBriefHint": "Paste your existing brief or write from scratch — structured facts can be auto-extracted",
     "fieldBrief": "Brief",
     "fieldBriefPh": "Suggested: creator profile / what to do (note if product trial needed) / post requirements / deadline. e.g.\nBeauty creators, 1,000+ followers\nTry the product after claiming\nRequirements: 3+ images, video over 30s\nSubmit the post link by Aug 10",
+    "fieldBriefPhPerf": "Suggested: what service to promote / target users to invite / conversion condition (e.g. register and complete first use) / suggested talking points / deadline. e.g.\nService: XX App, helping users with [specific need]\nTarget: users who have that need\nConversion: register via your referral code and complete first use of the service\nTalking point: \"I've been using XX — really useful. Register with my code and get a bonus\"\nDeadline: Sep 30",
     "extractBtn": "Extract & fill from brief",
     "extractHint": "Nothing is applied until you confirm",
     "extractFound": "Detected from your brief:",

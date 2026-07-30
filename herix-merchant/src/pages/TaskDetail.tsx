@@ -458,7 +458,11 @@ export default function TaskDetail() {
 
   const completeMut = useMutation({
     mutationFn: () => tasksApi.complete(id!),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['task', id] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['task', id] })
+      qc.invalidateQueries({ queryKey: ['tasks'] })
+      qc.invalidateQueries({ queryKey: ['wallet-balance'] })
+    },
   })
 
   const approveMut = useMutation({

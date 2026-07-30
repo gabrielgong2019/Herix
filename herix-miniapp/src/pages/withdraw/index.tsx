@@ -167,6 +167,29 @@ export default class Withdraw extends Component<{}, State> {
           <Text className='avail-line'>
             {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
           </Text>
+          <View className='rules-card'>
+            <Text className='rules-title'>{t('withdraw.rulesTitle')}</Text>
+            <View className='rules-row'>
+              <Text className='rules-label'>{t('withdraw.rulesMin')}</Text>
+              <Text className='rules-val'>¥{fmt(minAmount)}</Text>
+            </View>
+            <View className='rules-row'>
+              <Text className='rules-label'>{t('withdraw.rulesDaily')}</Text>
+              <Text className='rules-val'>{t('withdraw.rulesDailyVal')}</Text>
+            </View>
+            <View className='rules-row'>
+              <Text className='rules-label'>{t('withdraw.rulesProcess')}</Text>
+              <Text className='rules-val'>{t('withdraw.rulesProcessVal')}</Text>
+            </View>
+            <View className='rules-row'>
+              <Text className='rules-label'>{t('withdraw.rulesArrival')}</Text>
+              <Text className='rules-val'>{t('withdraw.rulesArrivalVal')}</Text>
+            </View>
+            <View className='rules-row'>
+              <Text className='rules-label'>{t('withdraw.rulesFee')}</Text>
+              <Text className='rules-val'>{t('withdraw.rulesFeeVal')}</Text>
+            </View>
+          </View>
           <View className='no-method'>
             <Text className='nm-icon'>💳</Text>
             <Text className='nm-title'>{t('withdraw.noMethod')}</Text>

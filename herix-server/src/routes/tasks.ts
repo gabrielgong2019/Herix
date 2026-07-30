@@ -1126,19 +1126,8 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 
   if (!Object.keys(data).length) return res.status(400).json({ error: '没有可更新的字段' });
 
-  // description 变更时重置翻译状态触发重译，但不重置次数（终身上限在 translateTask 内检查）
-  if (description !== undefined) {
-    data.translation_status = 'pending';
-  }
-
   await update('tasks', data, 'id = ?', [req.params.id]);
-  const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
-  res.json(updated);
-
-  // fire-and-forget 重译（description 变了才触发）
-  if (description !== undefined && updated) {
-    translateTask(updated.id, String(updated.title ?? ''), String(updated.description ?? '')).catch(() => {});
-  }
+  res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
 });
 
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */

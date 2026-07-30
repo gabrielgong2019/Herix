@@ -1127,7 +1127,13 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
   if (!Object.keys(data).length) return res.status(400).json({ error: '没有可更新的字段' });
 
   await update('tasks', data, 'id = ?', [req.params.id]);
-  res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
+  const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
+  res.json(updated);
+
+  // description 变更时触发重译，hash 兜底：纯标点/格式改动不调 API
+  if (description !== undefined && updated) {
+    translateTask(String(updated.id), String(updated.title ?? ''), String(updated.description ?? '')).catch(() => {});
+  }
 });
 
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 // 枚举唯一事实源：shared/contracts.ts（前后端共享，勿在此处重复字面量）
 import { TASK_MODES, CONTENT_TYPES, DIFFICULTIES, TASK_VISIBILITIES } from '../shared/contracts';
+import { LOCALE_CODES } from '../constants/locales';
 
 // ── 段位阈值（粉丝数） ──
 export const TIER_THRESHOLDS = {
@@ -55,7 +56,7 @@ export const LoginSchema = z.object({
 
 export const CreateTaskSchema = z.object({
   mode: z.enum(TASK_MODES).default('STANDARD'),
-  sourceLang: z.enum(['zh', 'ja', 'en', 'ko', 'vi']).default('zh'),
+  sourceLang: z.enum(LOCALE_CODES).default('zh'),
   title: z.string().min(2, '标题至少2字符').max(100),
   description: z.string().min(10, '描述至少10字符'),
   requirements: z.string().optional(),
@@ -125,7 +126,7 @@ export const UpdateBrandProfileSchema = z.object({
   contactName: z.string().min(1),
   contactPhone: z.string().optional(),
   billingEmail: z.string().email().optional().or(z.literal('')),
-  defaultLang: z.enum(['zh', 'ja', 'en', 'ko', 'vi']).optional(),
+  defaultLang: z.enum(LOCALE_CODES).optional(),
 });
 
 export const UpdateHeraldProfileSchema = z.object({

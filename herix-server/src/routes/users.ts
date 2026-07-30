@@ -3,6 +3,7 @@ import { findOne, findMany, update, insert } from '../utils/db';
 import { requireAuth, signToken } from '../middleware/auth';
 import { UpdateBrandProfileSchema, UpdateHeraldProfileSchema } from '../types';
 import { ZodError } from 'zod';
+import { SUPPORTED_LOCALES } from '../constants/locales';
 
 export const usersRouter = Router();
 
@@ -80,8 +81,7 @@ usersRouter.patch('/me', requireAuth, async (req: Request, res: Response) => {
     updates.nickname = nickname.trim();
   }
   if (lang !== undefined) {
-    const allowed = ['zh', 'en', 'ja', 'vi', 'ko'];
-    if (!allowed.includes(lang)) return res.status(400).json({ error: '不支持的语言' });
+    if (!SUPPORTED_LOCALES.has(lang)) return res.status(400).json({ error: '不支持的语言' });
     updates.preferred_lang = lang;
   }
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: '无有效字段' });

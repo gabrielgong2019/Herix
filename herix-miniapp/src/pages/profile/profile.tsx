@@ -80,6 +80,7 @@ interface State {
   myTagIds: string[];
   tagSheetOpen: boolean;
   tagSaving: boolean;
+  tagError: string;
 }
 
 export default class Profile extends Component<{}, State> {
@@ -107,6 +108,7 @@ export default class Profile extends Component<{}, State> {
     myTagIds: [],
     tagSheetOpen: false,
     tagSaving: false,
+    tagError: '',
   };
 
   componentDidShow() {
@@ -152,13 +154,13 @@ export default class Profile extends Component<{}, State> {
   };
 
   saveTags = async () => {
-    this.setState({ tagSaving: true });
+    this.setState({ tagSaving: true, tagError: '' });
     try {
       await specialtyTags.saveTags(this.state.myTagIds);
-      this.setState({ tagSheetOpen: false });
+      this.setState({ tagSheetOpen: false, tagError: '' });
       Taro.showToast({ title: t('common.save'), icon: 'success' });
     } catch (err: any) {
-      Taro.showToast({ title: err.message || t('error.GENERIC'), icon: 'none' });
+      this.setState({ tagError: err.message || t('error.GENERIC') });
     } finally {
       this.setState({ tagSaving: false });
     }
@@ -703,10 +705,13 @@ export default class Profile extends Component<{}, State> {
 
         {/* 标签选择器 overlay */}
         {isHerald && this.state.tagSheetOpen && (
-          <View className='ps-overlay' onClick={() => this.setState({ tagSheetOpen: false })}>
+          <View className='ps-overlay' onClick={() => this.setState({ tagSheetOpen: false, tagError: '' })}>
             <View className='ps-sheet tag-sheet' onClick={e => e.stopPropagation()}>
               <Text className='ps-title'>{t('specialty.selectTitle')}</Text>
               <Text className='ps-hint'>{t('specialty.selectHint')}</Text>
+              {this.state.tagError ? (
+                <Text className='tag-error'>{this.state.tagError}</Text>
+              ) : null}
               <View className='tag-picker-grid'>
                 {this.state.allTags.map(tag => {
                   const selected = this.state.myTagIds.includes(tag.id);

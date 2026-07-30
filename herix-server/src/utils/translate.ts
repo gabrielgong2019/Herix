@@ -1,7 +1,7 @@
 import pool from '../db';
 import crypto from 'crypto';
-
-const ALL_LOCALES = ['ja', 'en', 'ko', 'vi'] as const;
+import { getLocalesForCommunities } from '../constants/communities';
+import { DEFAULT_TARGET_LOCALES, SUPPORTED_LOCALES } from '../constants/locales';
 const TASK_LIFETIME_CAP = 20;
 
 /**
@@ -28,9 +28,28 @@ Herix 是面向日本华人社群的网红营销平台，连接品牌商家与�
 
 翻译风格：保持营销文案的吸引力，语气专业但友好，贴近目标语言母语者习惯。`;
 
-/** 发布/更新任务后异步翻译，fire-and-forget，不抛出。 */
-export async function translateTask(taskId: string, title: string, description: string, sourceLang = 'zh'): Promise<void> {
-  const locales = ALL_LOCALES.filter(l => l !== sourceLang);
+/** 发布/更新任务后异步翻译，fire-and-forget，不抛出。
+ *  targetCommunities 为空 → 翻译为所有默认目标语言（ja/en/ko/vi）
+ *  targetCommunities 非空 → 仅翻译目标社群所用的语言，跳过与 sourceLang 相同的部分 */
+export async function translateTask(
+  taskId: string,
+  title: string,
+  description: string,
+  sourceLang = 'zh',
+  targetCommunities: string[] = []
+): Promise<void> {
+  let locales: string[];
+  if (targetCommunities.length > 0) {
+    const communityLocales = getLocalesForCommunities(targetCommunities);
+    locales = communityLocales.filter(l => l !== sourceLang && SUPPORTED_LOCALES.has(l));
+    if (locales.length === 0) {
+      // 目标社群均使用源语言，无需翻译
+      await pool.query(`UPDATE tasks SET translation_status = 'done' WHERE id = $1`, [taskId]).catch(() => {});
+      return;
+    }
+  } else {
+    locales = DEFAULT_TARGET_LOCALES.filter(l => l !== sourceLang);
+  }
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     console.warn('[translate] DEEPSEEK_API_KEY not set, skipping');

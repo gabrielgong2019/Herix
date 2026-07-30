@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { tasksApi, metaApi, walletApi, type TaskFormData, type Task, type BrandBalance } from '@/lib/api'
+import { tasksApi, metaApi, walletApi, settingsApi, type TaskFormData, type Task, type BrandBalance } from '@/lib/api'
 import { extractBrief, type ExtractHit } from '@/lib/extract'
 import { DIFFICULTIES } from '@contracts'
 import { Topbar } from '@/components/layout/Topbar'
@@ -10,6 +10,33 @@ import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronUp, ImagePlus, X } from 'lucide-react'
 
 // ── Constants ─────────────────────────────────────────────────────
+
+// 与 herix-server/src/constants/locales.ts 保持同步（新增语言两处均需更新）
+const LOCALE_OPTIONS = [
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'en', label: 'English' },
+  { code: 'ko', label: '한국어' },
+  { code: 'vi', label: 'Tiếng Việt' },
+]
+
+function detectLang(text: string): string | null {
+  let ja = 0, ko = 0, zh = 0, en = 0
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)!
+    if (cp >= 0x3040 && cp <= 0x30ff) ja++       // 平假名 + 片假名 → 日文独有
+    else if (cp >= 0xac00 && cp <= 0xd7af) ko++   // 韩文字母
+    else if (cp >= 0x4e00 && cp <= 0x9fff) zh++   // CJK（中日共用，无日文假名时判中文）
+    else if ((cp >= 0x41 && cp <= 0x5a) || (cp >= 0x61 && cp <= 0x7a)) en++
+  }
+  const total = ja + ko + zh + en
+  if (total < 8) return null
+  if (ja > 2) return 'ja'          // 只要有平假名/片假名就是日文
+  if (ko / total > 0.1) return 'ko'
+  if (zh / total > 0.15) return 'zh'
+  if (en / total > 0.5) return 'en'
+  return null
+}
 
 const PLATFORMS = [
   { id: 'xiaohongshu', name: '小红书', icon: '📕' },
@@ -279,6 +306,7 @@ interface FormState {
   requireDraftReview: boolean
   submitDeadline: string
   customCodes: string
+  sourceLang: string
 }
 
 const DEFAULT_STATE: FormState = {
@@ -292,6 +320,7 @@ const DEFAULT_STATE: FormState = {
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
+  sourceLang: 'zh',
 }
 
 function parseTaskPlatformRequirements(raw: Task['platform_requirements']): FormState['platformRequirements'] {
@@ -334,6 +363,7 @@ function taskToFormState(task: Task): FormState {
     requireDraftReview: !!(task.require_draft_review),
     submitDeadline: task.submit_deadline ? task.submit_deadline.slice(0, 10) : '',
     customCodes: '',
+    sourceLang: task.source_lang || 'zh',
   }
 }
 
@@ -354,6 +384,9 @@ export default function TaskForm() {
   const [typeChosen, setTypeChosen] = useState(isEdit || !!copyId)
   // 需求单提取（建议式）：识别结果在面板确认后才应用
   const [extracted, setExtracted] = useState<ExtractHit[] | null>(null)
+  const [showLangPicker, setShowLangPicker] = useState(false)
+  const [langMismatch, setLangMismatch] = useState<string | null>(null) // 检测到的语言（与 sourceLang 不符时设置）
+  const [pendingStatus, setPendingStatus] = useState<'draft' | 'open' | null>(null)
 
   const isStandard = form.mode === 'STANDARD'
   const isCustomCodes = !isStandard && form.codeMode === 'custom'
@@ -364,6 +397,11 @@ export default function TaskForm() {
   const effectiveMaxHeralds = isCustomCodes ? customCodeList.length : Number(form.maxHeralds) || 0
 
   // 当前可发布额度（成本预览里对比展示；发布闸在服务端，这里只是预警）
+  const { data: brandProfile } = useQuery({
+    queryKey: ['brandProfile'],
+    queryFn: () => settingsApi.profile().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  })
   const { data: brandBalance } = useQuery({
     queryKey: ['brandBalance'],
     queryFn: () => walletApi.brandBalance().then((r) => r.data),
@@ -392,6 +430,13 @@ export default function TaskForm() {
   useEffect(() => {
     if (existingTask) setForm(taskToFormState(existingTask))
   }, [existingTask])
+
+  // 新建任务：从商家 profile 的 default_lang 预填源语言
+  useEffect(() => {
+    if (!isEdit && !copyId && brandProfile?.default_lang) {
+      setForm((prev) => ({ ...prev, sourceLang: brandProfile.default_lang! }))
+    }
+  }, [brandProfile, isEdit, copyId])
 
   // 复制任务：按白名单预填（排除日期与推广码——那些是每期不同的）
   const { data: copySource } = useQuery({
@@ -457,6 +502,7 @@ export default function TaskForm() {
         maxHeralds: effectiveMaxHeralds,
         targetCommunities: form.targetCommunities,
         siteId: form.siteId,
+        sourceLang: form.sourceLang,
         // dataURL 不进 JSON(413+DB膨胀双坑)；编辑态已有的服务器 URL 原样保留
         coverImage: form.coverImage && !form.coverImage.startsWith('data:') ? form.coverImage : undefined,
         deadline: form.deadline || undefined,
@@ -533,6 +579,16 @@ export default function TaskForm() {
 
   const handleSubmit = (status: 'draft' | 'open') => {
     if (!validate(status)) return
+    // 语言一致性检测：扫描标题+正文，若与选择的 sourceLang 不符则先弹确认
+    if (!langMismatch) {
+      const text = `${form.title} ${form.description}`.trim()
+      const detected = detectLang(text)
+      if (detected && detected !== form.sourceLang) {
+        setLangMismatch(detected)
+        setPendingStatus(status)
+        return
+      }
+    }
     saveMut.mutate(status)
   }
 
@@ -664,6 +720,85 @@ export default function TaskForm() {
           <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
             <SectionHeader num={sn.brief} title={t('taskForm.secBriefTitle')} hint={t('taskForm.secBriefHint')} />
 
+            {/* 原文语言 — 写作前确认，发布后锁定 */}
+            <div className="mb-4 flex items-center gap-2 flex-wrap">
+              <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldSourceLang')}：</span>
+              {showLangPicker ? (
+                <>
+                  {LOCALE_OPTIONS.map((l) => (
+                    <Chip
+                      key={l.code}
+                      label={l.label}
+                      selected={form.sourceLang === l.code}
+                      onClick={() => { set('sourceLang', l.code); setShowLangPicker(false); setLangMismatch(null); }}
+                    />
+                  ))}
+                  <button type="button" onClick={() => setShowLangPicker(false)} style={{ color: 'var(--muted)' }}>
+                    <X size={14} />
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="text-xs flex items-center gap-1 font-medium"
+                    style={{ color: 'var(--primary)' }}
+                    onClick={() => setShowLangPicker(true)}
+                  >
+                    {LOCALE_OPTIONS.find((l) => l.code === form.sourceLang)?.label ?? '中文'}
+                    <ChevronDown size={12} />
+                  </button>
+                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldSourceLangHint')}</span>
+                </>
+              )}
+            </div>
+
+            {/* 语言不一致确认条 */}
+            {langMismatch && (() => {
+              const detectedLabel = LOCALE_OPTIONS.find((l) => l.code === langMismatch)?.label ?? langMismatch
+              const selectedLabel = LOCALE_OPTIONS.find((l) => l.code === form.sourceLang)?.label ?? form.sourceLang
+              return (
+                <div className="mb-4 rounded-xl p-4 flex flex-col gap-3" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                  <p className="text-sm" style={{ color: '#92400e' }}>
+                    检测到内容为 <strong>{detectedLabel}</strong>，但原文语言设置为 <strong>{selectedLabel}</strong>。源语言设置不准确将影响翻译质量，建议与内容保持一致。
+                  </p>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                      style={{ background: 'var(--primary)', color: '#fff' }}
+                      onClick={() => {
+                        set('sourceLang', langMismatch)
+                        setLangMismatch(null)
+                        if (pendingStatus) saveMut.mutate(pendingStatus)
+                      }}
+                    >
+                      切换为{detectedLabel}并继续
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg text-xs border font-medium"
+                      style={{ borderColor: '#fde68a', background: '#fff', color: '#92400e' }}
+                      onClick={() => {
+                        setLangMismatch(null)
+                        if (pendingStatus) saveMut.mutate(pendingStatus)
+                      }}
+                    >
+                      保持{selectedLabel}继续
+                    </button>
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg text-xs"
+                      style={{ color: 'var(--muted)' }}
+                      onClick={() => { setLangMismatch(null); setPendingStatus(null); }}
+                    >
+                      取消
+                    </button>
+                  </div>
+                </div>
+              )
+            })()}
+
             <Field label={t('taskForm.fieldTitle')} required>
               <Input
                 value={form.title}
@@ -735,6 +870,7 @@ export default function TaskForm() {
                 </div>
               )}
             </Field>
+
           </div>
 
           {/* SECTION 2: Who do you want */}

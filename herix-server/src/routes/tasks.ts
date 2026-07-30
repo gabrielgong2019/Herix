@@ -1137,14 +1137,14 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 
   // description 变更时触发重译，hash 兜底：纯标点/格式改动不调 API
   if (description !== undefined && updated) {
-    translateTask(String(updated.id), String(updated.title ?? ''), String(updated.description ?? ''), updated.source_lang ?? 'zh').catch(() => {});
+    translateTask(String(updated.id), String(updated.title ?? ''), String(updated.description ?? ''), updated.source_lang ?? 'zh', updated.target_communities ?? []).catch(() => {});
   }
 });
 
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, description, source_lang, trial_credit_amount, cover_image FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, description, source_lang, target_communities, trial_credit_amount, cover_image FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -1274,7 +1274,7 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   });
 
   // fire-and-forget：翻译不阻塞发布响应
-  translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh').catch(() => {});
+  translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? []).catch(() => {});
 });
 
 // /escrow 端点已废弃，资金锁定在 /publish 时自动完成

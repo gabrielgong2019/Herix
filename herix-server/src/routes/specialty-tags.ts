@@ -15,6 +15,21 @@ specialtyTagsRouter.get('/', async (_req: Request, res: Response) => {
   } catch (err) { console.error('[specialty-tags GET /]', err); res.status(500).json({ error: '加载失败' }); }
 });
 
+/** GET /api/specialty-tags/herald/me — 当前赫使自己的标签（需 auth，必须在 /:userId 之前注册）*/
+specialtyTagsRouter.get('/herald/me', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const tags = await findMany<any>(
+      `SELECT hst.tag_id as id, hst.source
+       FROM herald_specialty_tags hst
+       JOIN specialty_tags st ON st.id = hst.tag_id AND st.active = 1
+       WHERE hst.herald_id = ?
+       ORDER BY st.sort_order, hst.tag_id`,
+      [req.user!.userId]
+    );
+    res.json(tags);
+  } catch (err) { console.error('[specialty-tags GET /herald/me]', err); res.status(500).json({ error: '加载失败' }); }
+});
+
 /** GET /api/specialty-tags/herald/:userId — 查某赫使的标签（公开） */
 specialtyTagsRouter.get('/herald/:userId', async (req: Request, res: Response) => {
   try {
@@ -46,13 +61,25 @@ specialtyTagsRouter.put('/herald/me', requireAuth, async (req: Request, res: Res
       if (valid.length !== tagIds.length) return res.status(400).json({ error: '包含无效标签ID' });
     }
 
-    await remove('herald_specialty_tags', 'herald_id = ? AND source = ?', [userId, 'manual']);
-    for (const tagId of tagIds) {
-      // 联结表无 id 列，不能走 insert() 工具（会自动注入 id 字段导致报错）
-      await pool.query(
-        'INSERT INTO herald_specialty_tags (herald_id, tag_id, source) VALUES ($1, $2, $3)',
-        [userId, tagId, 'manual']
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'DELETE FROM herald_specialty_tags WHERE herald_id = $1 AND source = $2',
+        [userId, 'manual']
       );
+      for (const tagId of tagIds) {
+        await client.query(
+          'INSERT INTO herald_specialty_tags (herald_id, tag_id, source) VALUES ($1, $2, $3)',
+          [userId, tagId, 'manual']
+        );
+      }
+      await client.query('COMMIT');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
     }
     res.json({ ok: true, tagIds });
   } catch (err: any) {

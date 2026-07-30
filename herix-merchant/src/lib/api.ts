@@ -197,6 +197,7 @@ export const settingsApi = {
     contactPhone?: string
     billingEmail?: string
     companyDesc?: string
+    defaultLang?: string
   }) => http.patch('/users/profile/brand', data),
   uploadBrandAsset: (type: 'logo' | 'promo', file: File) => {
     const fd = new FormData()
@@ -244,6 +245,7 @@ export interface MerchantUser {
   kyb_reject_reason?: string
   brand_logo_url?: string
   brand_promo_image_url?: string
+  default_lang?: string
 }
 
 export interface Task {
@@ -285,6 +287,7 @@ export interface Task {
   platform_review_note?: string
   brand_parties?: Array<{ user_id: string; nickname: string; email: string; bound_at: string }>
   applications?: Application[]
+  source_lang?: string
   brand_logo_url?: string
   brand_promo_image_url?: string
   creator_name?: string
@@ -304,6 +307,7 @@ export interface TaskFormData {
   maxHeralds: number
   targetCommunities: string[]
   siteId: string
+  sourceLang?: string
   coverImage?: string
   deadline?: string
   codeMode?: 'auto' | 'custom'

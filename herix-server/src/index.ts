@@ -116,14 +116,14 @@ import { translateTask } from './utils/translate';
 import pool from './db';
 setInterval(async () => {
   try {
-    const rows = await pool.query<{ id: string; title: string; description: string; source_lang: string }>(
-      `SELECT id, title, description, source_lang FROM tasks
+    const rows = await pool.query<{ id: string; title: string; description: string; source_lang: string; target_communities: string[] }>(
+      `SELECT id, title, description, source_lang, target_communities FROM tasks
        WHERE (translation_status = 'failed' AND translation_attempts < 20)
           OR  translation_status = 'pending'
        LIMIT 10`
     );
     for (const row of rows.rows) {
-      translateTask(row.id, row.title, row.description ?? '', row.source_lang ?? 'zh').catch(() => {});
+      translateTask(row.id, row.title, row.description ?? '', row.source_lang ?? 'zh', row.target_communities ?? []).catch(() => {});
     }
   } catch (err) {
     console.error('[translate-retry] sweep error', err);

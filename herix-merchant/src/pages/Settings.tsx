@@ -7,6 +7,14 @@ import { Upload } from 'lucide-react'
 
 const INDUSTRY_IDS = ['finance', 'beauty', 'fashion', 'food', 'travel', 'baby', 'ecommerce', 'other']
 
+const LOCALE_OPTIONS = [
+  { code: 'zh', label: '中文' },
+  { code: 'ja', label: '日本語' },
+  { code: 'en', label: 'English' },
+  { code: 'ko', label: '한국어' },
+  { code: 'vi', label: 'Tiếng Việt' },
+]
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
@@ -328,6 +336,7 @@ export default function Settings() {
   const [contactPhone, setContactPhone] = useState('')
   const [billingEmail, setBillingEmail] = useState('')
   const [companyDesc, setCompanyDesc]   = useState('')
+  const [defaultLang, setDefaultLang]   = useState('zh')
   const [saved, setSaved] = useState(false)
 
   const { data: profile } = useQuery({
@@ -344,11 +353,12 @@ export default function Settings() {
     setContactPhone(profile.contact_phone || '')
     setBillingEmail(profile.brand_billing_email || profile.contact_email || '')
     setCompanyDesc(profile.company_desc || '')
+    setDefaultLang(profile.default_lang || 'zh')
   }, [profile])
 
   const saveMut = useMutation({
     mutationFn: () =>
-      settingsApi.updateProfile({ companyName, industry, website, contactName, contactPhone, billingEmail, companyDesc }),
+      settingsApi.updateProfile({ companyName, industry, website, contactName, contactPhone, billingEmail, companyDesc, defaultLang }),
     onSuccess: () => {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -421,6 +431,28 @@ export default function Settings() {
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
                     style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
                   />
+                </Field>
+              </div>
+
+              <div className="col-span-2">
+                <Field label={t('settings.defaultLang')} hint={t('settings.defaultLangHint')}>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {LOCALE_OPTIONS.map((l) => (
+                      <button
+                        key={l.code}
+                        type="button"
+                        onClick={() => setDefaultLang(l.code)}
+                        className="px-3 py-1.5 rounded-xl text-sm font-medium transition-colors"
+                        style={{
+                          background: defaultLang === l.code ? 'var(--primary)' : 'var(--surface)',
+                          color: defaultLang === l.code ? '#fff' : 'var(--text)',
+                          border: `1px solid ${defaultLang === l.code ? 'var(--primary)' : 'var(--border)'}`,
+                        }}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
                 </Field>
               </div>
             </div>

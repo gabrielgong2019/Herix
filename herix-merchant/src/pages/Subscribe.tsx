@@ -5,11 +5,94 @@ import { useNavigate } from 'react-router-dom'
 import {
   subscriptionsApi, type SubscriptionPlanInfo, type MerchantSubscription, type SubscriptionInvoice,
 } from '@/lib/api'
+import { useAuth } from '@/contexts/AuthContext'
 import { Topbar } from '@/components/layout/Topbar'
-import { Check, Minus, Sparkles, Crown, Building2, ArrowRight, ReceiptText, ClipboardList, Banknote, Zap, Rocket } from 'lucide-react'
+import { Check, Minus, Sparkles, Crown, Building2, ArrowRight, ReceiptText, ClipboardList, Banknote, Zap, Rocket, Download } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 import { CYCLE_MONTHS, BILLING_CYCLES, type BillingCycle as Cycle } from '@contracts'
+
+const PLAN_LABEL: Record<string, string> = { basic: '基础版', premium: '高级版', custom: '定制版' }
+const CYCLE_LABEL: Record<string, string> = { monthly: '月付', quarterly: '季付', annual: '年付' }
+
+function printInvoice(
+  inv: SubscriptionInvoice,
+  sub: MerchantSubscription,
+  companyName: string,
+  contactName: string,
+) {
+  const issueDate = new Date(inv.created_at).toLocaleDateString('zh-CN')
+  const periodStart = sub.current_period_start ? new Date(sub.current_period_start).toLocaleDateString('zh-CN') : '—'
+  const periodEnd   = sub.current_period_end   ? new Date(sub.current_period_end).toLocaleDateString('zh-CN')   : '—'
+  const planLabel   = PLAN_LABEL[sub.plan_code] ?? sub.plan_code
+  const cycleLabel  = CYCLE_LABEL[sub.billing_cycle] ?? sub.billing_cycle
+  const statusLabel = inv.status === 'PAID' ? '已支付' : inv.status === 'VOID' ? '已作废' : '待支付'
+
+  const html = `<!DOCTYPE html><html lang="zh"><head><meta charset="UTF-8">
+<title>请求书 ${inv.invoice_no}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Hiragino Sans", "Noto Sans CJK SC", sans-serif; color: #111; padding: 48px; max-width: 720px; margin: 0 auto; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+  .brand { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+  .brand-sub { font-size: 11px; color: #666; margin-top: 2px; }
+  .doc-title { font-size: 28px; font-weight: 700; text-align: right; }
+  .doc-no { font-size: 12px; color: #666; text-align: right; margin-top: 4px; }
+  .divider { border: none; border-top: 2px solid #111; margin: 0 0 32px; }
+  .meta { display: flex; justify-content: space-between; margin-bottom: 36px; }
+  .meta-block dt { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .meta-block dd { font-size: 13px; font-weight: 500; }
+  .bill-to { margin-bottom: 32px; }
+  .bill-to .label { font-size: 11px; color: #888; margin-bottom: 6px; }
+  .bill-to .name { font-size: 16px; font-weight: 600; }
+  .bill-to .contact { font-size: 13px; color: #555; margin-top: 4px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 32px; }
+  th { background: #f4f4f4; font-size: 11px; text-align: left; padding: 10px 12px; border-bottom: 1px solid #ddd; }
+  td { font-size: 13px; padding: 14px 12px; border-bottom: 1px solid #eee; vertical-align: top; }
+  .amount-row td { font-weight: 700; font-size: 15px; background: #fafafa; }
+  .total-block { text-align: right; margin-bottom: 40px; }
+  .total-label { font-size: 12px; color: #888; }
+  .total-amount { font-size: 36px; font-weight: 700; margin-top: 4px; }
+  .status-badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;
+    background: ${inv.status === 'PAID' ? '#dcfce7' : '#fef3c7'}; color: ${inv.status === 'PAID' ? '#15803d' : '#b45309'}; }
+  .footer { border-top: 1px solid #eee; padding-top: 20px; font-size: 11px; color: #999; line-height: 1.8; }
+  @media print { body { padding: 24px; } }
+</style></head><body>
+<div class="header">
+  <div><div class="brand">HERIX</div><div class="brand-sub">花学科技 / Huaxue Technology Co., Ltd.</div></div>
+  <div><div class="doc-title">請求書</div><div class="doc-no">${inv.invoice_no}</div></div>
+</div>
+<hr class="divider">
+<div class="meta">
+  <dl class="meta-block"><dt>発行日</dt><dd>${issueDate}</dd></dl>
+  <dl class="meta-block"><dt>ステータス</dt><dd><span class="status-badge">${statusLabel}</span></dd></dl>
+</div>
+<div class="bill-to">
+  <div class="label">請求先</div>
+  <div class="name">${companyName || '—'}</div>
+  ${contactName ? `<div class="contact">${contactName} 様</div>` : ''}
+</div>
+<table>
+  <thead><tr><th>内容</th><th>期間</th><th style="text-align:right">金額</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>${planLabel}（${cycleLabel}）<br><span style="font-size:11px;color:#888">Herix 营销顾问订阅服务</span></td>
+      <td style="font-size:12px;color:#555">${periodStart}<br>〜 ${periodEnd}</td>
+      <td style="text-align:right">¥${inv.amount.toLocaleString()}</td>
+    </tr>
+    <tr class="amount-row"><td colspan="2">合計（税込）</td><td style="text-align:right">¥${inv.amount.toLocaleString()}</td></tr>
+  </tbody>
+</table>
+<div class="footer">
+  お支払いは Herix プラットフォーム残高よりお引き落とし。残高到账后自动生效，无需再操作。<br>
+  お問い合わせ：support@huaxuex.com
+</div>
+<script>window.onload = function(){ window.print(); }<\/script>
+</body></html>`
+
+  const w = window.open('', '_blank')
+  if (w) { w.document.write(html); w.document.close() }
+}
 
 const PLAN_ICON: Record<string, typeof Sparkles> = { basic: Sparkles, premium: Crown, custom: Building2 }
 
@@ -44,6 +127,7 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
   sub: MerchantSubscription; invoices: SubscriptionInvoice[]; walletAvailable: number
 }) {
   const { t } = useTranslation()
+  const { user } = useAuth()
   const qc = useQueryClient()
   const navigate = useNavigate()
   const [err, setErr] = useState('')
@@ -107,8 +191,18 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
       {/* 待付款：请求书 + 差额引导（充值到账后自动生效，无需再操作） */}
       {sub.status === 'PENDING_PAYMENT' && pendingInvoice && (
         <div className="mt-4 rounded-xl p-4" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-          <div className="flex items-center gap-2 text-sm font-semibold mb-2" style={{ color: '#92400e' }}>
-            <ReceiptText size={15} /> {t('subscribe.invoiceTitle')}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-sm font-semibold" style={{ color: '#92400e' }}>
+              <ReceiptText size={15} /> {t('subscribe.invoiceTitle')}
+            </div>
+            <button
+              type="button"
+              className="flex items-center gap-1 text-xs"
+              style={{ color: '#b45309' }}
+              onClick={() => printInvoice(pendingInvoice, sub, user?.company_name ?? user?.brand_name ?? '', user?.contact_name ?? '')}
+            >
+              <Download size={13} /> 下载 PDF
+            </button>
           </div>
           <div className="grid grid-cols-3 gap-4 text-sm mb-3">
             <div>
@@ -161,6 +255,14 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
                 <span style={{ color: inv.status === 'PAID' ? '#16a34a' : inv.status === 'PENDING' ? '#d97706' : '#9ca3af' }}>
                   {t(`subscribe.inv${inv.status}`)}
                 </span>
+                <button
+                  type="button"
+                  className="flex items-center gap-1"
+                  style={{ color: 'var(--primary)' }}
+                  onClick={() => printInvoice(inv, sub, user?.company_name ?? user?.brand_name ?? '', user?.contact_name ?? '')}
+                >
+                  <Download size={12} />
+                </button>
               </div>
             ))}
           </div>

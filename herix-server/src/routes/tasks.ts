@@ -10,6 +10,7 @@ import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate, getPublishLimitInfo } from '../utils/settings';
+import { translateTask } from '../utils/translate';
 import { fetchTaskApplications } from '../utils/applicationQueries';
 import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
 import { VALID_SITES } from '../constants/sites';
@@ -33,7 +34,7 @@ export const tasksRouter = Router();
 
 /** GET /api/tasks — 获取任务列表（已登录用户可见自己所有状态，未登录只见 OPEN） */
 tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
-  const { status, mode, creator, page = '1', limit = '20' } = req.query;
+  const { status, mode, creator, page = '1', limit = '20', lang } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
   let where = '1=1';
@@ -80,8 +81,11 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
 
   const total = totalRow?.cnt || 0;
 
+  const useLang = typeof lang === 'string' && lang !== 'zh' ? lang : null;
   const tasks = await findMany<any>(
-    `SELECT t.*, u.nickname as creator_name,
+    `SELECT t.*,
+            ${useLang ? 'COALESCE(tt.title, t.title) as title, COALESCE(tt.description, t.description) as description,' : ''}
+            u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             bp.company_name as brand_company_name,
             (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
@@ -91,10 +95,11 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
      FROM tasks t
      JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
+     ${useLang ? 'LEFT JOIN task_translations tt ON tt.task_id = t.id AND tt.locale = ?' : ''}
      WHERE ${where}
      ORDER BY t.created_at DESC
      LIMIT ? OFFSET ?`,
-    [...params, Number(limit), skip]
+    [...(useLang ? [useLang] : []), ...params, Number(limit), skip]
   );
 
   res.json({
@@ -886,6 +891,7 @@ tasksRouter.get('/:id/applications', requireAuth, async (req: Request, res: Resp
 
 /** PATCH /api/tasks/:id/publish — 发布任务 */
 tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
+  const lang = typeof req.query.lang === 'string' ? req.query.lang : null;
   const task = await findOne<any>(
     `SELECT t.*, u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
@@ -913,6 +919,18 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   );
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
+
+  // 语言覆盖：有翻译时用翻译字段覆盖原文
+  if (lang && lang !== 'zh') {
+    const tr = await findOne<any>(
+      'SELECT title, description FROM task_translations WHERE task_id = ? AND locale = ?',
+      [req.params.id, lang]
+    );
+    if (tr) {
+      if (tr.title)       task.title       = tr.title;
+      if (tr.description) task.description = tr.description;
+    }
+  }
 
   // 审核门（2026-07-18；2026-07-26 改按 status 判断）：草稿/审核中任务对非创建者一律 404，防直链绕过列表过滤
   if (task.status === 'DRAFT' || task.status === 'PENDING_REVIEW') {
@@ -1114,7 +1132,7 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, trial_credit_amount, cover_image FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, description, trial_credit_amount, cover_image FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -1240,6 +1258,9 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
       topupReminder: '任务发布成功。赫使完成任务后，报酬打款需要钱包有真实余额——请在赫使交付前完成充值，以免打款延迟。提前充值任务还会带上「极速打款」标签，赫使报名更积极。',
     } : {}),
   });
+
+  // fire-and-forget：翻译不阻塞发布响应
+  translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? '')).catch(() => {});
 });
 
 // /escrow 端点已废弃，资金锁定在 /publish 时自动完成

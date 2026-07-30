@@ -27,7 +27,8 @@ export async function findMany<T = any>(sql: string, params: any[] = []): Promis
   return result.rows as T[];
 }
 
-/** 执行 INSERT，返回插入的 ID */
+/** 执行 INSERT，返回插入的 ID。
+ *  ⚠️ 仅适用于有单列 `id` 主键的表；联结表（复合 PK，无 id 列）请用 pool.query 直接写。 */
 export async function insert(table: string, data: Record<string, any>): Promise<string> {
   if (!data.id) {
     data.id = genId();

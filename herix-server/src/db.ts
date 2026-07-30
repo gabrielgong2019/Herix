@@ -938,6 +938,14 @@ export async function initDatabase() {
        created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
      )`,
     `CREATE INDEX IF NOT EXISTS idx_short_links_task ON short_links(task_id)`,
+    `CREATE TABLE IF NOT EXISTS task_translations (
+       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+       locale TEXT NOT NULL,
+       title TEXT,
+       description TEXT,
+       translated_at TIMESTAMPTZ DEFAULT NOW(),
+       PRIMARY KEY (task_id, locale)
+     )`,
   ];
   for (const m of migrations) {
     await pool.query(m);

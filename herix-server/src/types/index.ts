@@ -55,6 +55,7 @@ export const LoginSchema = z.object({
 
 export const CreateTaskSchema = z.object({
   mode: z.enum(TASK_MODES).default('STANDARD'),
+  sourceLang: z.enum(['zh', 'ja', 'en', 'ko', 'vi']).default('zh'),
   title: z.string().min(2, '标题至少2字符').max(100),
   description: z.string().min(10, '描述至少10字符'),
   requirements: z.string().optional(),

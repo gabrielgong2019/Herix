@@ -940,6 +940,7 @@ export async function initDatabase() {
     `CREATE INDEX IF NOT EXISTS idx_short_links_task ON short_links(task_id)`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_status TEXT DEFAULT NULL`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_attempts INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_lang TEXT NOT NULL DEFAULT 'zh'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_source_hash TEXT DEFAULT NULL`,
     `CREATE TABLE IF NOT EXISTS task_translations (
        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,

@@ -1,7 +1,7 @@
 import pool from '../db';
 import crypto from 'crypto';
 
-const LOCALES = ['ja', 'en', 'ko', 'vi'] as const;
+const ALL_LOCALES = ['ja', 'en', 'ko', 'vi'] as const;
 const TASK_LIFETIME_CAP = 20;
 
 /**
@@ -29,7 +29,8 @@ Herix 是面向日本华人社群的网红营销平台，连接品牌商家与�
 翻译风格：保持营销文案的吸引力，语气专业但友好，贴近目标语言母语者习惯。`;
 
 /** 发布/更新任务后异步翻译，fire-and-forget，不抛出。 */
-export async function translateTask(taskId: string, title: string, description: string): Promise<void> {
+export async function translateTask(taskId: string, title: string, description: string, sourceLang = 'zh'): Promise<void> {
+  const locales = ALL_LOCALES.filter(l => l !== sourceLang);
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     console.warn('[translate] DEEPSEEK_API_KEY not set, skipping');
@@ -64,8 +65,8 @@ export async function translateTask(taskId: string, title: string, description: 
     );
 
     const userPrompt =
-      `请将以下任务内容翻译为日语(ja)、英语(en)、韩语(ko)、越南语(vi)。\n` +
-      `仅返回合法 JSON，格式：{"ja":{"title":"...","description":"..."},"en":{...},"ko":{...},"vi":{...}}\n\n` +
+      `请将以下任务内容翻译为：${locales.join('、')}。\n` +
+      `仅返回合法 JSON，格式：{"ja":{"title":"...","description":"..."},"en":{...},"ko":{...},"vi":{...}}（只包含需要翻译的语言）\n\n` +
       `title: ${title}\ndescription: ${description}`;
 
     const resp = await fetch('https://api.deepseek.com/chat/completions', {
@@ -99,7 +100,7 @@ export async function translateTask(taskId: string, title: string, description: 
     const translations = JSON.parse(content) as Record<string, { title?: string; description?: string }>;
     const now = new Date().toISOString();
 
-    for (const locale of LOCALES) {
+    for (const locale of locales) {
       const t = translations[locale];
       if (!t?.title) continue;
       await pool.query(
@@ -115,7 +116,7 @@ export async function translateTask(taskId: string, title: string, description: 
       `UPDATE tasks SET translation_status = 'done', translation_source_hash = $2 WHERE id = $1`,
       [taskId, hash]
     );
-    console.log(`[translate] task ${taskId} → ${LOCALES.join('/')}`);
+    console.log(`[translate] task ${taskId} (${sourceLang}) → ${locales.join('/')}`);
   } catch (err) {
     console.error('[translate] failed for task', taskId, err);
     await pool.query(

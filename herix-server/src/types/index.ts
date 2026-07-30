@@ -125,6 +125,7 @@ export const UpdateBrandProfileSchema = z.object({
   contactName: z.string().min(1),
   contactPhone: z.string().optional(),
   billingEmail: z.string().email().optional().or(z.literal('')),
+  defaultLang: z.enum(['zh', 'ja', 'en', 'ko', 'vi']).optional(),
 });
 
 export const UpdateHeraldProfileSchema = z.object({

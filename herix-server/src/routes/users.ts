@@ -12,27 +12,20 @@ usersRouter.patch('/profile/brand', requireAuth, async (req: Request, res: Respo
     const data = UpdateBrandProfileSchema.parse(req.body);
 
     const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    const fields: Record<string, any> = {
+      company_name:  data.companyName,
+      company_desc:  data.companyDesc || null,
+      website:       data.website || null,
+      industry:      data.industry || null,
+      contact_name:  data.contactName,
+      contact_phone: data.contactPhone || null,
+      billing_email: data.billingEmail || null,
+      ...(data.defaultLang ? { default_lang: data.defaultLang } : {}),
+    };
     if (existing) {
-      await update('brand_profiles', {
-        company_name: data.companyName,
-        company_desc: data.companyDesc || null,
-        website: data.website || null,
-        industry: data.industry || null,
-        contact_name: data.contactName,
-        contact_phone: data.contactPhone || null,
-        billing_email: data.billingEmail || null,
-      }, 'user_id = ?', [req.user!.userId]);
+      await update('brand_profiles', fields, 'user_id = ?', [req.user!.userId]);
     } else {
-      await insert('brand_profiles', {
-        user_id: req.user!.userId,
-        company_name: data.companyName,
-        company_desc: data.companyDesc || null,
-        website: data.website || null,
-        industry: data.industry || null,
-        contact_name: data.contactName,
-        contact_phone: data.contactPhone || null,
-        billing_email: data.billingEmail || null,
-      });
+      await insert('brand_profiles', { user_id: req.user!.userId, ...fields });
     }
 
     const profile = await findOne('SELECT * FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);

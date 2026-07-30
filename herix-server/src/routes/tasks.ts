@@ -969,11 +969,15 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
   try {
     const data = CreateTaskSchema.parse(req.body);
 
+    // source_lang：前端显式传 > 商家 profile 默认语言 > 兜底 zh
+    const bp = await findOne<{ default_lang: string }>('SELECT default_lang FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    const sourceLang = data.sourceLang !== 'zh' ? data.sourceLang : (bp?.default_lang ?? 'zh');
+
     // 类型专属字段只住 spec 表（2026-07-25 用户决策：未上线不做双写，直接终态）
     const taskId = await insert('tasks', {
       creator_id:        req.user!.userId,
       mode:              data.mode,
-      source_lang:       data.sourceLang,
+      source_lang:       sourceLang,
       title:             data.title,
       // 简报合并：description 即「任务简报」单一正文；requirements 仅为旧客户端兼容保留入参
       description:       data.requirements ? `${data.description}\n\n${data.requirements}` : data.description,

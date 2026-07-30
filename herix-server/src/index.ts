@@ -118,7 +118,7 @@ setInterval(async () => {
   try {
     const rows = await pool.query<{ id: string; title: string; description: string }>(
       `SELECT id, title, description FROM tasks
-       WHERE (translation_status = 'failed' AND translation_attempts < 3)
+       WHERE (translation_status = 'failed' AND translation_attempts < 20)
           OR (translation_status = 'pending' AND published_at < NOW() - INTERVAL '10 minutes')
        LIMIT 10`
     );

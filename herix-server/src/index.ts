@@ -128,7 +128,7 @@ setInterval(async () => {
   } catch (err) {
     console.error('[translate-retry] sweep error', err);
   }
-}, 5 * 60 * 1000);
+}, 30 * 60 * 1000);
 
 app.listen(PORT, () => {
   console.log(`Herix server running on http://localhost:${PORT}`);

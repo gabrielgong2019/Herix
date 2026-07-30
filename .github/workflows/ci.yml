@@ -38,7 +38,7 @@ jobs:
       - name: miniapp deps + tsc
         working-directory: herix-miniapp
         run: |
-          npm ci
+          npm ci --legacy-peer-deps
           npx tsc --noEmit
 
       - name: check-terms（术语 + i18n 键集奇偶校验）

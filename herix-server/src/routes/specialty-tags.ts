@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { findMany, findOne, insert, update, remove } from '../utils/db';
+import pool from '../db';
 import { requireAuth, requireRole } from '../middleware/auth';
 
 export const specialtyTagsRouter = Router();
@@ -47,7 +48,11 @@ specialtyTagsRouter.put('/herald/me', requireAuth, async (req: Request, res: Res
 
     await remove('herald_specialty_tags', 'herald_id = ? AND source = ?', [userId, 'manual']);
     for (const tagId of tagIds) {
-      await insert('herald_specialty_tags', { herald_id: userId, tag_id: tagId, source: 'manual' });
+      // 联结表无 id 列，不能走 insert() 工具（会自动注入 id 字段导致报错）
+      await pool.query(
+        'INSERT INTO herald_specialty_tags (herald_id, tag_id, source) VALUES ($1, $2, $3)',
+        [userId, tagId, 'manual']
+      );
     }
     res.json({ ok: true, tagIds });
   } catch (err: any) {

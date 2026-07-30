@@ -472,6 +472,7 @@ export interface BrandBalance {
     fundedLimit?: number
     fundedThreshold?: number
   }
+  operatorEntity?: string
 }
 
 export interface WalletEntry {

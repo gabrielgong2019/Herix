@@ -189,7 +189,7 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const { from, to } = getPeriodRange(req.query);
 
-  const [creditInfo, pubLimit, bal, flow] = await Promise.all([
+  const [creditInfo, pubLimit, bal, flow, operatorRow] = await Promise.all([
     getBrandCreditInfo(userId),
     getPublishLimitInfo(userId),
     getBalance(userId, 'brand'),
@@ -199,6 +199,7 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
        WHERE w.user_id = $1 AND w.wallet_type = 'brand' AND we.created_at >= $2 AND we.created_at <= $3`,
       [userId, from, to]
     ),
+    pool.query(`SELECT value FROM platform_settings WHERE key = 'operator_entity'`),
   ]);
 
   let periodInflow = 0, periodOutflow = 0;
@@ -247,6 +248,7 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
       fundedLimit: pubLimit.fundedLimit,
       fundedThreshold: pubLimit.fundedThreshold,
     },
+    operatorEntity: operatorRow.rows[0]?.value ?? 'Herix',
   });
 });
 

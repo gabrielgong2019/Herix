@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  subscriptionsApi, type SubscriptionPlanInfo, type MerchantSubscription, type SubscriptionInvoice,
+  subscriptionsApi, walletApi, type SubscriptionPlanInfo, type MerchantSubscription, type SubscriptionInvoice,
 } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { Topbar } from '@/components/layout/Topbar'
@@ -20,6 +20,7 @@ function printInvoice(
   sub: MerchantSubscription,
   companyName: string,
   contactName: string,
+  operatorEntity: string,
 ) {
   const issueDate = new Date(inv.created_at).toLocaleDateString('zh-CN')
   const periodStart = sub.current_period_start ? new Date(sub.current_period_start).toLocaleDateString('zh-CN') : '—'
@@ -59,7 +60,7 @@ function printInvoice(
   @media print { body { padding: 24px; } }
 </style></head><body>
 <div class="header">
-  <div><div class="brand">HERIX</div><div class="brand-sub">花学科技 / Huaxue Technology Co., Ltd.</div></div>
+  <div><div class="brand">HERIX</div><div class="brand-sub">${operatorEntity}</div></div>
   <div><div class="doc-title">請求書</div><div class="doc-no">${inv.invoice_no}</div></div>
 </div>
 <hr class="divider">
@@ -132,6 +133,12 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
   const navigate = useNavigate()
   const [err, setErr] = useState('')
 
+  const { data: balanceData } = useQuery({
+    queryKey: ['wallet-balance'],
+    queryFn: () => walletApi.brandBalance().then((r) => r.data),
+  })
+  const operatorEntity = balanceData?.operatorEntity ?? 'Herix'
+
   const renewMut = useMutation({
     mutationFn: (v: boolean) => subscriptionsApi.setAutoRenew(sub.id, v),
     onSuccess: () => { setErr(''); qc.invalidateQueries({ queryKey: ['mySubscription'] }) },
@@ -199,7 +206,7 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
               type="button"
               className="flex items-center gap-1 text-xs"
               style={{ color: '#b45309' }}
-              onClick={() => printInvoice(pendingInvoice, sub, user?.company_name ?? user?.brand_name ?? '', user?.contact_name ?? '')}
+              onClick={() => printInvoice(pendingInvoice, sub, user?.company_name ?? user?.brand_name ?? '', user?.contact_name ?? '', operatorEntity)}
             >
               <Download size={13} /> 下载 PDF
             </button>
@@ -259,7 +266,7 @@ function CurrentSubscription({ sub, invoices, walletAvailable }: {
                   type="button"
                   className="flex items-center gap-1"
                   style={{ color: 'var(--primary)' }}
-                  onClick={() => printInvoice(inv, sub, user?.company_name ?? user?.brand_name ?? '', user?.contact_name ?? '')}
+                  onClick={() => printInvoice(inv, sub, user?.company_name ?? user?.brand_name ?? '', user?.contact_name ?? '', operatorEntity)}
                 >
                   <Download size={12} />
                 </button>

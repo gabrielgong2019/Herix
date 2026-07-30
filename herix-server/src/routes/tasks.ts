@@ -1126,6 +1126,11 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
 
   if (!Object.keys(data).length) return res.status(400).json({ error: '没有可更新的字段' });
 
+  // description 变更时标记待翻译，由 cron 延迟处理（不立即调 API）
+  if (description !== undefined) {
+    data.translation_status = 'pending';
+  }
+
   await update('tasks', data, 'id = ?', [req.params.id]);
   res.json(await findOne('SELECT * FROM tasks WHERE id = ?', [req.params.id]));
 });

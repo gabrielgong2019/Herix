@@ -111,7 +111,7 @@ startSubmissionTimers();
 import { startSubscriptionSweep } from './utils/subscriptions';
 startSubscriptionSweep();
 
-// 翻译重试：每5分钟扫描 failed（<3次）和 pending 超过10分钟的任务（fire-and-forget未执行）
+// 翻译 cron：发布时 fire-and-forget 失败重试 + 编辑后 pending 延迟执行，每30分钟一次
 import { translateTask } from './utils/translate';
 import pool from './db';
 setInterval(async () => {
@@ -119,7 +119,7 @@ setInterval(async () => {
     const rows = await pool.query<{ id: string; title: string; description: string }>(
       `SELECT id, title, description FROM tasks
        WHERE (translation_status = 'failed' AND translation_attempts < 20)
-          OR (translation_status = 'pending' AND published_at < NOW() - INTERVAL '10 minutes')
+          OR  translation_status = 'pending'
        LIMIT 10`
     );
     for (const row of rows.rows) {

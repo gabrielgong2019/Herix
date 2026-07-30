@@ -33,6 +33,37 @@
   font-weight: 700;
 }
 
+.rules-card {
+  background: #f7f8fa;
+  border-radius: 16px;
+  padding: 28px 28px 20px;
+  margin-bottom: 36px;
+}
+.rules-title {
+  display: block;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+.rules-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.rules-label {
+  font-size: 24px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-right: 16px;
+}
+.rules-val {
+  font-size: 24px;
+  color: var(--text-primary);
+  text-align: right;
+}
+
 .field-label {
   display: block;
   font-size: 24px;

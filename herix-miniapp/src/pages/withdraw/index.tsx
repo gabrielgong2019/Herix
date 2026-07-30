@@ -199,6 +199,27 @@ export default class Withdraw extends Component<{}, State> {
           {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
         </Text>
 
+        {/* 提现规则（审核要求：明确展示规则） */}
+        <View className='rules-card'>
+          <Text className='rules-title'>{t('withdraw.rulesTitle')}</Text>
+          <View className='rules-row'>
+            <Text className='rules-label'>{t('withdraw.rulesMin')}</Text>
+            <Text className='rules-val'>¥{fmt(minAmount)}</Text>
+          </View>
+          <View className='rules-row'>
+            <Text className='rules-label'>{t('withdraw.rulesDaily')}</Text>
+            <Text className='rules-val'>{t('withdraw.rulesDailyVal')}</Text>
+          </View>
+          <View className='rules-row'>
+            <Text className='rules-label'>{t('withdraw.rulesProcess')}</Text>
+            <Text className='rules-val'>{t('withdraw.rulesProcessVal')}</Text>
+          </View>
+          <View className='rules-row'>
+            <Text className='rules-label'>{t('withdraw.rulesArrival')}</Text>
+            <Text className='rules-val'>{t('withdraw.rulesArrivalVal')}</Text>
+          </View>
+        </View>
+
         {/* 收款方式横向选择 */}
         <Text className='field-label'>{t('wallet.methods')}</Text>
         <ScrollView scrollX className='method-scroll'>

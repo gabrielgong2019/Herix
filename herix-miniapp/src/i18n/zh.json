@@ -109,7 +109,7 @@
   "withdraw.rulesArrival": "到账时间",
   "withdraw.rulesArrivalVal": "因收款方式而异",
   "withdraw.rulesFee": "手续费",
-  "withdraw.rulesFeeVal": "¥200 起，跨境转账另含汇率加点",
+  "withdraw.rulesFeeVal": "境内 ¥200 / 跨境 ¥400 起",
   "addMethod.backWallet": "← 返回钱包",
   "addMethod.backRegion": "← 选择其他地区",
   "addMethod.backType": "← 选择其他方式",

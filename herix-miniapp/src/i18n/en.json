@@ -109,7 +109,7 @@
   "withdraw.rulesArrival": "Arrival time",
   "withdraw.rulesArrivalVal": "Varies by payout method",
   "withdraw.rulesFee": "Service fee",
-  "withdraw.rulesFeeVal": "From ¥200; cross-border includes FX markup",
+  "withdraw.rulesFeeVal": "Domestic ¥200 / Cross-border from ¥400",
   "addMethod.backWallet": "← Back to wallet",
   "addMethod.backRegion": "← Choose another region",
   "addMethod.backType": "← Choose another method",

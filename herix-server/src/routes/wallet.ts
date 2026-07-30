@@ -199,7 +199,7 @@ walletRouter.get('/brand-balance', async (req: Request, res: Response) => {
        WHERE w.user_id = $1 AND w.wallet_type = 'brand' AND we.created_at >= $2 AND we.created_at <= $3`,
       [userId, from, to]
     ),
-    pool.query(`SELECT value FROM platform_settings WHERE key = 'operator_entity'`),
+    db.query(`SELECT value FROM platform_settings WHERE key = 'operator_entity'`),
   ]);
 
   let periodInflow = 0, periodOutflow = 0;

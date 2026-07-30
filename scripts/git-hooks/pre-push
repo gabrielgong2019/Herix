@@ -8,8 +8,8 @@ echo "[pre-push] server tsc..."
 (cd "$ROOT/herix-server" && npx tsc --noEmit)
 echo "[pre-push] merchant tsc + build..."
 (cd "$ROOT/herix-merchant" && npx tsc --noEmit && npm run build --silent >/dev/null)
-echo "[pre-push] miniapp tsc..."
-(cd "$ROOT/herix-miniapp" && npx tsc --noEmit)
+echo "[pre-push] miniapp tsc + build:weapp..."
+(cd "$ROOT/herix-miniapp" && npx tsc --noEmit && npm run build:weapp --silent >/dev/null)
 echo "[pre-push] check-terms..."
 (cd "$ROOT" && node scripts/check-terms.js)
 echo "[pre-push] route-audit..."

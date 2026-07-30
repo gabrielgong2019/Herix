@@ -218,6 +218,10 @@ export default class Withdraw extends Component<{}, State> {
             <Text className='rules-label'>{t('withdraw.rulesArrival')}</Text>
             <Text className='rules-val'>{t('withdraw.rulesArrivalVal')}</Text>
           </View>
+          <View className='rules-row'>
+            <Text className='rules-label'>{t('withdraw.rulesFee')}</Text>
+            <Text className='rules-val'>{t('withdraw.rulesFeeVal')}</Text>
+          </View>
         </View>
 
         {/* 收款方式横向选择 */}

@@ -1216,14 +1216,16 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   const needsReview = req.user!.role !== 'ADMIN' && bpRow?.kyb_status !== 'approved';
 
   await update('tasks', {
-    status:          needsReview ? 'PENDING_REVIEW' : 'OPEN',
-    published_at:    new Date().toISOString(),
-    cost_per_herald: costPerHerald,
-    commission_rate: commissionRate,
+    status:               needsReview ? 'PENDING_REVIEW' : 'OPEN',
+    published_at:         new Date().toISOString(),
+    cost_per_herald:      costPerHerald,
+    commission_rate:      commissionRate,
     fast_payout,
-    upload_token:    uploadToken,
-    platform_review: needsReview ? 'pending' : 'approved',
+    upload_token:         uploadToken,
+    platform_review:      needsReview ? 'pending' : 'approved',
     platform_review_note: null,
+    translation_status:   'pending',
+    translation_attempts: 0,
     ...(stampTrial ? { trial_credit_amount: trialGrant } : {}),
   }, 'id = ?', [req.params.id]);
 

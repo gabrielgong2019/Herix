@@ -938,6 +938,8 @@ export async function initDatabase() {
        created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
      )`,
     `CREATE INDEX IF NOT EXISTS idx_short_links_task ON short_links(task_id)`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_status TEXT DEFAULT NULL`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_attempts INTEGER NOT NULL DEFAULT 0`,
     `CREATE TABLE IF NOT EXISTS task_translations (
        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
        locale TEXT NOT NULL,

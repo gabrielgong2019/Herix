@@ -50,8 +50,17 @@ export async function translateTask(taskId: string, title: string, description: 
         [taskId, locale, t.title, t.description ?? null, now]
       );
     }
+
+    await pool.query(
+      `UPDATE tasks SET translation_status = 'done', translation_attempts = translation_attempts + 1 WHERE id = $1`,
+      [taskId]
+    );
     console.log(`[translate] task ${taskId} → ${LOCALES.join('/')}`);
   } catch (err) {
     console.error('[translate] failed for task', taskId, err);
+    await pool.query(
+      `UPDATE tasks SET translation_status = 'failed', translation_attempts = translation_attempts + 1 WHERE id = $1`,
+      [taskId]
+    ).catch(() => {});
   }
 }

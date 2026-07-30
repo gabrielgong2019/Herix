@@ -111,6 +111,25 @@ startSubmissionTimers();
 import { startSubscriptionSweep } from './utils/subscriptions';
 startSubscriptionSweep();
 
+// 翻译重试：每5分钟扫描 failed（<3次）和 pending 超过10分钟的任务（fire-and-forget未执行）
+import { translateTask } from './utils/translate';
+import pool from './db';
+setInterval(async () => {
+  try {
+    const rows = await pool.query<{ id: string; title: string; description: string }>(
+      `SELECT id, title, description FROM tasks
+       WHERE (translation_status = 'failed' AND translation_attempts < 3)
+          OR (translation_status = 'pending' AND published_at < NOW() - INTERVAL '10 minutes')
+       LIMIT 10`
+    );
+    for (const row of rows.rows) {
+      translateTask(row.id, row.title, row.description ?? '').catch(() => {});
+    }
+  } catch (err) {
+    console.error('[translate-retry] sweep error', err);
+  }
+}, 5 * 60 * 1000);
+
 app.listen(PORT, () => {
   console.log(`Herix server running on http://localhost:${PORT}`);
 });

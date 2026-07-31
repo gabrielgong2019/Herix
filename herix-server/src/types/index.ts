@@ -58,7 +58,7 @@ export const CreateTaskSchema = z.object({
   mode: z.enum(TASK_MODES).default('STANDARD'),
   sourceLang: z.enum(LOCALE_CODES).default('zh'),
   title: z.string().min(2, '标题至少2字符').max(100),
-  description: z.string().min(10, '描述至少10字符'),
+  description: z.string().default(''),  // PERFORMANCE 为补充说明可空；STANDARD 由下方 refine 要求≥10
   requirements: z.string().optional(),
   payoutPerHerald: z.number().positive('赫使报酬必须大于0'),
   maxHeralds: z.number().int().min(0).default(1),
@@ -82,6 +82,13 @@ export const CreateTaskSchema = z.object({
   reqMinCount: z.number().int().min(1).optional(),
   // 数据回传模式（仅 PERFORMANCE 有意义）：AGGREGATE=累计计数；DETAIL=逐用户明细。发布后锁定
   dataMode: z.enum(['AGGREGATE', 'DETAIL']).default('AGGREGATE'),
+  // 邀请任务展示（PERFORMANCE）：合格转化条件 register(必)+convert(可选文本行) / 被邀请人激励 / 话术
+  conversionCriteria: z.object({
+    register: z.object({ label: z.string().min(1), required: z.boolean().default(true) }),
+    convert: z.array(z.string()).default([]),
+  }).optional(),
+  inviteeBenefit: z.string().optional(),
+  referralScript: z.string().optional(),
   // 社群定向：空数组=全员可见
   targetCommunities: z.array(z.string()).default([]),
   // 站点归属：任务属于哪个运营站点，赫使按站点过滤
@@ -94,7 +101,10 @@ export const CreateTaskSchema = z.object({
   requireDraftReview: z.boolean().default(false),
   requireProposal: z.boolean().default(false),
   submitDeadline: z.string().optional(),
-});
+}).refine(
+  (d) => d.mode !== 'STANDARD' || d.description.trim().length >= 10,
+  { message: '描述至少10字符', path: ['description'] },
+);
 
 export const ApplyTaskSchema = z.object({
   message: z.string().optional(),

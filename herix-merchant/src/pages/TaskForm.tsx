@@ -306,6 +306,10 @@ interface FormState {
   mode: 'STANDARD' | 'PERFORMANCE'
   codeMode: 'auto' | 'custom'
   dataMode: 'AGGREGATE' | 'DETAIL'
+  conversionRegisterLabel: string
+  conversionConvert: string[]
+  inviteeBenefit: string
+  referralScript: string
   minImages: number | ''
   minVideoSeconds: number | ''
   maxRevisions: number
@@ -325,6 +329,7 @@ const DEFAULT_STATE: FormState = {
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
+  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
   sourceLang: 'zh',
@@ -363,6 +368,10 @@ function taskToFormState(task: Task): FormState {
     mode: task.mode,
     codeMode: task.code_mode || 'auto',
     dataMode: task.data_mode || 'AGGREGATE',
+    conversionRegisterLabel: task.conversion_criteria?.register?.label || '新用户（此前未注册过）',
+    conversionConvert: task.conversion_criteria?.convert?.length ? task.conversion_criteria.convert : [''],
+    inviteeBenefit: task.invitee_benefit || '',
+    referralScript: task.referral_script || '',
     minImages: task.min_images || '',
     minVideoSeconds: task.min_video_seconds || '',
     maxRevisions: task.max_revisions ?? 2,
@@ -515,6 +524,12 @@ export default function TaskForm() {
         deadline: form.deadline || undefined,
         codeMode: form.mode === 'PERFORMANCE' ? form.codeMode : undefined,
         dataMode: form.mode === 'PERFORMANCE' ? form.dataMode : undefined,
+        conversionCriteria: form.mode === 'PERFORMANCE' ? {
+          register: { label: form.conversionRegisterLabel.trim() || '新用户', required: true },
+          convert: form.conversionConvert.map(c => c.trim()).filter(Boolean),
+        } : undefined,
+        inviteeBenefit: form.mode === 'PERFORMANCE' ? (form.inviteeBenefit.trim() || undefined) : undefined,
+        referralScript: form.mode === 'PERFORMANCE' ? (form.referralScript.trim() || undefined) : undefined,
         minImages: form.minImages ? Number(form.minImages) : undefined,
         minVideoSeconds: form.minVideoSeconds ? Number(form.minVideoSeconds) : undefined,
         maxRevisions: form.maxRevisions,
@@ -574,7 +589,7 @@ export default function TaskForm() {
 
   const validate = (status: 'draft' | 'open') => {
     if (!form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
-    if (form.description.trim().length < 10) { setError(t('taskForm.errorDesc')); return false }
+    if (form.mode === 'STANDARD' && form.description.trim().length < 10) { setError(t('taskForm.errorDesc')); return false }
     if (!form.payoutPerHerald) { setError(t('taskForm.errorPayout')); return false }
     if (!isCustomCodes && !form.maxHeralds) { setError(t('taskForm.errorMaxHeralds')); return false }
     // 发布必须有封面（服务端 publish 闸同款规则，前端先挡一道）；存草稿不强制
@@ -1074,6 +1089,49 @@ export default function TaskForm() {
               <SectionHeader num={sn.spec} title={t('taskForm.sec3PerfTitle')} hint={t('taskForm.sec3PerfHint')} />
 
               {coverField}
+
+              {/* 合格转化条件：决定后续结算纠纷，重点引导 + 实时预览赫使视角 */}
+              <Field label={t('taskForm.conversionTitle')} hint={t('taskForm.conversionHint')}>
+                <div className="mb-2">
+                  <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.registerLabel')}</div>
+                  <input value={form.conversionRegisterLabel}
+                    onChange={(e) => set('conversionRegisterLabel', e.target.value)}
+                    className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+                </div>
+                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.convertLabel')}</div>
+                {form.conversionConvert.map((line, i) => (
+                  <div key={i} className="flex gap-2 mb-1.5">
+                    <input value={line} placeholder={t('taskForm.convertPh')}
+                      onChange={(e) => { const a = [...form.conversionConvert]; a[i] = e.target.value; set('conversionConvert', a) }}
+                      className="flex-1 text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+                    <button type="button" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      onClick={() => { const a = form.conversionConvert.filter((_, j) => j !== i); set('conversionConvert', a.length ? a : ['']) }}>✕</button>
+                  </div>
+                ))}
+                <button type="button" style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
+                  onClick={() => set('conversionConvert', [...form.conversionConvert, ''])}>＋ {t('taskForm.convertAdd')}</button>
+                <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                  <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>{t('taskForm.previewLabel')}</div>
+                  <div className="text-sm">☑️ {form.conversionRegisterLabel.trim() || '新用户'}</div>
+                  {form.conversionConvert.map(c => c.trim()).filter(Boolean).map((c, i) => (
+                    <div key={i} className="text-sm">☑️ {c}</div>
+                  ))}
+                  {form.conversionConvert.map(c => c.trim()).filter(Boolean).length === 0 && (
+                    <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t('taskForm.previewRegisterOnly')}</div>
+                  )}
+                </div>
+              </Field>
+
+              <Field label={t('taskForm.inviteeBenefitLabel')} hint={t('taskForm.inviteeBenefitHint')}>
+                <input value={form.inviteeBenefit} onChange={(e) => set('inviteeBenefit', e.target.value)}
+                  placeholder={t('taskForm.inviteeBenefitPh')}
+                  className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+              </Field>
+
+              <Field label={t('taskForm.referralScriptLabel')} hint={t('taskForm.referralScriptHint')}>
+                <Textarea value={form.referralScript} onChange={(e) => set('referralScript', e.target.value)}
+                  rows={3} placeholder={t('taskForm.referralScriptPh')} />
+              </Field>
 
               <Field label={t('taskForm.fieldCodeSource')}>
                 <div className="flex flex-col gap-2">

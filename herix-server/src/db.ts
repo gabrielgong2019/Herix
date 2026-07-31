@@ -853,7 +853,12 @@ export async function initDatabase() {
     `CREATE TABLE IF NOT EXISTS task_referral_specs (
       task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
       code_mode TEXT NOT NULL DEFAULT 'auto' CHECK(code_mode IN ('auto','custom')),
-      data_mode TEXT NOT NULL DEFAULT 'AGGREGATE' CHECK(data_mode IN ('AGGREGATE','DETAIL'))
+      data_mode TEXT NOT NULL DEFAULT 'AGGREGATE' CHECK(data_mode IN ('AGGREGATE','DETAIL')),
+      -- 邀请任务展示结构（2026-07-31）：合格转化条件(register必+convert可选)、被邀请人激励、参考话术。
+      -- JSONB 而非 TEXT：任务附属配置只整体读写、无跨任务查询需求，但用原生 JSON 类型（不留旧 TEXT-blob 包袱）
+      conversion_criteria JSONB NOT NULL DEFAULT '{"register":{"label":"新用户","required":true},"convert":[]}',
+      invitee_benefit TEXT,
+      referral_script TEXT
     )`,
     // 存量数据迁移（幂等）：主表旧列 → spec 表。用 DO 块守卫列存在性——
     // 下面紧接着 DROP 旧列，二次启动时旧列已不在，裸 INSERT..SELECT 会直接报错
@@ -984,6 +989,10 @@ export async function initDatabase() {
          FOREIGN KEY (submission_id) REFERENCES task_submissions(id) ON DELETE CASCADE;
      EXCEPTION WHEN duplicate_object THEN NULL;
      END $$`,
+    // 邀请任务展示字段（2026-07-31）：既有 spec 表补列
+    `ALTER TABLE task_referral_specs ADD COLUMN IF NOT EXISTS conversion_criteria JSONB NOT NULL DEFAULT '{"register":{"label":"新用户","required":true},"convert":[]}'`,
+    `ALTER TABLE task_referral_specs ADD COLUMN IF NOT EXISTS invitee_benefit TEXT`,
+    `ALTER TABLE task_referral_specs ADD COLUMN IF NOT EXISTS referral_script TEXT`,
     // submission_id 现在可以作为查询维度，补索引（之前靠 task_id+herald_id 间接查）
     `CREATE INDEX IF NOT EXISTS idx_subrev_submission ON submission_revisions(submission_id)`,
   ];

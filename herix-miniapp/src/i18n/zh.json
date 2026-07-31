@@ -1213,5 +1213,15 @@
   "pai.errFriends": "请填写{name}好友数（约）",
   "pai.errCountNum": "数量需为非负整数",
   "profile.friendsLabel": "好友数（约）",
-  "profile.friendsHint": "部分任务会核对好友数，填大约值即可"
+  "profile.friendsHint": "部分任务会核对好友数，填大约值即可",
+  "task.refYouEarn": "你每单赚",
+  "task.refFriendGets": "好友得到",
+  "task.refSuccessTitle": "什么算成功转化",
+  "task.refRegisterOnly": "☑️ 好友完成注册即计入转化",
+  "task.refHowTitle": "怎么做（3步）",
+  "task.refStep1": "① 审核通过后，获得你的专属邀请码",
+  "task.refStep2": "② 分享给有需求的朋友",
+  "task.refStep3": "③ 好友完成上述条件，奖励自动计入",
+  "task.refScriptTitle": "参考话术",
+  "task.refSupplementTitle": "补充说明"
 }

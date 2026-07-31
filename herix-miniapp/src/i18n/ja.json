@@ -1213,5 +1213,15 @@
   "pai.errFriends": "{name}の友だち数（約）を入力してください",
   "pai.errCountNum": "数量は0以上の整数で",
   "profile.friendsLabel": "友だち数（約）",
-  "profile.friendsHint": "一部のタスクは友だち数を確認します"
+  "profile.friendsHint": "一部のタスクは友だち数を確認します",
+  "task.refYouEarn": "1件あたり報酬",
+  "task.refFriendGets": "友達の特典",
+  "task.refSuccessTitle": "何が成果になるか",
+  "task.refRegisterOnly": "☑️ 友達が登録完了で成果としてカウント",
+  "task.refHowTitle": "やり方（3ステップ）",
+  "task.refStep1": "① 承認後、専用の招待コードを取得",
+  "task.refStep2": "② 必要な友達にシェア",
+  "task.refStep3": "③ 友達が上記条件を満たすと報酬が自動計上",
+  "task.refScriptTitle": "参考トーク",
+  "task.refSupplementTitle": "補足"
 }

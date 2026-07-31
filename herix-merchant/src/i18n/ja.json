@@ -264,7 +264,21 @@
     "coverClickUpload": "クリックしてカバー画像をアップロード",
     "errorCover": "タスクのカバー画像をアップロードしてください（公開時必須、下書き保存はスキップ可）",
     "mustBind": "連携必須",
-    "minFriendsPlaceholder": "最低友だち数（制限なし）"
+    "minFriendsPlaceholder": "最低友だち数（制限なし）",
+    "conversionTitle": "有効な成果条件",
+    "conversionHint": "何を1件の成果とみなすか明確に。クリエイターも同じリストを見ます。明記すると精算トラブルを大幅に減らせます",
+    "registerLabel": "被招待者の条件（必須・文言変更可）",
+    "convertLabel": "成果アクション（1行1件、追加削除可。空欄=登録완了で成果）",
+    "convertPh": "例：初回送金 ¥10,000 以上かつ着金",
+    "convertAdd": "条件を追加",
+    "previewLabel": "クリエイターに表示される内容",
+    "previewRegisterOnly": "登録完了で成果としてカウント",
+    "inviteeBenefitLabel": "被招待者の特典",
+    "inviteeBenefitHint": "招待コードで友達が得られる特典（新規獲得のフック）",
+    "inviteeBenefitPh": "例：初回送金で¥1,500割引、初回特典と併用可",
+    "referralScriptLabel": "参考トーク（任意）",
+    "referralScriptHint": "クリエイターがそのまま使える紹介文",
+    "referralScriptPh": "例：使っている送金アプリ、私のコードで初回送金1500円割引…"
   },
   "site": {
     "jp": "日本",

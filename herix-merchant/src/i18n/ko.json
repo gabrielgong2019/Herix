@@ -264,7 +264,21 @@
     "coverClickUpload": "클릭하여 커버 이미지 업로드",
     "errorCover": "작업 커버 이미지를 업로드해 주세요 (게시 시 필수, 초안 저장은 건너뛸 수 있음)",
     "mustBind": "연동 필수",
-    "minFriendsPlaceholder": "최소 친구 수 (제한 없음)"
+    "minFriendsPlaceholder": "최소 친구 수 (제한 없음)",
+    "conversionTitle": "유효 전환 조건",
+    "conversionHint": "무엇을 전환 1건으로 볼지 명확히 정의하세요. 크리에이터도 같은 체크리스트를 봅니다. 명확할수록 정산 분쟁이 크게 줄어듭니다",
+    "registerLabel": "피초대자 자격(필수, 문구 수정 가능)",
+    "convertLabel": "전환 행동(한 줄에 하나, 추가/삭제 가능; 비우면 가입만으로 전환)",
+    "convertPh": "예: 첫 송금 ¥10,000 이상 및 입금 완료",
+    "convertAdd": "조건 추가",
+    "previewLabel": "크리에이터에게 표시됨",
+    "previewRegisterOnly": "가입 완료 시 전환으로 집계",
+    "inviteeBenefitLabel": "피초대자 혜택",
+    "inviteeBenefitHint": "친구가 코드로 얻는 혜택(신규 유치 훅)",
+    "inviteeBenefitPh": "예: 첫 송금 시 ¥1,500 할인, 첫 주문 혜택과 중복 가능",
+    "referralScriptLabel": "참고 멘트(선택)",
+    "referralScriptHint": "크리에이터가 바로 쓸 수 있는 공유 문구",
+    "referralScriptPh": "예: 제가 쓰는 송금 앱인데, 제 코드로 첫 송금 시 1,500엔 할인…"
   },
   "site": {
     "jp": "일본",

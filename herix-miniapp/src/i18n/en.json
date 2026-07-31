@@ -1213,5 +1213,15 @@
   "pai.errFriends": "Enter your {name} friend count (approx.)",
   "pai.errCountNum": "Count must be a non-negative integer",
   "profile.friendsLabel": "Friends (approx.)",
-  "profile.friendsHint": "Some tasks check friend count"
+  "profile.friendsHint": "Some tasks check friend count",
+  "task.refYouEarn": "You earn / conv.",
+  "task.refFriendGets": "Friend gets",
+  "task.refSuccessTitle": "What counts as a conversion",
+  "task.refRegisterOnly": "☑️ Counts once your friend completes registration",
+  "task.refHowTitle": "How it works (3 steps)",
+  "task.refStep1": "① Get your referral code after approval",
+  "task.refStep2": "② Share with friends who need it",
+  "task.refStep3": "③ Reward auto-credited when friend meets the conditions",
+  "task.refScriptTitle": "Suggested pitch",
+  "task.refSupplementTitle": "Additional notes"
 }

@@ -926,7 +926,10 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             tcs.require_draft_review as require_draft_review,
             tcs.submit_deadline as submit_deadline,
             trs.code_mode as code_mode,
-            trs.data_mode as data_mode
+            trs.data_mode as data_mode,
+            trs.conversion_criteria as conversion_criteria,
+            trs.invitee_benefit as invitee_benefit,
+            trs.referral_script as referral_script
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id
@@ -1047,10 +1050,15 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
         [taskId, spec.content_type, spec.min_images, spec.min_video_seconds, spec.max_revisions, spec.require_proposal, spec.require_draft_review, spec.submit_deadline]
       );
     } else {
-      spec = { code_mode: data.codeMode || 'auto', data_mode: data.dataMode || 'AGGREGATE' };
+      const criteria = data.conversionCriteria || { register: { label: '新用户', required: true }, convert: [] };
+      spec = {
+        code_mode: data.codeMode || 'auto', data_mode: data.dataMode || 'AGGREGATE',
+        conversion_criteria: criteria, invitee_benefit: data.inviteeBenefit || null, referral_script: data.referralScript || null,
+      };
       await pool.query(
-        `INSERT INTO task_referral_specs (task_id, code_mode, data_mode) VALUES ($1, $2, $3)`,
-        [taskId, spec.code_mode, spec.data_mode]
+        `INSERT INTO task_referral_specs (task_id, code_mode, data_mode, conversion_criteria, invitee_benefit, referral_script)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [taskId, spec.code_mode, spec.data_mode, JSON.stringify(criteria), spec.invitee_benefit, spec.referral_script]
       );
     }
 
@@ -1117,9 +1125,18 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
       vals.push(req.params.id);
       await pool.query(`UPDATE task_content_specs SET ${sets.join(', ')} WHERE task_id = $${vals.length}`, vals);
     }
-  } else if (req.body.dataMode && ['AGGREGATE', 'DETAIL'].includes(req.body.dataMode)) {
-    // 数据回传模式只在草稿期可改（发布后锁定，防两套数据对不上）——本路由本就仅限 DRAFT
-    await pool.query('UPDATE task_referral_specs SET data_mode = $1 WHERE task_id = $2', [req.body.dataMode, req.params.id]);
+  } else if (task.mode === 'PERFORMANCE') {
+    // 邀请任务 spec：数据模式 + 展示字段（转化条件/激励/话术）草稿期可改
+    const rvals: any[] = []; const rsets: string[] = [];
+    const rpush = (col: string, v: any) => { rvals.push(v); rsets.push(`${col} = $${rvals.length}`); };
+    if (req.body.dataMode && ['AGGREGATE', 'DETAIL'].includes(req.body.dataMode)) rpush('data_mode', req.body.dataMode);
+    if (req.body.conversionCriteria !== undefined) rpush('conversion_criteria', JSON.stringify(req.body.conversionCriteria));
+    if (req.body.inviteeBenefit !== undefined) rpush('invitee_benefit', req.body.inviteeBenefit || null);
+    if (req.body.referralScript !== undefined) rpush('referral_script', req.body.referralScript || null);
+    if (rsets.length) {
+      rvals.push(req.params.id);
+      await pool.query(`UPDATE task_referral_specs SET ${rsets.join(', ')} WHERE task_id = $${rvals.length}`, rvals);
+    }
   }
 
   const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);

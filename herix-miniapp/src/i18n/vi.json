@@ -666,5 +666,15 @@
   "pai.errFriends": "Nhập số bạn bè {name} (khoảng)",
   "pai.errCountNum": "Số lượng phải là số nguyên không âm",
   "profile.friendsLabel": "Số bạn bè (khoảng)",
-  "profile.friendsHint": "Một số nhiệm vụ kiểm tra số bạn bè"
+  "profile.friendsHint": "Một số nhiệm vụ kiểm tra số bạn bè",
+  "task.refYouEarn": "Bạn nhận / lượt",
+  "task.refFriendGets": "Bạn bè nhận",
+  "task.refSuccessTitle": "Thế nào là chuyển đổi hợp lệ",
+  "task.refRegisterOnly": "☑️ Được tính khi bạn của bạn hoàn tất đăng ký",
+  "task.refHowTitle": "Cách thực hiện (3 bước)",
+  "task.refStep1": "① Nhận mã mời riêng sau khi được duyệt",
+  "task.refStep2": "② Chia sẻ cho bạn bè có nhu cầu",
+  "task.refStep3": "③ Thưởng tự động khi bạn bè đáp ứng điều kiện trên",
+  "task.refScriptTitle": "Lời gợi ý",
+  "task.refSupplementTitle": "Ghi chú thêm"
 }

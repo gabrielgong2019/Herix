@@ -17,6 +17,9 @@ interface TaskDetailData {
   title: string;
   cover_image?: string | null;
   description: string;
+  conversion_criteria?: { register: { label: string; required: boolean }; convert: string[] };
+  invitee_benefit?: string | null;
+  referral_script?: string | null;
   requirements: string;
   platform_requirements?: string | null;
   budget: number;
@@ -697,33 +700,62 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           )}
         </View>
 
-        <View className='section'>
-          <Text className='section-title'>{t('task.descTitle')}</Text>
-          <Text className='content'>{task.description}</Text>
-        </View>
+        {/* 邀请任务 4 块（2026-07-31 重排：利益→成功条件前置→怎么做→话术，按赫使决策顺序）*/}
+        {isPerformance && (() => {
+          const cc = task.conversion_criteria || { register: { label: '新用户', required: true }, convert: [] };
+          const convert = (cc.convert || []).filter(Boolean);
+          return (
+            <>
+              <View className='ref-benefits'>
+                <View className='ref-benefit-cell'>
+                  <Text className='ref-benefit-label'>{t('task.refYouEarn')}</Text>
+                  <Text className='ref-benefit-val'>{t('task.perConversion', { n: task.payout_per_herald ?? task.commission })}</Text>
+                </View>
+                {!!task.invitee_benefit && (
+                  <View className='ref-benefit-cell'>
+                    <Text className='ref-benefit-label'>{t('task.refFriendGets')}</Text>
+                    <Text className='ref-benefit-val'>{task.invitee_benefit}</Text>
+                  </View>
+                )}
+              </View>
+
+              <View className='section'>
+                <Text className='section-title'>{t('task.refSuccessTitle')}</Text>
+                <View className='ref-check'><Text className='ref-check-icon'>☑️</Text><Text className='ref-check-text'>{cc.register?.label || '新用户'}</Text></View>
+                {convert.map((c, i) => (
+                  <View key={i} className='ref-check'><Text className='ref-check-icon'>☑️</Text><Text className='ref-check-text'>{c}</Text></View>
+                ))}
+                {convert.length === 0 && <Text className='ref-check-note'>{t('task.refRegisterOnly')}</Text>}
+              </View>
+
+              <View className='section'>
+                <Text className='section-title'>{t('task.refHowTitle')}</Text>
+                <Text className='ref-step'>{t('task.refStep1')}</Text>
+                <Text className='ref-step'>{t('task.refStep2')}</Text>
+                <Text className='ref-step'>{t('task.refStep3')}</Text>
+              </View>
+
+              {!!task.referral_script && (
+                <View className='section'>
+                  <Text className='section-title'>{t('task.refScriptTitle')}</Text>
+                  <Text className='content'>{task.referral_script}</Text>
+                </View>
+              )}
+            </>
+          );
+        })()}
+
+        {(!isPerformance || !!task.description) && (
+          <View className='section'>
+            <Text className='section-title'>{isPerformance ? t('task.refSupplementTitle') : t('task.descTitle')}</Text>
+            <Text className='content'>{task.description}</Text>
+          </View>
+        )}
 
         {task.requirements && (
           <View className='section'>
             <Text className='section-title'>{t('task.reqSectionTitle')}</Text>
             <Text className='content'>{task.requirements}</Text>
-          </View>
-        )}
-
-        {/* 邀请码说明（PERFORMANCE 专属） */}
-        {isPerformance && (
-          <View className='section'>
-            <Text className='section-title'>{t('task.referralSection')}</Text>
-            <Text className='content'>
-              {task.code_mode === 'custom' ? t('task.codeCustom') : t('task.codeAuto')}
-            </Text>
-            <View className='spec-grid' style={{ marginTop: 8 }}>
-              <View className='spec-row'>
-                <Text className='spec-label'>{t('task.dataModeLabel')}</Text>
-                <Text className='spec-value'>
-                  {task.data_mode === 'DETAIL' ? t('task.dataModeDetail') : t('task.dataModeAgg')}
-                </Text>
-              </View>
-            </View>
           </View>
         )}
 

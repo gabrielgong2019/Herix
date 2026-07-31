@@ -677,7 +677,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             </Text>
           </View>
 
-          {task.avg_payout_days != null && (
+          {task.avg_payout_days != null && task.avg_payout_days > 0 && (
             <Text className='avg-pay-days'>{t('task.avgPayDays', { n: task.avg_payout_days })}</Text>
           )}
         </View>

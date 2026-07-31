@@ -294,7 +294,12 @@ submissionsRouter.get('/task/:taskId/my', requireAuth, requireRole('HERALD'), as
       [taskId]
     ),
     findOne<any>(
-      `SELECT ts.*, t.title AS task_title
+      `SELECT ts.*, t.title AS task_title,
+              (SELECT COUNT(*)::int FROM submission_revisions sr
+               WHERE sr.submission_id = ts.id
+               AND sr.kind = 'REVIEW' AND sr.action = 'REJECTED' AND sr.stage = ts.stage) AS stage_rejects,
+              EXISTS(SELECT 1 FROM arbitrations a
+                     WHERE a.submission_id = ts.id AND a.status = 'OPEN') AS arbitration_open
        FROM task_submissions ts
        JOIN tasks t ON t.id = ts.task_id
        WHERE ts.task_id = ? AND ts.herald_id = ?`,

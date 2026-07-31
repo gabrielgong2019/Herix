@@ -55,7 +55,7 @@
 |------|------|--------|
 | `review_state_e2e.sh` | PENDING_REVIEW 状态机 + 报名审核契约 | 21 |
 | `platform_req_e2e.sh` | 平台粉丝要求 ALL/ANY_N 资格闸 | 10 |
-| `draft_stage_e2e.sh` | 草稿前置 stage 流转 + /applications/my 字段 | 8 |
+| `draft_stage_e2e.sh` | 草稿前置 stage 流转 + /applications/my 字段 + requirements 列退役 | 9 |
 | `numeric_e2e.sh` | 金额 NUMERIC 迁移（typeParser/精确算术/SUM） | 8 |
 | `kyb_e2e.sh` | KYB 流程：结构化提交/法人番号校验位/状态流转/过审免任务审核 | 12 |
 | `referral_display_e2e.sh` | 邀请任务展示结构：conversion_criteria(JSONB)往返/PATCH/空convert | 10 |

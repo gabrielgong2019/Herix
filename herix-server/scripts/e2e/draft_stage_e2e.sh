@@ -39,6 +39,9 @@ curl -s -X POST $API/admin/task-reviews/$TID/approve -H "Authorization: Bearer $
 APPID=$(curl -s -X POST $API/applications/$TID -H "Authorization: Bearer $TH" -H 'Content-Type: application/json' -d '{}' | python3 -c "import json,sys;print(json.load(sys.stdin).get('id',''))")
 curl -s -X PATCH $API/applications/$APPID/review -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{"status":"APPROVED"}' >/dev/null
 
+echo "— 简报合并：requirements 列已退役 —"
+assert_eq "tasks 表无 requirements 列" "$(psql $DB -tAc "SELECT count(*) FROM information_schema.columns WHERE table_name='tasks' AND column_name='requirements'")" "0"
+
 echo "— /applications/my 字段（payout + require_draft_review）—"
 MY=$(curl -s $API/applications/my -H "Authorization: Bearer $TH")
 assert_eq "payout_per_herald 正确返回" "$(echo $MY | python3 -c "import json,sys;d=json.load(sys.stdin);r=[x for x in d if x['task_id']=='$TID'][0];print(int(r.get('payout_per_herald')))")" "2500"

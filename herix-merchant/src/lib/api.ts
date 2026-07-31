@@ -58,7 +58,7 @@ export const tasksApi = {
   create: (data: TaskFormData) => http.post<Task>('/tasks', data),
   update: (id: string, data: Partial<TaskFormData>) => http.put<Task>(`/tasks/${id}`, data),
   updateMeta: (id: string, data: {
-    description?: string; requirements?: string; deadline?: string
+    description?: string; deadline?: string
     coverImage?: string; maxHeralds?: number
   }) => http.patch<Task>(`/tasks/${id}/meta`, data),
   publish: (id: string) => http.patch<{ success: boolean }>(`/tasks/${id}/publish`),
@@ -252,7 +252,6 @@ export interface Task {
   id: string
   title: string
   description: string
-  requirements?: string
   category: string
   mode: TaskMode
   status: TaskStatus | string // 服务端大写状态（历史数据可能有例外，宽松收）
@@ -299,7 +298,6 @@ export interface Task {
 export interface TaskFormData {
   title: string
   description: string
-  requirements?: string
   category: string
   mode: TaskMode
   status: 'draft' | 'open'  // 仅前端流程标记：发布走 PATCH /publish，服务端不读此字段

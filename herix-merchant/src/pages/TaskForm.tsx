@@ -297,7 +297,6 @@ interface FormState {
   // 100% 被 400 拒（2026-07-26 用户报"带图保存失败"排查出，实与图片无关）
   difficulty: 'easy' | 'medium' | 'hard'
   contentType: 'photo' | 'video' | 'both'
-  requirements: string
   coverImage: string
   payoutPerHerald: number | ''
   maxHeralds: number | ''
@@ -325,7 +324,7 @@ const DEFAULT_STATE: FormState = {
   siteId: 'jp',
   targetCommunities: [], platformRequirements: [], reqMode: 'ALL', reqMinCount: 1,
   difficulty: 'medium', contentType: 'photo',
-  requirements: '', coverImage: '',
+  coverImage: '',
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
@@ -349,8 +348,7 @@ function parseTaskPlatformRequirements(raw: Task['platform_requirements']): Form
 function taskToFormState(task: Task): FormState {
   return {
     title: task.title,
-    // 简报合并（2026-07-25）：存量任务的 requirements 并入简报展示，编辑保存后只写 description
-    description: task.requirements ? `${task.description}\n\n${task.requirements}` : task.description,
+    description: task.description,  // 任务简报单一正文（requirements 列已退役）
     category: task.category,
     siteId: (task as any).site_id || 'jp',
     targetCommunities: task.target_communities || [],
@@ -359,7 +357,6 @@ function taskToFormState(task: Task): FormState {
     reqMinCount: task.req_min_count || 1,
     difficulty: task.difficulty,
     contentType: task.content_type === 'referral' ? 'photo' : task.content_type, // referral=邀请码占位值，表单无此选项
-    requirements: task.requirements || '',
     coverImage: task.cover_image || '',
     payoutPerHerald: task.payout_per_herald,
     maxHeralds: task.max_heralds,

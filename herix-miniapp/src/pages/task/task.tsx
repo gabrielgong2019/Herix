@@ -20,7 +20,6 @@ interface TaskDetailData {
   conversion_criteria?: { register: { label: string; required: boolean }; convert: string[] };
   invitee_benefit?: string | null;
   referral_script?: string | null;
-  requirements: string;
   platform_requirements?: string | null;
   budget: number;
   commission: number;
@@ -749,13 +748,6 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           <View className='section'>
             <Text className='section-title'>{isPerformance ? t('task.refSupplementTitle') : t('task.descTitle')}</Text>
             <Text className='content'>{task.description}</Text>
-          </View>
-        )}
-
-        {task.requirements && (
-          <View className='section'>
-            <Text className='section-title'>{t('task.reqSectionTitle')}</Text>
-            <Text className='content'>{task.requirements}</Text>
           </View>
         )}
 

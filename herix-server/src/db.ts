@@ -77,7 +77,6 @@ export async function initDatabase() {
       mode TEXT NOT NULL DEFAULT 'STANDARD' CHECK(mode IN ('STANDARD','PERFORMANCE')),
       title TEXT NOT NULL,
       description TEXT NOT NULL,
-      requirements TEXT,
       budget NUMERIC(15,2) NOT NULL DEFAULT 0,
       commission NUMERIC(15,2) NOT NULL DEFAULT 0,
       currency TEXT NOT NULL DEFAULT 'JPY',
@@ -995,6 +994,17 @@ export async function initDatabase() {
     `ALTER TABLE task_referral_specs ADD COLUMN IF NOT EXISTS referral_script TEXT`,
     // submission_id 现在可以作为查询维度，补索引（之前靠 task_id+herald_id 间接查）
     `CREATE INDEX IF NOT EXISTS idx_subrev_submission ON submission_revisions(submission_id)`,
+    // 简报字段彻底合并（2026-07-31）：requirements 退役。此前是半合并脏状态——创建走 description
+    // 合并，但编辑(PUT/PATCH-meta)仍单独写 requirements 列，两边不一致。先把存量非空 requirements
+    // 拼进 description（零丢失），再 DROP 列。DO block 守列存在，DROP 后重启不再 UPDATE 已删列。
+    `DO $$ BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_name='tasks' AND column_name='requirements') THEN
+         UPDATE tasks SET description = description || E'\n\n' || requirements
+           WHERE requirements IS NOT NULL AND requirements <> '';
+       END IF;
+     END $$`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS requirements`,
   ];
   for (const m of migrations) {
     await pool.query(m);

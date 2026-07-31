@@ -75,15 +75,8 @@ function ContentSection({ task, onEdit }: { task: Task; onEdit: () => void }) {
         </button>
       </div>
 
-      <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldDesc')}</div>
+      <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldBrief')}</div>
       <div className="text-sm whitespace-pre-wrap leading-relaxed mb-4">{task.description || '—'}</div>
-
-      {task.requirements && (
-        <>
-          <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldRequirements')}</div>
-          <div className="text-sm whitespace-pre-wrap leading-relaxed mb-4">{task.requirements}</div>
-        </>
-      )}
 
       <div className="grid grid-cols-4 gap-x-4 gap-y-3 pt-3 border-t" style={{ borderColor: 'var(--border)' }}>
         {metaItems.map(({ label, value }) => (

@@ -13,7 +13,6 @@ export default function TaskMetaEdit() {
   const qc = useQueryClient()
 
   const [description, setDescription] = useState('')
-  const [requirements, setRequirements] = useState('')
   const [deadline, setDeadline] = useState('')
   const [maxHeralds, setMaxHeralds] = useState('')
   const [saved, setSaved] = useState(false)
@@ -27,7 +26,6 @@ export default function TaskMetaEdit() {
   useEffect(() => {
     if (!task) return
     setDescription(task.description || '')
-    setRequirements(task.requirements || '')
     setDeadline(task.deadline ? task.deadline.slice(0, 10) : '')
     setMaxHeralds(String(task.max_heralds || ''))
   }, [task])
@@ -36,7 +34,6 @@ export default function TaskMetaEdit() {
     mutationFn: () =>
       tasksApi.updateMeta(id!, {
         description,
-        requirements,
         deadline: deadline || undefined,
         maxHeralds: maxHeralds ? Number(maxHeralds) : undefined,
       }),
@@ -76,25 +73,12 @@ export default function TaskMetaEdit() {
 
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
-                  {t('taskForm.fieldDesc')}
+                  {t('taskForm.fieldBrief')}
                 </label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
-                  style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
-                  {t('taskForm.fieldRequirements')}
-                </label>
-                <textarea
-                  value={requirements}
-                  onChange={(e) => setRequirements(e.target.value)}
-                  rows={4}
+                  rows={6}
                   className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
                   style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
                 />

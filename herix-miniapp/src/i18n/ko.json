@@ -232,8 +232,6 @@
   "merchant.form.platformReqsHint": "앰배서더가 보유해야 할 소셜 계정과 최소 팔로워 요건을 선택하세요",
   "merchant.form.remainAfterPublish": "게시 후 잔여 ¥{n}",
   "merchant.form.required": "필수",
-  "merchant.form.requirements": "세부 요구사항",
-  "merchant.form.requirementsPh": "선택: 게시 플랫폼 요건, 콘텐츠 키워드, 유지 기간 등...",
   "merchant.form.saveDraft": "초안 저장",
   "merchant.form.title": "캠페인 제목 *",
   "merchant.form.titlePh": "예: Herix 앰배서더 프로그램",

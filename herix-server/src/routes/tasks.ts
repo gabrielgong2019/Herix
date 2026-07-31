@@ -1008,8 +1008,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       mode:              data.mode,
       source_lang:       sourceLang,
       title:             data.title,
-      // 简报合并：description 即「任务简报」单一正文；requirements 仅为旧客户端兼容保留入参
-      description:       data.requirements ? `${data.description}\n\n${data.requirements}` : data.description,
+      description:       data.description,  // 任务简报单一正文（requirements 列已退役）
       payout_per_herald: data.payoutPerHerald,
       currency:          'JPY',
       max_heralds:       data.maxHeralds,
@@ -1081,11 +1080,10 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
   if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
 
-  const { title, description, requirements, payoutPerHerald, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements, visibility, reqMode, reqMinCount } = req.body;
+  const { title, description, payoutPerHerald, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements, visibility, reqMode, reqMinCount } = req.body;
   const data: Record<string, any> = {};
   if (title) data.title = title;
   if (description) data.description = description;
-  if (requirements !== undefined) data.requirements = requirements;
   if (payoutPerHerald) data.payout_per_herald = payoutPerHerald;
   if (maxHeralds) data.max_heralds = maxHeralds;
   if (deadline !== undefined) data.deadline = deadline || null;
@@ -1159,10 +1157,9 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     return res.status(400).json({ error: '只有进行中的任务可以编辑' });
   }
 
-  const { description, requirements, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount } = req.body;
+  const { description, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount } = req.body;
   const data: Record<string, any> = {};
   if (description !== undefined) data.description = description;
-  if (requirements !== undefined) data.requirements = requirements || null;
   if (deadline !== undefined) data.deadline = deadline || null;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) {

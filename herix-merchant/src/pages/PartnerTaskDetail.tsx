@@ -108,14 +108,6 @@ export default function PartnerTaskDetail() {
             {task.description && (
               <p className="leading-relaxed">{task.description}</p>
             )}
-            {task.requirements && (
-              <div>
-                <div className="text-xs font-medium mb-1" style={{ color: 'var(--muted)' }}>
-                  {t('taskForm.fieldRequirements')}
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>{task.requirements}</p>
-              </div>
-            )}
             {task.deadline && (
               <div className="flex gap-4 text-xs" style={{ color: 'var(--muted)' }}>
                 <span>{t('taskForm.fieldDeadline')}: {formatDate(task.deadline)}</span>

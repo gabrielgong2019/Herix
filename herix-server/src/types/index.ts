@@ -58,8 +58,7 @@ export const CreateTaskSchema = z.object({
   mode: z.enum(TASK_MODES).default('STANDARD'),
   sourceLang: z.enum(LOCALE_CODES).default('zh'),
   title: z.string().min(2, '标题至少2字符').max(100),
-  description: z.string().default(''),  // PERFORMANCE 为补充说明可空；STANDARD 由下方 refine 要求≥10
-  requirements: z.string().optional(),
+  description: z.string().default(''),  // 任务简报单一正文。PERFORMANCE 为补充说明可空；STANDARD 由下方 refine 要求≥10
   payoutPerHerald: z.number().positive('赫使报酬必须大于0'),
   maxHeralds: z.number().int().min(0).default(1),
   deadline: z.string().optional(),

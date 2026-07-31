@@ -107,8 +107,8 @@ export default class TaskDetail extends Component<{ id: string }, State> {
   }
 
   componentDidShow() {
-    // 用户从 profile 页更新粉丝数后返回时，重新拉取任务和资质数据，按钮状态自动刷新
-    this.loadTask();
+    // 用户从 profile 页更新粉丝数后返回时，强制 bust 缓存重新拉取资质数据，按钮状态自动刷新
+    this.loadTask({ forceProfile: true });
   }
 
   onShareAppMessage(): Taro.ShareAppMessageReturn {
@@ -120,7 +120,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     };
   }
 
-  loadTask = async () => {
+  loadTask = async (opts?: { forceProfile?: boolean }) => {
     try {
       const params = Taro.getCurrentInstance().router?.params;
       const id = params?.id as string;
@@ -140,7 +140,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
             const [myApps, mySubs, profile] = await Promise.all([
               applications.my(),
               subApi.my(),
-              getAmbassadorProfile(),
+              getAmbassadorProfile({ force: opts?.forceProfile }),
             ]);
 
             const myApp = myApps.find((a: any) => a.task_id === id);
@@ -262,8 +262,8 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       const toAdd = missingIds.map(pid => reqFormValues[pid]);
       const merged = existing.filter((s: any) => !missingIds.includes(s.platformId)).concat(toAdd);
 
-      const updated = await ambassador.updateProfile({ socialPlatforms: merged });
-      invalidateProfileCache();
+      await ambassador.updateProfile({ socialPlatforms: merged });
+      const updated = await getAmbassadorProfile({ force: true });
       this.setState({ ambassadorProfile: updated });
       if (this.state.task?.require_proposal) {
         this.setState({ showReqModal: false, proposalSheetOpen: true, proposalText: '', proposalLinks: [], proposalLinkInput: '' });

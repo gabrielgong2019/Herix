@@ -951,6 +951,41 @@ export async function initDatabase() {
        translated_at TIMESTAMPTZ DEFAULT NOW(),
        PRIMARY KEY (task_id, locale)
      )`,
+
+    // ── 架构修复批次（2026-07-31）────────────────────────────────────────────
+
+    // 1. require_draft_review: INTEGER → BOOLEAN（app 已按布尔写入）。
+    //    2026-07-31 修：原写法非幂等且缺 DROP DEFAULT——旧的整数 DEFAULT 0 无法自动转 boolean，
+    //    首次即报 42804，导致本条及其后所有迁移(2-4)从不执行，且 app 写 true 撞 integer 列使
+    //    "带草稿前置的任务创建全挂"。改为守卫幂等 + 先 DROP DEFAULT 再转类型。
+    `DO $$ BEGIN
+       IF (SELECT data_type FROM information_schema.columns
+           WHERE table_name = 'task_content_specs' AND column_name = 'require_draft_review') = 'integer' THEN
+         ALTER TABLE task_content_specs ALTER COLUMN require_draft_review DROP DEFAULT;
+         ALTER TABLE task_content_specs ALTER COLUMN require_draft_review TYPE BOOLEAN USING (require_draft_review <> 0);
+         ALTER TABLE task_content_specs ALTER COLUMN require_draft_review SET DEFAULT false;
+       END IF;
+     END $$`,
+
+    // 2. task_submissions.submitted_at DEFAULT 统一为 ISO-8601 UTC 格式
+    //    JS 写入用 new Date().toISOString()（带 Z），旧 DEFAULT 无时区，::timestamp 转换存在时区歧义
+    `ALTER TABLE task_submissions
+       ALTER COLUMN submitted_at SET DEFAULT (TO_CHAR(NOW() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))`,
+
+    // 3. 移除 content_url（旧版单链接兼容列，权威字段已是 content_urls JSON 数组）
+    //    merchant.html 已改用 content_urls；彻底消除双写负担
+    `ALTER TABLE task_submissions DROP COLUMN IF EXISTS content_url`,
+
+    // 4. submission_revisions.submission_id 补 FK + CASCADE
+    //    之前无 FK：task_submissions 被删时 revisions 变孤儿行；admin "重置" 类操作风险
+    `DO $$ BEGIN
+       ALTER TABLE submission_revisions
+         ADD CONSTRAINT fk_subrev_submission
+         FOREIGN KEY (submission_id) REFERENCES task_submissions(id) ON DELETE CASCADE;
+     EXCEPTION WHEN duplicate_object THEN NULL;
+     END $$`,
+    // submission_id 现在可以作为查询维度，补索引（之前靠 task_id+herald_id 间接查）
+    `CREATE INDEX IF NOT EXISTS idx_subrev_submission ON submission_revisions(submission_id)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

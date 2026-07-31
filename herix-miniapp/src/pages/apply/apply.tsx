@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Input, Textarea, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { submissions, tasks as taskApi, uploadSubmissionImage } from '../../utils/api';
+import { submissions, uploadSubmissionImage } from '../../utils/api';
 import './apply.scss';
 import { t } from '../../utils/i18n';
 import BackBar from '../../components/BackBar';
@@ -65,43 +65,36 @@ export default class Apply extends Component<{}, State> {
   }
 
   loadContext = async (taskId: string) => {
-    // 平台复制提示 + 图片张数要求：读任务详情
+    // 单次请求获取提交状态 + 下一步动作 + 任务配置（替代原来任务详情 + 全量提交两次串行请求）
+    // nextAction 由服务端状态机计算，客户端不再重新推导
     try {
-      // 注意变量名不能叫 t——会遮蔽 i18n 的 t()
-      const taskData: any = await taskApi.detail(taskId);
-      let reqs: any[] = [];
-      try {
-        reqs = typeof taskData?.platform_requirements === 'string' ? JSON.parse(taskData.platform_requirements) : taskData?.platform_requirements || [];
-      } catch {
-        reqs = [];
+      const ctx = await submissions.myForTask(taskId);
+
+      const hints = ctx.platformHints
+        .map(id => PLATFORM_HINT_KEYS[id])
+        .filter(Boolean) as string[];
+
+      let mode: 'draft' | 'final' = 'final';
+      let draftApprovedFlip = false;
+      if (ctx.nextAction === 'SUBMIT_DRAFT') {
+        mode = 'draft';
+      } else if (ctx.nextAction === 'SUBMIT_FINAL') {
+        mode = 'final';
+        draftApprovedFlip = ctx.submission?.stage === 'DRAFT';
       }
-      const hints = reqs.map(r => PLATFORM_HINT_KEYS[r.platformId]).filter(Boolean);
+
       this.setState({
+        mode,
+        draftApprovedFlip,
         hints: hints.length ? hints : [DEFAULT_HINT_KEY],
-        minImages: Number(taskData?.min_images) || 0,
+        minImages: ctx.minImages,
       });
 
-      // 用真实数据校正阶段（权威，不再单信 URL 的 mode）——逻辑镜像服务端 decideSubmit：
-      // 没有提交记录 → 按任务是否要求草稿前置决定；DRAFT+REJECTED → 重提草稿；
-      // DRAFT+APPROVED → 草稿已过，本次自动转终稿；FINAL+REJECTED → 重提终稿
-      const requireDraft = !!taskData?.require_draft_review;
-      const subs = await submissions.my().catch(() => []);
-      const row = (subs || []).find((s: any) => s.task_id === taskId);
-      let mode: 'draft' | 'final' = requireDraft ? 'draft' : 'final';
-      let draftApprovedFlip = false;
-      if (row) {
-        if (row.stage === 'DRAFT' && row.status === 'REJECTED') mode = 'draft';
-        else if (row.stage === 'DRAFT' && row.status === 'APPROVED') { mode = 'final'; draftApprovedFlip = true; }
-        else if (row.stage === 'FINAL') mode = 'final';
-      }
-      this.setState({ mode, draftApprovedFlip });
-
-      // 重新提交：预填上次内容 + 显示被拒原因（多链接从 content_urls 解析，回落单链接旧字段）
-      const prev = (subs || []).find((s: any) => s.task_id === taskId && s.status === 'REJECTED');
+      // 重提：预填上次内容 + 显示被拒原因
+      const prev = ctx.submission?.status === 'REJECTED' ? ctx.submission : null;
       if (prev) {
         let links: string[] = [];
         try { links = prev.content_urls ? JSON.parse(prev.content_urls) : []; } catch { links = []; }
-        if (!links.length && prev.content_url) links = [prev.content_url];
         let shots: string[] = [];
         try { shots = prev.screenshot_urls ? JSON.parse(prev.screenshot_urls) : []; } catch { shots = []; }
         this.setState({
@@ -113,7 +106,7 @@ export default class Apply extends Component<{}, State> {
         });
       }
     } catch {
-      /* 提示/阶段校正是辅助信息，失败时保留 URL 传入的乐观值，不阻塞提交 */
+      /* 失败时保留 URL 传入的乐观值，服务端仍会校验阶段合法性 */
     }
   };
 
@@ -179,7 +172,7 @@ export default class Apply extends Component<{}, State> {
     }
     this.setState({ submitting: true });
     try {
-      await submissions.submit(this.taskId, { contentUrls, description, screenshotUrls: screenshots });
+      await submissions.submit(this.taskId, { contentUrls, description, screenshotUrls: screenshots.length ? screenshots : undefined });
       Taro.showToast({ title: t('apply.success'), icon: 'success' });
       setTimeout(() => Taro.navigateBack(), 1500);
       // 成功后刻意不复位 submitting——返回前的1.5s窗口内按钮保持禁用,防双击双提交

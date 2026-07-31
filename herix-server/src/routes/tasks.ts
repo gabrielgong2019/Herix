@@ -10,6 +10,7 @@ import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate, getPublishLimitInfo } from '../utils/settings';
+import { SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { translateTask } from '../utils/translate';
 import { fetchTaskApplications } from '../utils/applicationQueries';
 import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
@@ -31,6 +32,14 @@ async function generateCodePool(taskId: string, count: number): Promise<void> {
 }
 
 export const tasksRouter = Router();
+
+// platformRequirements 里的 platformId 必须在注册表内（建任务走 zod，编辑走这里）
+function badPlatformReq(reqs: any): string | null {
+  if (!Array.isArray(reqs)) return null;
+  const bad = reqs.find((r: any) => r?.platformId && !SOCIAL_PLATFORM_IDS.includes(r.platformId));
+  return bad ? bad.platformId : null;
+}
+
 
 /** GET /api/tasks — 获取任务列表（已登录用户可见自己所有状态，未登录只见 OPEN） */
 tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
@@ -1029,7 +1038,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
         min_video_seconds: data.minVideoSeconds || null,
         max_revisions: data.maxRevisions ?? 2,
         require_proposal: data.requireProposal ? 1 : 0,
-        require_draft_review: data.requireDraftReview ? 1 : 0,
+        require_draft_review: !!data.requireDraftReview,
         submit_deadline: data.submitDeadline || null,
       };
       await pool.query(
@@ -1075,7 +1084,11 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (category !== undefined) data.category = category;
   if (difficulty) data.difficulty = difficulty;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
-  if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  if (platformRequirements !== undefined) {
+    const badPid = badPlatformReq(platformRequirements);
+    if (badPid) return res.status(400).json({ error: `未知社交平台：${badPid}`, code: 'UNKNOWN_PLATFORM' });
+    data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  }
   if (visibility && ['PUBLIC', 'INVITE'].includes(visibility)) data.visibility = visibility;
   if (req.body.targetCommunities !== undefined) {
     data.target_communities = (req.body.targetCommunities as string[]).filter(c => VALID_COMMUNITIES.has(c));
@@ -1098,7 +1111,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
     if (req.body.minVideoSeconds !== undefined) push('min_video_seconds', req.body.minVideoSeconds || null);
     if (req.body.maxRevisions !== undefined) push('max_revisions', req.body.maxRevisions ?? 2);
     if (req.body.requireProposal !== undefined) push('require_proposal', req.body.requireProposal ? 1 : 0);
-    if (req.body.requireDraftReview !== undefined) push('require_draft_review', req.body.requireDraftReview ? 1 : 0);
+    if (req.body.requireDraftReview !== undefined) push('require_draft_review', !!req.body.requireDraftReview);
     if (req.body.submitDeadline !== undefined) push('submit_deadline', req.body.submitDeadline || null);
     if (sets.length) {
       vals.push(req.params.id);
@@ -1135,7 +1148,11 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
   if (requirements !== undefined) data.requirements = requirements || null;
   if (deadline !== undefined) data.deadline = deadline || null;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
-  if (platformRequirements !== undefined) data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  if (platformRequirements !== undefined) {
+    const badPid = badPlatformReq(platformRequirements);
+    if (badPid) return res.status(400).json({ error: `未知社交平台：${badPid}`, code: 'UNKNOWN_PLATFORM' });
+    data.platform_requirements = platformRequirements ? JSON.stringify(platformRequirements) : null;
+  }
   if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
     data.req_mode = reqMode;
     data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;

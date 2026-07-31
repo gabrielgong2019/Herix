@@ -195,12 +195,22 @@ export async function uploadSubmissionImage(filePath: string): Promise<string> {
   return body.url as string;
 }
 
+export interface TaskSubmissionContext {
+  submission: any | null;
+  nextAction: 'SUBMIT_DRAFT' | 'SUBMIT_FINAL' | 'WAITING_REVIEW' | 'DONE';
+  requireDraft: boolean;
+  minImages: number;
+  platformHints: string[];
+}
+
 export const submissions = {
-  submit: (taskId: string, data: { contentUrl?: string; contentUrls?: string[]; description?: string; screenshotUrls?: string[] }) =>
+  submit: (taskId: string, data: { contentUrls?: string[]; description?: string; screenshotUrls?: string[] }) =>
     request<any>('POST', `/submissions/${taskId}`, data),
   review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
     request<any>('PATCH', `/submissions/${id}/review`, { status, reviewNote }),
   byTask: (taskId: string) => request<any[]>('GET', `/submissions/task/${taskId}`),
+  /** 赫使侧：单次获取提交状态 + 下一步动作 + 任务配置，替代原来两次串行请求 */
+  myForTask: (taskId: string) => request<TaskSubmissionContext>('GET', `/submissions/task/${taskId}/my`),
   my: () => request<any[]>('GET', '/submissions/my'),
 };
 

@@ -1116,7 +1116,7 @@ function submissionsPanel(subs) {
       +'<div style="display:flex;justify-content:space-between;margin-bottom:8px">'
       +'<div style="font-weight:600;font-size:13px">'+esc(s.herald_name||s.herald_id.slice(0,8))+'</div>'
       +'<span style="font-size:12px;font-weight:600;color:'+color+'">'+subStatusLabel(s.status)+'</span></div>'
-      +(s.content_url?'<a href="'+esc(s.content_url)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:6px;word-break:break-all">🔗 '+esc(s.content_url)+'</a>':'')
+      +(function(){var urls=[];try{urls=s.content_urls?JSON.parse(s.content_urls):[]}catch(e){}return urls.map(function(u,i){return '<a href="'+esc(u)+'" target="_blank" style="font-size:12px;color:var(--primary);display:block;margin-bottom:4px;word-break:break-all">🔗 '+(urls.length>1?'链接'+(i+1)+' ':'')+esc(u)+'</a>'}).join('')})()
       +(s.description?'<div style="font-size:12px;color:#555;margin-bottom:8px">'+esc(s.description)+'</div>':'')
       +(screenshots.length?'<div style="font-size:12px;color:var(--muted);margin-bottom:8px">'+t('merchant.panel.screenshots','{n} 张截图',{n:screenshots.length})+'</div>':'')
       +'<div style="font-size:11px;color:var(--muted);margin-bottom:10px">'+t('merchant.panel.submittedAt','提交于 {time}',{time:fmtLocal(s.submitted_at)})+'</div>'
@@ -1480,7 +1480,7 @@ function reviewRow(id, type, info) {
   if (info.rating) meta.push(info.rating);
   if (info.sub) meta.push('<span style="color:#9ca3af;font-size:11px">'+esc(info.sub)+'</span>');
   if (info.preview) meta.push('<span style="color:#6b7280;font-size:11px">'+esc(info.preview.slice(0,50))+(info.preview.length>50?'…':'')+'</span>');
-  if (info.contentUrl) meta.push('<a href="'+esc(info.contentUrl)+'" target="_blank" style="color:#6366f1;font-size:11px;text-decoration:none">🔗 '+t('merchant.reviews.viewContent','查看内容')+'</a>');
+  if (info.contentUrls && info.contentUrls.length) info.contentUrls.forEach(function(u,i){meta.push('<a href="'+esc(u)+'" target="_blank" style="color:#6366f1;font-size:11px;text-decoration:none">🔗 '+(info.contentUrls.length>1?'链接'+(i+1):t('merchant.reviews.viewContent','查看内容'))+'</a>')});
 
   var taskLabel = info.taskTitle
     ? ' <span style="font-weight:400;color:#9ca3af;font-size:13px">· '+esc(info.taskTitle)+(info.taskId?'<button onclick="event.stopPropagation();openTask(\''+info.taskId+'\')" style="font-size:10px;color:#c4b5fd;background:none;border:none;cursor:pointer;padding:0 2px;vertical-align:middle">↗</button>':'')+'</span>'
@@ -1539,7 +1539,7 @@ function allSubsPanel(subs) {
       taskId: null,
       tiers: '', rating: '',
       preview: s.description,
-      contentUrl: s.content_url,
+      contentUrls: (function(){try{return s.content_urls?JSON.parse(s.content_urls):[]}catch(e){return[]}})(),
     });
   }).join('')+'</div>';
 }

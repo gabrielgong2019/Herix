@@ -48,6 +48,29 @@ export function decideSubmit(requireDraft: boolean, row: SubmissionRowLike | nul
   return { ok: false, httpStatus: 409, code: 'ALREADY_SUBMITTED', error: '已经提交过结果' };
 }
 
+/**
+ * 客户端"下一步动作"类型——由服务端计算后下推，客户端不再重新推导状态机。
+ *
+ *   SUBMIT_DRAFT    → 赫使应提交草稿（初次或重提）
+ *   SUBMIT_FINAL    → 草稿已过，赫使应发布内容并提交终稿链接
+ *   WAITING_REVIEW  → 已提交，等待商家审核
+ *   DONE            → 终稿已过，任务完成
+ */
+export type NextAction = 'SUBMIT_DRAFT' | 'SUBMIT_FINAL' | 'WAITING_REVIEW' | 'DONE';
+
+/** 根据任务配置与当前提交行，计算赫使侧的下一步动作（null = 无有效提交行且任务无草稿要求） */
+export function computeNextAction(requireDraft: boolean, row: SubmissionRowLike | null): NextAction {
+  if (!row) return requireDraft ? 'SUBMIT_DRAFT' : 'SUBMIT_FINAL';
+  if (row.status === 'PENDING_REVIEW') return 'WAITING_REVIEW';
+  if (row.stage === 'DRAFT') {
+    if (row.status === 'REJECTED') return 'SUBMIT_DRAFT';
+    return 'SUBMIT_FINAL'; // DRAFT + APPROVED
+  }
+  // stage = FINAL
+  if (row.status === 'REJECTED') return 'SUBMIT_FINAL';
+  return 'DONE'; // FINAL + APPROVED
+}
+
 export type RejectDecision = { allowed: true } | { allowed: false; code: string; error: string; used: number; limit: number };
 
 /** 商家拒绝时：按阶段与既往拒绝次数判定是否还有额度 */

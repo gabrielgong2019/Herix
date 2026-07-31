@@ -5,7 +5,7 @@ import { SubmitResultSchema, ReviewSubmissionSchema } from '../types';
 import { ZodError } from 'zod';
 import { notify } from '../utils/notify';
 import pool from '../db';
-import { decideSubmit, canReject } from '../utils/submissionFlow';
+import { decideSubmit, canReject, computeNextAction } from '../utils/submissionFlow';
 import { auditRevision, countRejects, approveDraftSubmission, settleFinalSubmission } from '../utils/reviewActions';
 
 export const submissionsRouter = Router();
@@ -79,7 +79,6 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     // 单行 = 该赫使交付的当前状态（历史版本进 submission_revisions，不丢）
     const writeData = {
       stage: decision.stage,
-      content_url: urls[0] || null,           // 旧版 weapp 兼容镜像（=首链接），随客户端更新退役
       content_urls: urls.length ? JSON.stringify(urls) : null,
       description: data.description || null,
       screenshot_urls: data.screenshotUrls ? JSON.stringify(data.screenshotUrls) : null,
@@ -279,6 +278,52 @@ submissionsRouter.post('/:id/rate', requireAuth, requireRole('BRAND', 'ADMIN'), 
   }
 });
 
+/**
+ * GET /api/submissions/task/:taskId/my — 赫使侧：获取当前任务的提交状态 + 下一步动作
+ *
+ * 单次调用替代原来的"任务详情 + 全量我的提交"两次串行请求。
+ * nextAction 由服务端状态机计算下推，客户端无需重新实现 decideSubmit 逻辑。
+ */
+submissionsRouter.get('/task/:taskId/my', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  const taskId   = req.params.taskId;
+  const heraldId = req.user!.userId;
+
+  const [spec, submission, task] = await Promise.all([
+    findOne<{ min_images: number; require_draft_review: boolean; max_revisions: number }>(
+      'SELECT min_images, require_draft_review, max_revisions FROM task_content_specs WHERE task_id = ?',
+      [taskId]
+    ),
+    findOne<any>(
+      `SELECT ts.*, t.title AS task_title
+       FROM task_submissions ts
+       JOIN tasks t ON t.id = ts.task_id
+       WHERE ts.task_id = ? AND ts.herald_id = ?`,
+      [taskId, heraldId]
+    ),
+    findOne<{ platform_requirements: string | null }>(
+      'SELECT platform_requirements FROM tasks WHERE id = ?',
+      [taskId]
+    ),
+  ]);
+
+  const requireDraft = !!(spec?.require_draft_review);
+  const nextAction   = computeNextAction(requireDraft, submission ?? null);
+
+  let platformHints: string[] = [];
+  try {
+    const reqs = task?.platform_requirements ? JSON.parse(task.platform_requirements) : [];
+    platformHints = (reqs as any[]).map(r => r.platformId).filter(Boolean);
+  } catch { /* ignore malformed JSON */ }
+
+  res.json({
+    submission:    submission ?? null,
+    nextAction,
+    requireDraft,
+    minImages:     spec?.min_images ?? 0,
+    platformHints,
+  });
+});
+
 /** GET /api/submissions/task/:taskId — 任务的提交列表 (品牌商家) */
 submissionsRouter.get('/task/:taskId', requireAuth, async (req: Request, res: Response) => {
   const subs = await findMany<any>(
@@ -298,7 +343,7 @@ submissionsRouter.get('/task/:taskId', requireAuth, async (req: Request, res: Re
  *  含阶段/多链接/改稿计数/任务配置，前端据此渲染徽章与额度提示 */
 submissionsRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const rows = await findMany<any>(
-    `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, ts.status, ts.content_url, ts.content_urls,
+    `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, ts.status, ts.content_urls,
             ts.description, ts.screenshot_urls, ts.submitted_at,
             t.title AS task_title, u.nickname AS herald_name,
             COALESCE(tcs.require_draft_review, 0) AS require_draft_review,

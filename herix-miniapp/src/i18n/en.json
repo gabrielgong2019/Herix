@@ -202,7 +202,7 @@
   "wx.phoneInvalid": "Invalid phone number",
   "wx.wechatOk": "✓ WeChat ID",
   "wx.wechatMin": "At least 6 characters",
-  "wx.autoDetect": "Digits are treated as a phone number",
+  "wx.autoDetect": "Enter WeChat ID or phone number",
   "pai.accountId": "— Account ID",
   "pai.homeLink": "— Profile link",
   "pai.followers": "Followers (optional)",
@@ -1200,5 +1200,8 @@
   "req.bound": "Linked",
   "req.boundCheck": "✓ Linked",
   "req.needBind": "Link {name} required",
-  "req.contactHint": "The brand may contact you via this account to check task progress"
+  "req.contactHint": "The brand may contact you via this account to check task progress",
+  "pai.friends": "Friends",
+  "req.friendsOk": "{n}+ friends ✓",
+  "req.friendsInsufficient": "{c} friends now, need {r}+"
 }

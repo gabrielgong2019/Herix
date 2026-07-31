@@ -53,15 +53,18 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
         const platform = platformById(req.platformId);
         const failure = check.failures.find(f => f.platformId === req.platformId);
         // 满足态：有粉丝门槛→显示达标；否则→已绑定
+        const isFriends = platform.countLabel === 'friends';
         let icon = '✓';
         let color = '#10b981';
-        let desc = req.minFollowers ? t('req.followersOk', { n: req.minFollowers.toLocaleString() }) : t('req.bound');
+        let desc = req.minFollowers
+          ? t(isFriends ? 'req.friendsOk' : 'req.followersOk', { n: req.minFollowers.toLocaleString() })
+          : t('req.bound');
         if (failure) {
           if (failure.type === 'INSUFFICIENT') {
-            // 粉丝不够是硬差距（当场改不了）：红色 + 讲清差多少
+            // 数量不够是硬差距（当场改不了）：红色 + 讲清差多少
             icon = '✗';
             color = '#ef4444';
-            desc = t('req.insufficient', { c: failure.current.toLocaleString(), r: failure.required.toLocaleString() });
+            desc = t(isFriends ? 'req.friendsInsufficient' : 'req.insufficient', { c: failure.current.toLocaleString(), r: failure.required.toLocaleString() });
           } else {
             // 没绑：不是错误、是可当场补的动作。中性色 + "需绑定X"（报名时会弹出补录）
             icon = '';

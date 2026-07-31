@@ -619,7 +619,7 @@
   "withdraw.rulesArrivalVal": "Tùy theo phương thức nhận tiền",
   "withdraw.rulesFee": "Phí dịch vụ",
   "withdraw.rulesFeeVal": "Nội địa ¥200 / Quốc tế từ ¥400",
-  "wx.autoDetect": "Nhập toàn số sẽ tự nhận diện là số điện thoại",
+  "wx.autoDetect": "Nhập WeChat ID hoặc số điện thoại",
   "wx.continuePhone": "Tiếp tục nhập (11 số)",
   "wx.phoneInvalid": "Số điện thoại không đúng định dạng",
   "wx.phoneInvalidFull": "Số điện thoại không đúng định dạng (cần 11 số, bắt đầu bằng 1)",
@@ -653,5 +653,8 @@
   "req.bound": "Đã liên kết",
   "req.boundCheck": "✓ Đã liên kết",
   "req.needBind": "Cần liên kết {name}",
-  "req.contactHint": "Nhãn hàng có thể liên hệ bạn qua tài khoản này để kiểm tra tiến độ"
+  "req.contactHint": "Nhãn hàng có thể liên hệ bạn qua tài khoản này để kiểm tra tiến độ",
+  "pai.friends": "Số bạn bè",
+  "req.friendsOk": "{n}+ bạn bè ✓",
+  "req.friendsInsufficient": "Hiện {c} bạn bè, cần {r}+"
 }

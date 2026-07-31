@@ -42,19 +42,21 @@ export default class PlatformAccountInput extends Component<Props, State> {
     const platform = platformById(this.props.platformId);
     const followers = followersText ? parseInt(followersText, 10) : null;
 
+    // followers 承载"数量门槛"数字（内容平台=粉丝数，联系平台=好友数），三条路径都要带上，
+    // 否则微信/LINE 填了好友数存不进档案，报名时校验必然 INSUFFICIENT 卡死（2026-07-29 修）
     if (this.props.platformId === 'wechat') {
       const check = validateWechatOrPhone(rawValue);
       this.props.onChange({
         platformId: this.props.platformId,
         accountId: check.ok ? check.saved : null,
         url: null,
-        followers: null,
+        followers,
       });
       return;
     }
 
     if (platform.inputType === 'id') {
-      this.props.onChange({ platformId: this.props.platformId, accountId: rawValue.trim() || null, url: null, followers: null });
+      this.props.onChange({ platformId: this.props.platformId, accountId: rawValue.trim() || null, url: null, followers });
     } else {
       this.props.onChange({ platformId: this.props.platformId, url: rawValue.trim() || null, accountId: null, followers });
     }
@@ -83,25 +85,23 @@ export default class PlatformAccountInput extends Component<Props, State> {
         {platformId === 'wechat' ? (
           <WechatOrPhoneInput value={rawValue} onChange={this.handleRawChange} />
         ) : (
-          <>
-            <Input
-              className='ob-input'
-              style={{ margin: 0 }}
-              placeholder={platform.placeholder}
-              value={rawValue}
-              onInput={e => this.handleRawChange(e.detail.value)}
-            />
-            {platform.hasFollowers && (
-              <Input
-                className='ob-input'
-                style={{ margin: '6px 0 0', fontSize: '13px' }}
-                type='number'
-                placeholder={t('pai.followers')}
-                value={followersText}
-                onInput={e => this.handleFollowersChange(e.detail.value)}
-              />
-            )}
-          </>
+          <Input
+            className='ob-input'
+            style={{ margin: 0 }}
+            placeholder={platform.placeholder}
+            value={rawValue}
+            onInput={e => this.handleRawChange(e.detail.value)}
+          />
+        )}
+        {platform.hasFollowers && (
+          <Input
+            className='ob-input'
+            style={{ margin: '6px 0 0', fontSize: '13px' }}
+            type='number'
+            placeholder={t(platform.countLabel === 'friends' ? 'pai.friends' : 'pai.followers')}
+            value={followersText}
+            onInput={e => this.handleFollowersChange(e.detail.value)}
+          />
         )}
       </View>
     );

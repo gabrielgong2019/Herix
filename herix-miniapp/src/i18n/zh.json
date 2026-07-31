@@ -202,7 +202,7 @@
   "wx.phoneInvalid": "手机号格式有误",
   "wx.wechatOk": "✓ 微信 ID",
   "wx.wechatMin": "微信号至少6位",
-  "wx.autoDetect": "纯数字自动识别手机号",
+  "wx.autoDetect": "可输入微信号或手机号",
   "pai.accountId": "— 账号 ID",
   "pai.homeLink": "— 主页链接",
   "pai.followers": "粉丝数（选填）",
@@ -1200,5 +1200,8 @@
   "req.bound": "已绑定",
   "req.boundCheck": "✓ 已绑定",
   "req.needBind": "需绑定{name}",
-  "req.contactHint": "商家可能通过此账号联系你确认任务进度"
+  "req.contactHint": "商家可能通过此账号联系你确认任务进度",
+  "pai.friends": "好友数",
+  "req.friendsOk": "{n}+ 好友 ✓",
+  "req.friendsInsufficient": "当前 {c} 好友，需 {r}+"
 }

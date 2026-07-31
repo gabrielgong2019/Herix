@@ -202,7 +202,7 @@
   "wx.phoneInvalid": "電話番号が正しくありません",
   "wx.wechatOk": "✓ WeChat ID",
   "wx.wechatMin": "WeChat IDは6文字以上です",
-  "wx.autoDetect": "数字のみの場合は電話番号として認識します",
+  "wx.autoDetect": "WeChat IDまたは電話番号を入力",
   "pai.accountId": "— アカウントID",
   "pai.homeLink": "— プロフィールURL",
   "pai.followers": "フォロワー数（任意）",
@@ -1200,5 +1200,8 @@
   "req.bound": "連携済み",
   "req.boundCheck": "✓ 連携済み",
   "req.needBind": "{name}の連携が必要",
-  "req.contactHint": "タスクの進捗確認のため、このアカウントで連絡が来る場合があります"
+  "req.contactHint": "タスクの進捗確認のため、このアカウントで連絡が来る場合があります",
+  "pai.friends": "友だち数",
+  "req.friendsOk": "友だち {n}+ ✓",
+  "req.friendsInsufficient": "現在 {c} 友だち、{r}+ 必要"
 }

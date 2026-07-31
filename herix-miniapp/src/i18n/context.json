@@ -245,7 +245,7 @@
   "addMethod.errLabel": "名称未填的校验toast",
   "addMethod.added": "添加成功toast,短",
   "addMethod.addFailed": "添加失败toast",
-  "index.slogan": "品牌slogan,'赫'与HERIX双关,页首右上角,译文需品牌方定稿",
+  "index.slogan": "品牌slogan,页首右上角,zh:赫动四海/ja:赫と、世界へ/en:Move the world/vi:Herix vươn bốn biển",
   "index.empty": "任务列表空态",
   "taskCard.diffEasy": "任务难度角标:低,1-2字",
   "taskCard.diffMedium": "任务难度角标:中,原文'刚好'口语化,1-3字",

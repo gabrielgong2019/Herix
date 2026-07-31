@@ -262,7 +262,8 @@
     "summaryAnyN": "Creator must meet {{n}} of the following {{total}}: {{list}}",
     "errorTooManyCodes": "Max {{max}} codes per upload (currently {{n}}) — please split into batches",
     "coverClickUpload": "Click to upload cover image",
-    "errorCover": "Please upload a cover image (required to publish; drafts can skip)"
+    "errorCover": "Please upload a cover image (required to publish; drafts can skip)",
+    "mustBind": "Must bind"
   },
   "site": {
     "jp": "Japan",

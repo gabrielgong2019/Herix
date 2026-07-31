@@ -38,13 +38,19 @@ function detectLang(text: string): string | null {
   return null
 }
 
-const PLATFORMS = [
-  { id: 'xiaohongshu', name: '小红书', icon: '📕' },
-  { id: 'instagram', name: 'Instagram', icon: '📸' },
-  { id: 'tiktok', name: 'TikTok', icon: '🎵' },
-  { id: 'youtube', name: 'YouTube', icon: '▶️' },
-  { id: 'twitter', name: 'X/Twitter', icon: '𝕏' },
-  { id: 'facebook', name: 'Facebook', icon: '📘' },
+// hasFollowers 区分两类要求：有粉丝概念的可选填粉丝门槛；联系类(微信/LINE等)只有"必须绑定"。
+// 与 herix-miniapp/src/utils/platforms.ts 保持一致（新增平台两处同步）
+const PLATFORMS: { id: string; name: string; icon: string; hasFollowers: boolean }[] = [
+  { id: 'xiaohongshu', name: '小红书', icon: '📕', hasFollowers: true },
+  { id: 'instagram', name: 'Instagram', icon: '📸', hasFollowers: true },
+  { id: 'tiktok', name: 'TikTok', icon: '🎵', hasFollowers: true },
+  { id: 'youtube', name: 'YouTube', icon: '▶️', hasFollowers: true },
+  { id: 'twitter', name: 'X/Twitter', icon: '𝕏', hasFollowers: true },
+  { id: 'facebook', name: 'Facebook', icon: '📘', hasFollowers: true },
+  { id: 'wechat', name: '微信', icon: '💬', hasFollowers: false },
+  { id: 'line', name: 'LINE', icon: '💚', hasFollowers: false },
+  { id: 'zalo', name: 'Zalo', icon: '🔵', hasFollowers: false },
+  { id: 'whatsapp', name: 'WhatsApp', icon: '📱', hasFollowers: false },
 ]
 
 const PLATFORM_FEE_RATE = 0.2
@@ -928,13 +934,18 @@ export default function TaskForm() {
                         <span className="text-sm font-medium flex-shrink-0" style={{ minWidth: 92 }}>
                           {meta ? `${meta.icon} ${meta.name}` : r.platformId}
                         </span>
-                        <input
-                          type="number" min={0} placeholder={t('taskForm.minFollowersPlaceholder')}
-                          value={r.minFollowers}
-                          onChange={(e) => updatePlatformReq(r.platformId, { minFollowers: e.target.value === '' ? '' : Number(e.target.value) })}
-                          className="text-sm rounded-lg"
-                          style={{ width: 110, padding: '6px 10px', border: '1px solid var(--border)', background: '#fff' }}
-                        />
+                        {meta?.hasFollowers ? (
+                          <input
+                            type="number" min={0} placeholder={t('taskForm.minFollowersPlaceholder')}
+                            value={r.minFollowers}
+                            onChange={(e) => updatePlatformReq(r.platformId, { minFollowers: e.target.value === '' ? '' : Number(e.target.value) })}
+                            className="text-sm rounded-lg"
+                            style={{ width: 110, padding: '6px 10px', border: '1px solid var(--border)', background: '#fff' }}
+                          />
+                        ) : (
+                          // 联系类无粉丝概念：只需绑定账号（商家可能借此联系赫使确认进度）
+                          <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.mustBind')}</span>
+                        )}
                         <label className="flex items-center gap-1.5 text-xs cursor-pointer flex-shrink-0" style={{ color: 'var(--muted)' }}>
                           <input type="checkbox" checked={r.required}
                             disabled={form.reqMode === 'ANY_N'}

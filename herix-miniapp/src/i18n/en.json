@@ -240,7 +240,7 @@
   "task.modeContent": "Content Creation",
   "task.modeReferral": "Referral Code Incentive",
   "task.instantPayout": "⚡ Instant Payout",
-  "task.spotsProgress": "{used}/{total} applied",
+  "task.spotsProgress": "{used}/{total} joined",
   "task.referralSection": "Referral Code Info",
   "task.codeAuto": "After approval, the platform will assign you a unique referral code automatically",
   "task.codeCustom": "After approval, the brand will provide you with a unique referral code",

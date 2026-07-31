@@ -671,9 +671,9 @@ export default class TaskDetail extends Component<{ id: string }, State> {
               <View className='slots-fill' style={{ width: `${fillPct}%` }} />
             </View>
             <Text className='slots-text'>
-              {slotsLeft > 0 ? t('task.slotsLeft', { n: slotsLeft }) : t('task.slotsNone')}
-              {'  '}
-              <Text className='slots-sub'>{t('task.spotsProgress', { used: approvedCount, total: slotsTotal })}</Text>
+              {slotsLeft > 0
+                ? t('task.spotsProgress', { used: approvedCount, total: slotsTotal })
+                : t('task.slotsNone')}
             </Text>
           </View>
 

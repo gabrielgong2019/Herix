@@ -513,7 +513,7 @@
   "task.slotsLeft": "Còn {n} suất",
   "task.slotsNone": "Hết suất",
   "task.specsTitle": "Thông số nội dung",
-  "task.spotsProgress": "{used}/{total} đã đăng ký",
+  "task.spotsProgress": "Đã tham gia {used}/{total}",
   "task.stApproved": "Đã duyệt",
   "task.stPending": "Chờ duyệt",
   "task.stRejected": "Đã từ chối",

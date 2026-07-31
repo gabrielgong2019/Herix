@@ -240,7 +240,7 @@
   "task.modeContent": "コンテンツ制作",
   "task.modeReferral": "紹介コードインセンティブ",
   "task.instantPayout": "⚡ 即時精算",
-  "task.spotsProgress": "{used}/{total}人応募済み",
+  "task.spotsProgress": "応募 {used}/{total}",
   "task.referralSection": "紹介コードについて",
   "task.codeAuto": "承認後、プラットフォームが専用紹介コードを自動で発行します",
   "task.codeCustom": "承認後、ブランドから専用紹介コードが発行されます",

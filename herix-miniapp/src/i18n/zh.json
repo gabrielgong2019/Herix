@@ -240,7 +240,7 @@
   "task.modeContent": "内容创作",
   "task.modeReferral": "邀请码激励",
   "task.instantPayout": "⚡ 即时结算",
-  "task.spotsProgress": "{used}/{total} 人已报名",
+  "task.spotsProgress": "已报名 {used}/{total}",
   "task.referralSection": "推广码说明",
   "task.codeAuto": "审核通过后，平台自动为你分配专属推广码",
   "task.codeCustom": "审核通过后，品牌方将向你发放专属推广码",

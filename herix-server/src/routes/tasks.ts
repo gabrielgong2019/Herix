@@ -899,7 +899,7 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id AND ta.status = 'APPROVED') as approved_count,
             (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
             (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count,
-            (SELECT CASE WHEN COUNT(*) >= 3
+            (SELECT CASE WHEN COUNT(*) >= 5
                THEN NULLIF(ROUND(AVG(EXTRACT(EPOCH FROM (ts.reviewed_at::timestamp - ts.submitted_at::timestamp)) / 86400)), 0)
                ELSE NULL END
              FROM task_submissions ts

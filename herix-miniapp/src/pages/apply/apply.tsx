@@ -193,6 +193,69 @@ export default class Apply extends Component<{}, State> {
     const { mode, links, screenshots, description, submitting, uploading, hints, isResubmit, rejectNote, minImages, draftApprovedFlip } = this.state;
     const isDraft = mode === 'draft';
 
+    const linkSection = (
+      <View className='form-group'>
+        <Text className='label'>{isDraft ? t('apply.previewLink') : t('apply.contentLinks')}</Text>
+        {links.map((link, i) => (
+          <View key={i} className='link-row'>
+            <Input
+              className='input link-input'
+              placeholder='https://...'
+              value={link}
+              onInput={e => this.setLink(i, e.detail.value)}
+            />
+            {!isDraft && links.length > 1 && (
+              <Text className='link-remove' onClick={() => this.removeLink(i)}>✕</Text>
+            )}
+          </View>
+        ))}
+        {!isDraft && links.length < MAX_LINKS && (
+          <Text className='add-link' onClick={this.addLink}>＋ {t('apply.addLink')}</Text>
+        )}
+        <View className='hints'>
+          {hints.map((hint, i) => (
+            <Text key={i} className='hint'>💡 {t(hint)}</Text>
+          ))}
+        </View>
+      </View>
+    );
+
+    const imageSection = (
+      <View className='form-group'>
+        <Text className='label'>
+          {isDraft ? t('apply.draftScreenshots') : t('apply.screenshots')}
+          {minImages > 0 && <Text className='label-sub'> · {t('apply.needMinImages', { n: minImages })}</Text>}
+        </Text>
+        <View className='shots-grid'>
+          {screenshots.map((url, i) => (
+            <View key={url} className='shot-item'>
+              <Image className='shot-img' src={url} mode='aspectFill' />
+              <Text className='shot-remove' onClick={() => this.removeImage(i)}>✕</Text>
+            </View>
+          ))}
+          {screenshots.length < MAX_IMAGES && (
+            <View className='shot-add' onClick={this.pickImages}>
+              {uploading ? t('apply.uploading') : '＋'}
+            </View>
+          )}
+        </View>
+      </View>
+    );
+
+    const descSection = (
+      <View className='form-group'>
+        <Text className='label'>{isDraft ? t('apply.draftDescLabel') : t('apply.contentDesc')}</Text>
+        <Textarea
+          className='textarea'
+          placeholder={isDraft ? t('apply.draftDescPh') : t('apply.descPh')}
+          value={description}
+          onInput={e => this.setState({ description: e.detail.value })}
+          maxlength={2000}
+        />
+        {isDraft && <Text className='hint'>💡 {t('apply.cloudHint')}</Text>}
+      </View>
+    );
+
     return (
       <View className='apply-page'>
         <BackBar />
@@ -203,66 +266,23 @@ export default class Apply extends Component<{}, State> {
         </Text>
 
         {isDraft && <View className='draft-banner'>📝 {t('apply.draftIntro')}</View>}
+        {isDraft && <View className='warn-banner'>⚠️ {t('apply.draftWarn')}</View>}
         {!isDraft && draftApprovedFlip && <View className='draft-banner'>🎉 {t('apply.draftApprovedIntro')}</View>}
         {isResubmit && !!rejectNote && <View className='reject-banner'>{t('apply.rejectBanner', { note: rejectNote })}</View>}
 
-        <View className='form-group'>
-          <Text className='label'>{isDraft ? t('apply.previewLink') : t('apply.contentLinks')}</Text>
-          {links.map((link, i) => (
-            <View key={i} className='link-row'>
-              <Input
-                className='input link-input'
-                placeholder='https://...'
-                value={link}
-                onInput={e => this.setLink(i, e.detail.value)}
-              />
-              {!isDraft && links.length > 1 && (
-                <Text className='link-remove' onClick={() => this.removeLink(i)}>✕</Text>
-              )}
-            </View>
-          ))}
-          {!isDraft && links.length < MAX_LINKS && (
-            <Text className='add-link' onClick={this.addLink}>＋ {t('apply.addLink')}</Text>
-          )}
-          {!isDraft && (
-            <View className='hints'>
-              {hints.map((hint, i) => (
-                <Text key={i} className='hint'>💡 {t(hint)}</Text>
-              ))}
-            </View>
-          )}
-        </View>
-
-        <View className='form-group'>
-          <Text className='label'>
-            {t('apply.screenshots')}
-            {minImages > 0 && <Text className='label-sub'> · {t('apply.needMinImages', { n: minImages })}</Text>}
-          </Text>
-          <View className='shots-grid'>
-            {screenshots.map((url, i) => (
-              <View key={url} className='shot-item'>
-                <Image className='shot-img' src={url} mode='aspectFill' />
-                <Text className='shot-remove' onClick={() => this.removeImage(i)}>✕</Text>
-              </View>
-            ))}
-            {screenshots.length < MAX_IMAGES && (
-              <View className='shot-add' onClick={this.pickImages}>
-                {uploading ? t('apply.uploading') : '＋'}
-              </View>
-            )}
-          </View>
-        </View>
-
-        <View className='form-group'>
-          <Text className='label'>{isDraft ? t('apply.draftDescLabel') : t('apply.contentDesc')}</Text>
-          <Textarea
-            className='textarea'
-            placeholder={isDraft ? t('apply.draftDescPh') : t('apply.descPh')}
-            value={description}
-            onInput={e => this.setState({ description: e.detail.value })}
-            maxlength={2000}
-          />
-        </View>
+        {isDraft ? (
+          <>
+            {imageSection}
+            {descSection}
+            {linkSection}
+          </>
+        ) : (
+          <>
+            {linkSection}
+            {imageSection}
+            {descSection}
+          </>
+        )}
 
         <Button className='btn-primary' onClick={this.handleSubmit} loading={submitting} disabled={submitting || uploading}>
           {isDraft ? t('apply.submitDraftBtn') : t('apply.submitReview')}

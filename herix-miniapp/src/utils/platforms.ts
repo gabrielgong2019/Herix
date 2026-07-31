@@ -21,7 +21,7 @@ export interface Platform {
 }
 
 export const PLATFORM_REGISTRY: Platform[] = [
-  { id: 'wechat',      name: '微信',        icon: '💬', inputType: 'id',  placeholder: '微信号 或手机号',                          hasFollowers: true,  countLabel: 'friends' },
+  { id: 'wechat',      name: '微信',        icon: '💬', inputType: 'id',  placeholder: '微信ID 或手机号',                          hasFollowers: true,  countLabel: 'friends' },
   { id: 'instagram',   name: 'Instagram',   icon: '📸', inputType: 'url', placeholder: 'https://instagram.com/你的账号',            hasFollowers: true,  countLabel: 'followers' },
   { id: 'xiaohongshu', name: '小红书',       icon: '📕', inputType: 'url', placeholder: 'https://www.xiaohongshu.com/user/profile/...', hasFollowers: true,  countLabel: 'followers' },
   { id: 'tiktok',      name: 'TikTok',      icon: '🎵', inputType: 'url', placeholder: 'https://tiktok.com/@你的账号',               hasFollowers: true,  countLabel: 'followers' },

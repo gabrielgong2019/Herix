@@ -2,6 +2,7 @@ import { Component } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import WechatOrPhoneInput, { validateWechatOrPhone } from './WechatOrPhoneInput';
 import { platformById } from '../utils/platforms';
+import { DEFAULT_FRIEND_COUNT } from '../utils/platformEntry';
 import './PlatformAccountInput.scss';
 import { t } from '../utils/i18n';
 
@@ -34,8 +35,15 @@ export default class PlatformAccountInput extends Component<Props, State> {
     const existing = props.existingValue;
     this.state = {
       rawValue: existing?.accountId || existing?.url || '',
-      followersText: existing?.followers != null ? String(existing.followers) : '',
+      followersText: existing?.followers != null
+        ? String(existing.followers)
+        : (platformById(props.platformId).countLabel === 'friends' ? String(DEFAULT_FRIEND_COUNT) : ''),
     };
+  }
+
+  // 预填的默认好友数要主动推给父组件，否则赫使没碰输入框、提交时仍是空（2026-07-29）
+  componentDidMount() {
+    if (this.state.followersText) this.emit(this.state.rawValue, this.state.followersText);
   }
 
   emit(rawValue: string, followersText: string) {
@@ -93,15 +101,16 @@ export default class PlatformAccountInput extends Component<Props, State> {
             onInput={e => this.handleRawChange(e.detail.value)}
           />
         )}
-        {platform.hasFollowers && (
-          <Input
-            className='ob-input'
-            style={{ margin: '6px 0 0', fontSize: '13px' }}
-            type='number'
-            placeholder={t(platform.countLabel === 'friends' ? 'pai.friends' : 'pai.followers')}
-            value={followersText}
-            onInput={e => this.handleFollowersChange(e.detail.value)}
-          />
+        <Input
+          className='ob-input'
+          style={{ margin: '6px 0 0', fontSize: '13px' }}
+          type='number'
+          placeholder={t(platform.countLabel === 'friends' ? 'pai.friends' : 'pai.followers')}
+          value={followersText}
+          onInput={e => this.handleFollowersChange(e.detail.value)}
+        />
+        {platform.countLabel === 'friends' && (
+          <Text style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px', display: 'block' }}>{t('pai.friendsHint')}</Text>
         )}
       </View>
     );

@@ -42,14 +42,14 @@ curl -s -X PATCH $API/applications/$APPID/review -H "Authorization: Bearer $TB" 
 echo "— /applications/my 字段（payout + require_draft_review）—"
 MY=$(curl -s $API/applications/my -H "Authorization: Bearer $TH")
 assert_eq "payout_per_herald 正确返回" "$(echo $MY | python3 -c "import json,sys;d=json.load(sys.stdin);r=[x for x in d if x['task_id']=='$TID'][0];print(int(r.get('payout_per_herald')))")" "2500"
-assert_eq "require_draft_review 正确返回" "$(echo $MY | python3 -c "import json,sys;d=json.load(sys.stdin);r=[x for x in d if x['task_id']=='$TID'][0];print(r.get('require_draft_review'))")" "1"
+assert_eq "require_draft_review 正确返回" "$(echo $MY | python3 -c "import json,sys;d=json.load(sys.stdin);r=[x for x in d if x['task_id']=='$TID'][0];print(r.get('require_draft_review'))")" "True"
 
 echo "— 阶段1：提交草稿 —"
 curl -s -X POST $API/submissions/$TID -H "Authorization: Bearer $TH" -H 'Content-Type: application/json' -d '{"description":"草稿脚本文字内容","screenshotUrls":["https://x/1.jpg"]}' >/dev/null
 ROW=$(psql $DB -tAc "SELECT stage||'|'||status FROM task_submissions WHERE task_id='$TID' AND herald_id='$HID'")
 assert_eq "首次提交落 DRAFT+PENDING_REVIEW" "$ROW" "DRAFT|PENDING_REVIEW"
 STAGE=$(curl -s $API/submissions/my -H "Authorization: Bearer $TH" | python3 -c "import json,sys;d=json.load(sys.stdin);r=[x for x in d if x['task_id']=='$TID'][0];print(r['stage']+'|'+r['status']+'|'+str(r['require_draft_review']))")
-assert_eq "/submissions/my 回显 DRAFT|PENDING_REVIEW|1" "$STAGE" "DRAFT|PENDING_REVIEW|1"
+assert_eq "/submissions/my 回显 DRAFT|PENDING_REVIEW|True" "$STAGE" "DRAFT|PENDING_REVIEW|True"
 
 echo "— 草稿通过 → 仍是 DRAFT（不算完成）—"
 SUBID=$(psql $DB -tAc "SELECT id FROM task_submissions WHERE task_id='$TID' AND herald_id='$HID'")

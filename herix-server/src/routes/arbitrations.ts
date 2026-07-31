@@ -26,7 +26,7 @@ arbitrationsRouter.post('/', requireAuth, requireRole('BRAND', 'HERALD', 'ADMIN'
     const sub = await findOne<any>(
       `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, ts.status,
               t.creator_id, t.title,
-              COALESCE(tcs.require_draft_review, 0) AS require_draft_review,
+              COALESCE(tcs.require_draft_review, false) AS require_draft_review,
               COALESCE(tcs.max_revisions, 2) AS max_revisions
        FROM task_submissions ts
        JOIN tasks t ON t.id = ts.task_id
@@ -98,7 +98,7 @@ arbitrationsRouter.get('/', requireAuth, requireRole('ADMIN'), async (req: Reque
             bu.nickname AS brand_name, hu.nickname AS herald_name,
             ts.status AS submission_status, ts.stage AS submission_stage,
             ts.content_urls, ts.description, ts.review_note,
-            COALESCE(tcs.require_draft_review, 0) AS require_draft_review,
+            COALESCE(tcs.require_draft_review, false) AS require_draft_review,
             COALESCE(tcs.max_revisions, 2) AS max_revisions
      FROM arbitrations a
      JOIN tasks t ON t.id = a.task_id

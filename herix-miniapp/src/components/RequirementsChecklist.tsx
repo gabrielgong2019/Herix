@@ -82,7 +82,7 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
               </Text>
             </View>
             {/* 联系类未绑：补一句为什么要绑，消除"莫名其妙要我加微信"的困惑 */}
-            {failure && failure.type === 'MISSING' && !platform.hasFollowers && (
+            {failure && failure.type === 'MISSING' && platform.countLabel === 'friends' && (
               <Text className='requirements-hint' style={{ display: 'block', marginTop: '2px' }}>
                 {t('req.contactHint')}
               </Text>

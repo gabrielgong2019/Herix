@@ -3,6 +3,7 @@ import { View, Text, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { ambassador, communities as communitiesApi, getToken, auth as authApi } from '../../utils/api';
 import { PLATFORM_REGISTRY, platformById } from '../../utils/platforms';
+import { makePlatformEntry, DEFAULT_FRIEND_COUNT } from '../../utils/platformEntry';
 import './index.scss';
 import { t } from '../../utils/i18n';
 import { validateWechatOrPhone } from '../../components/WechatOrPhoneInput';
@@ -147,14 +148,16 @@ export default class Onboard extends Component<{}, State> {
     if (this.state.submitting) return;
     const d = this.state.data;
     const platforms: any[] = [];
+    // 引导期微信作联系方式：好友数按默认值(不额外加输入，降低注册摩擦)，赫使后续可在档案改
     if (d.wechatId) {
       const check = validateWechatOrPhone(d.wechatId.trim());
-      if (check.saved) platforms.push({ platformId: 'wechat', accountId: check.saved, url: null, followers: null });
+      if (check.saved) platforms.push({ platformId: 'wechat', accountId: check.saved, url: null, followers: DEFAULT_FRIEND_COUNT });
     }
+    // SNS 步骤可整步跳过；但填了平台就必须填全（数量必填），走三入口共享校验
     if (d.snsPlatform && d.snsVal) {
-      const meta = platformById(d.snsPlatform);
-      if (meta.inputType === 'id') platforms.push({ platformId: d.snsPlatform, accountId: d.snsVal, url: null, followers: null });
-      else platforms.push({ platformId: d.snsPlatform, url: d.snsVal, followers: d.snsFollowers ? parseInt(d.snsFollowers, 10) : null, accountId: null });
+      const res = makePlatformEntry(d.snsPlatform, d.snsVal, d.snsFollowers);
+      if (!res.ok) { Taro.showToast({ title: res.error, icon: 'none' }); return; }
+      platforms.push(res.entry);
     }
     const body = {
       residence: d.residence || undefined,
@@ -283,7 +286,7 @@ export default class Onboard extends Component<{}, State> {
                   <Text
                     key={p.id}
                     className={`chip ${d.snsPlatform === p.id ? 'sel' : ''}`}
-                    onClick={() => this.set('snsPlatform', d.snsPlatform === p.id ? '' : p.id)}
+                    onClick={() => { const nid = d.snsPlatform === p.id ? '' : p.id; this.setState(st => ({ data: { ...st.data, snsPlatform: nid, snsFollowers: nid && platformById(nid).countLabel === 'friends' && !st.data.snsFollowers ? String(DEFAULT_FRIEND_COUNT) : st.data.snsFollowers } })); }}
                   >
                     {p.icon} {p.name}
                   </Text>
@@ -298,18 +301,16 @@ export default class Onboard extends Component<{}, State> {
                     value={d.snsVal}
                     onInput={e => this.set('snsVal', e.detail.value)}
                   />
-                  {selP.hasFollowers && (
-                    <View>
-                      <Text className='field-label'>{t('pai.followers')}</Text>
-                      <Input
-                        className='ob-input'
-                        type='number'
-                        placeholder={t('ob.followersPh')}
-                        value={d.snsFollowers}
-                        onInput={e => this.set('snsFollowers', e.detail.value)}
-                      />
-                    </View>
-                  )}
+                  <View>
+                    <Text className='field-label'>{t(selP.countLabel === 'friends' ? 'pai.friends' : 'pai.followers')}</Text>
+                    <Input
+                      className='ob-input'
+                      type='number'
+                      placeholder={t('ob.followersPh')}
+                      value={d.snsFollowers}
+                      onInput={e => this.set('snsFollowers', e.detail.value)}
+                    />
+                  </View>
                 </View>
               )}
             </View>

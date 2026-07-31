@@ -2,16 +2,16 @@ import { Router, Request, Response } from 'express';
 import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
 import { calcTier } from '../types';
+import { isContactPlatform, socialPlatformMeta, SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { VALID_COMMUNITIES } from '../constants/communities';
 
 /** 根据 social_platforms JSON 计算各平台段位快照 */
-// 联系类平台(微信/LINE等)的数字是"好友数"而非公开粉丝，不代表 KOL 影响力，不参与段位计算
-// （2026-07-29：好友数门槛上线后，避免微信3000好友被误算成 Micro/Mid 段位）
-const CONTACT_PLATFORMS = new Set(['wechat', 'line', 'zalo', 'whatsapp']);
+// 联系类平台(微信/LINE等)的数字是"好友数"而非公开粉丝，不代表 KOL 影响力，不参与段位计算。
+// isContactPlatform 来自共享契约，加平台无需改这里（2026-07-29）
 function buildTierSnapshot(socialPlatforms: any[]): Record<string, string> {
   const snapshot: Record<string, string> = {};
   for (const p of socialPlatforms) {
-    if (p.followers != null && p.platformId && !CONTACT_PLATFORMS.has(p.platformId)) {
+    if (p.followers != null && p.platformId && !isContactPlatform(p.platformId)) {
       snapshot[p.platformId] = calcTier(Number(p.followers));
     }
   }
@@ -85,6 +85,9 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
   if (visaType) data.visa_type = visaType;
   if (bankAccount) data.bank_account = JSON.stringify(bankAccount);
   if (socialPlatforms !== undefined) {
+    // platformId 必须在注册表内，挡掉非法/拼错的平台进档案（否则永远匹配不上任务要求）
+    const bad = (Array.isArray(socialPlatforms) ? socialPlatforms : []).find((p: any) => p?.platformId && !socialPlatformMeta(p.platformId));
+    if (bad) return res.status(400).json({ error: `未知社交平台：${bad.platformId}`, code: 'UNKNOWN_PLATFORM' });
     data.social_platforms = JSON.stringify(socialPlatforms);
     data.tier_snapshot = JSON.stringify(buildTierSnapshot(socialPlatforms));
     data.social_platforms_updated_at = new Date().toISOString();

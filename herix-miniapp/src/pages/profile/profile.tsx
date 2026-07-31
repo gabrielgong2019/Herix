@@ -1,3 +1,4 @@
+import { makePlatformEntry } from '../../utils/platformEntry';
 import { Component } from 'react';
 import { View, Text, Input, Button, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
@@ -415,7 +416,7 @@ export default class Profile extends Component<{}, State> {
   };
 
   pickPlatform = (platformId: string) => {
-    this.setState({ platformPickerOpen: false, socialSheet: { mode: 'add', platformId, account: '', followers: '' } });
+    this.setState({ platformPickerOpen: false, socialSheet: { mode: 'add', platformId, account: '', followers: platformById(platformId).countLabel === 'friends' ? '50' : '' } });
   };
 
   /** 用弹层内容替换/追加对应平台后，整个数组发回后端 */
@@ -423,27 +424,10 @@ export default class Profile extends Component<{}, State> {
     const socials = parseJSON(this.state.user?.social_platforms, []);
     const rest = socials.filter((s: any) => s.platformId !== (removeId || sheet?.platformId));
     if (!sheet) return rest;
-    const p = platformById(sheet.platformId);
-    const val = sheet.account.trim();
-    if (!val) {
-      Taro.showToast({ title: t('profile.accountRequired'), icon: 'none' });
-      return null;
-    }
-    let entry: any;
-    if (sheet.platformId === 'wechat') {
-      const check = validateWechatOrPhone(val);
-      if (!check.ok) {
-        Taro.showToast({ title: check.msg!, icon: 'none' });
-        return null;
-      }
-      entry = { platformId: 'wechat', accountId: check.saved, url: null, followers: null };
-    } else {
-      const fol = sheet.followers ? parseInt(sheet.followers, 10) : null;
-      entry = p.inputType === 'id'
-        ? { platformId: sheet.platformId, accountId: val, url: null, followers: null }
-        : { platformId: sheet.platformId, url: val, followers: fol, accountId: null };
-    }
-    return [...rest, entry];
+    // 共享构造+校验（账号非空/微信规范化/数量必填），三入口同一份逻辑
+    const res = makePlatformEntry(sheet.platformId, sheet.account, sheet.followers);
+    if (!res.ok) { Taro.showToast({ title: res.error, icon: 'none' }); return null; }
+    return [...rest, res.entry];
   };
 
   savePlatforms = async (platforms: any[]) => {
@@ -808,18 +792,17 @@ export default class Profile extends Component<{}, State> {
                   onInput={e => this.setState({ socialSheet: { ...sheet, account: e.detail.value } })}
                 />
                 {isWechat && <Text className='ps-hint'>{t('wx.autoDetect')}</Text>}
-                {!isWechat && p.hasFollowers && (
-                  <View>
-                    <Text className='ps-label'>{t('profile.followersLabel')}</Text>
-                    <Input
-                      className='input'
-                      type='number'
-                      placeholder={t('profile.followersLabel')}
-                      value={sheet.followers}
-                      onInput={e => this.setState({ socialSheet: { ...sheet, followers: e.detail.value } })}
-                    />
-                  </View>
-                )}
+                <View>
+                  <Text className='ps-label'>{p.countLabel === 'friends' ? t('profile.friendsLabel') : t('profile.followersLabel')}</Text>
+                  <Input
+                    className='input'
+                    type='number'
+                    placeholder={p.countLabel === 'friends' ? t('pai.friends') : t('pai.followers')}
+                    value={sheet.followers}
+                    onInput={e => this.setState({ socialSheet: { ...sheet, followers: e.detail.value } })}
+                  />
+                  {p.countLabel === 'friends' && <Text className='ps-hint'>{t('profile.friendsHint')}</Text>}
+                </View>
                 <View className='btn-primary' onClick={this.saveSheet}>{t('common.save')}</View>
                 {sheet.mode === 'edit' && (
                   <Text className='ps-delete' onClick={this.deleteAccount}>{t('profile.deleteAccount')}</Text>

@@ -77,3 +77,31 @@ export type WalletEntryType = typeof WALLET_ENTRY_TYPES[number];
 // ── 发布并发阶梯 ──────────────────────────────────────────────────
 export const PUBLISH_TIERS = ['BASE', 'KYB', 'FUNDED', 'SUBSCRIPTION', 'OVERRIDE'] as const;
 export type PublishTier = typeof PUBLISH_TIERS[number];
+
+// ── 社交平台注册表（2026-07-29 前后端单一来源）─────────────────────
+// 权威元数据：id + countLabel(数量门槛叫法) + inputType(账号ID还是主页链接)。
+// UI 专属字段(icon/name/placeholder)不在契约里，由各端自行叠加。
+// 加平台只改这里；服务端校验/tier、前端展示/收集都从这派生，杜绝漂移。
+export const SOCIAL_PLATFORMS = [
+  { id: 'wechat',      countLabel: 'friends',   inputType: 'id'  },
+  { id: 'instagram',   countLabel: 'followers', inputType: 'url' },
+  { id: 'xiaohongshu', countLabel: 'followers', inputType: 'url' },
+  { id: 'tiktok',      countLabel: 'followers', inputType: 'url' },
+  { id: 'line',        countLabel: 'friends',   inputType: 'id'  },
+  { id: 'zalo',        countLabel: 'friends',   inputType: 'id'  },
+  { id: 'whatsapp',    countLabel: 'friends',   inputType: 'id'  },
+  { id: 'facebook',    countLabel: 'followers', inputType: 'url' },
+  { id: 'youtube',     countLabel: 'followers', inputType: 'url' },
+  { id: 'twitter',     countLabel: 'followers', inputType: 'url' },
+] as const;
+export type SocialPlatformId = typeof SOCIAL_PLATFORMS[number]['id'];
+export type CountLabel = 'followers' | 'friends';
+export const SOCIAL_PLATFORM_IDS: readonly string[] = SOCIAL_PLATFORMS.map(p => p.id);
+/** 查平台元数据；未知 id 返回 null（调用方据此判合法性） */
+export function socialPlatformMeta(id: string): { id: string; countLabel: CountLabel; inputType: 'id' | 'url' } | null {
+  return (SOCIAL_PLATFORMS.find(p => p.id === id) as any) || null;
+}
+/** 联系类平台（好友数，非公开粉丝）——不计入 KOL 段位 */
+export function isContactPlatform(id: string): boolean {
+  return socialPlatformMeta(id)?.countLabel === 'friends';
+}

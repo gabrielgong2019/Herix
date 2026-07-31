@@ -205,7 +205,7 @@
   "wx.autoDetect": "WeChat IDまたは電話番号を入力",
   "pai.accountId": "— アカウントID",
   "pai.homeLink": "— プロフィールURL",
-  "pai.followers": "フォロワー数（任意）",
+  "pai.followers": "フォロワー数",
   "task.slotsLeft": "残り {n} 枠",
   "task.slotsNone": "満員",
   "task.avgPayDays": "平均 {n} 日で入金",
@@ -1204,7 +1204,14 @@
   "req.boundCheck": "✓ 連携済み",
   "req.needBind": "{name}の連携が必要",
   "req.contactHint": "タスクの進捗確認のため、このアカウントで連絡が来る場合があります",
-  "pai.friends": "友だち数",
+  "pai.friends": "友だち数（約）",
   "req.friendsOk": "友だち {n}+ ✓",
-  "req.friendsInsufficient": "現在 {c} 友だち、{r}+ 必要"
+  "req.friendsInsufficient": "現在 {c} 友だち、{r}+ 必要",
+  "pai.friendsHint": "一部のタスクは友だち数を確認します。おおよそでOK",
+  "pai.errAccount": "{name}のアカウントを入力してください",
+  "pai.errFollowers": "{name}のフォロワー数を入力してください",
+  "pai.errFriends": "{name}の友だち数（約）を入力してください",
+  "pai.errCountNum": "数量は0以上の整数で",
+  "profile.friendsLabel": "友だち数（約）",
+  "profile.friendsHint": "一部のタスクは友だち数を確認します"
 }

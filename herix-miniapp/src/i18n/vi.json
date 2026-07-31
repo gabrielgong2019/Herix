@@ -318,7 +318,7 @@
   "onboard.communityLabel": "Cộng đồng của bạn",
   "onboard.communitySkip": "Bỏ qua",
   "pai.accountId": "— ID tài khoản",
-  "pai.followers": "Số người theo dõi (không bắt buộc)",
+  "pai.followers": "Số người theo dõi",
   "pai.homeLink": "— liên kết trang cá nhân",
   "profile.account": "Email hoặc số điện thoại",
   "profile.accountId": "ID tài khoản",
@@ -657,7 +657,14 @@
   "req.boundCheck": "✓ Đã liên kết",
   "req.needBind": "Cần liên kết {name}",
   "req.contactHint": "Nhãn hàng có thể liên hệ bạn qua tài khoản này để kiểm tra tiến độ",
-  "pai.friends": "Số bạn bè",
+  "pai.friends": "Số bạn bè (khoảng)",
   "req.friendsOk": "{n}+ bạn bè ✓",
-  "req.friendsInsufficient": "Hiện {c} bạn bè, cần {r}+"
+  "req.friendsInsufficient": "Hiện {c} bạn bè, cần {r}+",
+  "pai.friendsHint": "Một số nhiệm vụ kiểm tra số bạn bè — ước lượng là được",
+  "pai.errAccount": "Nhập tài khoản {name}",
+  "pai.errFollowers": "Nhập số người theo dõi {name}",
+  "pai.errFriends": "Nhập số bạn bè {name} (khoảng)",
+  "pai.errCountNum": "Số lượng phải là số nguyên không âm",
+  "profile.friendsLabel": "Số bạn bè (khoảng)",
+  "profile.friendsHint": "Một số nhiệm vụ kiểm tra số bạn bè"
 }

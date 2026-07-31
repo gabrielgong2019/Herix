@@ -275,7 +275,7 @@ export interface Task {
   min_video_seconds?: number | null
   max_revisions?: number
   require_proposal?: number
-  require_draft_review?: number
+  require_draft_review?: boolean
   submit_deadline?: string | null
   created_at: string
   published_at?: string
@@ -363,7 +363,7 @@ export interface Submission {
   created_at?: string
   task_title?: string
   herald_name?: string
-  require_draft_review?: number
+  require_draft_review?: boolean
   max_revisions?: number
   stage_rejects?: number
   arbitration_open?: boolean

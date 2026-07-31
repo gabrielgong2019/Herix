@@ -346,7 +346,7 @@ submissionsRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), as
     `SELECT ts.id, ts.task_id, ts.herald_id, ts.stage, ts.status, ts.content_urls,
             ts.description, ts.screenshot_urls, ts.submitted_at,
             t.title AS task_title, u.nickname AS herald_name,
-            COALESCE(tcs.require_draft_review, 0) AS require_draft_review,
+            COALESCE(tcs.require_draft_review, false) AS require_draft_review,
             COALESCE(tcs.max_revisions, 2) AS max_revisions,
             (SELECT COUNT(*)::int FROM submission_revisions sr
              WHERE sr.task_id = ts.task_id AND sr.herald_id = ts.herald_id
@@ -388,7 +388,7 @@ submissionsRouter.get('/:id/revisions', requireAuth, async (req: Request, res: R
 submissionsRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
   const subs = await findMany<any>(
     `SELECT ts.*, t.title as task_title, t.payout_per_herald,
-            COALESCE(tcs.require_draft_review, 0) AS require_draft_review,
+            COALESCE(tcs.require_draft_review, false) AS require_draft_review,
             COALESCE(tcs.max_revisions, 2) AS max_revisions,
             (SELECT COUNT(*)::int FROM submission_revisions sr
              WHERE sr.task_id = ts.task_id AND sr.herald_id = ts.herald_id

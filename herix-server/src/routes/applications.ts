@@ -261,7 +261,7 @@ applicationRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Req
   // 新任务 commission 恒 0 导致价格显示¥0；require_draft_review 供前端判断是否要走草稿阶段（2026-07-27）
   const apps = await findMany<any>(
     `SELECT ta.*, t.title as task_title, t.status as task_status, t.commission, t.mode,
-            t.payout_per_herald, COALESCE(tcs.require_draft_review, 0) AS require_draft_review
+            t.payout_per_herald, COALESCE(tcs.require_draft_review, false) AS require_draft_review
      FROM task_applications ta
      JOIN tasks t ON t.id = ta.task_id
      LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id

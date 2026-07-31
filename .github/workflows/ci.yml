@@ -45,3 +45,5 @@ jobs:
         run: node scripts/check-terms.js
       - name: route-audit（前端调用 ↔ 服务端路由契约）
         run: python3 scripts/audit-fe-routes.py
+      - name: platform-registry（contracts ↔ miniapp 镜像一致）
+        run: node scripts/check-platform-registry.js

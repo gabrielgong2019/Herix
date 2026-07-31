@@ -71,7 +71,7 @@ assert_eq "A6.3 通过报名(过额度闸)" "$(curl -s -X PATCH $API/application
 
 echo "═══ A7 [赫使] 收到报名通过 → 提交草稿 ═══"
 assert_eq "A7.1 赫使收到 APP_APPROVED" "$(psql $DB -tAc "SELECT count(*) FROM notifications WHERE user_id='$HID' AND type='APP_APPROVED'")" "1"
-assert_eq "A7.2 /applications/my 带草稿前置标记" "$(curl -s $API/applications/my -H "Authorization: Bearer $TH" | python3 -c "import json,sys;d=json.load(sys.stdin);print([x for x in d if x['task_id']=='$TID'][0]['require_draft_review'])")" "1"
+assert_eq "A7.2 /applications/my 带草稿前置标记" "$(curl -s $API/applications/my -H "Authorization: Bearer $TH" | python3 -c "import json,sys;d=json.load(sys.stdin);print([x for x in d if x['task_id']=='$TID'][0]['require_draft_review'])")" "True"
 curl -s -X POST $API/submissions/$TID -H "Authorization: Bearer $TH" -H 'Content-Type: application/json' -d '{"description":"草稿：开箱视频脚本第一版","screenshotUrls":["https://x/draft1.jpg"]}' >/dev/null
 SUBID=$(psql $DB -tAc "SELECT id FROM task_submissions WHERE task_id='$TID' AND herald_id='$HID'")
 assert_eq "A7.3 首提落 DRAFT+PENDING_REVIEW" "$(psql $DB -tAc "SELECT stage||'|'||status FROM task_submissions WHERE id='$SUBID'")" "DRAFT|PENDING_REVIEW"

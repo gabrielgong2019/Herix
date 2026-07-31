@@ -205,7 +205,7 @@
   "wx.autoDetect": "可输入微信ID或手机号",
   "pai.accountId": "— 账号 ID",
   "pai.homeLink": "— 主页链接",
-  "pai.followers": "粉丝数（选填）",
+  "pai.followers": "粉丝数",
   "task.slotsLeft": "还剩 {n} 个名额",
   "task.slotsNone": "名额已满",
   "task.avgPayDays": "平均 {n} 天到账",
@@ -1204,7 +1204,14 @@
   "req.boundCheck": "✓ 已绑定",
   "req.needBind": "需绑定{name}",
   "req.contactHint": "商家可能通过此账号联系你确认任务进度",
-  "pai.friends": "好友数",
+  "pai.friends": "好友数（约）",
   "req.friendsOk": "{n}+ 好友 ✓",
-  "req.friendsInsufficient": "当前 {c} 好友，需 {r}+"
+  "req.friendsInsufficient": "当前 {c} 好友，需 {r}+",
+  "pai.friendsHint": "部分任务会核对好友数，填大约值即可",
+  "pai.errAccount": "请填写{name}账号",
+  "pai.errFollowers": "请填写{name}粉丝数",
+  "pai.errFriends": "请填写{name}好友数（约）",
+  "pai.errCountNum": "数量需为非负整数",
+  "profile.friendsLabel": "好友数（约）",
+  "profile.friendsHint": "部分任务会核对好友数，填大约值即可"
 }

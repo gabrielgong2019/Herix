@@ -205,7 +205,7 @@
   "wx.autoDetect": "Enter WeChat ID or phone number",
   "pai.accountId": "— Account ID",
   "pai.homeLink": "— Profile link",
-  "pai.followers": "Followers (optional)",
+  "pai.followers": "Followers",
   "task.slotsLeft": "{n} spots left",
   "task.slotsNone": "Fully booked",
   "task.avgPayDays": "Avg. {n} days to payment",
@@ -1204,7 +1204,14 @@
   "req.boundCheck": "✓ Linked",
   "req.needBind": "Link {name} required",
   "req.contactHint": "The brand may contact you via this account to check task progress",
-  "pai.friends": "Friends",
+  "pai.friends": "Friends (approx.)",
   "req.friendsOk": "{n}+ friends ✓",
-  "req.friendsInsufficient": "{c} friends now, need {r}+"
+  "req.friendsInsufficient": "{c} friends now, need {r}+",
+  "pai.friendsHint": "Some tasks check friend count — an estimate is fine",
+  "pai.errAccount": "Enter your {name} account",
+  "pai.errFollowers": "Enter your {name} follower count",
+  "pai.errFriends": "Enter your {name} friend count (approx.)",
+  "pai.errCountNum": "Count must be a non-negative integer",
+  "profile.friendsLabel": "Friends (approx.)",
+  "profile.friendsHint": "Some tasks check friend count"
 }

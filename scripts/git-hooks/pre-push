@@ -14,4 +14,6 @@ echo "[pre-push] check-terms..."
 (cd "$ROOT" && node scripts/check-terms.js)
 echo "[pre-push] route-audit..."
 (cd "$ROOT" && python3 scripts/audit-fe-routes.py)
+echo "[pre-push] platform-registry..."
+(cd "$ROOT" && node scripts/check-platform-registry.js)
 echo "[pre-push] ✅ all green"

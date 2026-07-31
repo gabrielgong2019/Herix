@@ -251,6 +251,12 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         Taro.showToast({ title: t('task.fillAccount', { name: platformById(pid).name }), icon: 'none' });
         return;
       }
+      // 数量必填（粉丝/好友），与档案编辑一致；联系类已默认50、内容平台须自填
+      if (val.followers == null) {
+        const isFriends = platformById(pid).countLabel === 'friends';
+        Taro.showToast({ title: t(isFriends ? 'pai.errFriends' : 'pai.errFollowers', { name: platformById(pid).name }), icon: 'none' });
+        return;
+      }
     }
 
     this.setState({ reqSubmitting: true });

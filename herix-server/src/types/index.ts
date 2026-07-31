@@ -1,6 +1,6 @@
 import { z } from 'zod';
 // 枚举唯一事实源：shared/contracts.ts（前后端共享，勿在此处重复字面量）
-import { TASK_MODES, CONTENT_TYPES, DIFFICULTIES, TASK_VISIBILITIES } from '../shared/contracts';
+import { TASK_MODES, CONTENT_TYPES, DIFFICULTIES, TASK_VISIBILITIES, SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { LOCALE_CODES } from '../constants/locales';
 
 // ── 段位阈值（粉丝数） ──
@@ -73,7 +73,7 @@ export const CreateTaskSchema = z.object({
   codeMode: z.enum(['auto', 'custom']).default('auto'),
   visibility: z.enum(TASK_VISIBILITIES).default('PUBLIC'),
   platformRequirements: z.array(z.object({
-    platformId: z.string(),
+    platformId: z.string().refine((id) => SOCIAL_PLATFORM_IDS.includes(id), { message: '未知社交平台' }),
     minFollowers: z.number().int().min(0).nullish(),
     required: z.boolean().default(true),
   })).optional(),

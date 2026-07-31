@@ -1,3 +1,5 @@
+@use '../styles/breakpoints' as bp;
+
 .back-bar {
   display: flex;
   align-items: center;
@@ -11,4 +13,22 @@
 }
 .back-bar-text {
   font-size: 26px;
+}
+
+@include bp.desktop {
+  .back-bar {
+    padding: 20PX 0 12PX;
+    gap: 6PX;
+    cursor: pointer;
+    opacity: 0.75;
+    transition: opacity 0.15s;
+    &:hover { opacity: 1; }
+  }
+  .back-bar-arrow {
+    font-size: 20PX;
+  }
+  .back-bar-text {
+    font-size: 14PX;
+    font-weight: 500;
+  }
 }

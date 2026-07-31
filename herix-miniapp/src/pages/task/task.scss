@@ -644,26 +644,33 @@
     grid-template-columns: minmax(0, 1fr) 320PX;
     column-gap: 24PX;
     align-items: start;
-    padding: 24PX 24PX 40PX; // 底部不再需要给 fixed 栏留 140px
+    padding: 0 24PX 40PX;
   }
 
   .back-bar {
-    grid-column: 1 / -1; // 返回条横跨主内容+侧栏
-    padding: 0;
+    grid-column: 1 / -1; // 返回条横跨主内容+侧栏（BackBar.scss 里处理字号/padding）
+  }
+
+  // 封面图和品牌卡显式锁定在左列，避免 grid auto-placement 把它们推到右侧
+  .task-cover {
+    grid-column: 1;
+  }
+
+  .brand-card {
+    grid-column: 1;
   }
 
   .section {
     grid-column: 1;
-    margin: 0 0 16PX; // 左右间距由 grid 的 padding/gap 承担
+    margin: 0 0 16PX;
   }
 
   .actions {
     grid-column: 2;
-    grid-row: 1 / span 20; // 跨足够多的隐式行，sticky 才有滚动行程
+    grid-row: 2 / span 20; // 从 row-2 开始（row-1 是 back-bar），留出顶部对齐
     position: sticky;
     top: 24PX;
     align-self: start;
-    // 复位手机端 fixed 底栏的定位
     left: auto;
     right: auto;
     bottom: auto;

@@ -263,7 +263,8 @@
     "errorTooManyCodes": "Max {{max}} codes per upload (currently {{n}}) — please split into batches",
     "coverClickUpload": "Click to upload cover image",
     "errorCover": "Please upload a cover image (required to publish; drafts can skip)",
-    "mustBind": "Must bind"
+    "mustBind": "Must bind",
+    "minFriendsPlaceholder": "Min friends (no limit)"
   },
   "site": {
     "jp": "Japan",

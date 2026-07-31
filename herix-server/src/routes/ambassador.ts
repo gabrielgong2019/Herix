@@ -5,10 +5,13 @@ import { calcTier } from '../types';
 import { VALID_COMMUNITIES } from '../constants/communities';
 
 /** 根据 social_platforms JSON 计算各平台段位快照 */
+// 联系类平台(微信/LINE等)的数字是"好友数"而非公开粉丝，不代表 KOL 影响力，不参与段位计算
+// （2026-07-29：好友数门槛上线后，避免微信3000好友被误算成 Micro/Mid 段位）
+const CONTACT_PLATFORMS = new Set(['wechat', 'line', 'zalo', 'whatsapp']);
 function buildTierSnapshot(socialPlatforms: any[]): Record<string, string> {
   const snapshot: Record<string, string> = {};
   for (const p of socialPlatforms) {
-    if (p.followers != null && p.platformId) {
+    if (p.followers != null && p.platformId && !CONTACT_PLATFORMS.has(p.platformId)) {
       snapshot[p.platformId] = calcTier(Number(p.followers));
     }
   }

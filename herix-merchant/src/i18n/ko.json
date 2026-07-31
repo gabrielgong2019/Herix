@@ -263,7 +263,8 @@
     "errorTooManyCodes": "1회 최대 {{max}}개까지 업로드 가능합니다 (현재 {{n}}개). 나눠서 제출해 주세요",
     "coverClickUpload": "클릭하여 커버 이미지 업로드",
     "errorCover": "작업 커버 이미지를 업로드해 주세요 (게시 시 필수, 초안 저장은 건너뛸 수 있음)",
-    "mustBind": "연동 필수"
+    "mustBind": "연동 필수",
+    "minFriendsPlaceholder": "최소 친구 수 (제한 없음)"
   },
   "site": {
     "jp": "일본",

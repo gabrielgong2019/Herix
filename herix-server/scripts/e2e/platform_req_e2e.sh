@@ -87,25 +87,30 @@ APPID2=$(echo $R | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.ge
 R=$(curl -s -X POST $API/applications/$TID2 -H "Authorization: Bearer $TL" -H 'Content-Type: application/json' -d '{}')
 assert_eq "只满足1/3项 → 拒绝" "$(echo $R | python3 -c "import json,sys;print(json.load(sys.stdin).get('code',''))")" "REQUIREMENTS_NOT_MET"
 
-echo "— 联系类平台（微信）：只判有无绑定 + 报名被拦后补绑可通过 —"
+echo "— 联系类平台（微信好友数门槛）：MISSING→不足→达标，且好友数不算 KOL 段位 —"
 TID3=$(curl -s -X POST $API/tasks -H "Authorization: Bearer $TB" -H 'Content-Type: application/json' -d '{
-  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"平台要求e2e-微信","description":"验证联系类平台必须绑定但无粉丝门槛端到端测试","mode":"STANDARD",
+  "coverImage":"/uploads/tasks/e2e-cover.webp","title":"平台要求e2e-微信好友","description":"验证联系类平台好友数门槛端到端测试","mode":"STANDARD",
   "payoutPerHerald":3000,"maxHeralds":5,"category":"experience","contentType":"photo","difficulty":"easy",
   "visibility":"PUBLIC",
-  "platformRequirements":[{"platformId":"wechat","required":true}],
+  "platformRequirements":[{"platformId":"wechat","minFollowers":500,"required":true}],
   "reqMode":"ALL"}' | python3 -c "import json,sys;print(json.load(sys.stdin).get('id',''))")
 curl -s -X PATCH $API/tasks/$TID3/publish -H "Authorization: Bearer $TB" >/dev/null
 curl -s -X POST $API/admin/task-reviews/$TID3/approve -H "Authorization: Bearer $TA" >/dev/null
-# H_NONE 没绑任何平台 → 微信要求 MISSING 拦截
+# 完全没绑 → MISSING（可当场补）
 R=$(curl -s -X POST $API/applications/$TID3 -H "Authorization: Bearer $TN" -H 'Content-Type: application/json' -d '{}')
-assert_eq "没绑微信 → 报名被拦 REQUIREMENTS_NOT_MET" "$(echo $R | python3 -c "import json,sys;print(json.load(sys.stdin).get('code',''))")" "REQUIREMENTS_NOT_MET"
-assert_eq "  failure type=MISSING（不是粉丝不足）" "$(echo $R | python3 -c "import json,sys;print(json.load(sys.stdin).get('failures',[{}])[0].get('type',''))")" "MISSING"
-assert_eq "  canRetry=true（可当场补绑重试，不是死路）" "$(echo $R | python3 -c "import json,sys;print(json.load(sys.stdin).get('canRetry'))")" "True"
-# 赫使补绑微信（模拟补录弹窗写档案：微信是 accountId 类，无 followers）
-psql $DB -c "UPDATE herald_profiles SET social_platforms='[{\"platformId\":\"wechat\",\"accountId\":\"wx_test_001\",\"followers\":null}]' WHERE user_id='$H_NONE'" >/dev/null
+assert_eq "没绑微信 → MISSING 拦截" "$(echo $R | python3 -c "import json,sys;print(json.load(sys.stdin).get('failures',[{}])[0].get('type',''))")" "MISSING"
+# 绑了但好友数不足(300<500) → INSUFFICIENT（关键：不改赫使端存好友数的话这里会永久卡，本用例证明不卡）
+psql $DB -c "UPDATE herald_profiles SET social_platforms='[{\"platformId\":\"wechat\",\"accountId\":\"wx_test_001\",\"followers\":300}]' WHERE user_id='$H_NONE'" >/dev/null
+R=$(curl -s -X POST $API/applications/$TID3 -H "Authorization: Bearer $TN" -H 'Content-Type: application/json' -d '{}')
+assert_eq "好友数不足(300<500) → INSUFFICIENT" "$(echo $R | python3 -c "import json,sys;print(json.load(sys.stdin).get('failures',[{}])[0].get('type',''))")" "INSUFFICIENT"
+# 好友数达标(800) → 通过
+psql $DB -c "UPDATE herald_profiles SET social_platforms='[{\"platformId\":\"wechat\",\"accountId\":\"wx_test_001\",\"followers\":800}]' WHERE user_id='$H_NONE'" >/dev/null
 R=$(curl -s -X POST $API/applications/$TID3 -H "Authorization: Bearer $TN" -H 'Content-Type: application/json' -d '{}')
 APPID3=$(echo $R | python3 -c "import json,sys;d=json.load(sys.stdin);print(d.get('id') or 'ERR:'+str(d))")
-[[ "$APPID3" != ERR:* ]] && ok "补绑微信后报名通过（联系类无粉丝门槛，只判有无）" || bad "补绑后报名" "$R"
+[[ "$APPID3" != ERR:* ]] && ok "好友数达标(800≥500)报名通过（好友数存得进、校验读得到，不卡）" || bad "达标报名" "$R"
+# 好友数不进 KOL 段位（tier_snapshot 不含 wechat）
+TIER=$(curl -s -X PATCH $API/ambassador/profile -H "Authorization: Bearer $TN" -H 'Content-Type: application/json' -d '{"socialPlatforms":[{"platformId":"wechat","accountId":"wx_test_001","followers":800}]}' | python3 -c "import json,sys;d=json.load(sys.stdin);import json as j;print('wechat' in j.loads(d.get('tier_snapshot') or '{}'))" 2>/dev/null)
+assert_eq "微信好友数不算 KOL 段位(tier_snapshot 不含 wechat)" "$TIER" "False"
 
 echo ""
 echo "== 结果: $PASS 通过 / $FAIL 失败 =="

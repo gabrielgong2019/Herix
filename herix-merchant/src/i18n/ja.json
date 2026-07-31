@@ -263,7 +263,8 @@
     "errorTooManyCodes": "1回の提出は最大 {{max}} 件まで（現在 {{n}} 件）。分割して提出してください",
     "coverClickUpload": "クリックしてカバー画像をアップロード",
     "errorCover": "タスクのカバー画像をアップロードしてください（公開時必須、下書き保存はスキップ可）",
-    "mustBind": "連携必須"
+    "mustBind": "連携必須",
+    "minFriendsPlaceholder": "最低友だち数（制限なし）"
   },
   "site": {
     "jp": "日本",

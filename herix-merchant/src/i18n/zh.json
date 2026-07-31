@@ -263,7 +263,8 @@
     "errorTooManyCodes": "单次最多上传 {{max}} 个推广码（当前 {{n}} 个），请分批提交",
     "coverClickUpload": "点击上传封面图",
     "errorCover": "请上传任务封面图（发布必填，保存草稿可先跳过）",
-    "mustBind": "必须绑定"
+    "mustBind": "必须绑定",
+    "minFriendsPlaceholder": "最低好友数（不限）"
   },
   "site": {
     "jp": "日本",

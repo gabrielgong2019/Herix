@@ -236,6 +236,7 @@
   "task.addHint": "Add the accounts above to apply",
   "task.notEligible": "Requirements not met",
   "task.notEligibleHint": "Not enough followers to apply yet",
+  "task.goUpdateFollowers": "Update my follower count in profile →",
   "task.modeStd": "Content Creation",
   "task.modeContent": "Content Creation",
   "task.modeReferral": "Referral Code Incentive",
@@ -1195,5 +1196,9 @@
   "hd.stNeedFinal": "Final submission needed",
   "apply.draftApprovedIntro": "Your draft was approved — please submit the link to your published content as the final version",
   "taskCard.unitPerson": "/person",
-  "taskCard.unitConv": "/conv."
+  "taskCard.unitConv": "/conv.",
+  "req.bound": "Linked",
+  "req.boundCheck": "✓ Linked",
+  "req.needBind": "Link {name} required",
+  "req.contactHint": "The brand may contact you via this account to check task progress"
 }

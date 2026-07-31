@@ -52,27 +52,38 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
       {requiredItems.map(req => {
         const platform = platformById(req.platformId);
         const failure = check.failures.find(f => f.platformId === req.platformId);
+        // 满足态：有粉丝门槛→显示达标；否则→已绑定
         let icon = '✓';
         let color = '#10b981';
-        let desc = req.minFollowers ? t('req.followersOk', { n: req.minFollowers.toLocaleString() }) : t('req.added');
+        let desc = req.minFollowers ? t('req.followersOk', { n: req.minFollowers.toLocaleString() }) : t('req.bound');
         if (failure) {
           if (failure.type === 'INSUFFICIENT') {
+            // 粉丝不够是硬差距（当场改不了）：红色 + 讲清差多少
             icon = '✗';
             color = '#ef4444';
             desc = t('req.insufficient', { c: failure.current.toLocaleString(), r: failure.required.toLocaleString() });
           } else {
-            icon = '○';
-            color = '#f59e0b';
-            desc = t('req.notAdded');
+            // 没绑：不是错误、是可当场补的动作。中性色 + "需绑定X"（报名时会弹出补录）
+            icon = '';
+            color = '#6b7280';
+            desc = t('req.needBind', { name: platform.name });
           }
         }
         return (
-          <View key={req.platformId} className='requirement-row'>
-            <Text className='requirement-icon'>{platform.icon}</Text>
-            <Text className='requirement-name'>{platform.name}</Text>
-            <Text style={{ fontSize: '12px', color, fontWeight: 500 }}>
-              {icon} {desc}
-            </Text>
+          <View key={req.platformId}>
+            <View className='requirement-row'>
+              <Text className='requirement-icon'>{platform.icon}</Text>
+              <Text className='requirement-name'>{platform.name}</Text>
+              <Text style={{ fontSize: '12px', color, fontWeight: 500 }}>
+                {icon ? icon + ' ' : ''}{desc}
+              </Text>
+            </View>
+            {/* 联系类未绑：补一句为什么要绑，消除"莫名其妙要我加微信"的困惑 */}
+            {failure && failure.type === 'MISSING' && !platform.hasFollowers && (
+              <Text className='requirements-hint' style={{ display: 'block', marginTop: '2px' }}>
+                {t('req.contactHint')}
+              </Text>
+            )}
           </View>
         );
       })}
@@ -85,7 +96,7 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
             <Text className='requirement-icon'>{platform.icon}</Text>
             <Text className='requirement-name muted'>{platform.name}</Text>
             {has ? (
-              <Text style={{ fontSize: '12px', color: '#10b981' }}>{t('req.addedCheck')}</Text>
+              <Text style={{ fontSize: '12px', color: '#10b981' }}>{t('req.boundCheck')}</Text>
             ) : (
               <Text className='optional-badge'>{t('req.optional')}</Text>
             )}

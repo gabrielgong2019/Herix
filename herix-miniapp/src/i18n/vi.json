@@ -488,6 +488,7 @@
   "task.noApplicants": "Chưa có ai đăng ký",
   "task.notEligible": "Chưa đạt yêu cầu follower",
   "task.notEligibleHint": "Số người theo dõi chưa đủ, tạm thời không thể đăng ký nhiệm vụ này",
+  "task.goUpdateFollowers": "Cập nhật số follower trong hồ sơ →",
   "task.notExist": "Nhiệm vụ không tồn tại",
   "task.pendingReview": "⏳ Đã đăng ký, chờ thương hiệu xét duyệt",
   "task.perConversion": "¥{n}/lượt chuyển đổi thành công",
@@ -648,5 +649,9 @@
   "hd.stNeedFinal": "Cần nộp bản chính thức",
   "apply.draftApprovedIntro": "Bản nháp của bạn đã được duyệt, vui lòng nộp liên kết nội dung đã đăng chính thức làm bản cuối",
   "taskCard.unitPerson": "/người",
-  "taskCard.unitConv": "/lượt"
+  "taskCard.unitConv": "/lượt",
+  "req.bound": "Đã liên kết",
+  "req.boundCheck": "✓ Đã liên kết",
+  "req.needBind": "Cần liên kết {name}",
+  "req.contactHint": "Nhãn hàng có thể liên hệ bạn qua tài khoản này để kiểm tra tiến độ"
 }

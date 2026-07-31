@@ -236,6 +236,7 @@
   "task.addHint": "添加以上账号即可报名",
   "task.notEligible": "不满足粉丝要求",
   "task.notEligibleHint": "粉丝数不足，暂时无法报名此任务",
+  "task.goUpdateFollowers": "去我的主页更新粉丝数 →",
   "task.modeStd": "内容创作",
   "task.modeContent": "内容创作",
   "task.modeReferral": "邀请码激励",
@@ -1195,5 +1196,9 @@
   "hd.stNeedFinal": "待提交终稿",
   "apply.draftApprovedIntro": "草稿已通过，请提交正式发布内容的链接作为终稿",
   "taskCard.unitPerson": "/人",
-  "taskCard.unitConv": "/次"
+  "taskCard.unitConv": "/次",
+  "req.bound": "已绑定",
+  "req.boundCheck": "✓ 已绑定",
+  "req.needBind": "需绑定{name}",
+  "req.contactHint": "商家可能通过此账号联系你确认任务进度"
 }

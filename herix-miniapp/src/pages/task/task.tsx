@@ -106,6 +106,11 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     this.loadTask();
   }
 
+  componentDidShow() {
+    // 用户从 profile 页更新粉丝数后返回时，重新拉取任务和资质数据，按钮状态自动刷新
+    this.loadTask();
+  }
+
   onShareAppMessage(): Taro.ShareAppMessageReturn {
     const { task } = this.state;
     return {
@@ -600,6 +605,10 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         <View className='actions'>
           <Button className='btn-disabled' disabled>{t('task.notEligible')}</Button>
           <Text className='banner-hint banner-hint-error'>{t('task.notEligibleHint')}</Text>
+          <Text
+            className='banner-hint banner-hint-link'
+            onClick={() => Taro.switchTab({ url: '/pages/profile/profile' })}
+          >{t('task.goUpdateFollowers')}</Text>
         </View>
       );
     }

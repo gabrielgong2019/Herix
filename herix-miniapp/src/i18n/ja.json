@@ -236,6 +236,7 @@
   "task.addHint": "上記のアカウントを追加すると応募できます",
   "task.notEligible": "フォロワー条件を満たしていません",
   "task.notEligibleHint": "フォロワー数が足りないため、現在応募できません",
+  "task.goUpdateFollowers": "プロフィールでフォロワー数を更新する →",
   "task.modeStd": "コンテンツ制作",
   "task.modeContent": "コンテンツ制作",
   "task.modeReferral": "紹介コードインセンティブ",
@@ -1195,5 +1196,9 @@
   "hd.stNeedFinal": "本稿提出待ち",
   "apply.draftApprovedIntro": "下書きが承認されました。正式に公開したコンテンツのリンクを本稿として提出してください",
   "taskCard.unitPerson": "/人",
-  "taskCard.unitConv": "/回"
+  "taskCard.unitConv": "/回",
+  "req.bound": "連携済み",
+  "req.boundCheck": "✓ 連携済み",
+  "req.needBind": "{name}の連携が必要",
+  "req.contactHint": "タスクの進捗確認のため、このアカウントで連絡が来る場合があります"
 }

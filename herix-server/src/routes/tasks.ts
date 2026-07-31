@@ -968,7 +968,17 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 
   const submissionCount = subRow?.cnt || 0;
 
-  res.json({ ...task, applications, _count: { applications: applications.length, submissions: submissionCount } });
+  // 非 owner：只下发已通过的报名，名字截断为前3位+***，不暴露完整身份和拒绝状态
+  const publicApplications = isOwner ? applications : applications
+    .filter((a: any) => a.status === 'APPROVED')
+    .map((a: any) => ({
+      id: a.id,
+      nickname: (a.nickname || '').slice(0, 3) + '***',
+      avatar_url: a.avatar_url,
+      status: 'APPROVED',
+    }));
+
+  res.json({ ...task, applications: publicApplications, _count: { applications: applications.length, submissions: submissionCount } });
 });
 
 /** POST /api/tasks — 创建任务 (品牌商家) */

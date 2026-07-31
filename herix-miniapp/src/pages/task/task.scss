@@ -155,27 +155,51 @@
   display: block;
 }
 
-.applicant {
+.approved-bubbles {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.approved-bubble {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--border);
+  gap: 8px;
 }
 
-.applicant:last-child { border-bottom: none; }
-
-.name { font-size: 26px; color: var(--text-primary); }
-
-.app-status {
-  font-size: 22px;
-  padding: 2px 12px;
-  border-radius: 12px;
+.bubble-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
 }
 
-.app-status.pending { background: #fff3e0; color: #e65100; }
-.app-status.approved { background: #e8f5e9; color: #2e7d32; }
-.app-status.rejected { background: #fbe9e7; color: #c62828; }
+.bubble-initial {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--primary-light, #e8eaf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bubble-initial-text {
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--primary, #3f51b5);
+}
+
+.bubble-name {
+  font-size: 20px;
+  color: var(--text-muted);
+  max-width: 80px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .actions {
   position: fixed;

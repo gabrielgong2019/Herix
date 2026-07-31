@@ -762,18 +762,22 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           </View>
         )}
 
-        <View className='section'>
-          <Text className='section-title'>{t('task.applicantsTitle', { n: task.applications.length })}</Text>
-          {task.applications.map((app: any) => (
-            <View key={app.id} className='applicant'>
-              <Text className='name'>{app.nickname}</Text>
-              <Text className={`app-status ${app.status.toLowerCase()}`}>
-                {app.status === 'PENDING' ? t('task.stPending') : app.status === 'APPROVED' ? t('task.stApproved') : t('task.stRejected')}
-              </Text>
+        {task.applications.length > 0 && (
+          <View className='section'>
+            <Text className='section-title'>{t('task.applicantsTitle', { n: task.applications.length })}</Text>
+            <View className='approved-bubbles'>
+              {task.applications.map((app: any) => (
+                <View key={app.id} className='approved-bubble'>
+                  {app.avatar_url
+                    ? <Image className='bubble-avatar' src={app.avatar_url} />
+                    : <View className='bubble-initial'><Text className='bubble-initial-text'>{(app.nickname || '?')[0]}</Text></View>
+                  }
+                  <Text className='bubble-name'>{app.nickname}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-          {task.applications.length === 0 && <Text className='muted'>{t('task.noApplicants')}</Text>}
-        </View>
+          </View>
+        )}
 
         {myAmbassadorTask && (
           <View className='section code-section'>

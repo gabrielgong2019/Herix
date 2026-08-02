@@ -120,6 +120,19 @@ const HERALD: Templates = {
     vi: 'Thời hạn nộp lại cho "{{task}}" đã qua và vị trí của bạn đã được tự động giải phóng. Bạn có thể đăng ký lại.',
   },
 
+  'notify.DRAFT_FINAL_REMINDER.title': {
+    zh: '「{{task}}」草稿已通过，记得发布并交终稿',
+    en: '"{{task}}" — draft approved, remember to publish & submit',
+    ja: '「{{task}}」の下書きが承認されました。投稿と最終提出をお忘れなく',
+    vi: '"{{task}}" — bản nháp đã duyệt, nhớ đăng và nộp bài cuối',
+  },
+  'notify.DRAFT_FINAL_REMINDER.body': {
+    zh: '你在「{{task}}」的草稿已通过审核 🎉 去发布内容后回来提交终稿链接，任务就完成、报酬即可到账啦。',
+    en: 'Your draft for "{{task}}" has been approved 🎉 Once you publish your content, come back and submit the final link to complete the task and get paid.',
+    ja: '「{{task}}」の下書きが承認されました 🎉 コンテンツを投稿後、最終リンクを提出すればタスク完了・報酬が支払われます。',
+    vi: 'Bản nháp của bạn cho "{{task}}" đã được duyệt 🎉 Sau khi đăng nội dung, hãy quay lại nộp liên kết cuối để hoàn thành và nhận thù lao.',
+  },
+
   'notify.CONVERSION_UPDATED.title': {
     zh: '推广数据更新：{{task}}',
     en: 'Referral data updated: {{task}}',

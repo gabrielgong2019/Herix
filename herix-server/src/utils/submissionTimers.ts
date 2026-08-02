@@ -25,12 +25,13 @@ function isoDaysAgo(days: number): string {
 }
 
 /** 单轮扫描（导出供测试脚本直接调用） */
-export async function runSubmissionTimersOnce(): Promise<{ reminded: number; autoApproved: number; released: number; warned: number }> {
-  const reviewDays   = Number(await getSetting('review_timeout_days')) || 7;
-  const resubmitDays = Number(await getSetting('resubmit_timeout_days')) || 7;
+export async function runSubmissionTimersOnce(): Promise<{ reminded: number; autoApproved: number; released: number; warned: number; finalReminded: number }> {
+  const reviewDays      = Number(await getSetting('review_timeout_days')) || 7;
+  const resubmitDays    = Number(await getSetting('resubmit_timeout_days')) || 7;
+  const finalRemindDays = Number(await getSetting('final_submit_reminder_days')) || 7;
   const dueCutoff    = isoDaysAgo(reviewDays);
   const remindCutoff = isoDaysAgo(Math.max(reviewDays - 1, 0));
-  let reminded = 0, autoApproved = 0, released = 0, warned = 0;
+  let reminded = 0, autoApproved = 0, released = 0, warned = 0, finalReminded = 0;
 
   // ── 1. 临期催审（剩 ≤24h 且未到期，只发一次）──
   const toRemind = await findMany<any>(
@@ -161,9 +162,36 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
     released++;
   }
 
-  if (reminded || autoApproved || released || warned) {
-    console.log(`[timers] reminded=${reminded} autoApproved=${autoApproved} released=${released} warned=${warned}`);
+  // ── 4. 草稿已过·待交终稿催办（只催不动作）：草稿通过 finalRemindDays 天仍未发布交终稿 → 友好提醒赫使 ──
+  // 状态锚点 DRAFT+APPROVED：赫使一交终稿该行即翻 FINAL+PENDING_REVIEW，自然退出本 sweep。只发一次。
+  const toNudgeFinal = await findMany<any>(
+    `SELECT ts.id, ts.task_id, ts.herald_id, t.title, u.email
+     FROM task_submissions ts
+     JOIN tasks t ON t.id = ts.task_id
+     JOIN users u ON u.id = ts.herald_id
+     WHERE ts.stage = 'DRAFT' AND ts.status = 'APPROVED' AND ts.final_reminder_sent = 0
+       AND ts.reviewed_at < ?
+       AND EXISTS (SELECT 1 FROM task_applications ta
+                   WHERE ta.task_id = ts.task_id AND ta.herald_id = ts.herald_id AND ta.status = 'APPROVED')
+       AND ${NO_OPEN_ARBITRATION}`,
+    [isoDaysAgo(finalRemindDays)]
+  );
+  for (const s of toNudgeFinal) {
+    await notify({
+      userId: s.herald_id,
+      email: s.email,
+      targetRole: 'HERALD',
+      type: 'DRAFT_FINAL_REMINDER',
+      variables: { task: s.title },
+      metadata: { taskId: s.task_id, submissionId: s.id, taskTitle: s.title },
+    }).catch((e) => console.error('[timers] DRAFT_FINAL_REMINDER failed:', e));
+    await update('task_submissions', { final_reminder_sent: 1 }, 'id = ?', [s.id]);
+    finalReminded++;
   }
-  return { reminded, autoApproved, released, warned };
+
+  if (reminded || autoApproved || released || warned || finalReminded) {
+    console.log(`[timers] reminded=${reminded} autoApproved=${autoApproved} released=${released} warned=${warned} finalReminded=${finalReminded}`);
+  }
+  return { reminded, autoApproved, released, warned, finalReminded };
 }
 // 调度移至 jobs/registry.ts（runOnce = runSubmissionTimersOnce，每小时一轮）

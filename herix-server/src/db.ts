@@ -597,6 +597,8 @@ export async function initDatabase() {
     `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS reminder_sent INTEGER NOT NULL DEFAULT 0`,
     // resubmit_warn_sent：赫使侧临期预警只发一次的标记，被拒后重提时归零
     `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS resubmit_warn_sent INTEGER NOT NULL DEFAULT 0`,
+    // final_reminder_sent：草稿已过·待交终稿催办只发一次的标记（DRAFT+APPROVED 态，只催不动作）
+    `ALTER TABLE task_submissions ADD COLUMN IF NOT EXISTS final_reminder_sent INTEGER NOT NULL DEFAULT 0`,
     // preferred_lang：用户通知语言，由客户端登录/切语言时同步（heralds: zh/en/ja/vi；brands: zh/en/ja/ko）
     `ALTER TABLE users ADD COLUMN IF NOT EXISTS preferred_lang TEXT NOT NULL DEFAULT 'zh'`,
     // 仲裁开案：改稿额度用尽后商家/赫使任一方开案，一个提交终身只能开一案（UNIQUE）。
@@ -620,7 +622,8 @@ export async function initDatabase() {
     `CREATE INDEX IF NOT EXISTS idx_arbitrations_status ON arbitrations(status, created_at)`,
     `INSERT INTO platform_settings (key, value, note) VALUES
       ('review_timeout_days',   '7', '商家审核时限（天）：待审超时自动通过（终稿=自动结算打款），临期24h先发催审通知'),
-      ('resubmit_timeout_days', '7', '赫使重提时限（天）：被拒后超时未重新提交，自动释放任务名额')
+      ('resubmit_timeout_days', '7', '赫使重提时限（天）：被拒后超时未重新提交，自动释放任务名额'),
+      ('final_submit_reminder_days', '7', '草稿通过后N天仍未提交终稿：友好催办提醒赫使发布并交终稿（只催不释放名额）')
      ON CONFLICT (key) DO NOTHING`,
     // 发布并发闸四级阶梯（2026-07-26）：注册3/KYB10/累计充值达标20/订阅不限。
     // 资金闸（批准报名占额度）不动，这里只限"同时进行中任务数"防空任务刷屏

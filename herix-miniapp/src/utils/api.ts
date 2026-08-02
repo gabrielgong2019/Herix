@@ -212,6 +212,8 @@ export const submissions = {
   /** 赫使侧：单次获取提交状态 + 下一步动作 + 任务配置，替代原来两次串行请求 */
   myForTask: (taskId: string) => request<TaskSubmissionContext>('GET', `/submissions/task/${taskId}/my`),
   my: () => request<any[]>('GET', '/submissions/my'),
+  /** 评审往来审计链（商家赫使同源），供审核往来时间线渲染 */
+  revisions: (subId: string) => request<any[]>('GET', `/submissions/${subId}/revisions`),
 };
 
 // ── Arbitrations（改稿额度用尽后的平台仲裁）──

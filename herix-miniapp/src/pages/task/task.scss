@@ -734,3 +734,37 @@
   line-height: 1.6;
   margin: 6px 0;
 }
+
+/* 审核往来时间线（② 赫使侧，与商家端同源 /revisions） */
+.timeline {
+  .tl-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border, #eee);
+    &:last-child { border-bottom: none; }
+  }
+  .tl-who {
+    flex-shrink: 0;
+    width: 60px;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-secondary, #888);
+  }
+  .tl-body { flex: 1; min-width: 0; }
+  .tl-head-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .tl-head { font-size: 26px; font-weight: 600; }
+  .tl-h-submit { color: var(--primary, #d43b27); }
+  .tl-h-return { color: #d97706; }
+  .tl-h-approve { color: #16a34a; }
+  .tl-time { font-size: 22px; color: var(--text-secondary, #aaa); flex-shrink: 0; }
+  .tl-note { display: block; margin-top: 6px; font-size: 24px; color: #92400e; line-height: 1.5; }
+  .tl-desc { display: block; margin-top: 6px; font-size: 24px; color: var(--text, #333); line-height: 1.5; white-space: pre-wrap; }
+  .tl-imgs { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+  .tl-img { width: 120px; height: 120px; border-radius: 12px; background: #f2f2f2; }
+}

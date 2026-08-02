@@ -56,6 +56,7 @@ interface State {
   userId: string | null;
   myApplication: any;
   mySubmission: any;
+  revisions: any[];
   myAmbassadorTask: any;
   ambassadorProfile: any;
   /** 明细模式：我的邀请进度（脱敏行） */
@@ -86,6 +87,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     userId: null,
     myApplication: null,
     mySubmission: null,
+    revisions: [],
     myAmbassadorTask: null,
     referralRecords: [],
     ambassadorProfile: null,
@@ -147,9 +149,12 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
             const myApp = myApps.find((a: any) => a.task_id === id);
             const mySub = mySubs.find((s: any) => s.task_id === id);
+            let revs: any[] = [];
+            if (mySub) { try { revs = await subApi.revisions(mySub.id); } catch { /* 时间线非关键，失败静默 */ } }
             this.setState({
               myApplication: myApp || null,
               mySubmission: mySub || null,
+              revisions: revs,
               ambassadorProfile: profile,
             });
 
@@ -469,6 +474,52 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         <Button className='btn-primary' loading={arbSubmitting} disabled={arbSubmitting} onClick={this.submitArbitration}>
           {t('task.arbitrateSubmit')}
         </Button>
+      </View>
+    );
+  }
+
+  /** 审核往来时间线：/revisions 审计链（与商家同源），每轮 提交/通过/退回修改 + 意见 + 真图。
+   *  友好框架：轮次用中性"第N轮"，不显示"已拒 X/Y"裸计数 */
+  renderTimeline() {
+    const { revisions } = this.state;
+    if (!revisions || !revisions.length) return null;
+    let round = 0;
+    return (
+      <View className='section timeline'>
+        <Text className='section-title'>{t('task.tlTitle')}</Text>
+        {revisions.map((r: any, i: number) => {
+          const isSubmit = r.kind === 'SUBMIT';
+          if (isSubmit) round += 1;
+          const stage = r.stage === 'DRAFT' ? t('task.tlDraft') : t('task.tlFinal');
+          let shots: string[] = [];
+          try { shots = r.screenshot_urls ? JSON.parse(r.screenshot_urls) : []; } catch { /* ignore */ }
+          const head = isSubmit
+            ? t('task.tlSubmit', { stage, round })
+            : r.action === 'APPROVED' ? t('task.tlApprove', { stage })
+            : r.action === 'REJECTED' ? t('task.tlReturn')
+            : r.action;
+          const hCls = isSubmit ? 'tl-h-submit' : r.action === 'REJECTED' ? 'tl-h-return' : 'tl-h-approve';
+          return (
+            <View key={i} className='tl-item'>
+              <Text className='tl-who'>{isSubmit ? t('task.tlHerald') : t('task.tlBrand')}</Text>
+              <View className='tl-body'>
+                <View className='tl-head-row'>
+                  <Text className={`tl-head ${hCls}`}>{head}</Text>
+                  <Text className='tl-time'>{(r.created_at || '').slice(5, 16)}</Text>
+                </View>
+                {!!r.note && <Text className='tl-note'>「{r.note}」</Text>}
+                {isSubmit && !!r.description && <Text className='tl-desc'>{r.description}</Text>}
+                {shots.length > 0 && (
+                  <View className='tl-imgs'>
+                    {shots.map((u: string, j: number) => (
+                      <Image key={j} className='tl-img' src={assetUrl(u)} mode='aspectFill' />
+                    ))}
+                  </View>
+                )}
+              </View>
+            </View>
+          );
+        })}
       </View>
     );
   }
@@ -861,6 +912,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         )}
 
         {this.renderActionBar()}
+        {this.renderTimeline()}
         {this.renderReqModal()}
         {this.renderProposalSheet()}
       </View>

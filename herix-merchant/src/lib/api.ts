@@ -303,6 +303,7 @@ export interface Task {
   register_url?: string
   app_download_url?: string
   service_logo_url?: string
+  service_name?: string
 }
 
 export interface TaskFormData {
@@ -336,6 +337,7 @@ export interface TaskFormData {
   reqMode?: 'ALL' | 'ANY_N'
   reqMinCount?: number
   registerUrl?: string
+  serviceName?: string
 }
 
 export interface Application {

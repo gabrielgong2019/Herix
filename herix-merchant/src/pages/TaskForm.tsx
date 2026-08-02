@@ -311,6 +311,7 @@ interface FormState {
   referralScript: string
   registerUrl: string
   serviceLogo: string
+  serviceName: string
   minImages: number | ''
   minVideoSeconds: number | ''
   maxRevisions: number
@@ -330,7 +331,7 @@ const DEFAULT_STATE: FormState = {
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'DETAIL',
-  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '', registerUrl: '', serviceLogo: '',
+  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '', registerUrl: '', serviceLogo: '', serviceName: '',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
   sourceLang: 'zh',
@@ -373,6 +374,7 @@ function taskToFormState(task: Task): FormState {
     referralScript: task.referral_script || '',
     registerUrl: task.register_url || task.app_download_url || '',
     serviceLogo: (task as any).service_logo_url || '',
+    serviceName: (task as any).service_name || '',
     minImages: task.min_images || '',
     minVideoSeconds: task.min_video_seconds || '',
     maxRevisions: task.max_revisions ?? 2,
@@ -542,6 +544,7 @@ export default function TaskForm() {
         inviteeBenefit: form.mode === 'PERFORMANCE' ? (form.inviteeBenefit.trim() || undefined) : undefined,
         referralScript: form.mode === 'PERFORMANCE' ? (form.referralScript.trim() || undefined) : undefined,
         registerUrl: form.mode === 'PERFORMANCE' ? (form.registerUrl.trim() || undefined) : undefined,
+        serviceName: form.serviceName.trim() || undefined,
         minImages: form.minImages ? Number(form.minImages) : undefined,
         minVideoSeconds: form.minVideoSeconds ? Number(form.minVideoSeconds) : undefined,
         maxRevisions: form.maxRevisions,
@@ -697,6 +700,16 @@ export default function TaskForm() {
             reader.readAsDataURL(file)
           }
         }}
+      />
+    </Field>
+  )
+
+  const serviceNameField = (
+    <Field label={t('taskForm.fieldServiceName')} hint={t('taskForm.fieldServiceNameHint')}>
+      <Input
+        value={form.serviceName}
+        onChange={(e) => set('serviceName', e.target.value)}
+        placeholder={t('taskForm.fieldServiceNamePh')}
       />
     </Field>
   )
@@ -971,6 +984,7 @@ export default function TaskForm() {
                     rows={2} placeholder={t('taskForm.fieldPerfIntroPh')} />
                 </Field>
 
+                {serviceNameField}
                 {serviceLogoField}
 
                 <Field label={t('taskForm.fieldAppDownloadUrl')} hint={t('taskForm.fieldAppDownloadUrlHint')}>
@@ -1442,6 +1456,7 @@ export default function TaskForm() {
               )}
             </Field>
 
+            {serviceNameField}
             {serviceLogoField}
 
           </div>
@@ -1631,7 +1646,6 @@ export default function TaskForm() {
               </Field>
 
               {coverField}
-              {serviceLogoField}
             </div>
           )}
 

@@ -67,8 +67,8 @@ referralsRouter.get('/my-codes', requireAuth, requireRole('HERALD'), async (req:
   const codes = await findMany<any>(
     `SELECT at.id, at.task_id, at.unique_code, at.status, at.joined_at,
             t.title as task_title, t.description as task_description,
-            t.payout_per_herald, t.mode, t.app_download_url,
-            trs.invitee_benefit, trs.referral_script,
+            t.payout_per_herald, t.mode, t.service_name,
+            trs.invitee_benefit, trs.referral_script, trs.register_url,
             at.share_intro,
             at.registered_count, at.used_count, at.paid_conversions,
             COALESCE((SELECT SUM(tt.amount) FROM task_transactions tt

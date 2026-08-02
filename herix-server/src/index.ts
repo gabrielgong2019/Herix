@@ -29,6 +29,7 @@ import { subscriptionsRouter } from './routes/subscriptions';
 import { brandsRouter } from './routes/brands';
 import { shortLinksRouter } from './routes/shortLinks';
 import { UPLOADS_DIR } from './utils/uploads';
+import { findOne } from './utils/db';
 
 (async () => {
   await initDatabase();
@@ -87,6 +88,125 @@ app.use('/api/arbitrations', arbitrationsRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/brands', brandsRouter);
 app.use('/t', shortLinksRouter);
+
+/** GET /invite/:code — 公开邀请落地页（朋友扫码/点链接看到的页面） */
+app.get('/invite/:code', async (req, res) => {
+  const code = (req.params.code || '').toUpperCase();
+  const row = await findOne<any>(
+    `SELECT t.id as task_id, t.title, t.description, t.app_download_url,
+            trs.invitee_benefit,
+            at.share_intro
+     FROM ambassador_tasks at
+     JOIN tasks t ON t.id = at.task_id
+     LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
+     WHERE at.unique_code = $1 AND at.status = 'active'
+     LIMIT 1`,
+    [code]
+  );
+  if (!row) return res.status(404).send('<h2 style="font-family:sans-serif;padding:40px">推广码无效或已失效</h2>');
+
+  const base = process.env.BASE_URL || 'https://herix.huaxuex.com';
+  const h5TaskUrl = `${base}/app/index.html#/pages/landing/index?task=${row.task_id}`;
+  // 优先用赫使保存的自定义文案，没有则用任务简介
+  row.display_description = row.share_intro || row.description;
+  const esc = (s: string | null) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!DOCTYPE html><html lang="zh"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(row.title)} — Herix 邀请</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#F5F4FF;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+.page{max-width:420px;margin:0 auto;padding:0 0 110px}
+.topbar{display:flex;align-items:center;gap:8px;padding:18px 20px 14px}
+.hbadge{display:flex;align-items:center;gap:6px;background:#5B4EFC;border-radius:20px;padding:4px 10px 4px 6px}
+.hdot{width:20px;height:20px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#5B4EFC}
+.hlabel{font-size:12px;font-weight:700;color:#fff;letter-spacing:.04em}
+.from{font-size:12px;color:#9CA3AF;margin-left:4px}
+.chip{display:inline-flex;align-items:center;background:#EEE9FF;color:#5B4EFC;border-radius:20px;padding:1px 8px;font-size:12px;font-weight:600}
+.card{margin:0 16px;background:#fff;border-radius:20px;padding:24px 22px;border:1px solid #E5E7EB;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#5B4EFC,#9B8FFF)}
+.brand{font-size:13px;color:#9CA3AF;margin-bottom:6px}
+.intro{font-size:15px;color:#4B5563;line-height:1.6;margin-bottom:22px}
+.stamp{background:#EDE9FF;border:2px dashed #5B4EFC;border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
+.slabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5B4EFC;margin-bottom:4px}
+.scode{font-family:monospace;font-size:26px;font-weight:800;color:#4134D4;letter-spacing:2px}
+.scopy{flex-shrink:0;background:#5B4EFC;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.shint{font-size:11px;color:#9CA3AF;margin-top:8px;text-align:center}
+.benefit{margin:12px 16px 0;background:#fff;border-radius:16px;padding:16px 18px;border:1px solid #E5E7EB;display:flex;align-items:flex-start;gap:12px}
+.bicon{width:36px;height:36px;border-radius:10px;background:#FFF0E8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.blabel{font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.bval{font-size:15px;font-weight:600;color:#111827;line-height:1.4}
+.join-bar{margin:12px 16px 0;background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.jleft{}
+.jtitle{font-size:13px;font-weight:700;color:#111827;margin-bottom:2px}
+.jsub{font-size:12px;color:#9CA3AF}
+.jbtn{flex-shrink:0;background:#EEE9FF;color:#5B4EFC;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+.ctawrap{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 28px;background:linear-gradient(to top,#F5F4FF 70%,transparent)}
+.ctainner{max-width:420px;margin:0 auto}
+.ctabtn{width:100%;padding:15px;background:#FF6B35;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3)}
+.ctanote{text-align:center;font-size:11px;color:#9CA3AF;margin-top:8px}
+.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:100}
+.toast.show{opacity:1}
+</style></head><body>
+<div class="page">
+  <div class="topbar">
+    <div class="hbadge"><div class="hdot">H</div><span class="hlabel">HERIX</span></div>
+    <span class="from">　<span class="chip">大使</span> 邀请你</span>
+  </div>
+  <div class="card">
+    <div class="brand">Remitly</div>
+    <div class="intro">${esc(row.display_description || row.title)}</div>
+    <div class="stamp" onclick="copyCode()">
+      <div><div class="slabel">你的专属推广码</div><div class="scode">${esc(code)}</div></div>
+      <button class="scopy" id="scopyBtn">复制</button>
+    </div>
+    <div class="shint">注册时填入此码，福利自动到账</div>
+  </div>
+  ${row.invitee_benefit ? `
+  <div class="benefit">
+    <div class="bicon">🎁</div>
+    <div><div class="blabel">好友专享优惠</div><div class="bval">${esc(row.invitee_benefit)}</div></div>
+  </div>` : ''}
+  <div class="join-bar">
+    <div class="jleft">
+      <div class="jtitle">你也想推广赚钱？</div>
+      <div class="jsub">加入 Herix，接品牌推广任务</div>
+    </div>
+    <a class="jbtn" href="${esc(h5TaskUrl)}">了解 →</a>
+  </div>
+</div>
+<div class="ctawrap"><div class="ctainner">
+  ${row.app_download_url
+    ? `<button class="ctabtn" onclick="openApp()">下载 App，立即注册 →</button>`
+    : `<button class="ctabtn" onclick="copyCode()">复制推广码，前往 App 注册</button>`}
+  <div class="ctanote">App Store · Google Play</div>
+</div></div>
+<div class="toast" id="toast">已复制 ✓</div>
+<script>
+function copyCode(){
+  navigator.clipboard&&navigator.clipboard.writeText('${code}');
+  var b=document.getElementById('scopyBtn');
+  b.textContent='已复制';b.style.background='#059669';
+  showToast('推广码已复制 ✓');
+  setTimeout(function(){b.textContent='复制';b.style.background='';},2000);
+}
+function openApp(){
+  var ua=navigator.userAgent;
+  var url='${esc(row.app_download_url || '')}';
+  if(!url)return;
+  window.open(url,'_blank');
+}
+function showToast(m){
+  var t=document.getElementById('toast');
+  t.textContent=m;t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');},2000);
+}
+</script>
+</body></html>`);
+});
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);

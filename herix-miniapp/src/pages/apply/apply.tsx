@@ -206,6 +206,7 @@ export default class Apply extends Component<{}, State> {
           <Text className='add-link' onClick={this.addLink}>＋ {t('apply.addLink')}</Text>
         )}
         <View className='hints'>
+          {isDraft && <Text className='hint'>💡 {t('apply.cloudHint')}</Text>}
           {hints.map((hint, i) => (
             <Text key={i} className='hint'>💡 {t(hint)}</Text>
           ))}
@@ -245,7 +246,6 @@ export default class Apply extends Component<{}, State> {
           onInput={e => this.setState({ description: e.detail.value })}
           maxlength={2000}
         />
-        {isDraft && <Text className='hint'>💡 {t('apply.cloudHint')}</Text>}
       </View>
     );
 

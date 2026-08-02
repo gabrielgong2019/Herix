@@ -947,6 +947,7 @@ export async function initDatabase() {
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS default_lang TEXT NOT NULL DEFAULT 'zh'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_lang TEXT NOT NULL DEFAULT 'zh'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_source_hash TEXT DEFAULT NULL`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS app_download_url TEXT`,
     `CREATE TABLE IF NOT EXISTS task_translations (
        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
        locale TEXT NOT NULL,
@@ -1005,6 +1006,7 @@ export async function initDatabase() {
        END IF;
      END $$`,
     `ALTER TABLE tasks DROP COLUMN IF EXISTS requirements`,
+    `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS share_intro TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

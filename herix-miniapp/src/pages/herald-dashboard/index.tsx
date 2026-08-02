@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { View, Text } from '@tarojs/components';
+import { View, Text, Textarea } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { wallet as walletApi, applications, submissions, referrals, getToken } from '../../utils/api';
 import './index.scss';
@@ -30,6 +30,7 @@ interface State {
   mySubs: any[];
   myCodes: any[];
   filter: string;
+  shareModal: { code: string; taskId: string; intro: string; benefit: string } | null;
 }
 
 export default class HeraldDashboard extends Component<{}, State> {
@@ -41,6 +42,7 @@ export default class HeraldDashboard extends Component<{}, State> {
     mySubs: [],
     myCodes: [],
     filter: 'all',
+    shareModal: null,
   };
 
   componentDidShow() {
@@ -77,10 +79,44 @@ export default class HeraldDashboard extends Component<{}, State> {
   copyCode = (code: string) => {
     Taro.setClipboardData({
       data: code,
-      // weapp 自带复制提示,只在 H5 补 toast
       success: () => { if (process.env.TARO_ENV === 'h5') Taro.showToast({ title: t('common.copied'), icon: 'success' }); },
     });
   };
+
+  openShareModal = (codeObj: any) => {
+    this.setState({
+      shareModal: {
+        code: codeObj.unique_code || '',
+        taskId: codeObj.task_id || '',
+        // 优先用赫使已保存的自定义文案，没有则用任务简介作为默认
+        intro: codeObj.share_intro || codeObj.task_description || '',
+        benefit: codeObj.invitee_benefit || '',
+      },
+    });
+  };
+
+  saveShareIntro = async (codeId: string, intro: string) => {
+    const { myCodes } = this.state;
+    try {
+      await referrals.patchShareIntro(codeId, intro || null);
+      const updated = myCodes.map((c: any) => c.id === codeId ? { ...c, share_intro: intro || null } : c);
+      this.setState({ myCodes: updated });
+      Taro.showToast({ title: t('hd.shareSaved'), icon: 'success' });
+    } catch (e) {
+      Taro.showToast({ title: '保存失败', icon: 'none' });
+    }
+  };
+
+  closeShareModal = () => this.setState({ shareModal: null });
+
+  copyShareLink = (code: string) => {
+    const url = `https://herix.huaxuex.com/invite/${code}`;
+    Taro.setClipboardData({
+      data: url,
+      success: () => Taro.showToast({ title: t('hd.linkCopied'), icon: 'success' }),
+    });
+  };
+
 
   // 通用待办卡（等价 herix taskCardHTML）
   renderTaskCard(key: string, opts: {
@@ -121,7 +157,7 @@ export default class HeraldDashboard extends Component<{}, State> {
   }
 
   render() {
-    const { loading, loggedIn, balance: bal, myApps, mySubs, myCodes, filter } = this.state;
+    const { loading, loggedIn, balance: bal, myApps, mySubs, myCodes, filter, shareModal } = this.state;
 
     if (!loggedIn) {
       return (
@@ -297,6 +333,9 @@ export default class HeraldDashboard extends Component<{}, State> {
                         <Text className='code-copy' onClick={() => this.copyCode(code.unique_code || '')}>
                           {t('hd.copy')}
                         </Text>
+                        <Text className='code-share' onClick={() => this.openShareModal(code)}>
+                          {t('hd.share')}
+                        </Text>
                       </View>
                       <View className='code-box'>
                         <View className='code-stats'>
@@ -390,6 +429,66 @@ export default class HeraldDashboard extends Component<{}, State> {
             })
           )}
         </View>
+
+        {/* 分享 modal */}
+        {shareModal && (
+          <View className='hd-share-overlay' onClick={this.closeShareModal}>
+            <View className='hd-share-modal' onClick={e => e.stopPropagation()}>
+              <View className='hd-share-header'>
+                <Text className='hd-share-title'>{t('hd.shareTitle')}</Text>
+                <Text className='hd-share-close' onClick={this.closeShareModal}>✕</Text>
+              </View>
+
+              {/* 邀请语 — 赫使自定义，保存后朋友打开链接时看到的就是这段文字 */}
+              <View className='hd-share-field'>
+                <Text className='hd-share-label'>{t('hd.shareIntroLabel')}</Text>
+                <Text className='hd-share-hint'>{t('hd.shareIntroHint')}</Text>
+                <Textarea
+                  className='hd-share-textarea'
+                  value={shareModal.intro}
+                  onInput={e => this.setState({ shareModal: { ...shareModal, intro: e.detail.value } })}
+                  autoHeight
+                  maxlength={300}
+                />
+              </View>
+
+              {/* 好友优惠 — 只读，商家定义 */}
+              {shareModal.benefit ? (
+                <View className='hd-share-field'>
+                  <Text className='hd-share-label'>{t('hd.shareBenefitLabel')}</Text>
+                  <View className='hd-share-benefit-row'>
+                    <Text className='hd-share-benefit-text'>{shareModal.benefit}</Text>
+                  </View>
+                </View>
+              ) : null}
+
+              {/* 邀请链接 */}
+              <View className='hd-share-field'>
+                <Text className='hd-share-label'>{t('hd.shareLinkLabel')}</Text>
+                <View className='hd-share-link-row'>
+                  <Text className='hd-share-link-url'>{`herix.huaxuex.com/invite/${shareModal.code}`}</Text>
+                </View>
+              </View>
+
+              {/* 主操作：保存邀请语并复制链接 */}
+              <View
+                className='hd-share-btn-primary'
+                onClick={() => {
+                  const modal = this.state.shareModal!;
+                  const codeObj = myCodes.find((c: any) => c.unique_code === modal.code);
+                  const copy = () => this.copyShareLink(modal.code);
+                  if (codeObj) {
+                    this.saveShareIntro(codeObj.id, modal.intro).then(copy, copy);
+                  } else {
+                    copy();
+                  }
+                }}
+              >
+                <Text>{t('hd.copyLink')}</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     );
   }

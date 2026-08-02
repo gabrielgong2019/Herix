@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import pool from '../db';
 import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import crypto from 'crypto';
@@ -65,13 +66,17 @@ referralsRouter.get('/my-codes', requireAuth, requireRole('HERALD'), async (req:
   // 旧版从 referrals 明细表统计——那张表 CSV 上传从不写，赫使端永远显示 0（2026-07-17 修复）
   const codes = await findMany<any>(
     `SELECT at.id, at.task_id, at.unique_code, at.status, at.joined_at,
-            t.title as task_title, t.payout_per_herald, t.mode,
+            t.title as task_title, t.description as task_description,
+            t.payout_per_herald, t.mode, t.app_download_url,
+            trs.invitee_benefit, trs.referral_script,
+            at.share_intro,
             at.registered_count, at.used_count, at.paid_conversions,
             COALESCE((SELECT SUM(tt.amount) FROM task_transactions tt
               WHERE tt.task_id = at.task_id AND tt.to_user_id = at.herald_id
                 AND tt.type = 'TASK_RELEASE' AND tt.status = 'completed'), 0) as earned_amount
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
+     LEFT JOIN task_referral_specs trs ON trs.task_id = at.task_id
      WHERE at.herald_id = ?
      ORDER BY at.joined_at DESC`, [req.user!.userId]
   );
@@ -93,6 +98,18 @@ referralsRouter.get('/my-records/:taskId', requireAuth, requireRole('HERALD'), a
     [req.params.taskId, req.user!.userId]
   );
   res.json(rows);
+});
+
+/** PATCH /api/referrals/my-codes/:id/share-intro — 赫使保存自定义推广文案 */
+referralsRouter.patch('/my-codes/:id/share-intro', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  const row = await findOne<{ herald_id: string }>(
+    'SELECT herald_id FROM ambassador_tasks WHERE id = ?', [req.params.id]
+  );
+  if (!row) return res.status(404).json({ error: '推广码不存在' });
+  if (row.herald_id !== req.user!.userId) return res.status(403).json({ error: '无权限' });
+  const intro = typeof req.body.share_intro === 'string' ? req.body.share_intro.trim() || null : null;
+  await pool.query('UPDATE ambassador_tasks SET share_intro = $1 WHERE id = $2', [intro, req.params.id]);
+  res.json({ ok: true });
 });
 
 /** GET /api/referrals/stats/:taskId — 推广数据统计（创建者/绑定品牌方/管理员） */

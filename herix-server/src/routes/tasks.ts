@@ -929,7 +929,8 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             trs.data_mode as data_mode,
             trs.conversion_criteria as conversion_criteria,
             trs.invitee_benefit as invitee_benefit,
-            trs.referral_script as referral_script
+            trs.referral_script as referral_script,
+            t.app_download_url as app_download_url
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id
@@ -1008,7 +1009,8 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       mode:              data.mode,
       source_lang:       sourceLang,
       title:             data.title,
-      description:       data.description,  // 任务简报单一正文（requirements 列已退役）
+      description:       data.description,
+      app_download_url:  data.appDownloadUrl || null,
       payout_per_herald: data.payoutPerHerald,
       currency:          'JPY',
       max_heralds:       data.maxHeralds,
@@ -1131,6 +1133,9 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
     if (req.body.conversionCriteria !== undefined) rpush('conversion_criteria', JSON.stringify(req.body.conversionCriteria));
     if (req.body.inviteeBenefit !== undefined) rpush('invitee_benefit', req.body.inviteeBenefit || null);
     if (req.body.referralScript !== undefined) rpush('referral_script', req.body.referralScript || null);
+    if (req.body.appDownloadUrl !== undefined) {
+      await pool.query('UPDATE tasks SET app_download_url = $1 WHERE id = $2', [req.body.appDownloadUrl || null, req.params.id]);
+    }
     if (rsets.length) {
       rvals.push(req.params.id);
       await pool.query(`UPDATE task_referral_specs SET ${rsets.join(', ')} WHERE task_id = $${rvals.length}`, rvals);

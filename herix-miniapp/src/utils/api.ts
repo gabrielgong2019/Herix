@@ -273,6 +273,9 @@ export const referrals = {
   myCodes: () => request<any[]>('GET', '/referrals/my-codes'),
   /** 明细模式：本人在某任务下的邀请进度（脱敏标识） */
   myRecords: (taskId: string) => request<any[]>('GET', `/referrals/my-records/${taskId}`),
+  /** 保存赫使自定义推广文案 */
+  patchShareIntro: (id: string, share_intro: string | null) =>
+    request<{ ok: boolean }>('PATCH', `/referrals/my-codes/${id}/share-intro`, { share_intro }),
 };
 
 // ── Categories ──

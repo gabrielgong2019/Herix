@@ -309,6 +309,7 @@ interface FormState {
   conversionConvert: string[]
   inviteeBenefit: string
   referralScript: string
+  appDownloadUrl: string
   minImages: number | ''
   minVideoSeconds: number | ''
   maxRevisions: number
@@ -327,8 +328,8 @@ const DEFAULT_STATE: FormState = {
   coverImage: '',
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
-  mode: 'STANDARD', codeMode: 'auto', dataMode: 'AGGREGATE',
-  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '',
+  mode: 'STANDARD', codeMode: 'auto', dataMode: 'DETAIL',
+  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '', appDownloadUrl: '',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
   sourceLang: 'zh',
@@ -364,11 +365,12 @@ function taskToFormState(task: Task): FormState {
     visibility: task.visibility,
     mode: task.mode,
     codeMode: task.code_mode || 'auto',
-    dataMode: task.data_mode || 'AGGREGATE',
+    dataMode: task.data_mode || 'DETAIL',
     conversionRegisterLabel: task.conversion_criteria?.register?.label || '新用户（此前未注册过）',
     conversionConvert: task.conversion_criteria?.convert?.length ? task.conversion_criteria.convert : [''],
     inviteeBenefit: task.invitee_benefit || '',
     referralScript: task.referral_script || '',
+    appDownloadUrl: task.app_download_url || '',
     minImages: task.min_images || '',
     minVideoSeconds: task.min_video_seconds || '',
     maxRevisions: task.max_revisions ?? 2,
@@ -397,6 +399,13 @@ export default function TaskForm() {
   const [typeChosen, setTypeChosen] = useState(isEdit || !!copyId)
   const [perfStep, setPerfStep] = useState(1)
   const [perfHowOpen, setPerfHowOpen] = useState(false)
+  const [showPerfIntro, setShowPerfIntro] = useState(false)
+  const dismissPerfIntro = () => {
+    localStorage.setItem('herix_perf_intro_seen', '1')
+    setShowPerfIntro(false)
+    setTypeChosen(true)
+    setPerfStep(1)
+  }
   // 需求单提取（建议式）：识别结果在面板确认后才应用
   const [extracted, setExtracted] = useState<ExtractHit[] | null>(null)
   const [showLangPicker, setShowLangPicker] = useState(false)
@@ -529,6 +538,7 @@ export default function TaskForm() {
         } : undefined,
         inviteeBenefit: form.mode === 'PERFORMANCE' ? (form.inviteeBenefit.trim() || undefined) : undefined,
         referralScript: form.mode === 'PERFORMANCE' ? (form.referralScript.trim() || undefined) : undefined,
+        appDownloadUrl: form.mode === 'PERFORMANCE' ? (form.appDownloadUrl.trim() || undefined) : undefined,
         minImages: form.minImages ? Number(form.minImages) : undefined,
         minVideoSeconds: form.minVideoSeconds ? Number(form.minVideoSeconds) : undefined,
         maxRevisions: form.maxRevisions,
@@ -716,7 +726,14 @@ export default function TaskForm() {
               <div
                 className="rounded-2xl p-7 text-left transition-all hover:-translate-y-0.5 cursor-pointer"
                 style={{ background: '#fff', border: '2px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,.04)' }}
-                onClick={() => { set('mode', 'PERFORMANCE'); setTypeChosen(true); setPerfStep(1) }}
+                onClick={() => {
+                  set('mode', 'PERFORMANCE')
+                  if (!localStorage.getItem('herix_perf_intro_seen')) {
+                    setShowPerfIntro(true)
+                  } else {
+                    setTypeChosen(true); setPerfStep(1)
+                  }
+                }}
               >
                 <div className="text-3xl mb-3">🔗</div>
                 <div className="text-base font-semibold mb-1.5" style={{ color: 'var(--text)' }}>{t('taskForm.modePerformance')}</div>
@@ -754,6 +771,44 @@ export default function TaskForm() {
             )}
           </div>
         </div>
+
+        {/* 首次邀请码机制说明弹窗 */}
+        {showPerfIntro && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(0,0,0,0.45)' }}
+            onClick={dismissPerfIntro}
+          >
+            <div
+              className="rounded-2xl p-8 mx-4 w-full max-w-sm"
+              style={{ background: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,.18)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="text-base font-bold mb-5" style={{ color: 'var(--text)' }}>
+                🔗 {t('taskForm.perfIntroTitle')}
+              </div>
+              <div className="space-y-3 mb-6">
+                {(['perfHowStep1', 'perfHowStep2', 'perfHowStep3', 'perfHowStep4', 'perfHowStep5'] as const).map((key, i) => (
+                  <div key={key} className="flex items-start gap-3 text-sm" style={{ color: 'var(--text)' }}>
+                    <span
+                      className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center font-bold"
+                      style={{ background: 'var(--primary-light)', color: 'var(--primary)', fontSize: 12 }}
+                    >{i + 1}</span>
+                    <span className="leading-relaxed" style={{ paddingTop: 2 }}>{t(`taskForm.${key}`)}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="w-full rounded-xl py-3 text-sm font-semibold"
+                style={{ background: 'var(--primary)', color: '#fff', border: 'none', cursor: 'pointer' }}
+                onClick={dismissPerfIntro}
+              >
+                {t('taskForm.perfIntroCta')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
@@ -867,14 +922,21 @@ export default function TaskForm() {
                   <Textarea value={form.description} onChange={(e) => set('description', e.target.value)}
                     rows={2} placeholder={t('taskForm.fieldPerfIntroPh')} />
                 </Field>
+
+                <Field label={t('taskForm.fieldAppDownloadUrl')} hint={t('taskForm.fieldAppDownloadUrlHint')}>
+                  <Input value={form.appDownloadUrl} onChange={(e) => set('appDownloadUrl', e.target.value)}
+                    placeholder={t('taskForm.fieldAppDownloadUrlPh')} />
+                </Field>
               </div>
             )}
 
-            {/* Step 2 — 转化目标 */}
+            {/* Step 2 — 任务要求 */}
             {perfStep === 2 && (
               <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
                 <SectionHeader num={2} title={t('taskForm.perfStep2Title')} hint={t('taskForm.perfStep2Hint')} />
 
+                {/* 子块 1：转化条件 */}
+                <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>{t('taskForm.perfStep2Sec1')}</div>
                 <Field label={t('taskForm.conversionTitle')} hint={t('taskForm.conversionHint')}>
                   <div className="mb-2">
                     <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.registerLabel')}</div>
@@ -906,21 +968,19 @@ export default function TaskForm() {
                   </div>
                 </Field>
 
-                <Field label={t('taskForm.fieldDataMode')}>
-                  <div className="flex gap-3">
-                    {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
-                      <RadioCard key={m} selected={form.dataMode === m} onClick={() => set('dataMode', m)}
-                        title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
-                        desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)} />
-                    ))}
-                  </div>
-                </Field>
-
-                <Field label={t('taskForm.inviteeBenefitLabel')} hint={t('taskForm.inviteeBenefitHint')}>
-                  <input value={form.inviteeBenefit} onChange={(e) => set('inviteeBenefit', e.target.value)}
-                    placeholder={t('taskForm.inviteeBenefitPh')}
-                    className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
-                </Field>
+                {/* 子块 2：被邀请人激励 + 参考话术 */}
+                <div className="border-t mt-5 pt-5" style={{ borderColor: 'var(--border)' }}>
+                  <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>{t('taskForm.perfStep2Sec2')}</div>
+                  <Field label={t('taskForm.inviteeBenefitLabel')} hint={t('taskForm.inviteeBenefitHint')}>
+                    <input value={form.inviteeBenefit} onChange={(e) => set('inviteeBenefit', e.target.value)}
+                      placeholder={t('taskForm.inviteeBenefitPh')}
+                      className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+                  </Field>
+                  <Field label={t('taskForm.referralScriptLabel')} hint={t('taskForm.referralScriptHint')}>
+                    <Textarea value={form.referralScript} onChange={(e) => set('referralScript', e.target.value)}
+                      rows={3} placeholder={t('taskForm.referralScriptPh')} />
+                  </Field>
+                </div>
               </div>
             )}
 
@@ -1026,6 +1086,8 @@ export default function TaskForm() {
               <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
                 <SectionHeader num={4} title={t('taskForm.perfStep4Title')} hint={t('taskForm.perfStep4Hint')} />
 
+                {/* 子块 1：推广码 */}
+                <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>{t('taskForm.perfStep4Sec1')}</div>
                 <Field label={t('taskForm.fieldCodeSource')}>
                   <div className="flex flex-col gap-2">
                     {(['auto', 'custom'] as const).map((m) => (
@@ -1055,10 +1117,18 @@ export default function TaskForm() {
                   </Field>
                 )}
 
-                <Field label={t('taskForm.referralScriptLabel')} hint={t('taskForm.referralScriptHint')}>
-                  <Textarea value={form.referralScript} onChange={(e) => set('referralScript', e.target.value)}
-                    rows={3} placeholder={t('taskForm.referralScriptPh')} />
-                </Field>
+                {/* 子块 2：数据回传模式 */}
+                <div className="border-t mt-5 pt-5" style={{ borderColor: 'var(--border)' }}>
+                  <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>{t('taskForm.perfStep4Sec2')}</div>
+                  <div className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{t('taskForm.dataModeNote')}</div>
+                  <div className="flex gap-3">
+                    {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
+                      <RadioCard key={m} selected={form.dataMode === m} onClick={() => set('dataMode', m)}
+                        title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
+                        desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)} />
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
 

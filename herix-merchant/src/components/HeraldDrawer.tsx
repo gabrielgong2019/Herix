@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
+import { X, ExternalLink } from 'lucide-react'
 import type { Application } from '@/lib/api'
 import { formatDate } from '@/lib/utils'
 
@@ -17,6 +17,8 @@ interface Props {
 interface SocialPlatform {
   platformId: string
   followers?: number | null
+  url?: string | null
+  accountId?: string | null
 }
 
 function parsePlatforms(raw?: string): SocialPlatform[] {
@@ -130,15 +132,29 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
               platforms.filter(p => p.platformId).map(p => {
                 const tier = tiers[p.platformId]
                 const tierStyle = tier ? TIER_COLORS[tier] || TIER_COLORS.Nano : null
+                const platformName = t(`platform.${p.platformId}`, p.platformId)
                 return (
                   <div key={p.platformId} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '9px 0', borderBottom: '1px solid var(--border)',
                   }}>
-                    <span style={{ fontSize: 13, fontWeight: 500 }}>
-                      {t(`platform.${p.platformId}`, p.platformId)}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                      {p.url ? (
+                        <a href={p.url} target="_blank" rel="noopener noreferrer"
+                          style={{ fontSize: 13, fontWeight: 500, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
+                          {platformName}
+                          <ExternalLink size={11} style={{ flexShrink: 0 }} />
+                        </a>
+                      ) : (
+                        <span style={{ fontSize: 13, fontWeight: 500 }}>{platformName}</span>
+                      )}
+                      {p.accountId && (
+                        <span style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 100 }}>
+                          {p.accountId}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
                       {p.followers != null && (
                         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                           {t('herald.followers', { n: fmtFollowers(Number(p.followers)) })}

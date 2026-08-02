@@ -1218,6 +1218,7 @@
   "pai.friendsHint": "一部のタスクは友だち数を確認します。おおよそでOK",
   "pai.errAccount": "{name}のアカウントを入力してください",
   "pai.errFollowers": "{name}のフォロワー数を入力してください",
+  "pai.errUrl": "{name}のプロフィールリンクを入力してください（例: https://…）",
   "pai.errFriends": "{name}の友だち数（約）を入力してください",
   "pai.errCountNum": "数量は0以上の整数で",
   "profile.friendsLabel": "友だち数（約）",

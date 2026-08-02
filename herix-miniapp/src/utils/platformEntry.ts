@@ -34,7 +34,13 @@ export function makePlatformEntry(platformId: string, rawValue: string, countTex
   } else if (p.inputType === 'id') {
     accountId = raw;
   } else {
-    url = raw;
+    // url 类平台（IG/小红书/TikTok…）：必须是主页链接，防"1111"这类死链混入、被商家审核时点开
+    let u = raw;
+    if (!/^https?:\/\//i.test(u)) {
+      if (/^[\w-]+(\.[\w-]+)+/.test(u)) u = 'https://' + u; // 像域名就补协议
+      else return { ok: false, error: t('pai.errUrl', { name: p.name }) };
+    }
+    url = u;
   }
 
   // 数量必填（粉丝/好友），允许 0（真新人）；负数/非数字拒绝

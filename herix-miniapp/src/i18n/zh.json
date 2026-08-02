@@ -1218,6 +1218,7 @@
   "pai.friendsHint": "部分任务会核对好友数，填大约值即可",
   "pai.errAccount": "请填写{name}账号",
   "pai.errFollowers": "请填写{name}粉丝数",
+  "pai.errUrl": "请填写{name}主页链接（如 https://…）",
   "pai.errFriends": "请填写{name}好友数（约）",
   "pai.errCountNum": "数量需为非负整数",
   "profile.friendsLabel": "好友数（约）",

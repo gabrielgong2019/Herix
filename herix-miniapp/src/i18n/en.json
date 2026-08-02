@@ -1218,6 +1218,7 @@
   "pai.friendsHint": "Some tasks check friend count — an estimate is fine",
   "pai.errAccount": "Enter your {name} account",
   "pai.errFollowers": "Enter your {name} follower count",
+  "pai.errUrl": "Enter your {name} profile link (e.g. https://…)",
   "pai.errFriends": "Enter your {name} friend count (approx.)",
   "pai.errCountNum": "Count must be a non-negative integer",
   "profile.friendsLabel": "Friends (approx.)",

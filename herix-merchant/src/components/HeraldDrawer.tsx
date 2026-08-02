@@ -223,11 +223,13 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
             </Section>
           )}
 
-          {app.proposal_text && (
+          {(app.proposal_text || (app.proposal_links && parseProposalLinks(app.proposal_links).length > 0)) && (
             <Section label={t('herald.proposal')}>
-              <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, margin: 0 }}>
-                {app.proposal_text}
-              </p>
+              {app.proposal_text && (
+                <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, margin: 0 }}>
+                  {app.proposal_text}
+                </p>
+              )}
               {app.proposal_links && parseProposalLinks(app.proposal_links).length > 0 && (
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {parseProposalLinks(app.proposal_links).map((link, i) => (

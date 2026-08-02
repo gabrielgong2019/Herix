@@ -673,6 +673,7 @@
   "pai.friendsHint": "Một số nhiệm vụ kiểm tra số bạn bè — ước lượng là được",
   "pai.errAccount": "Nhập tài khoản {name}",
   "pai.errFollowers": "Nhập số người theo dõi {name}",
+  "pai.errUrl": "Nhập liên kết trang {name} của bạn (vd: https://…)",
   "pai.errFriends": "Nhập số bạn bè {name} (khoảng)",
   "pai.errCountNum": "Số lượng phải là số nguyên không âm",
   "profile.friendsLabel": "Số bạn bè (khoảng)",

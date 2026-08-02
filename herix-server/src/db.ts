@@ -950,9 +950,10 @@ export async function initDatabase() {
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS default_lang TEXT NOT NULL DEFAULT 'zh'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_lang TEXT NOT NULL DEFAULT 'zh'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_source_hash TEXT DEFAULT NULL`,
-    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS app_download_url TEXT`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_logo_url TEXT`,
-    `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='app_download_url') THEN ALTER TABLE tasks RENAME COLUMN app_download_url TO register_url; END IF; END $$`,
+    `ALTER TABLE task_referral_specs ADD COLUMN IF NOT EXISTS register_url TEXT`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS app_download_url`,
+    `ALTER TABLE tasks DROP COLUMN IF EXISTS register_url`,
     `CREATE TABLE IF NOT EXISTS task_translations (
        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
        locale TEXT NOT NULL,

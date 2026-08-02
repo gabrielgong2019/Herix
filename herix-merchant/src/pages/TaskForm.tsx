@@ -701,6 +701,46 @@ export default function TaskForm() {
     </Field>
   )
 
+  const serviceLogoField = (
+    <Field label={t('taskForm.fieldServiceLogo')} hint={t('taskForm.fieldServiceLogoHint')}>
+      <div
+        className="relative rounded-xl border-2 border-dashed overflow-hidden cursor-pointer transition-colors"
+        style={{ borderColor: 'var(--border)', width: 80, height: 80, background: form.serviceLogo ? 'transparent' : '#fafafa' }}
+        onClick={() => document.getElementById('service-logo-input')?.click()}
+      >
+        {form.serviceLogo ? (
+          <>
+            <img src={form.serviceLogo} className="w-full h-full object-contain" alt="logo" />
+            <button
+              type="button"
+              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center text-white"
+              onClick={(e) => { e.stopPropagation(); set('serviceLogo', ''); serviceLogoFileRef.current = null }}
+            >
+              <X size={10} />
+            </button>
+          </>
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ color: 'var(--muted)' }}>
+            <ImagePlus size={18} />
+            <span className="text-xs text-center leading-tight px-1">{t('taskForm.fieldServiceLogoUpload')}</span>
+          </div>
+        )}
+      </div>
+      <input
+        id="service-logo-input" type="file" accept="image/*" className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file) {
+            serviceLogoFileRef.current = file
+            const reader = new FileReader()
+            reader.onload = (ev) => set('serviceLogo', ev.target?.result as string)
+            reader.readAsDataURL(file)
+          }
+        }}
+      />
+    </Field>
+  )
+
   const pageTitle = fromOnboard ? t('taskForm.onboardTitle') : isEdit ? t('taskForm.editTitle') : t('taskForm.createTitle')
 
   const currentSite = sites.find((s) => s.id === form.siteId)
@@ -931,44 +971,6 @@ export default function TaskForm() {
                     rows={2} placeholder={t('taskForm.fieldPerfIntroPh')} />
                 </Field>
 
-                <Field label={t('taskForm.fieldServiceLogo')} hint={t('taskForm.fieldServiceLogoHint')}>
-                  <div
-                    className="relative rounded-xl border-2 border-dashed overflow-hidden cursor-pointer transition-colors"
-                    style={{ borderColor: 'var(--border)', width: 80, height: 80, background: form.serviceLogo ? 'transparent' : '#fafafa' }}
-                    onClick={() => document.getElementById('service-logo-input')?.click()}
-                  >
-                    {form.serviceLogo ? (
-                      <>
-                        <img src={form.serviceLogo} className="w-full h-full object-contain" alt="logo" />
-                        <button
-                          type="button"
-                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center text-white"
-                          onClick={(e) => { e.stopPropagation(); set('serviceLogo', ''); serviceLogoFileRef.current = null }}
-                        >
-                          <X size={10} />
-                        </button>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ color: 'var(--muted)' }}>
-                        <ImagePlus size={18} />
-                        <span className="text-xs text-center leading-tight px-1">{t('taskForm.fieldServiceLogoUpload')}</span>
-                      </div>
-                    )}
-                  </div>
-                  <input
-                    id="service-logo-input" type="file" accept="image/*" className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0]
-                      if (file) {
-                        serviceLogoFileRef.current = file
-                        const reader = new FileReader()
-                        reader.onload = (ev) => set('serviceLogo', ev.target?.result as string)
-                        reader.readAsDataURL(file)
-                      }
-                    }}
-                  />
-                </Field>
-
                 <Field label={t('taskForm.fieldAppDownloadUrl')} hint={t('taskForm.fieldAppDownloadUrlHint')}>
                   <Input value={form.registerUrl} onChange={(e) => set('registerUrl', e.target.value)}
                     placeholder={t('taskForm.fieldAppDownloadUrlPh')} />
@@ -1197,6 +1199,7 @@ export default function TaskForm() {
                 </Field>
 
                 {coverField}
+                {serviceLogoField}
               </div>
             )}
 
@@ -1625,6 +1628,7 @@ export default function TaskForm() {
               </Field>
 
               {coverField}
+              {serviceLogoField}
             </div>
           )}
 

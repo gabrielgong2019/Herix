@@ -930,7 +930,7 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
             trs.conversion_criteria as conversion_criteria,
             trs.invitee_benefit as invitee_benefit,
             trs.referral_script as referral_script,
-            t.register_url as register_url
+            trs.register_url as register_url
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id
@@ -1010,7 +1010,6 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       source_lang:       sourceLang,
       title:             data.title,
       description:       data.description,
-      register_url:  data.registerUrl || null,
       payout_per_herald: data.payoutPerHerald,
       currency:          'JPY',
       max_heralds:       data.maxHeralds,
@@ -1054,12 +1053,13 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       const criteria = data.conversionCriteria || { register: { label: '新用户' }, convert: [] };
       spec = {
         code_mode: data.codeMode || 'auto', data_mode: data.dataMode || 'AGGREGATE',
-        conversion_criteria: criteria, invitee_benefit: data.inviteeBenefit || null, referral_script: data.referralScript || null,
+        conversion_criteria: criteria, invitee_benefit: data.inviteeBenefit || null,
+        referral_script: data.referralScript || null, register_url: data.registerUrl || null,
       };
       await pool.query(
-        `INSERT INTO task_referral_specs (task_id, code_mode, data_mode, conversion_criteria, invitee_benefit, referral_script)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [taskId, spec.code_mode, spec.data_mode, JSON.stringify(criteria), spec.invitee_benefit, spec.referral_script]
+        `INSERT INTO task_referral_specs (task_id, code_mode, data_mode, conversion_criteria, invitee_benefit, referral_script, register_url)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [taskId, spec.code_mode, spec.data_mode, JSON.stringify(criteria), spec.invitee_benefit, spec.referral_script, spec.register_url]
       );
     }
 
@@ -1133,9 +1133,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
     if (req.body.conversionCriteria !== undefined) rpush('conversion_criteria', JSON.stringify(req.body.conversionCriteria));
     if (req.body.inviteeBenefit !== undefined) rpush('invitee_benefit', req.body.inviteeBenefit || null);
     if (req.body.referralScript !== undefined) rpush('referral_script', req.body.referralScript || null);
-    if (req.body.registerUrl !== undefined) {
-      await pool.query('UPDATE tasks SET register_url = $1 WHERE id = $2', [req.body.registerUrl || null, req.params.id]);
-    }
+    if (req.body.registerUrl !== undefined) rpush('register_url', req.body.registerUrl || null);
     if (rsets.length) {
       rvals.push(req.params.id);
       await pool.query(`UPDATE task_referral_specs SET ${rsets.join(', ')} WHERE task_id = $${rvals.length}`, rvals);

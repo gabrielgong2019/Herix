@@ -94,7 +94,7 @@ app.get('/invite/:code', async (req, res) => {
   try {
   const code = (req.params.code || '').toUpperCase();
   const row = await findOne<any>(
-    `SELECT t.id as task_id, t.title, t.description, t.register_url, t.service_logo_url,
+    `SELECT t.id as task_id, t.title, t.description, trs.register_url, t.service_logo_url,
             trs.invitee_benefit, trs.conversion_criteria,
             at.share_intro,
             bp.company_name as brand_name, bp.logo_url as brand_logo_url

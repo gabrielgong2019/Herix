@@ -294,19 +294,9 @@ export async function sweepSubscriptionsOnce(): Promise<{ activated: number; ren
     } catch (e) { console.error(`[subs] grace retry failed sub=${sub.id}:`, e); }
   }
 
+  if (out.activated || out.renewed || out.reminded || out.pastDue || out.expired) {
+    console.log(`[subs] activated=${out.activated} renewed=${out.renewed} reminded=${out.reminded} pastDue=${out.pastDue} expired=${out.expired}`);
+  }
   return out;
 }
-
-/** 启动：45 秒后首跑（错开 submissionTimers），此后每小时一轮 */
-export function startSubscriptionSweep(): void {
-  const run = () =>
-    sweepSubscriptionsOnce()
-      .then((r) => {
-        if (r.activated || r.renewed || r.reminded || r.pastDue || r.expired) {
-          console.log(`[subs] activated=${r.activated} renewed=${r.renewed} reminded=${r.reminded} pastDue=${r.pastDue} expired=${r.expired}`);
-        }
-      })
-      .catch((e) => console.error('[subs] sweep failed:', e));
-  setTimeout(run, 45_000);
-  setInterval(run, 3600_000);
-}
+// 调度移至 jobs/registry.ts（runOnce = sweepSubscriptionsOnce，每小时一轮）

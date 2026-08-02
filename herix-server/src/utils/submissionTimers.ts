@@ -161,19 +161,9 @@ export async function runSubmissionTimersOnce(): Promise<{ reminded: number; aut
     released++;
   }
 
+  if (reminded || autoApproved || released || warned) {
+    console.log(`[timers] reminded=${reminded} autoApproved=${autoApproved} released=${released} warned=${warned}`);
+  }
   return { reminded, autoApproved, released, warned };
 }
-
-/** 启动：30 秒后首跑（等 DB 迁移完成），此后每小时一轮 */
-export function startSubmissionTimers(): void {
-  const run = () =>
-    runSubmissionTimersOnce()
-      .then((r) => {
-        if (r.reminded || r.autoApproved || r.released || r.warned) {
-          console.log(`[timers] reminded=${r.reminded} autoApproved=${r.autoApproved} released=${r.released} warned=${r.warned}`);
-        }
-      })
-      .catch((e) => console.error('[timers] sweep failed:', e));
-  setTimeout(run, 30_000);
-  setInterval(run, 3600_000);
-}
+// 调度移至 jobs/registry.ts（runOnce = runSubmissionTimersOnce，每小时一轮）

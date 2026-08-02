@@ -219,36 +219,10 @@ process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
 });
 
-// 汇率中间价自动同步（锁价基准），启动+每6小时
-import { startFxSync } from './utils/fxSync';
-startFxSync();
-
-// 交付双向计时器（催审/超时自动通过/名额释放），启动30秒后首跑+每小时
-import { startSubmissionTimers } from './utils/submissionTimers';
-startSubmissionTimers();
-
-// 订阅生命周期（待付激活/到期续费/宽限重试/提醒），启动45秒后首跑+每小时
-import { startSubscriptionSweep } from './utils/subscriptions';
-startSubscriptionSweep();
-
-// 翻译 cron：发布时 fire-and-forget 失败重试 + 编辑后 pending 延迟执行，每30分钟一次
-import { translateTask } from './utils/translate';
-import pool from './db';
-setInterval(async () => {
-  try {
-    const rows = await pool.query<{ id: string; title: string; description: string; source_lang: string; target_communities: string[] }>(
-      `SELECT id, title, description, source_lang, target_communities FROM tasks
-       WHERE (translation_status = 'failed' AND translation_attempts < 20)
-          OR  translation_status = 'pending'
-       LIMIT 10`
-    );
-    for (const row of rows.rows) {
-      translateTask(row.id, row.title, row.description ?? '', row.source_lang ?? 'zh', row.target_communities ?? []).catch(() => {});
-    }
-  } catch (err) {
-    console.error('[translate-retry] sweep error', err);
-  }
-}, 30 * 60 * 1000);
+// 后台任务统一调度：所有轮询收拢到 jobs/registry，单实例 pg advisory lock 防多副本双跑
+import { startJobs } from './jobs/scheduler';
+import { JOBS } from './jobs/registry';
+startJobs(JOBS);
 
 app.listen(PORT, () => {
   console.log(`Herix server running on http://localhost:${PORT}`);

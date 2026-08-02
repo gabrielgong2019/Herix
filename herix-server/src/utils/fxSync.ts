@@ -76,8 +76,4 @@ export async function syncFxRates(): Promise<void> {
   }
 }
 
-/** 启动时同步一次 + 每 6 小时；失败不影响服务（锁价用库内现值） */
-export function startFxSync(): void {
-  setTimeout(syncFxRates, 10_000); // 等 initDatabase 建完表
-  setInterval(syncFxRates, 6 * 3600_000);
-}
+// 调度移至 jobs/registry.ts（runOnce = syncFxRates，每 6 小时，失败不影响服务）

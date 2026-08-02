@@ -100,7 +100,7 @@ export const CreateTaskSchema = z.object({
   requireDraftReview: z.boolean().default(false),
   requireProposal: z.boolean().default(false),
   submitDeadline: z.string().optional(),
-  appDownloadUrl: z.string().optional(),
+  registerUrl: z.string().optional(),
 }).refine(
   (d) => d.mode !== 'STANDARD' || d.description.trim().length >= 10,
   { message: '描述至少10字符', path: ['description'] },

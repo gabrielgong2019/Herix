@@ -91,14 +91,17 @@ app.use('/t', shortLinksRouter);
 
 /** GET /invite/:code — 公开邀请落地页（朋友扫码/点链接看到的页面） */
 app.get('/invite/:code', async (req, res) => {
+  try {
   const code = (req.params.code || '').toUpperCase();
   const row = await findOne<any>(
-    `SELECT t.id as task_id, t.title, t.description, t.app_download_url,
-            trs.invitee_benefit,
-            at.share_intro
+    `SELECT t.id as task_id, t.title, t.description, t.register_url, t.service_logo_url,
+            trs.invitee_benefit, trs.conversion_criteria,
+            at.share_intro,
+            bp.company_name as brand_name, bp.logo_url as brand_logo_url
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
      LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
+     LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      WHERE at.unique_code = $1 AND at.status = 'active'
      LIMIT 1`,
     [code]
@@ -107,9 +110,20 @@ app.get('/invite/:code', async (req, res) => {
 
   const base = process.env.BASE_URL || 'https://herix.huaxuex.com';
   const h5TaskUrl = `${base}/app/index.html#/pages/landing/index?task=${row.task_id}`;
-  // 优先用赫使保存的自定义文案，没有则用任务简介
-  row.display_description = row.share_intro || row.description;
-  const esc = (s: string | null) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const esc = (s: string | null | undefined) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // 转化条件：register label + convert 列表
+  let criteriaLines: string[] = [];
+  try {
+    const cc = typeof row.conversion_criteria === 'string' ? JSON.parse(row.conversion_criteria) : row.conversion_criteria;
+    if (cc?.register?.label) criteriaLines.push(cc.register.label);
+    if (Array.isArray(cc?.convert)) criteriaLines.push(...cc.convert.filter(Boolean));
+  } catch {}
+
+  // 服务 LOGO 优先用 service_logo_url，没有再用品牌 logo
+  const logoUrl = row.service_logo_url || row.brand_logo_url;
+  // 一句话：赫使自定义文案 > 任务标题（不用 description 避免内部细节泄漏）
+  const oneliner = row.share_intro || row.title;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!DOCTYPE html><html lang="zh"><head>
@@ -118,86 +132,130 @@ app.get('/invite/:code', async (req, res) => {
 <title>${esc(row.title)} — Herix 邀请</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#F5F4FF;color:#111827;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
-.page{max-width:420px;margin:0 auto;padding:0 0 110px}
-.topbar{display:flex;align-items:center;gap:8px;padding:18px 20px 14px}
-.hbadge{display:flex;align-items:center;gap:6px;background:#5B4EFC;border-radius:20px;padding:4px 10px 4px 6px}
-.hdot{width:20px;height:20px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#5B4EFC}
-.hlabel{font-size:12px;font-weight:700;color:#fff;letter-spacing:.04em}
-.from{font-size:12px;color:#9CA3AF;margin-left:4px}
-.chip{display:inline-flex;align-items:center;background:#EEE9FF;color:#5B4EFC;border-radius:20px;padding:1px 8px;font-size:12px;font-weight:600}
-.card{margin:0 16px;background:#fff;border-radius:20px;padding:24px 22px;border:1px solid #E5E7EB;position:relative;overflow:hidden}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#5B4EFC,#9B8FFF)}
-.brand{font-size:13px;color:#9CA3AF;margin-bottom:6px}
-.intro{font-size:15px;color:#4B5563;line-height:1.6;margin-bottom:22px}
-.stamp{background:#EDE9FF;border:2px dashed #5B4EFC;border-radius:14px;padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer}
-.slabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#5B4EFC;margin-bottom:4px}
-.scode{font-family:monospace;font-size:26px;font-weight:800;color:#4134D4;letter-spacing:2px}
-.scopy{flex-shrink:0;background:#5B4EFC;color:#fff;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.shint{font-size:11px;color:#9CA3AF;margin-top:8px;text-align:center}
-.benefit{margin:12px 16px 0;background:#fff;border-radius:16px;padding:16px 18px;border:1px solid #E5E7EB;display:flex;align-items:flex-start;gap:12px}
-.bicon{width:36px;height:36px;border-radius:10px;background:#FFF0E8;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-.blabel{font-size:11px;font-weight:700;color:#9CA3AF;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
-.bval{font-size:15px;font-weight:600;color:#111827;line-height:1.4}
-.join-bar{margin:12px 16px 0;background:#fff;border:1px solid #E5E7EB;border-radius:16px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.jleft{}
-.jtitle{font-size:13px;font-weight:700;color:#111827;margin-bottom:2px}
-.jsub{font-size:12px;color:#9CA3AF}
-.jbtn{flex-shrink:0;background:#EEE9FF;color:#5B4EFC;border:none;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
-.ctawrap{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 28px;background:linear-gradient(to top,#F5F4FF 70%,transparent)}
-.ctainner{max-width:420px;margin:0 auto}
-.ctabtn{width:100%;padding:15px;background:#FF6B35;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(255,107,53,.3)}
-.ctanote{text-align:center;font-size:11px;color:#9CA3AF;margin-top:8px}
-.toast{position:fixed;bottom:110px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:9px 18px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:100}
+body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;font-size:14px}
+.page{max-width:390px;margin:0 auto;padding:16px 16px 130px}
+/* 顶栏 */
+.topbar{display:flex;align-items:center;gap:6px;margin-bottom:16px;padding:0 2px}
+.herix-logo{width:24px;height:24px;border-radius:6px;object-fit:cover;flex-shrink:0}
+.herix-name{font-size:14px;font-weight:600;color:#1C1C1E}
+.topbar-sep{color:#C7C7CC;font-size:12px;margin:0 2px}
+.invite-label{font-size:13px;color:#8E8E93}
+/* 卡片 */
+.card{background:#FFFFFF;border-radius:16px;overflow:hidden;margin-bottom:10px}
+/* 品牌区 */
+.brand-section{padding:18px 18px 16px}
+.brand-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.service-logo{width:44px;height:44px;border-radius:12px;object-fit:contain;background:#F2F2F7;flex-shrink:0}
+.brand-name{font-size:15px;font-weight:600;color:#1C1C1E;line-height:1.3}
+.oneliner{font-size:13px;color:#8E8E93;margin-top:2px;line-height:1.45}
+.benefit-hero{font-size:32px;font-weight:700;color:#1C1C1E;line-height:1.2;letter-spacing:-.5px;word-break:break-all}
+/* 邀请码区 */
+.code-section{padding:18px}
+.code-label{font-size:12px;font-weight:500;color:#d43b27;margin-bottom:10px;letter-spacing:.03em}
+.code-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.scode{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:24px;font-weight:700;color:#1C1C1E;letter-spacing:2px}
+.scopy{flex-shrink:0;background:#d43b27;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.code-hint{font-size:12px;color:#8E8E93;margin-top:10px;line-height:1.5}
+/* 步骤区 */
+.steps-section{padding:18px}
+.steps-label{font-size:12px;font-weight:500;color:#8E8E93;margin-bottom:14px;letter-spacing:.02em}
+.steps{display:flex;align-items:flex-start}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;padding:0 4px}
+.step+.step::before{content:'';position:absolute;top:13px;left:calc(-50% + 13px);right:calc(50% + 13px);height:1px;background:#E5E5EA}
+.step-num{width:26px;height:26px;border-radius:50%;background:#FFE8E5;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#d43b27;position:relative;z-index:1;flex-shrink:0}
+.step-main{font-size:11px;font-weight:500;color:#1C1C1E;text-align:center;line-height:1.5}
+.step-hint{font-size:10px;color:#8E8E93;text-align:center;line-height:1.4;margin-top:2px}
+/* 分割线 */
+.divider{height:1px;background:#F2F2F7;margin:0 18px}
+/* 条件小字 */
+.conditions-section{padding:14px 18px;font-size:11px;color:#8E8E93;line-height:1.7}
+/* CTA */
+.ctawrap{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 34px;background:linear-gradient(to top,#F2F2F7 70%,transparent)}
+.ctainner{max-width:390px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.ctabtn{width:100%;padding:15px;background:#d43b27;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.02em}
+.ctabtn-sec{width:100%;padding:13px;background:#fff;color:#1C1C1E;border:none;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}
+.toast{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style></head><body>
 <div class="page">
+
   <div class="topbar">
-    <div class="hbadge"><div class="hdot">H</div><span class="hlabel">HERIX</span></div>
-    <span class="from">　<span class="chip">大使</span> 邀请你</span>
+    <img class="herix-logo" src="/merchant/logo.png" alt="Herix">
+    <span class="herix-name">Herix</span>
+    <span class="topbar-sep">|</span>
+    <span class="invite-label">大使邀请</span>
   </div>
+
   <div class="card">
-    <div class="brand">Remitly</div>
-    <div class="intro">${esc(row.display_description || row.title)}</div>
-    <div class="stamp" onclick="copyCode()">
-      <div><div class="slabel">你的专属推广码</div><div class="scode">${esc(code)}</div></div>
-      <button class="scopy" id="scopyBtn">复制</button>
+    <div class="brand-section">
+      <div class="brand-row">
+        ${logoUrl ? `<img class="service-logo" src="${esc(logoUrl)}" alt="logo">` : ''}
+        <div>
+          ${row.brand_name ? `<div class="brand-name">${esc(row.brand_name)}</div>` : ''}
+          <div class="oneliner">${esc(oneliner)}</div>
+        </div>
+      </div>
+      ${row.invitee_benefit ? `<div class="benefit-hero">${esc(row.invitee_benefit)}</div>` : ''}
     </div>
-    <div class="shint">注册时填入此码，福利自动到账</div>
-  </div>
-  ${row.invitee_benefit ? `
-  <div class="benefit">
-    <div class="bicon">🎁</div>
-    <div><div class="blabel">好友专享优惠</div><div class="bval">${esc(row.invitee_benefit)}</div></div>
-  </div>` : ''}
-  <div class="join-bar">
-    <div class="jleft">
-      <div class="jtitle">你也想推广赚钱？</div>
-      <div class="jsub">加入 Herix，接品牌推广任务</div>
+
+    <div class="divider"></div>
+
+    <div class="code-section">
+      <div class="code-label">使用邀请码享受专属优惠</div>
+      <div class="code-row">
+        <div class="scode">${esc(code)}</div>
+        <button class="scopy" id="scopyBtn" onclick="copyCode()">复制</button>
+      </div>
+      <div class="code-hint">完成注册后使用此邀请码，如有疑问请咨询邀请你的大使</div>
     </div>
-    <a class="jbtn" href="${esc(h5TaskUrl)}">了解 →</a>
+
+    <div class="divider"></div>
+
+    <div class="steps-section">
+      <div class="steps-label">领取步骤</div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-main">复制邀请码</div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-main">完成注册<br>并使用邀请码</div>
+          <div class="step-hint">使用方式请<br>咨询邀请人</div>
+        </div>
+        ${row.invitee_benefit ? `
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-main">${esc(row.invitee_benefit)}</div>
+        </div>` : ''}
+      </div>
+    </div>
+
+    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section">${criteriaLines.map(l => esc(l)).join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>` : ''}
   </div>
+
 </div>
+
 <div class="ctawrap"><div class="ctainner">
-  ${row.app_download_url
-    ? `<button class="ctabtn" onclick="openApp()">下载 App，立即注册 →</button>`
-    : `<button class="ctabtn" onclick="copyCode()">复制推广码，前往 App 注册</button>`}
-  <div class="ctanote">App Store · Google Play</div>
+  ${row.register_url
+    ? `<button class="ctabtn" onclick="openApp()">立即注册</button>
+       <button class="ctabtn-sec" onclick="copyCode()">复制邀请码</button>`
+    : `<button class="ctabtn" onclick="copyCode()">复制邀请码</button>`}
 </div></div>
-<div class="toast" id="toast">已复制 ✓</div>
+
+<div class="toast" id="toast">邀请码已复制 ✓</div>
 <script>
 function copyCode(){
   navigator.clipboard&&navigator.clipboard.writeText('${code}');
   var b=document.getElementById('scopyBtn');
-  b.textContent='已复制';b.style.background='#059669';
-  showToast('推广码已复制 ✓');
-  setTimeout(function(){b.textContent='复制';b.style.background='';},2000);
+  b.textContent='已复制';b.style.background='#34C759';
+  showToast('邀请码已复制 ✓');
+  setTimeout(function(){b.textContent='复制';b.style.background='';},2200);
 }
 function openApp(){
-  var ua=navigator.userAgent;
-  var url='${esc(row.app_download_url || '')}';
-  if(!url)return;
-  window.open(url,'_blank');
+  var url='${esc(row.register_url || '')}';
+  if(url)window.open(url,'_blank');
+  copyCode();
 }
 function showToast(m){
   var t=document.getElementById('toast');
@@ -206,6 +264,10 @@ function showToast(m){
 }
 </script>
 </body></html>`);
+  } catch (e) {
+    console.error('/invite error:', e);
+    res.status(500).send('<h2 style="font-family:sans-serif;padding:40px">页面加载失败，请稍后重试</h2>');
+  }
 });
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

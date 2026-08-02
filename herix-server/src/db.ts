@@ -951,6 +951,8 @@ export async function initDatabase() {
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_lang TEXT NOT NULL DEFAULT 'zh'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_source_hash TEXT DEFAULT NULL`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS app_download_url TEXT`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_logo_url TEXT`,
+    `DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tasks' AND column_name='app_download_url') THEN ALTER TABLE tasks RENAME COLUMN app_download_url TO register_url; END IF; END $$`,
     `CREATE TABLE IF NOT EXISTS task_translations (
        task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
        locale TEXT NOT NULL,
@@ -1010,6 +1012,9 @@ export async function initDatabase() {
      END $$`,
     `ALTER TABLE tasks DROP COLUMN IF EXISTS requirements`,
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS share_intro TEXT`,
+    // 文件目录结构重组：tasks/ 扁平 → tasks/{taskId}/ 子目录，同步更新 DB 路径引用
+    `UPDATE tasks SET cover_image = regexp_replace(cover_image, '^/uploads/tasks/([^/]+)\\.webp$', '/uploads/tasks/\\1/cover.webp') WHERE cover_image ~ '^/uploads/tasks/[^/]+\\.webp$'`,
+    `UPDATE tasks SET service_logo_url = regexp_replace(service_logo_url, '^/uploads/tasks/([^/]+)-logo\\.png$', '/uploads/tasks/\\1/service-logo.png') WHERE service_logo_url ~ '^/uploads/tasks/[^/]+-logo\\.png$'`,
   ];
   for (const m of migrations) {
     await pool.query(m);

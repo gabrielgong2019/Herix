@@ -309,7 +309,8 @@ interface FormState {
   conversionConvert: string[]
   inviteeBenefit: string
   referralScript: string
-  appDownloadUrl: string
+  registerUrl: string
+  serviceLogo: string
   minImages: number | ''
   minVideoSeconds: number | ''
   maxRevisions: number
@@ -329,7 +330,7 @@ const DEFAULT_STATE: FormState = {
   payoutPerHerald: '', maxHeralds: '',
   deadline: '', visibility: 'PUBLIC',
   mode: 'STANDARD', codeMode: 'auto', dataMode: 'DETAIL',
-  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '', appDownloadUrl: '',
+  conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '', registerUrl: '', serviceLogo: '',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
   sourceLang: 'zh',
@@ -370,7 +371,8 @@ function taskToFormState(task: Task): FormState {
     conversionConvert: task.conversion_criteria?.convert?.length ? task.conversion_criteria.convert : [''],
     inviteeBenefit: task.invitee_benefit || '',
     referralScript: task.referral_script || '',
-    appDownloadUrl: task.app_download_url || '',
+    registerUrl: task.register_url || task.app_download_url || '',
+    serviceLogo: (task as any).service_logo_url || '',
     minImages: task.min_images || '',
     minVideoSeconds: task.min_video_seconds || '',
     maxRevisions: task.max_revisions ?? 2,
@@ -484,6 +486,7 @@ export default function TaskForm() {
 
   // 封面原始文件：dataURL(form.coverImage)仅用于本地预览，真正上传走 multipart(见 saveMut)
   const coverFileRef = useRef<File | null>(null)
+  const serviceLogoFileRef = useRef<File | null>(null)
 
   const toggleList = useCallback((key: 'targetCommunities', val: string) => {
     setForm((prev) => {
@@ -538,7 +541,7 @@ export default function TaskForm() {
         } : undefined,
         inviteeBenefit: form.mode === 'PERFORMANCE' ? (form.inviteeBenefit.trim() || undefined) : undefined,
         referralScript: form.mode === 'PERFORMANCE' ? (form.referralScript.trim() || undefined) : undefined,
-        appDownloadUrl: form.mode === 'PERFORMANCE' ? (form.appDownloadUrl.trim() || undefined) : undefined,
+        registerUrl: form.mode === 'PERFORMANCE' ? (form.registerUrl.trim() || undefined) : undefined,
         minImages: form.minImages ? Number(form.minImages) : undefined,
         minVideoSeconds: form.minVideoSeconds ? Number(form.minVideoSeconds) : undefined,
         maxRevisions: form.maxRevisions,
@@ -560,6 +563,10 @@ export default function TaskForm() {
       if (coverFileRef.current) {
         await tasksApi.uploadCover(taskId, coverFileRef.current)
         coverFileRef.current = null
+      }
+      if (serviceLogoFileRef.current) {
+        await tasksApi.uploadServiceLogo(taskId, serviceLogoFileRef.current)
+        serviceLogoFileRef.current = null
       }
       if (isCustomCodes && customCodeList.length > 0) {
         await tasksApi.uploadCustomCodes(taskId, customCodeList)
@@ -628,6 +635,7 @@ export default function TaskForm() {
   const validatePerfStep = (step: number): boolean => {
     setError('')
     if (step === 1 && !form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
+    if (step === 2 && !form.inviteeBenefit.trim()) { setError(t('taskForm.errorInviteeBenefit')); return false }
     if (step === 4) {
       if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
       if (isCustomCodes && customCodeList.length > MAX_CUSTOM_CODES) {
@@ -923,8 +931,46 @@ export default function TaskForm() {
                     rows={2} placeholder={t('taskForm.fieldPerfIntroPh')} />
                 </Field>
 
+                <Field label={t('taskForm.fieldServiceLogo')} hint={t('taskForm.fieldServiceLogoHint')}>
+                  <div
+                    className="relative rounded-xl border-2 border-dashed overflow-hidden cursor-pointer transition-colors"
+                    style={{ borderColor: 'var(--border)', width: 80, height: 80, background: form.serviceLogo ? 'transparent' : '#fafafa' }}
+                    onClick={() => document.getElementById('service-logo-input')?.click()}
+                  >
+                    {form.serviceLogo ? (
+                      <>
+                        <img src={form.serviceLogo} className="w-full h-full object-contain" alt="logo" />
+                        <button
+                          type="button"
+                          className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 flex items-center justify-center text-white"
+                          onClick={(e) => { e.stopPropagation(); set('serviceLogo', ''); serviceLogoFileRef.current = null }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1" style={{ color: 'var(--muted)' }}>
+                        <ImagePlus size={18} />
+                        <span className="text-xs text-center leading-tight px-1">{t('taskForm.fieldServiceLogoUpload')}</span>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    id="service-logo-input" type="file" accept="image/*" className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        serviceLogoFileRef.current = file
+                        const reader = new FileReader()
+                        reader.onload = (ev) => set('serviceLogo', ev.target?.result as string)
+                        reader.readAsDataURL(file)
+                      }
+                    }}
+                  />
+                </Field>
+
                 <Field label={t('taskForm.fieldAppDownloadUrl')} hint={t('taskForm.fieldAppDownloadUrlHint')}>
-                  <Input value={form.appDownloadUrl} onChange={(e) => set('appDownloadUrl', e.target.value)}
+                  <Input value={form.registerUrl} onChange={(e) => set('registerUrl', e.target.value)}
                     placeholder={t('taskForm.fieldAppDownloadUrlPh')} />
                 </Field>
               </div>

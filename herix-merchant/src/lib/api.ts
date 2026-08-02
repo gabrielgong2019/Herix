@@ -83,6 +83,11 @@ export const tasksApi = {
     fd.append('file', file)
     return http.post<{ url: string }>(`/uploads/task/${id}/cover`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
+  uploadServiceLogo: (id: string, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    return http.post<{ url: string }>(`/uploads/task/${id}/service-logo`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+  },
   downloadCodesUrl: (id: string) => `${BASE}/tasks/${id}/codes/export`,
   getWeappLink: (id: string) => http.get<WeappLinkResult>(`/tasks/${id}/weapp-link`),
   getWeappQrUrl: (id: string) => `${BASE}/tasks/${id}/weapp-qrcode`,
@@ -293,6 +298,9 @@ export interface Task {
   brand_logo_url?: string
   brand_promo_image_url?: string
   creator_name?: string
+  register_url?: string
+  app_download_url?: string
+  service_logo_url?: string
 }
 
 export interface TaskFormData {
@@ -325,6 +333,7 @@ export interface TaskFormData {
   platformRequirements?: Array<{ platformId: string; minFollowers?: number; required: boolean }>
   reqMode?: 'ALL' | 'ANY_N'
   reqMinCount?: number
+  registerUrl?: string
 }
 
 export interface Application {

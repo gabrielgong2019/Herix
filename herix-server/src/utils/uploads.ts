@@ -12,13 +12,20 @@ export function saveBrandAsset(userId: string, type: 'logo' | 'promo' | 'kyb', b
   return `/uploads/brands/${userId}/${type}.${ext}`;
 }
 
-/** 保存任务封面图，文件名带时间戳避免冲突 */
-export function saveTaskCover(taskId: string, buffer: Buffer): string {
-  const dir = path.join(UPLOADS_ROOT, 'tasks');
+/** 保存任务产品/服务 Logo，固定文件名覆盖更新 */
+export function saveTaskServiceLogo(taskId: string, buffer: Buffer): string {
+  const dir = path.join(UPLOADS_ROOT, 'tasks', taskId);
   fs.mkdirSync(dir, { recursive: true });
-  const filename = `${taskId}.webp`;
-  fs.writeFileSync(path.join(dir, filename), buffer);
-  return `/uploads/tasks/${filename}`;
+  fs.writeFileSync(path.join(dir, 'service-logo.png'), buffer);
+  return `/uploads/tasks/${taskId}/service-logo.png`;
+}
+
+/** 保存任务封面图，固定文件名覆盖更新 */
+export function saveTaskCover(taskId: string, buffer: Buffer): string {
+  const dir = path.join(UPLOADS_ROOT, 'tasks', taskId);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'cover.webp'), buffer);
+  return `/uploads/tasks/${taskId}/cover.webp`;
 }
 
 /** 保存赫使提交的截图/成品图，时间戳文件名（同一赫使多图不覆盖） */

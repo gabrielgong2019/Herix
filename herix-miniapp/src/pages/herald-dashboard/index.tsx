@@ -88,8 +88,13 @@ export default class HeraldDashboard extends Component<{}, State> {
       shareModal: {
         code: codeObj.unique_code || '',
         taskId: codeObj.task_id || '',
-        // 优先用赫使已保存的自定义文案，没有则用任务简介作为默认
-        intro: codeObj.share_intro || codeObj.task_description || '',
+        // 优先用赫使已保存的自定义文案；没有则拼 任务简介+用户优惠 作为可编辑起点
+        intro: codeObj.share_intro || (() => {
+          const parts: string[] = [];
+          if (codeObj.task_description) parts.push(codeObj.task_description);
+          if (codeObj.invitee_benefit) parts.push(`注册优惠：${codeObj.invitee_benefit}`);
+          return parts.join('\n\n');
+        })(),
         benefit: codeObj.invitee_benefit || '',
       },
     });
@@ -110,7 +115,8 @@ export default class HeraldDashboard extends Component<{}, State> {
   closeShareModal = () => this.setState({ shareModal: null });
 
   copyShareLink = (code: string) => {
-    const url = `https://herix.huaxuex.com/invite/${code}`;
+    const base = process.env.TARO_APP_INVITE_HOST || 'https://herix.huaxuex.com';
+    const url = `${base}/invite/${code}`;
     Taro.setClipboardData({
       data: url,
       success: () => Taro.showToast({ title: t('hd.linkCopied'), icon: 'success' }),
@@ -432,8 +438,9 @@ export default class HeraldDashboard extends Component<{}, State> {
 
         {/* 分享 modal */}
         {shareModal && (
-          <View className='hd-share-overlay' onClick={this.closeShareModal}>
-            <View className='hd-share-modal' onClick={e => e.stopPropagation()}>
+          <View className='hd-share-overlay'>
+            <View className='hd-share-backdrop' onClick={this.closeShareModal} />
+            <View className='hd-share-modal'>
               <View className='hd-share-header'>
                 <Text className='hd-share-title'>{t('hd.shareTitle')}</Text>
                 <Text className='hd-share-close' onClick={this.closeShareModal}>✕</Text>
@@ -447,7 +454,6 @@ export default class HeraldDashboard extends Component<{}, State> {
                   className='hd-share-textarea'
                   value={shareModal.intro}
                   onInput={e => this.setState({ shareModal: { ...shareModal, intro: e.detail.value } })}
-                  autoHeight
                   maxlength={300}
                 />
               </View>
@@ -462,10 +468,11 @@ export default class HeraldDashboard extends Component<{}, State> {
                 </View>
               ) : null}
 
-              {/* 邀请链接 */}
+              {/* 推广码 + 邀请链接 */}
               <View className='hd-share-field'>
                 <Text className='hd-share-label'>{t('hd.shareLinkLabel')}</Text>
                 <View className='hd-share-link-row'>
+                  <Text className='hd-share-code-tag'>{shareModal.code}</Text>
                   <Text className='hd-share-link-url'>{`herix.huaxuex.com/invite/${shareModal.code}`}</Text>
                 </View>
               </View>

@@ -1263,7 +1263,7 @@ export default function TaskForm() {
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
                 rows={7}
-                placeholder={t(isStandard ? 'taskForm.fieldBriefPh' : 'taskForm.fieldBriefPhPerf')}
+                placeholder={t('taskForm.fieldBriefPh')}
               />
               <div className="mt-2 flex items-center gap-2">
                 <button

@@ -705,6 +705,12 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           const convert = (cc.convert || []).filter(Boolean);
           return (
             <>
+              {!!task.description && (
+                <View className='section'>
+                  <Text className='section-title'>{t('task.refIntroTitle')}</Text>
+                  <Text className='content'>{task.description}</Text>
+                </View>
+              )}
               <View className='ref-benefits'>
                 <View className='ref-benefit-cell'>
                   <Text className='ref-benefit-label'>{t('task.refYouEarn')}</Text>
@@ -744,9 +750,9 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           );
         })()}
 
-        {(!isPerformance || !!task.description) && (
+        {!isPerformance && (
           <View className='section'>
-            <Text className='section-title'>{isPerformance ? t('task.refSupplementTitle') : t('task.descTitle')}</Text>
+            <Text className='section-title'>{t('task.descTitle')}</Text>
             <Text className='content'>{task.description}</Text>
           </View>
         )}

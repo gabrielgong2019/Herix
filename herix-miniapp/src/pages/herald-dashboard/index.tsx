@@ -31,6 +31,7 @@ interface State {
   myCodes: any[];
   filter: string;
   shareModal: { code: string; taskId: string; intro: string; benefit: string } | null;
+  shareSaving: boolean;
 }
 
 export default class HeraldDashboard extends Component<{}, State> {
@@ -43,7 +44,14 @@ export default class HeraldDashboard extends Component<{}, State> {
     myCodes: [],
     filter: 'all',
     shareModal: null,
+    shareSaving: false,
   };
+
+  private _saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  componentWillUnmount() {
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+  }
 
   componentDidShow() {
     if (!getToken()) {
@@ -86,7 +94,9 @@ export default class HeraldDashboard extends Component<{}, State> {
   openShareModal = (codeObj: any) => {
     // 优先级：赫使自定义文案 > 商家建议话术 > 空（赫使自行填写）
     const intro = codeObj.share_intro || codeObj.referral_script || '';
+    if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
     this.setState({
+      shareSaving: false,
       shareModal: {
         code: codeObj.unique_code || '',
         taskId: codeObj.task_id || '',
@@ -96,23 +106,39 @@ export default class HeraldDashboard extends Component<{}, State> {
     });
   };
 
-  saveShareIntro = async (codeId: string, intro: string) => {
-    const { myCodes } = this.state;
-    try {
-      await referrals.patchShareIntro(codeId, intro || null);
-      const updated = myCodes.map((c: any) => c.id === codeId ? { ...c, share_intro: intro || null } : c);
-      this.setState({ myCodes: updated });
-      Taro.showToast({ title: t('hd.shareSaved'), icon: 'success' });
-    } catch (e) {
-      Taro.showToast({ title: '保存失败', icon: 'none' });
-    }
+  closeShareModal = () => {
+    if (this._saveTimer) { clearTimeout(this._saveTimer); this._saveTimer = null; }
+    this.setState({ shareModal: null, shareSaving: false });
   };
 
-  closeShareModal = () => this.setState({ shareModal: null });
+  onShareIntroChange = (val: string) => {
+    const { shareModal, myCodes } = this.state;
+    if (!shareModal) return;
+    // Taro H5 Textarea 挂载时会用初始值触发一次 onInput，跳过（值没有变化）
+    if (val === shareModal.intro) return;
+    this.setState({ shareModal: { ...shareModal, intro: val }, shareSaving: true });
+    if (this._saveTimer) clearTimeout(this._saveTimer);
+    const codeObj = myCodes.find((c: any) => c.unique_code === shareModal.code);
+    if (!codeObj) { this.setState({ shareSaving: false }); return; }
+    this._saveTimer = setTimeout(() => {
+      this.saveShareIntro(codeObj.id, val)
+        .catch(() => Taro.showToast({ title: t('hd.shareSaveFailed'), icon: 'none' }))
+        .finally(() => { this._saveTimer = null; this.setState({ shareSaving: false }); });
+    }, 500);
+  };
+
+  saveShareIntro = async (codeId: string, intro: string) => {
+    await referrals.patchShareIntro(codeId, intro || null);
+    // 用 functional setState，避免用 await 前的旧快照覆盖飞行途中的其他改动
+    this.setState(prev => ({
+      myCodes: prev.myCodes.map((c: any) =>
+        c.id === codeId ? { ...c, share_intro: intro || null } : c
+      ),
+    }));
+  };
 
   copyShareLink = (code: string) => {
-    const base = process.env.TARO_APP_INVITE_HOST || 'https://herix.huaxuex.com';
-    const url = `${base}/invite/${code}`;
+    const url = `https://herix.huaxuex.com/invite/${code}`;
     Taro.setClipboardData({
       data: url,
       success: () => Taro.showToast({ title: t('hd.linkCopied'), icon: 'success' }),
@@ -159,7 +185,7 @@ export default class HeraldDashboard extends Component<{}, State> {
   }
 
   render() {
-    const { loading, loggedIn, balance: bal, myApps, mySubs, myCodes, filter, shareModal } = this.state;
+    const { loading, loggedIn, balance: bal, myApps, mySubs, myCodes, filter, shareModal, shareSaving } = this.state;
 
     if (!loggedIn) {
       return (
@@ -449,7 +475,7 @@ export default class HeraldDashboard extends Component<{}, State> {
                 <Textarea
                   className='hd-share-textarea'
                   value={shareModal.intro}
-                  onInput={e => this.setState({ shareModal: { ...shareModal, intro: e.detail.value } })}
+                  onInput={e => this.onShareIntroChange(e.detail.value)}
                   maxlength={300}
                 />
               </View>
@@ -473,21 +499,12 @@ export default class HeraldDashboard extends Component<{}, State> {
                 </View>
               </View>
 
-              {/* 主操作：保存邀请语并复制链接 */}
+              {/* 主操作：复制链接（文案由 onInput debounce 自动保存，按钮不负责保存） */}
               <View
-                className='hd-share-btn-primary'
-                onClick={() => {
-                  const modal = this.state.shareModal!;
-                  const codeObj = myCodes.find((c: any) => c.unique_code === modal.code);
-                  const copy = () => this.copyShareLink(modal.code);
-                  if (codeObj) {
-                    this.saveShareIntro(codeObj.id, modal.intro).then(copy, copy);
-                  } else {
-                    copy();
-                  }
-                }}
+                className={`hd-share-btn-primary${shareSaving ? ' hd-share-btn-saving' : ''}`}
+                onClick={() => { if (!shareSaving) this.copyShareLink(shareModal.code); }}
               >
-                <Text>{t('hd.copyLink')}</Text>
+                <Text>{shareSaving ? t('hd.shareSaving') : t('hd.copyLink')}</Text>
               </View>
             </View>
           </View>

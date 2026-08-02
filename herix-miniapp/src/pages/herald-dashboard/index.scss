@@ -424,4 +424,9 @@
   font-weight: 700;
   background: var(--primary);
   color: #fff;
+  transition: opacity 0.2s;
+  &.hd-share-btn-saving {
+    opacity: 0.45;
+    pointer-events: none;
+  }
 }

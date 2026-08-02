@@ -153,7 +153,7 @@ export default class Index extends Component<{}, State> {
           </View>
         )}
 
-        <ScrollView className='filters' scrollX>
+        <ScrollView className='filters' scrollX enhanced showScrollbar={false}>
           <Text
             className={`filter ${activeCategory === '' ? 'active' : ''}`}
             onClick={() => this.setState({ activeCategory: '' })}

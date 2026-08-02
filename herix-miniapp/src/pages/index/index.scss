@@ -76,6 +76,7 @@
   white-space: nowrap;
   padding: 4px 40px 24px;
   background: var(--bg);
+  // 滚动条隐藏走 <ScrollView showScrollbar={false}>（组件级 API，weapp+H5 一致），不在此处 CSS 强压
 }
 
 .filter {

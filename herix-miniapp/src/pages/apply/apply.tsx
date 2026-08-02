@@ -207,7 +207,7 @@ export default class Apply extends Component<{}, State> {
         )}
         <View className='hints'>
           {isDraft && <Text className='hint'>💡 {t('apply.cloudHint')}</Text>}
-          {hints.map((hint, i) => (
+          {!isDraft && hints.map((hint, i) => (
             <Text key={i} className='hint'>💡 {t(hint)}</Text>
           ))}
         </View>

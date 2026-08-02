@@ -1151,8 +1151,8 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
 
 /** PATCH /api/tasks/:id/meta — 已发布任务的有限字段编辑 */
 tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
-  const task = await findOne<{ id: string; creator_id: string; status: string; max_heralds: number }>(
-    'SELECT id, creator_id, status, max_heralds FROM tasks WHERE id = ?', [req.params.id]
+  const task = await findOne<{ id: string; creator_id: string; status: string; max_heralds: number; mode: string }>(
+    'SELECT id, creator_id, status, max_heralds, mode FROM tasks WHERE id = ?', [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
@@ -1162,7 +1162,7 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     return res.status(400).json({ error: '只有进行中的任务可以编辑' });
   }
 
-  const { description, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount } = req.body;
+  const { description, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount, conversionCriteria, inviteeBenefit, referralScript } = req.body;
   const data: Record<string, any> = {};
   if (description !== undefined) data.description = description;
   if (deadline !== undefined) data.deadline = deadline || null;
@@ -1182,9 +1182,22 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     data.max_heralds = maxHeralds;
   }
 
-  if (!Object.keys(data).length) return res.status(400).json({ error: '没有可更新的字段' });
+  // PERFORMANCE 展示字段（转化条件/激励/话术）OPEN 后也可改——纯展示文案，不影响已分码/已结算
+  const rvals: any[] = []; const rsets: string[] = [];
+  if (task.mode === 'PERFORMANCE') {
+    const rpush = (col: string, v: any) => { rvals.push(v); rsets.push(`${col} = $${rvals.length}`); };
+    if (conversionCriteria !== undefined) rpush('conversion_criteria', JSON.stringify(conversionCriteria));
+    if (inviteeBenefit !== undefined) rpush('invitee_benefit', inviteeBenefit || null);
+    if (referralScript !== undefined) rpush('referral_script', referralScript || null);
+  }
 
-  await update('tasks', data, 'id = ?', [req.params.id]);
+  if (!Object.keys(data).length && !rsets.length) return res.status(400).json({ error: '没有可更新的字段' });
+
+  if (Object.keys(data).length) await update('tasks', data, 'id = ?', [req.params.id]);
+  if (rsets.length) {
+    rvals.push(req.params.id);
+    await pool.query(`UPDATE task_referral_specs SET ${rsets.join(', ')} WHERE task_id = $${rvals.length}`, rvals);
+  }
   const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 

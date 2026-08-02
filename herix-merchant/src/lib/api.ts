@@ -60,6 +60,8 @@ export const tasksApi = {
   updateMeta: (id: string, data: {
     description?: string; deadline?: string
     coverImage?: string; maxHeralds?: number
+    conversionCriteria?: { register: { label: string }; convert: string[] }
+    inviteeBenefit?: string; referralScript?: string
   }) => http.patch<Task>(`/tasks/${id}/meta`, data),
   publish: (id: string) => http.patch<{ success: boolean }>(`/tasks/${id}/publish`),
   complete: (id: string) => http.patch<Task>(`/tasks/${id}/complete`),

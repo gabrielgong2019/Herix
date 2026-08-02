@@ -15,6 +15,11 @@ export default function TaskMetaEdit() {
   const [description, setDescription] = useState('')
   const [deadline, setDeadline] = useState('')
   const [maxHeralds, setMaxHeralds] = useState('')
+  // PERFORMANCE 展示字段（OPEN 后可改）
+  const [registerLabel, setRegisterLabel] = useState('')
+  const [convert, setConvert] = useState<string[]>([''])
+  const [inviteeBenefit, setInviteeBenefit] = useState('')
+  const [referralScript, setReferralScript] = useState('')
   const [saved, setSaved] = useState(false)
 
   const { data: task } = useQuery({
@@ -28,6 +33,10 @@ export default function TaskMetaEdit() {
     setDescription(task.description || '')
     setDeadline(task.deadline ? task.deadline.slice(0, 10) : '')
     setMaxHeralds(String(task.max_heralds || ''))
+    setRegisterLabel(task.conversion_criteria?.register?.label || '新用户（此前未注册过）')
+    setConvert(task.conversion_criteria?.convert?.length ? task.conversion_criteria.convert : [''])
+    setInviteeBenefit(task.invitee_benefit || '')
+    setReferralScript(task.referral_script || '')
   }, [task])
 
   const saveMut = useMutation({
@@ -36,6 +45,11 @@ export default function TaskMetaEdit() {
         description,
         deadline: deadline || undefined,
         maxHeralds: maxHeralds ? Number(maxHeralds) : undefined,
+        ...(task?.mode === 'PERFORMANCE' ? {
+          conversionCriteria: { register: { label: registerLabel.trim() || '新用户' }, convert: convert.map((c) => c.trim()).filter(Boolean) },
+          inviteeBenefit: inviteeBenefit.trim(),
+          referralScript: referralScript.trim(),
+        } : {}),
       }),
     onSuccess: () => {
       setSaved(true)
@@ -113,6 +127,49 @@ export default function TaskMetaEdit() {
                   />
                 </div>
               </div>
+
+              {task.mode === 'PERFORMANCE' && (
+                <>
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                      {t('taskForm.conversionTitle')}
+                    </label>
+                    <input value={registerLabel} onChange={(e) => setRegisterLabel(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none mb-2"
+                      style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }} />
+                    {convert.map((line, i) => (
+                      <div key={i} className="flex gap-2 mb-1.5">
+                        <input value={line} onChange={(e) => { const a = [...convert]; a[i] = e.target.value; setConvert(a) }}
+                          placeholder={t('taskForm.convertPh')}
+                          className="flex-1 px-3 py-2 rounded-xl text-sm outline-none" style={{ border: '1px solid var(--border)' }} />
+                        <button type="button" onClick={() => { const a = convert.filter((_, j) => j !== i); setConvert(a.length ? a : ['']) }}
+                          style={{ color: 'var(--muted)' }}>✕</button>
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setConvert([...convert, ''])} className="text-xs font-medium" style={{ color: 'var(--primary)' }}>
+                      ＋ {t('taskForm.convertAdd')}
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                      {t('taskForm.inviteeBenefitLabel')}
+                    </label>
+                    <input value={inviteeBenefit} onChange={(e) => setInviteeBenefit(e.target.value)}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                      style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }} />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                      {t('taskForm.referralScriptLabel')}
+                    </label>
+                    <textarea value={referralScript} onChange={(e) => setReferralScript(e.target.value)} rows={3}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-y"
+                      style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }} />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="flex items-center gap-3 mt-6">

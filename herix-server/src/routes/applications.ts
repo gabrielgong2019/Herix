@@ -122,7 +122,7 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
         email: creator.email,
         targetRole: 'BRAND',
         type: 'NEW_APPLICATION',
-        variables: { task: app.task_title, herald: app.herald_name },
+        variables: { task: app.task_title, heraldName: app.herald_name },
         metadata: { taskId: req.params.taskId, applicationId: appId, taskTitle: app.task_title, heraldName: app.herald_name },
       }).catch((e) => console.error('[notify] NEW_APPLICATION notification failed:', e));
     }

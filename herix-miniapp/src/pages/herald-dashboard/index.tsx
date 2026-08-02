@@ -84,17 +84,13 @@ export default class HeraldDashboard extends Component<{}, State> {
   };
 
   openShareModal = (codeObj: any) => {
+    // 优先级：赫使自定义文案 > 商家建议话术 > 空（赫使自行填写）
+    const intro = codeObj.share_intro || codeObj.referral_script || '';
     this.setState({
       shareModal: {
         code: codeObj.unique_code || '',
         taskId: codeObj.task_id || '',
-        // 优先用赫使已保存的自定义文案；没有则拼 任务简介+用户优惠 作为可编辑起点
-        intro: codeObj.share_intro || (() => {
-          const parts: string[] = [];
-          if (codeObj.task_description) parts.push(codeObj.task_description);
-          if (codeObj.invitee_benefit) parts.push(`注册优惠：${codeObj.invitee_benefit}`);
-          return parts.join('\n\n');
-        })(),
+        intro,
         benefit: codeObj.invitee_benefit || '',
       },
     });

@@ -284,7 +284,7 @@
     "perfHowStep1": "앰배서더가 캠페인에 참여하고 전용 초대 코드를 받습니다",
     "perfHowStep2": "앰배서더가 콘텐츠를 게시하고 팔로워에게 코드 사용을 유도합니다",
     "perfHowStep3": "사용자가 가입 / 구매 등 전환 행동을 완료합니다",
-    "perfHowStep4": "브랜드가 전환 데이터를 업로드합니다",
+    "perfHowStep4": "전환 데이터를 업로드해 주세요. API 연동이 필요하시면 마케팅 어드바이저에게 문의하세요",
     "perfHowStep5": "시스템이 초대 코드를 확인하고 자동 정산합니다",
     "perfWizardOf": "{{step}} / {{total}}",
     "perfWizardNext": "다음",

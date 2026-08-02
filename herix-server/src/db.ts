@@ -1016,6 +1016,7 @@ export async function initDatabase() {
     // 文件目录结构重组：tasks/ 扁平 → tasks/{taskId}/ 子目录，同步更新 DB 路径引用
     `UPDATE tasks SET cover_image = regexp_replace(cover_image, '^/uploads/tasks/([^/]+)\\.webp$', '/uploads/tasks/\\1/cover.webp') WHERE cover_image ~ '^/uploads/tasks/[^/]+\\.webp$'`,
     `UPDATE tasks SET service_logo_url = regexp_replace(service_logo_url, '^/uploads/tasks/([^/]+)-logo\\.png$', '/uploads/tasks/\\1/service-logo.png') WHERE service_logo_url ~ '^/uploads/tasks/[^/]+-logo\\.png$'`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_name TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

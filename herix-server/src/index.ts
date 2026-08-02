@@ -95,6 +95,7 @@ app.get('/invite/:code', async (req, res) => {
   const code = (req.params.code || '').toUpperCase();
   const row = await findOne<any>(
     `SELECT t.id as task_id, t.title, t.description, trs.register_url, t.service_logo_url,
+            t.service_name,
             trs.invitee_benefit, trs.conversion_criteria,
             at.share_intro,
             bp.company_name as brand_name, bp.logo_url as brand_logo_url
@@ -112,16 +113,23 @@ app.get('/invite/:code', async (req, res) => {
   const h5TaskUrl = `${base}/app/index.html#/pages/landing/index?task=${row.task_id}`;
   const esc = (s: string | null | undefined) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-  // 转化条件：register label + convert 列表
+  // 转化条件：register label + convert 列表（对象或字符串均支持）
   let criteriaLines: string[] = [];
   try {
     const cc = typeof row.conversion_criteria === 'string' ? JSON.parse(row.conversion_criteria) : row.conversion_criteria;
     if (cc?.register?.label) criteriaLines.push(cc.register.label);
-    if (Array.isArray(cc?.convert)) criteriaLines.push(...cc.convert.filter(Boolean));
+    if (Array.isArray(cc?.convert)) {
+      for (const item of cc.convert) {
+        const label = typeof item === 'string' ? item : item?.label;
+        if (label) criteriaLines.push(label);
+      }
+    }
   } catch {}
 
   // 服务 LOGO 优先用 service_logo_url，没有再用品牌 logo
   const logoUrl = row.service_logo_url || row.brand_logo_url;
+  // 品牌/服务显示名：任务填写的 service_name > 商家公司名
+  const displayBrandName = row.service_name || row.brand_name;
   // 一句话：赫使自定义文案 > 任务标题（不用 description 避免内部细节泄漏）
   const oneliner = row.share_intro || row.title;
 
@@ -191,7 +199,7 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
       <div class="brand-row">
         ${logoUrl ? `<img class="service-logo" src="${esc(logoUrl)}" alt="logo">` : ''}
         <div>
-          ${row.brand_name ? `<div class="brand-name">${esc(row.brand_name)}</div>` : ''}
+          ${displayBrandName ? `<div class="brand-name">${esc(displayBrandName)}</div>` : ''}
           <div class="oneliner">${esc(oneliner)}</div>
         </div>
       </div>
@@ -206,7 +214,7 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
         <div class="scode">${esc(code)}</div>
         <button class="scopy" id="scopyBtn" onclick="copyCode()">复制</button>
       </div>
-      <div class="code-hint">完成注册后使用此邀请码，如有疑问请咨询邀请你的大使</div>
+      <div class="code-hint">注册完成后请确保正确使用邀请码，如有问题请咨询邀请你的大使</div>
     </div>
 
     <div class="divider"></div>
@@ -220,8 +228,7 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
         </div>
         <div class="step">
           <div class="step-num">2</div>
-          <div class="step-main">完成注册<br>并使用邀请码</div>
-          <div class="step-hint">使用方式请<br>咨询邀请人</div>
+          <div class="step-main">完成注册并确保<br>正确使用邀请码</div>
         </div>
         ${row.invitee_benefit ? `
         <div class="step">
@@ -231,7 +238,7 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
       </div>
     </div>
 
-    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section">${criteriaLines.map(l => esc(l)).join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>` : ''}
+    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section"><div style="font-weight:600;color:#636366;margin-bottom:6px">参与条件</div>${criteriaLines.map(l => `<div>· ${esc(l)}</div>`).join('')}</div>` : ''}
   </div>
 
 </div>

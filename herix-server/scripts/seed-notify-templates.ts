@@ -189,6 +189,32 @@ const HERALD: Templates = {
 // ─── Brand-facing templates (zh / en / ja / ko) ────────────────────────────
 
 const BRAND: Templates = {
+  'notify.TASK_PENDING_REVIEW.title': {
+    zh: '任务审核中：{{task}}',
+    en: 'Task under review: {{task}}',
+    ja: 'タスク審査中：{{task}}',
+    ko: '작업 심사 중: {{task}}',
+  },
+  'notify.TASK_PENDING_REVIEW.body': {
+    zh: '你发布的任务「{{task}}」已提交平台审核，预计 1-2 个工作日内完成审核。审核通过后任务将自动上线，届时会再通知你。',
+    en: 'Your task "{{task}}" has been submitted for platform review. We\'ll complete the review within 1-2 business days and notify you when it goes live.',
+    ja: '「{{task}}」の審査を受け付けました。1〜2営業日以内に審査を完了し、承認後に通知します。',
+    ko: '"{{task}}" 작업이 플랫폼 심사에 제출되었습니다. 1-2 영업일 내에 심사를 완료하고 승인 시 알려드리겠습니다.',
+  },
+
+  'notify.TASK_APPROVED.title': {
+    zh: '任务已上线：{{task}}',
+    en: 'Task approved: {{task}}',
+    ja: 'タスク承認：{{task}}',
+    ko: '작업 승인: {{task}}',
+  },
+  'notify.TASK_APPROVED.body': {
+    zh: '你的任务「{{task}}」已通过平台审核，现在已公开上线，赫使可以开始报名了。',
+    en: 'Your task "{{task}}" has been approved and is now live. Ambassadors can start applying.',
+    ja: '「{{task}}」が承認され、公開されました。アンバサダーの応募を受け付けています。',
+    ko: '"{{task}}" 작업이 승인되어 공개되었습니다. 앰배서더들이 지원을 시작할 수 있습니다.',
+  },
+
   'notify.NEW_APPLICATION.title': {
     zh: '新报名：{{task}}',
     en: 'New application: {{task}}',
@@ -196,10 +222,10 @@ const BRAND: Templates = {
     ko: '새 지원: {{task}}',
   },
   'notify.NEW_APPLICATION.body': {
-    zh: '{{herald}} 报名了你的任务「{{task}}」，请前往任务详情审核。',
-    en: '{{herald}} has applied for your task "{{task}}". Please review the application.',
-    ja: '{{herald}} さんがタスク「{{task}}」に応募しました。詳細を確認して審査してください。',
-    ko: '{{herald}}님이 "{{task}}" 작업에 지원했습니다. 지원서를 검토해 주세요.',
+    zh: '{{heraldName}} 报名了你的任务「{{task}}」，请前往任务详情审核。',
+    en: '{{heraldName}} has applied for your task "{{task}}". Please review the application.',
+    ja: '{{heraldName}} さんがタスク「{{task}}」に応募しました。詳細を確認して審査してください。',
+    ko: '{{heraldName}}님이 "{{task}}" 작업에 지원했습니다. 지원서를 검토해 주세요.',
   },
 
   'notify.REVIEW_REMINDER.title': {

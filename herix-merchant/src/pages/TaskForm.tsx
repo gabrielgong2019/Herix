@@ -971,6 +971,8 @@ export default function TaskForm() {
                     rows={2} placeholder={t('taskForm.fieldPerfIntroPh')} />
                 </Field>
 
+                {serviceLogoField}
+
                 <Field label={t('taskForm.fieldAppDownloadUrl')} hint={t('taskForm.fieldAppDownloadUrlHint')}>
                   <Input value={form.registerUrl} onChange={(e) => set('registerUrl', e.target.value)}
                     placeholder={t('taskForm.fieldAppDownloadUrlPh')} />
@@ -1199,7 +1201,6 @@ export default function TaskForm() {
                 </Field>
 
                 {coverField}
-                {serviceLogoField}
               </div>
             )}
 
@@ -1440,6 +1441,8 @@ export default function TaskForm() {
                 </div>
               )}
             </Field>
+
+            {serviceLogoField}
 
           </div>
 

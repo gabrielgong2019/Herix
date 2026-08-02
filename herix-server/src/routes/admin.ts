@@ -12,6 +12,7 @@ import { imageUpload } from '../middleware/upload';
 import { processLogo, processPromo } from '../utils/image';
 import { saveBrandAsset } from '../utils/uploads';
 import { i18nAdminRouter } from './i18n';
+import { notify } from '../utils/notify';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
@@ -44,12 +45,17 @@ adminRouter.post('/task-reviews/:id/approve', async (req: Request, res: Response
   if (!task) return res.status(404).json({ error: '任务不存在或不在审核中' });
   // published_at 语义 = 进入公开时间：审核通过时刷新（发布时写的是提交送审时间，队列排序用）
   await update('tasks', { status: 'OPEN', published_at: new Date().toISOString(), platform_review: 'approved', platform_review_note: null }, 'id = ?', [task.id]);
-  await createNotification({
-    userId: task.creator_id, type: 'TASK_REVIEW_APPROVED', targetRole: 'BRAND',
-    title: '任务审核通过',
-    body: `你的任务《${task.title}》已通过平台审核，现已对赫使公开可见。`,
-    metadata: { taskId: task.id, taskTitle: task.title },
-  });
+  const brandUser = await findOne<any>('SELECT id, email FROM users WHERE id = ?', [task.creator_id]);
+  if (brandUser) {
+    notify({
+      userId: brandUser.id,
+      email: brandUser.email,
+      targetRole: 'BRAND',
+      type: 'TASK_APPROVED',
+      variables: { task: task.title },
+      metadata: { taskId: task.id },
+    }).catch((e) => console.error('[notify] TASK_APPROVED failed:', e));
+  }
   res.json({ success: true });
 });
 

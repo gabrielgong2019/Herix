@@ -1023,6 +1023,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       visibility:        data.visibility || 'PUBLIC',
       target_communities: data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c)),
       site_id:           VALID_SITES.has(data.siteId) ? data.siteId : 'jp',
+      service_name:      data.serviceName || null,
       status:            'DRAFT',
       // cost_per_herald 和 commission_rate 在发布时计算快照
     });
@@ -1104,6 +1105,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (req.body.siteId !== undefined && VALID_SITES.has(req.body.siteId)) {
     data.site_id = req.body.siteId;
   }
+  if (req.body.serviceName !== undefined) data.service_name = req.body.serviceName || null;
   if (reqMode && ['ALL', 'ANY_N'].includes(reqMode)) {
     data.req_mode = reqMode;
     data.req_min_count = reqMode === 'ANY_N' ? Math.max(1, parseInt(String(reqMinCount || 1), 10)) : null;
@@ -1304,6 +1306,21 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     translation_attempts: 0,
     ...(stampTrial ? { trial_credit_amount: trialGrant } : {}),
   }, 'id = ?', [req.params.id]);
+
+  // 通知商家发布结果
+  if (needsReview) {
+    const brandUser = await findOne<any>('SELECT id, email FROM users WHERE id = ?', [task.creator_id]);
+    if (brandUser) {
+      notify({
+        userId: brandUser.id,
+        email: brandUser.email,
+        targetRole: 'BRAND',
+        type: 'TASK_PENDING_REVIEW',
+        variables: { task: task.title },
+        metadata: { taskId: req.params.id },
+      }).catch((e) => console.error('[notify] TASK_PENDING_REVIEW failed:', e));
+    }
+  }
 
   // 体验额度发放标记（一次性）：记下发放去向，之后不再有资格
   if (stampTrial) {

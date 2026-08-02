@@ -356,7 +356,7 @@ function taskToFormState(task: Task): FormState {
     reqMode: task.req_mode === 'ANY_N' ? 'ANY_N' : 'ALL',
     reqMinCount: task.req_min_count || 1,
     difficulty: task.difficulty,
-    contentType: task.content_type === 'referral' ? 'photo' : task.content_type, // referral=邀请码占位值，表单无此选项
+    contentType: (!task.content_type || task.content_type === 'referral') ? 'photo' : task.content_type as FormState['contentType'], // null和referral均回退到photo
     coverImage: task.cover_image || '',
     payoutPerHerald: task.payout_per_herald,
     maxHeralds: task.max_heralds,
@@ -395,6 +395,8 @@ export default function TaskForm() {
   // 类型是第一分叉：创建时先整屏选类型(step 0)，选完才渲染表单；编辑/复制态跳过
   const copyId = searchParams.get('copy')
   const [typeChosen, setTypeChosen] = useState(isEdit || !!copyId)
+  const [perfStep, setPerfStep] = useState(1)
+  const [perfHowOpen, setPerfHowOpen] = useState(false)
   // 需求单提取（建议式）：识别结果在面板确认后才应用
   const [extracted, setExtracted] = useState<ExtractHit[] | null>(null)
   const [showLangPicker, setShowLangPicker] = useState(false)
@@ -611,6 +613,31 @@ export default function TaskForm() {
     saveMut.mutate(status)
   }
 
+  const PERF_TOTAL = 5
+
+  const validatePerfStep = (step: number): boolean => {
+    setError('')
+    if (step === 1 && !form.title.trim()) { setError(t('taskForm.errorTitle')); return false }
+    if (step === 4) {
+      if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
+      if (isCustomCodes && customCodeList.length > MAX_CUSTOM_CODES) {
+        setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: MAX_CUSTOM_CODES }))
+        return false
+      }
+    }
+    return true
+  }
+
+  const perfNext = () => {
+    if (!validatePerfStep(perfStep)) return
+    setPerfStep((s) => Math.min(s + 1, PERF_TOTAL))
+  }
+
+  const perfBack = () => {
+    setError('')
+    setPerfStep((s) => Math.max(s - 1, 1))
+  }
+
   // 封面上传块（2026-07-29 用户决策：所有任务类型发布必填）——两种任务类型共用，
   // 此前只在内容任务分支渲染，邀请码任务压根没有上传入口
   const coverField = (
@@ -673,22 +700,50 @@ export default function TaskForm() {
               <div className="text-sm" style={{ color: 'var(--muted)' }}>{t('taskForm.typeStepHint')}</div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              {([
-                { mode: 'STANDARD' as const, icon: '📝', title: t('taskForm.modeStandard'), desc: t('taskForm.modeStandardDesc') },
-                { mode: 'PERFORMANCE' as const, icon: '🔗', title: t('taskForm.modePerformance'), desc: t('taskForm.modePerformanceDesc') },
-              ]).map((c) => (
+              {/* 内容创作 */}
+              <button
+                type="button"
+                className="rounded-2xl p-7 text-left transition-all hover:-translate-y-0.5"
+                style={{ background: '#fff', border: '2px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,.04)' }}
+                onClick={() => { set('mode', 'STANDARD'); setTypeChosen(true) }}
+              >
+                <div className="text-3xl mb-3">📝</div>
+                <div className="text-base font-semibold mb-1.5" style={{ color: 'var(--text)' }}>{t('taskForm.modeStandard')}</div>
+                <div className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>{t('taskForm.modeStandardDesc')}</div>
+              </button>
+
+              {/* 邀请码激励 — div 包裹避免嵌套 button */}
+              <div
+                className="rounded-2xl p-7 text-left transition-all hover:-translate-y-0.5 cursor-pointer"
+                style={{ background: '#fff', border: '2px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,.04)' }}
+                onClick={() => { set('mode', 'PERFORMANCE'); setTypeChosen(true); setPerfStep(1) }}
+              >
+                <div className="text-3xl mb-3">🔗</div>
+                <div className="text-base font-semibold mb-1.5" style={{ color: 'var(--text)' }}>{t('taskForm.modePerformance')}</div>
+                <div className="text-xs leading-relaxed mb-3" style={{ color: 'var(--muted)' }}>{t('taskForm.perfTypeIntro')}</div>
                 <button
-                  key={c.mode}
                   type="button"
-                  className="rounded-2xl p-7 text-left transition-all hover:-translate-y-0.5"
-                  style={{ background: '#fff', border: '2px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,.04)' }}
-                  onClick={() => { set('mode', c.mode); setTypeChosen(true) }}
+                  className="flex items-center gap-1 text-xs"
+                  style={{ color: 'var(--primary)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                  onClick={(e) => { e.stopPropagation(); setPerfHowOpen((v) => !v) }}
                 >
-                  <div className="text-3xl mb-3">{c.icon}</div>
-                  <div className="text-base font-semibold mb-1.5" style={{ color: 'var(--text)' }}>{c.title}</div>
-                  <div className="text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>{c.desc}</div>
+                  {t('taskForm.perfHowItWorks')}
+                  {perfHowOpen ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                 </button>
-              ))}
+                {perfHowOpen && (
+                  <div className="mt-2 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                    {(['perfHowStep1', 'perfHowStep2', 'perfHowStep3', 'perfHowStep4', 'perfHowStep5'] as const).map((key, i) => (
+                      <div key={key} className="flex items-start gap-2 text-xs" style={{ color: 'var(--muted)' }}>
+                        <span
+                          className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center font-bold mt-0.5"
+                          style={{ background: 'var(--primary-light)', color: 'var(--primary)', fontSize: 10 }}
+                        >{i + 1}</span>
+                        <span>{t(`taskForm.${key}`)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             {fromOnboard && (
               <div className="text-center mt-6">
@@ -703,6 +758,383 @@ export default function TaskForm() {
     )
   }
 
+  // ── PERFORMANCE 向导 ─────────────────────────────────────────────────
+  if (!isStandard) {
+    const langMismatchBanner = langMismatch ? (() => {
+      const detectedLabel = LOCALE_OPTIONS.find((l) => l.code === langMismatch)?.label ?? langMismatch
+      const selectedLabel = LOCALE_OPTIONS.find((l) => l.code === form.sourceLang)?.label ?? form.sourceLang
+      return (
+        <div className="mb-4 rounded-xl p-4 flex flex-col gap-3" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+          <p className="text-sm" style={{ color: '#92400e' }}>
+            检测到内容为 <strong>{detectedLabel}</strong>，但原文语言设置为 <strong>{selectedLabel}</strong>。源语言设置不准确将影响翻译质量。
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <button type="button" className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+              style={{ background: 'var(--primary)', color: '#fff' }}
+              onClick={() => { set('sourceLang', langMismatch); setLangMismatch(null); if (pendingStatus) saveMut.mutate(pendingStatus) }}>
+              切换为{detectedLabel}并继续
+            </button>
+            <button type="button" className="px-3 py-1.5 rounded-lg text-xs border font-medium"
+              style={{ borderColor: '#fde68a', background: '#fff', color: '#92400e' }}
+              onClick={() => { setLangMismatch(null); if (pendingStatus) saveMut.mutate(pendingStatus) }}>
+              保持{selectedLabel}继续
+            </button>
+            <button type="button" className="px-3 py-1.5 rounded-lg text-xs" style={{ color: 'var(--muted)' }}
+              onClick={() => { setLangMismatch(null); setPendingStatus(null) }}>
+              取消
+            </button>
+          </div>
+        </div>
+      )
+    })() : null
+
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Topbar title={pageTitle} />
+        <div className="flex-1 p-7">
+          <div className="max-w-[680px] mx-auto">
+
+            {/* 进度条 */}
+            <div className="flex items-center gap-1.5 mb-6">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <div key={n} style={{
+                  height: 4, borderRadius: 2,
+                  flex: n === perfStep ? 2 : 1,
+                  background: n <= perfStep ? 'var(--primary)' : 'var(--border)',
+                  transition: 'all 0.2s',
+                }} />
+              ))}
+              <span className="text-xs ml-2 flex-shrink-0" style={{ color: 'var(--muted)' }}>
+                {t('taskForm.perfWizardOf', { step: perfStep, total: PERF_TOTAL })}
+              </span>
+            </div>
+
+            {/* 类型徽章 */}
+            <div className="flex items-center gap-2 mb-4 text-xs" style={{ color: 'var(--muted)' }}>
+              <span>🔗</span>
+              <span className="px-2 py-0.5 rounded-full font-medium" style={{ background: 'var(--primary-light)', color: 'var(--primary)' }}>
+                {t('taskForm.modePerformance')}
+              </span>
+              {!isEdit && (
+                <button type="button" className="underline" style={{ color: 'var(--muted)' }}
+                  onClick={() => { setTypeChosen(false); setPerfStep(1) }}>
+                  {t('taskForm.typeChange')}
+                </button>
+              )}
+            </div>
+
+            {/* 错误提示 */}
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-lg text-sm" style={{ background: '#fee2e2', color: 'var(--danger)' }}>
+                {error}
+              </div>
+            )}
+
+            {/* Step 1 — 任务简报 */}
+            {perfStep === 1 && (
+              <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+                <SectionHeader num={1} title={t('taskForm.perfStep1Title')} hint={t('taskForm.perfStep1Hint')} />
+
+                <div className="mb-4 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldSourceLang')}：</span>
+                  {showLangPicker ? (
+                    <>
+                      {LOCALE_OPTIONS.map((l) => (
+                        <Chip key={l.code} label={l.label} selected={form.sourceLang === l.code}
+                          onClick={() => { set('sourceLang', l.code); setShowLangPicker(false); setLangMismatch(null) }} />
+                      ))}
+                      <button type="button" onClick={() => setShowLangPicker(false)} style={{ color: 'var(--muted)' }}><X size={14} /></button>
+                    </>
+                  ) : (
+                    <>
+                      <button type="button" className="text-xs flex items-center gap-1 font-medium" style={{ color: 'var(--primary)' }}
+                        onClick={() => setShowLangPicker(true)}>
+                        {LOCALE_OPTIONS.find((l) => l.code === form.sourceLang)?.label ?? '中文'}
+                        <ChevronDown size={12} />
+                      </button>
+                      <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.fieldSourceLangHint')}</span>
+                    </>
+                  )}
+                </div>
+
+                {langMismatchBanner}
+
+                <Field label={t('taskForm.fieldTitle')} required>
+                  <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder={t('taskForm.fieldTitlePh')} />
+                </Field>
+
+                <Field label={t('taskForm.fieldPerfIntroLabel')}>
+                  <Textarea value={form.description} onChange={(e) => set('description', e.target.value)}
+                    rows={2} placeholder={t('taskForm.fieldPerfIntroPh')} />
+                </Field>
+              </div>
+            )}
+
+            {/* Step 2 — 转化目标 */}
+            {perfStep === 2 && (
+              <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+                <SectionHeader num={2} title={t('taskForm.perfStep2Title')} hint={t('taskForm.perfStep2Hint')} />
+
+                <Field label={t('taskForm.conversionTitle')} hint={t('taskForm.conversionHint')}>
+                  <div className="mb-2">
+                    <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.registerLabel')}</div>
+                    <input value={form.conversionRegisterLabel}
+                      onChange={(e) => set('conversionRegisterLabel', e.target.value)}
+                      className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+                  </div>
+                  <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.convertLabel')}</div>
+                  {form.conversionConvert.map((line, i) => (
+                    <div key={i} className="flex gap-2 mb-1.5">
+                      <input value={line} placeholder={t('taskForm.convertPh')}
+                        onChange={(e) => { const a = [...form.conversionConvert]; a[i] = e.target.value; set('conversionConvert', a) }}
+                        className="flex-1 text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+                      <button type="button" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                        onClick={() => { const a = form.conversionConvert.filter((_, j) => j !== i); set('conversionConvert', a.length ? a : ['']) }}>✕</button>
+                    </div>
+                  ))}
+                  <button type="button" style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
+                    onClick={() => set('conversionConvert', [...form.conversionConvert, ''])}>＋ {t('taskForm.convertAdd')}</button>
+                  <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
+                    <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>{t('taskForm.previewLabel')}</div>
+                    <div className="text-sm">☑️ {form.conversionRegisterLabel.trim() || '新用户'}</div>
+                    {form.conversionConvert.map((c) => c.trim()).filter(Boolean).map((c, i) => (
+                      <div key={i} className="text-sm">☑️ {c}</div>
+                    ))}
+                    {form.conversionConvert.map((c) => c.trim()).filter(Boolean).length === 0 && (
+                      <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t('taskForm.previewRegisterOnly')}</div>
+                    )}
+                  </div>
+                </Field>
+
+                <Field label={t('taskForm.fieldDataMode')}>
+                  <div className="flex gap-3">
+                    {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
+                      <RadioCard key={m} selected={form.dataMode === m} onClick={() => set('dataMode', m)}
+                        title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
+                        desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)} />
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label={t('taskForm.inviteeBenefitLabel')} hint={t('taskForm.inviteeBenefitHint')}>
+                  <input value={form.inviteeBenefit} onChange={(e) => set('inviteeBenefit', e.target.value)}
+                    placeholder={t('taskForm.inviteeBenefitPh')}
+                    className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
+                </Field>
+              </div>
+            )}
+
+            {/* Step 3 — 招募条件 */}
+            {perfStep === 3 && (
+              <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+                <SectionHeader num={3} title={t('taskForm.perfStep3Title')} hint={t('taskForm.perfStep3Hint')} />
+
+                <Field label={t('taskForm.fieldCategory')}>
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((c) => (
+                      <Chip key={c.id} label={t(`category.${c.id}`, { defaultValue: c.label })}
+                        selected={form.category === c.id} onClick={() => set('category', c.id)} />
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label={t('taskForm.fieldCommunity')} hint={t('taskForm.fieldCommunityHint')}>
+                  <div className="flex flex-wrap gap-2">
+                    {communities.map((c) => (
+                      <Chip key={c.id} label={t(`community.${c.id}`, { defaultValue: c.id })}
+                        selected={form.targetCommunities.includes(c.id)} onClick={() => toggleList('targetCommunities', c.id)} />
+                    ))}
+                  </div>
+                </Field>
+
+                <Field label={t('taskForm.fieldPlatform')} hint={t('taskForm.fieldPlatformHint')}>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {PLATFORMS.map((p) => (
+                      <Chip key={p.id} label={`${p.icon} ${p.name}`}
+                        selected={form.platformRequirements.some((r) => r.platformId === p.id)}
+                        onClick={() => togglePlatformReq(p.id)} />
+                    ))}
+                  </div>
+                  {form.platformRequirements.length > 0 && (
+                    <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--border)' }}>
+                      {form.platformRequirements.map((r, i) => {
+                        const meta = PLATFORMS.find((p) => p.id === r.platformId)
+                        return (
+                          <div key={r.platformId} className="flex items-center gap-3 px-3 py-2.5"
+                            style={{ borderTop: i > 0 ? '1px solid var(--border)' : undefined, background: '#fafafa' }}>
+                            <span className="text-sm font-medium flex-shrink-0" style={{ minWidth: 92 }}>
+                              {meta ? `${meta.icon} ${meta.name}` : r.platformId}
+                            </span>
+                            <input type="number" min={0}
+                              placeholder={t(meta?.countLabel === 'friends' ? 'taskForm.minFriendsPlaceholder' : 'taskForm.minFollowersPlaceholder')}
+                              value={r.minFollowers}
+                              onChange={(e) => updatePlatformReq(r.platformId, { minFollowers: e.target.value === '' ? '' : Number(e.target.value) })}
+                              className="text-sm rounded-lg"
+                              style={{ width: 130, padding: '6px 10px', border: '1px solid var(--border)', background: '#fff' }} />
+                            <label className="flex items-center gap-1.5 text-xs cursor-pointer flex-shrink-0" style={{ color: 'var(--muted)' }}>
+                              <input type="checkbox" checked={r.required}
+                                disabled={form.reqMode === 'ANY_N'}
+                                onChange={(e) => updatePlatformReq(r.platformId, { required: e.target.checked })} />
+                              {t('taskForm.requiredToggle')}
+                            </label>
+                            <button type="button" onClick={() => togglePlatformReq(r.platformId)}
+                              className="ml-auto text-xs" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                              {t('common.remove')}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {form.platformRequirements.length >= 2 && (
+                    <div className="mt-3 flex items-center gap-3 flex-wrap">
+                      <span className="text-xs" style={{ color: 'var(--muted)' }}>{t('taskForm.reqModeLabel')}</span>
+                      <Chip label={t('taskForm.reqModeAll')} selected={form.reqMode === 'ALL'} onClick={() => set('reqMode', 'ALL')} />
+                      <Chip label={t('taskForm.reqModeAnyN', { n: form.reqMinCount, total: form.platformRequirements.length })}
+                        selected={form.reqMode === 'ANY_N'} onClick={() => set('reqMode', 'ANY_N')} />
+                      {form.reqMode === 'ANY_N' && (
+                        <div className="flex items-center gap-1.5">
+                          <button type="button" onClick={() => set('reqMinCount', Math.max(1, form.reqMinCount - 1))}
+                            style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer' }}>−</button>
+                          <span className="text-sm font-semibold" style={{ minWidth: 16, textAlign: 'center' }}>{form.reqMinCount}</span>
+                          <button type="button" onClick={() => set('reqMinCount', Math.min(form.platformRequirements.length, form.reqMinCount + 1))}
+                            style={{ width: 24, height: 24, borderRadius: 6, border: '1px solid var(--border)', background: '#fff', cursor: 'pointer' }}>+</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {form.platformRequirements.length > 0 && (
+                    <div className="mt-2.5 text-xs leading-relaxed" style={{ color: 'var(--muted)' }}>
+                      {platformReqSummary(form, t)}
+                    </div>
+                  )}
+                </Field>
+
+                <Field label={t('taskForm.fieldDifficulty')}>
+                  <div className="flex gap-3">
+                    {DIFFICULTIES.map((d) => (
+                      <Chip key={d} label={t(`taskForm.diff${d[0].toUpperCase()}${d.slice(1)}`)}
+                        selected={form.difficulty === d} onClick={() => set('difficulty', d as FormState['difficulty'])} />
+                    ))}
+                  </div>
+                </Field>
+              </div>
+            )}
+
+            {/* Step 4 — 推广码设置 */}
+            {perfStep === 4 && (
+              <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+                <SectionHeader num={4} title={t('taskForm.perfStep4Title')} hint={t('taskForm.perfStep4Hint')} />
+
+                <Field label={t('taskForm.fieldCodeSource')}>
+                  <div className="flex flex-col gap-2">
+                    {(['auto', 'custom'] as const).map((m) => (
+                      <label key={m} className="flex items-center gap-2 cursor-pointer text-sm">
+                        <input type="radio" name="codeMode" value={m} checked={form.codeMode === m} onChange={() => set('codeMode', m)} />
+                        {t(`taskForm.code${m[0].toUpperCase()}${m.slice(1)}`)}
+                      </label>
+                    ))}
+                  </div>
+                </Field>
+
+                {isCustomCodes ? (
+                  <Field label={t('taskForm.customCodesLabel')} hint={t('taskForm.customCodesHint')}>
+                    <Textarea value={form.customCodes} onChange={(e) => set('customCodes', e.target.value)}
+                      rows={6} placeholder={t('taskForm.customCodesPh')} style={{ fontFamily: 'monospace', fontSize: 13 }} />
+                    {customCodeList.length > 0 && (
+                      <div className="mt-1.5 text-xs" style={{ color: 'var(--muted)' }}>
+                        {customCodeList.length} 个推广码（将作为招募名额）
+                      </div>
+                    )}
+                  </Field>
+                ) : (
+                  <Field label={t('taskForm.fieldMaxHeralds')} required>
+                    <Input type="number" min={1} value={form.maxHeralds}
+                      onChange={(e) => set('maxHeralds', e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="10" style={{ maxWidth: 160 }} />
+                  </Field>
+                )}
+
+                <Field label={t('taskForm.referralScriptLabel')} hint={t('taskForm.referralScriptHint')}>
+                  <Textarea value={form.referralScript} onChange={(e) => set('referralScript', e.target.value)}
+                    rows={3} placeholder={t('taskForm.referralScriptPh')} />
+                </Field>
+              </div>
+            )}
+
+            {/* Step 5 — 预算与发布 */}
+            {perfStep === 5 && (
+              <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
+                <SectionHeader num={5} title={t('taskForm.perfStep5Title')} hint={t('taskForm.perfStep5Hint')} />
+
+                <PerformanceBudgetEstimate payout={Number(form.payoutPerHerald) || 0} codeCount={effectiveMaxHeralds} t={t} />
+
+                <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>
+                  <Input type="number" min={0} value={form.payoutPerHerald}
+                    onChange={(e) => set('payoutPerHerald', e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="0" style={{ maxWidth: 160 }} />
+                </Field>
+
+                <Field label={t('taskForm.fieldDeadline')} hint={t('taskForm.fieldDeadlineHint')}>
+                  <Input type="date" value={form.deadline} onChange={(e) => set('deadline', e.target.value)}
+                    style={{ maxWidth: 200 }} />
+                </Field>
+
+                {coverField}
+              </div>
+            )}
+
+            {/* 向导导航 */}
+            <div className="flex gap-3 justify-between">
+              {perfStep > 1 ? (
+                <button type="button" onClick={perfBack}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--text)' }}>
+                  {t('taskForm.perfWizardBack')}
+                </button>
+              ) : fromOnboard ? (
+                <button type="button" onClick={() => navigate('/')}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}>
+                  {t('taskForm.skipForNow')}
+                </button>
+              ) : (
+                <button type="button" onClick={() => navigate('/tasks')}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                  style={{ borderColor: 'var(--border)', background: '#fff', color: 'var(--muted)' }}>
+                  {t('common.cancel')}
+                </button>
+              )}
+
+              {perfStep < PERF_TOTAL ? (
+                <button type="button" onClick={perfNext}
+                  className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                  style={{ background: 'var(--primary)', color: '#fff' }}>
+                  {t('taskForm.perfWizardNext')}
+                </button>
+              ) : (
+                <div className="flex gap-3">
+                  <button type="button" onClick={() => handleSubmit('draft')} disabled={saveMut.isPending}
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold border transition-colors"
+                    style={{ borderColor: 'var(--text)', background: '#fff', color: 'var(--text)' }}>
+                    {t('taskForm.saveDraft')}
+                  </button>
+                  <button type="button" onClick={() => handleSubmit('open')} disabled={saveMut.isPending}
+                    className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+                    style={{ background: 'var(--primary)', color: '#fff' }}>
+                    {saveMut.isPending ? t('common.loading') : fromOnboard ? t('taskForm.publishAndEnter') : t('taskForm.publishTask')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── STANDARD 长滚动表单 ───────────────────────────────────────────────
   return (
     <div className="flex flex-col min-h-screen">
       <Topbar title={pageTitle} />
@@ -1080,104 +1512,6 @@ export default function TaskForm() {
             </div>
           )}
 
-          {/* SECTION 3b: Referral code setup — PERFORMANCE only */}
-          {!isStandard && (
-            <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
-              <SectionHeader num={sn.spec} title={t('taskForm.sec3PerfTitle')} hint={t('taskForm.sec3PerfHint')} />
-
-              {coverField}
-
-              {/* 合格转化条件：决定后续结算纠纷，重点引导 + 实时预览赫使视角 */}
-              <Field label={t('taskForm.conversionTitle')} hint={t('taskForm.conversionHint')}>
-                <div className="mb-2">
-                  <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.registerLabel')}</div>
-                  <input value={form.conversionRegisterLabel}
-                    onChange={(e) => set('conversionRegisterLabel', e.target.value)}
-                    className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
-                </div>
-                <div className="text-xs mb-1" style={{ color: 'var(--muted)' }}>{t('taskForm.convertLabel')}</div>
-                {form.conversionConvert.map((line, i) => (
-                  <div key={i} className="flex gap-2 mb-1.5">
-                    <input value={line} placeholder={t('taskForm.convertPh')}
-                      onChange={(e) => { const a = [...form.conversionConvert]; a[i] = e.target.value; set('conversionConvert', a) }}
-                      className="flex-1 text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
-                    <button type="button" style={{ color: 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer' }}
-                      onClick={() => { const a = form.conversionConvert.filter((_, j) => j !== i); set('conversionConvert', a.length ? a : ['']) }}>✕</button>
-                  </div>
-                ))}
-                <button type="button" style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13 }}
-                  onClick={() => set('conversionConvert', [...form.conversionConvert, ''])}>＋ {t('taskForm.convertAdd')}</button>
-                <div className="mt-3 rounded-xl p-3" style={{ background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                  <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>{t('taskForm.previewLabel')}</div>
-                  <div className="text-sm">☑️ {form.conversionRegisterLabel.trim() || '新用户'}</div>
-                  {form.conversionConvert.map(c => c.trim()).filter(Boolean).map((c, i) => (
-                    <div key={i} className="text-sm">☑️ {c}</div>
-                  ))}
-                  {form.conversionConvert.map(c => c.trim()).filter(Boolean).length === 0 && (
-                    <div className="text-xs mt-0.5" style={{ color: 'var(--muted)' }}>{t('taskForm.previewRegisterOnly')}</div>
-                  )}
-                </div>
-              </Field>
-
-              <Field label={t('taskForm.inviteeBenefitLabel')} hint={t('taskForm.inviteeBenefitHint')}>
-                <input value={form.inviteeBenefit} onChange={(e) => set('inviteeBenefit', e.target.value)}
-                  placeholder={t('taskForm.inviteeBenefitPh')}
-                  className="w-full text-sm rounded-lg" style={{ padding: '8px 12px', border: '1px solid var(--border)' }} />
-              </Field>
-
-              <Field label={t('taskForm.referralScriptLabel')} hint={t('taskForm.referralScriptHint')}>
-                <Textarea value={form.referralScript} onChange={(e) => set('referralScript', e.target.value)}
-                  rows={3} placeholder={t('taskForm.referralScriptPh')} />
-              </Field>
-
-              <Field label={t('taskForm.fieldCodeSource')}>
-                <div className="flex flex-col gap-2">
-                  {(['auto', 'custom'] as const).map((m) => (
-                    <label key={m} className="flex items-center gap-2 cursor-pointer text-sm">
-                      <input
-                        type="radio" name="codeMode" value={m}
-                        checked={form.codeMode === m}
-                        onChange={() => set('codeMode', m)}
-                      />
-                      {t(`taskForm.code${m[0].toUpperCase()}${m.slice(1)}`)}
-                    </label>
-                  ))}
-                </div>
-              </Field>
-
-              {form.codeMode === 'custom' && (
-                <Field label={t('taskForm.customCodesLabel')} hint={t('taskForm.customCodesHint')}>
-                  <Textarea
-                    value={form.customCodes}
-                    onChange={(e) => set('customCodes', e.target.value)}
-                    rows={6}
-                    placeholder={t('taskForm.customCodesPh')}
-                    style={{ fontFamily: 'monospace', fontSize: 13 }}
-                  />
-                  {customCodeList.length > 0 && (
-                    <div className="mt-1.5 text-xs" style={{ color: 'var(--muted)' }}>
-                      {customCodeList.length} 个推广码
-                    </div>
-                  )}
-                </Field>
-              )}
-
-              <Field label={t('taskForm.fieldDataMode')}>
-                <div className="flex gap-3">
-                  {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
-                    <RadioCard
-                      key={m}
-                      selected={form.dataMode === m}
-                      onClick={() => set('dataMode', m)}
-                      title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
-                      desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)}
-                    />
-                  ))}
-                </div>
-              </Field>
-            </div>
-          )}
-
           {/* SECTION 4: 时间线（报名截止 + 交稿截止） */}
           <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
             <SectionHeader num={sn.time} title={t('taskForm.secTimeTitle')} hint={t('taskForm.secTimeHint')} />
@@ -1206,10 +1540,7 @@ export default function TaskForm() {
           <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
             <SectionHeader num={sn.payout} title={t('taskForm.sec4Title')} hint={t('taskForm.sec4Hint')} />
 
-            {isStandard
-              ? <StandardCostPreview payout={Number(form.payoutPerHerald) || 0} maxHeralds={effectiveMaxHeralds} balance={brandBalance} t={t} />
-              : <PerformanceBudgetEstimate payout={Number(form.payoutPerHerald) || 0} codeCount={effectiveMaxHeralds} t={t} />
-            }
+            <StandardCostPreview payout={Number(form.payoutPerHerald) || 0} maxHeralds={effectiveMaxHeralds} balance={brandBalance} t={t} />
 
             <div className={`grid gap-4 ${isCustomCodes ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>

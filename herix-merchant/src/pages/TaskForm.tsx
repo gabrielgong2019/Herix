@@ -536,7 +536,7 @@ export default function TaskForm() {
         codeMode: form.mode === 'PERFORMANCE' ? form.codeMode : undefined,
         dataMode: form.mode === 'PERFORMANCE' ? form.dataMode : undefined,
         conversionCriteria: form.mode === 'PERFORMANCE' ? {
-          register: { label: form.conversionRegisterLabel.trim() || '新用户', required: true },
+          register: { label: form.conversionRegisterLabel.trim() || '新用户' },
           convert: form.conversionConvert.map(c => c.trim()).filter(Boolean),
         } : undefined,
         inviteeBenefit: form.mode === 'PERFORMANCE' ? (form.inviteeBenefit.trim() || undefined) : undefined,

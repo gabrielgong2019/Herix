@@ -83,7 +83,7 @@ export const CreateTaskSchema = z.object({
   dataMode: z.enum(['AGGREGATE', 'DETAIL']).default('AGGREGATE'),
   // 邀请任务展示（PERFORMANCE）：合格转化条件 register(必)+convert(可选文本行) / 被邀请人激励 / 话术
   conversionCriteria: z.object({
-    register: z.object({ label: z.string().min(1), required: z.boolean().default(true) }),
+    register: z.object({ label: z.string().min(1) }),
     convert: z.array(z.string()).default([]),
   }).optional(),
   inviteeBenefit: z.string().optional(),

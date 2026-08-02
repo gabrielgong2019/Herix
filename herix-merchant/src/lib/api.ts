@@ -275,7 +275,7 @@ export interface Task {
   deadline?: string
   code_mode?: 'auto' | 'custom'
   data_mode?: 'AGGREGATE' | 'DETAIL'
-  conversion_criteria?: { register: { label: string; required: boolean }; convert: string[] }
+  conversion_criteria?: { register: { label: string }; convert: string[] }
   invitee_benefit?: string | null
   referral_script?: string | null
   min_images?: number | null
@@ -321,7 +321,7 @@ export interface TaskFormData {
   deadline?: string
   codeMode?: 'auto' | 'custom'
   dataMode?: 'AGGREGATE' | 'DETAIL'
-  conversionCriteria?: { register: { label: string; required: boolean }; convert: string[] }
+  conversionCriteria?: { register: { label: string }; convert: string[] }
   inviteeBenefit?: string
   referralScript?: string
   minImages?: number | null

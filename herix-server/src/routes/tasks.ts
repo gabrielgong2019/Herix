@@ -1051,7 +1051,7 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
         [taskId, spec.content_type, spec.min_images, spec.min_video_seconds, spec.max_revisions, spec.require_proposal, spec.require_draft_review, spec.submit_deadline]
       );
     } else {
-      const criteria = data.conversionCriteria || { register: { label: '新用户', required: true }, convert: [] };
+      const criteria = data.conversionCriteria || { register: { label: '新用户' }, convert: [] };
       spec = {
         code_mode: data.codeMode || 'auto', data_mode: data.dataMode || 'AGGREGATE',
         conversion_criteria: criteria, invitee_benefit: data.inviteeBenefit || null, referral_script: data.referralScript || null,

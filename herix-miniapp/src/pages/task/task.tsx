@@ -17,7 +17,7 @@ interface TaskDetailData {
   title: string;
   cover_image?: string | null;
   description: string;
-  conversion_criteria?: { register: { label: string; required: boolean }; convert: string[] };
+  conversion_criteria?: { register: { label: string }; convert: string[] };
   invitee_benefit?: string | null;
   referral_script?: string | null;
   platform_requirements?: string | null;
@@ -701,7 +701,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
         {/* 邀请任务 4 块（2026-07-31 重排：利益→成功条件前置→怎么做→话术，按赫使决策顺序）*/}
         {isPerformance && (() => {
-          const cc = task.conversion_criteria || { register: { label: '新用户', required: true }, convert: [] };
+          const cc = task.conversion_criteria || { register: { label: '新用户' }, convert: [] };
           const convert = (cc.convert || []).filter(Boolean);
           return (
             <>

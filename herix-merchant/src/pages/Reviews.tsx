@@ -2,39 +2,73 @@ import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reviewsApi, tasksApi, parseLinks, type Submission, type SubmissionRevision, type Application } from '@/lib/api'
+import { reviewsApi, tasksApi, parseLinks, type Submission, type Application } from '@/lib/api'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
 import { useNavigate } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
 import { Check, X, FileText, Scale } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
-/** 草稿定稿对照：从审计链取最后一版草稿内容（草稿通过前的最后一次 SUBMIT 即定稿版本） */
-function approvedDraftOf(revs: SubmissionRevision[]): SubmissionRevision | null {
-  const draftSubmits = revs.filter((r) => r.stage === 'DRAFT' && r.kind === 'SUBMIT')
-  return draftSubmits.length ? draftSubmits[draftSubmits.length - 1] : null
+function jarr(raw?: string | null): string[] {
+  if (!raw) return []
+  try { const a = JSON.parse(raw); return Array.isArray(a) ? a : [] } catch { return [] }
 }
 
-function DraftCompare({ subId }: { subId: string }) {
+/** 评审往来时间线：/revisions 完整审计链（商家赫使同源），每轮 提交/通过/退回 + 意见 + 真图 */
+function ReviewTimeline({ subId }: { subId: string }) {
   const { t } = useTranslation()
   const { data: revs = [], isLoading } = useQuery({
     queryKey: ['revisions', subId],
     queryFn: () => reviewsApi.revisions(subId).then((r) => r.data),
   })
   if (isLoading) return <div className="text-xs px-5 py-3" style={{ color: 'var(--muted)' }}>{t('common.loading')}</div>
-  const draft = approvedDraftOf(revs)
-  if (!draft) return <div className="text-xs px-5 py-3" style={{ color: 'var(--muted)' }}>{t('reviews.noDraft')}</div>
-  let shots: string[] = []
-  try { shots = draft.screenshot_urls ? JSON.parse(draft.screenshot_urls) : [] } catch { /* ignore */ }
+  if (!revs.length) return <div className="text-xs px-5 py-3" style={{ color: 'var(--muted)' }}>{t('reviews.noDraft')}</div>
+  let round = 0
   return (
-    <div className="px-5 py-3 rounded-lg mx-5 mb-3" style={{ background: '#f8fafc', border: '1px solid var(--border)' }}>
-      <div className="text-xs font-semibold mb-1.5" style={{ color: 'var(--muted)' }}>{t('reviews.approvedDraft')}</div>
-      {draft.description && <div className="text-sm whitespace-pre-wrap mb-1.5">{draft.description}</div>}
-      {shots.length > 0 && (
-        <div className="text-xs" style={{ color: 'var(--muted)' }}>
-          {t('reviews.draftImages', { n: shots.length })}
-        </div>
-      )}
+    <div className="px-5 py-3.5 mx-5 mb-3 rounded-lg" style={{ background: '#f8fafc', border: '1px solid var(--border)' }}>
+      <div className="text-xs font-semibold mb-2.5" style={{ color: 'var(--muted)' }}>{t('reviews.timeline')}</div>
+      <div className="flex flex-col gap-3">
+        {revs.map((r, i) => {
+          const isSubmit = r.kind === 'SUBMIT'
+          if (isSubmit) round++
+          const stage = r.stage === 'DRAFT' ? t('reviews.stageDraft') : t('reviews.stageFinal')
+          const shots = jarr(r.screenshot_urls)
+          const links = jarr(r.content_urls)
+          const head = isSubmit
+            ? t('reviews.tlSubmit', { stage, round })
+            : r.action === 'APPROVED' ? t('reviews.tlApprove', { stage })
+            : r.action === 'REJECTED' ? t('reviews.tlReturn')
+            : r.action
+          const hColor = isSubmit ? 'var(--primary)' : r.action === 'REJECTED' ? '#d97706' : '#16a34a'
+          return (
+            <div key={i} className="flex gap-2.5 text-xs">
+              <span style={{ color: 'var(--muted)', flexShrink: 0, minWidth: 40, fontWeight: 600 }}>
+                {isSubmit ? t('reviews.tlHerald') : t('reviews.tlBrand')}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div>
+                  <span style={{ color: hColor, fontWeight: 600 }}>{head}</span>
+                  <span className="ml-2" style={{ color: 'var(--muted)' }}>{formatDate(r.created_at)}</span>
+                </div>
+                {r.note && <div className="mt-0.5" style={{ color: '#92400e' }}>「{r.note}」</div>}
+                {isSubmit && r.description && <div className="mt-0.5 whitespace-pre-wrap" style={{ color: 'var(--text)' }}>{r.description}</div>}
+                {shots.length > 0 && (
+                  <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                    {shots.map((u, j) => (
+                      <a key={j} href={u} target="_blank" rel="noreferrer">
+                        <img src={u} alt="" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border)' }} />
+                      </a>
+                    ))}
+                  </div>
+                )}
+                {links.map((u, j) => (
+                  <a key={j} href={u} target="_blank" rel="noreferrer" className="block mt-0.5" style={{ color: 'var(--primary)', wordBreak: 'break-all' }}>{u}</a>
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -237,16 +271,14 @@ export default function Reviews() {
                               </a>
                             ))
                           : (!isDraft && <span style={{ color: 'var(--muted)' }}>—</span>)}
-                        {!isDraft && !!sub.require_draft_review && (
-                          <button
-                            type="button"
-                            className="flex items-center gap-1 text-xs mt-1 underline cursor-pointer"
-                            style={{ color: 'var(--muted)' }}
-                            onClick={() => setCompareId(compareId === sub.id ? null : sub.id)}
-                          >
-                            <FileText size={11} /> {t('reviews.compareDraft')}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="flex items-center gap-1 text-xs mt-1 underline cursor-pointer"
+                          style={{ color: 'var(--muted)' }}
+                          onClick={() => setCompareId(compareId === sub.id ? null : sub.id)}
+                        >
+                          <FileText size={11} /> {t('reviews.viewTimeline')}
+                        </button>
                       </td>
                       <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
                         <div className="flex gap-2">
@@ -284,7 +316,7 @@ export default function Reviews() {
                     </tr>
                     {compareId === sub.id && (
                       <tr>
-                        <td colSpan={6} style={{ borderBottom: '1px solid var(--border)' }}><DraftCompare subId={sub.id} /></td>
+                        <td colSpan={6} style={{ borderBottom: '1px solid var(--border)' }}><ReviewTimeline subId={sub.id} /></td>
                       </tr>
                     )}
                   </Fragment>

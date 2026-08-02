@@ -264,7 +264,7 @@
     "mustBind": "Must bind",
     "minFriendsPlaceholder": "Min friends (no limit)",
     "conversionTitle": "Valid conversion criteria",
-    "conversionHint": "Clearly define what counts as one conversion — creators see the same checklist. Being specific greatly reduces settlement disputes",
+    "conversionHint": "Clearly define what counts as one conversion — creators see the same checklist. The platform does not auto-verify; settlement is based on the conversion data you upload, so being specific greatly reduces disputes",
     "registerLabel": "Invitee eligibility (required, editable)",
     "convertLabel": "Conversion actions (one per line, add/remove; empty = registration counts)",
     "convertPh": "e.g. First transfer ≥ ¥10,000 and successfully received",

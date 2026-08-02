@@ -264,7 +264,7 @@
     "mustBind": "必须绑定",
     "minFriendsPlaceholder": "最低好友数（不限）",
     "conversionTitle": "合格转化条件",
-    "conversionHint": "清晰定义什么算一次成功转化——赫使会看到同款清单，写清楚可大幅减少后续结算纠纷",
+    "conversionHint": "清晰定义什么算一次成功转化——赫使会看到同款清单。平台不自动判定，结算以你上传的转化数据为准，写清楚可大幅减少后续纠纷",
     "registerLabel": "被邀请人身份（必需，可改文案）",
     "convertLabel": "转化动作（每行一条，可增删；留空=完成注册即算转化）",
     "convertPh": "如：首次汇款 ≥ ¥10,000 且成功到账",

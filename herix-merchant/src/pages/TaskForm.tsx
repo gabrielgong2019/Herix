@@ -561,7 +561,10 @@ export default function TaskForm() {
         reqMode: form.platformRequirements.length ? form.reqMode : undefined,
         reqMinCount: form.reqMode === 'ANY_N' ? form.reqMinCount : undefined,
       }
-      const res = isEdit ? await tasksApi.update(id!, payload) : await tasksApi.create(payload)
+      const isPublished = ['OPEN', 'IN_PROGRESS'].includes(existingTask?.status ?? '')
+      const res = isEdit
+        ? isPublished ? await tasksApi.updateMeta(id!, payload) : await tasksApi.update(id!, payload)
+        : await tasksApi.create(payload)
       const taskId = isEdit ? id! : (res.data as Task).id
       if (coverFileRef.current) {
         await tasksApi.uploadCover(taskId, coverFileRef.current)

@@ -57,12 +57,7 @@ export const tasksApi = {
   get: (id: string) => http.get<Task>(`/tasks/${id}`),
   create: (data: TaskFormData) => http.post<Task>('/tasks', data),
   update: (id: string, data: Partial<TaskFormData>) => http.put<Task>(`/tasks/${id}`, data),
-  updateMeta: (id: string, data: {
-    description?: string; deadline?: string
-    coverImage?: string; maxHeralds?: number
-    conversionCriteria?: { register: { label: string }; convert: string[] }
-    inviteeBenefit?: string; referralScript?: string
-  }) => http.patch<Task>(`/tasks/${id}/meta`, data),
+  updateMeta: (id: string, data: Partial<TaskFormData>) => http.patch<Task>(`/tasks/${id}/meta`, data),
   publish: (id: string) => http.patch<{ success: boolean }>(`/tasks/${id}/publish`),
   complete: (id: string) => http.patch<Task>(`/tasks/${id}/complete`),
   applications: (id: string) => http.get<Application[]>(`/tasks/${id}/applications`),

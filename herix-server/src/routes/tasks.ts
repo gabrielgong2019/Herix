@@ -1162,9 +1162,11 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     return res.status(400).json({ error: '只有进行中的任务可以编辑' });
   }
 
-  const { description, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount, conversionCriteria, inviteeBenefit, referralScript } = req.body;
+  const { title, description, deadline, coverImage, platformRequirements, maxHeralds, reqMode, reqMinCount, conversionCriteria, inviteeBenefit, referralScript } = req.body;
   const data: Record<string, any> = {};
+  if (title) data.title = title;
   if (description !== undefined) data.description = description;
+  if (req.body.serviceName !== undefined) data.service_name = req.body.serviceName || null;
   if (deadline !== undefined) data.deadline = deadline || null;
   if (coverImage !== undefined) data.cover_image = coverImage || null;
   if (platformRequirements !== undefined) {

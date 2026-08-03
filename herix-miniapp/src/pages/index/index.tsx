@@ -117,7 +117,10 @@ export default class Index extends Component<{}, State> {
     const keyword = searchText.trim().toLowerCase();
     const visibleTasks = taskList.filter(task => {
       if (activeCategory && task.category !== activeCategory) return false;
-      if (keyword && !task.title?.toLowerCase().includes(keyword) && !task.description?.toLowerCase().includes(keyword)) return false;
+      if (keyword) {
+        const brand = (task.brand_company_name || task.creator_name || '').toLowerCase();
+        if (!task.title?.toLowerCase().includes(keyword) && !task.description?.toLowerCase().includes(keyword) && !brand.includes(keyword)) return false;
+      }
       return true;
     });
     // 对齐 herix.html：分类胶囊只显示当前任务列表中实际有任务的分类（从全量列表算，别用过滤后的）

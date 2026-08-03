@@ -692,31 +692,15 @@
   display: block;
 }
 
-/* 邀请任务 4 块（2026-07-31） */
-.ref-benefits {
-  display: flex;
-  gap: 16px;
-  margin: 4px 0 20px;
-}
-.ref-benefit-cell {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 20px 18px;
-}
-.ref-benefit-label {
+/* 邀请任务块（2026-08-03：两列 ref-benefits 已删——你每单赚与顶部大价重复；
+   好友得到改为独立 section 卡，紧贴参考话术。值用阅读字号+半粗+primary 做温和强调，
+   而非旧版 30px/700 大号红整句（那正是突兀来源）。*/
+.friend-benefit {
   display: block;
-  font-size: 22px;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-.ref-benefit-val {
-  display: block;
-  font-size: 30px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 600;
   color: var(--primary);
+  line-height: 1.6;
   word-break: break-word;
 }
 .ref-check {

@@ -750,7 +750,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           )}
         </View>
 
-        {/* 邀请任务 4 块（2026-07-31 重排：利益→成功条件前置→怎么做→话术，按赫使决策顺序）*/}
+        {/* 邀请任务块（2026-08-03 重排：你每单赚与顶部大价重复，去重删除；好友得到下移到参考话术前，作"拉新钩子+话术"一组）*/}
         {isPerformance && (() => {
           const cc = task.conversion_criteria || { register: { label: '新用户' }, convert: [] };
           const convert = (cc.convert || []).filter(Boolean);
@@ -762,18 +762,6 @@ export default class TaskDetail extends Component<{ id: string }, State> {
                   <Text className='content'>{task.description}</Text>
                 </View>
               )}
-              <View className='ref-benefits'>
-                <View className='ref-benefit-cell'>
-                  <Text className='ref-benefit-label'>{t('task.refYouEarn')}</Text>
-                  <Text className='ref-benefit-val'>{t('task.perConversion', { n: task.payout_per_herald ?? task.commission })}</Text>
-                </View>
-                {!!task.invitee_benefit && (
-                  <View className='ref-benefit-cell'>
-                    <Text className='ref-benefit-label'>{t('task.refFriendGets')}</Text>
-                    <Text className='ref-benefit-val'>{task.invitee_benefit}</Text>
-                  </View>
-                )}
-              </View>
 
               <View className='section'>
                 <Text className='section-title'>{t('task.refSuccessTitle')}</Text>
@@ -790,6 +778,13 @@ export default class TaskDetail extends Component<{ id: string }, State> {
                 <Text className='ref-step'>{t('task.refStep2')}</Text>
                 <Text className='ref-step'>{t('task.refStep3')}</Text>
               </View>
+
+              {!!task.invitee_benefit && (
+                <View className='section'>
+                  <Text className='section-title'>{t('task.refFriendGets')}</Text>
+                  <Text className='friend-benefit'>{task.invitee_benefit}</Text>
+                </View>
+              )}
 
               {!!task.referral_script && (
                 <View className='section'>

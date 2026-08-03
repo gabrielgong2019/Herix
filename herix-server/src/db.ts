@@ -945,6 +945,10 @@ export async function initDatabase() {
        created_at TEXT NOT NULL DEFAULT (to_char(NOW(), 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
      )`,
     `CREATE INDEX IF NOT EXISTS idx_short_links_task ON short_links(task_id)`,
+    // short_links 补 surrogate id（2026-08-03）：通用 insert() 助手给每行补 id=genId()，
+    // 但本表原设计以 code 为主键、无 id 列，导致短链写入 42703 undefined_column。
+    // 加上 id 让它与全库"每表都有 id + 走 insert()"的约定一致，消除唯一异类。code 仍为主键/查找键。
+    `ALTER TABLE short_links ADD COLUMN IF NOT EXISTS id TEXT`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_status TEXT DEFAULT NULL`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS translation_attempts INTEGER NOT NULL DEFAULT 0`,
     `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS default_lang TEXT NOT NULL DEFAULT 'zh'`,

@@ -39,6 +39,20 @@ Herix 是面向日本华人社群的网红营销平台，连接品牌商家与�
 
 翻译风格：保持营销文案的吸引力，语气专业但友好，贴近目标语言母语者习惯。`;
 
+/** 健壮解析 LLM 返回的 JSON（2026-08-03）：模型有时把 JSON 包在 ```json 围栏里、
+ *  或前后带解说文字，直接 JSON.parse 会抛 SyntaxError。这里先剥围栏、再截取第一个 `{`
+ *  到最后一个 `}`，去掉多余包裹后再 parse。真正结构损坏仍会抛，由 translateTask 外层 catch
+ *  降级标 failed（既有行为），本函数只提升成功率、不吞错。 */
+function parseLlmJson(raw: string): any {
+  let s = raw.trim();
+  const fence = s.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) s = fence[1].trim();
+  const first = s.indexOf('{');
+  const last = s.lastIndexOf('}');
+  if (first !== -1 && last > first) s = s.slice(first, last + 1);
+  return JSON.parse(s);
+}
+
 /** 发布/更新任务后异步翻译，fire-and-forget，不抛出。
  *  targetCommunities 为空 → 翻译为所有默认目标语言（ja/en/ko/vi）
  *  targetCommunities 非空 → 仅翻译目标社群所用的语言，跳过与 sourceLang 相同的部分
@@ -145,7 +159,7 @@ export async function translateTask(
       return;
     }
 
-    const translations = JSON.parse(content) as Record<string, {
+    const translations = parseLlmJson(content) as Record<string, {
       title?: string;
       description?: string;
       invitee_benefit?: string;

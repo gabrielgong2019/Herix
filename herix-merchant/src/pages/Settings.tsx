@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { settingsApi } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
 import { Upload } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const INDUSTRY_IDS = ['finance', 'beauty', 'fashion', 'food', 'travel', 'baby', 'ecommerce', 'other']
 
@@ -328,6 +329,7 @@ function KybSection() {
 export default function Settings() {
   const { t } = useTranslation()
   const qc = useQueryClient()
+  const { refreshUser } = useAuth()
 
   const [companyName, setCompanyName]   = useState('')
   const [industry, setIndustry]         = useState('')
@@ -363,6 +365,7 @@ export default function Settings() {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
       qc.invalidateQueries({ queryKey: ['merchant-profile'] })
+      refreshUser()
     },
   })
 

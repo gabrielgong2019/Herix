@@ -223,7 +223,7 @@ export default class Landing extends Component<{}, State> {
             {!!task.cover_image && <Image className='lp-task-cover' src={assetUrl(task.cover_image)} mode='widthFix' />}
             {!!catText && <Text className='lp-task-cat'>{catText}</Text>}
             <Text className='lp-task-title'>{task.title}</Text>
-            {!!task.creator_name && <Text className='lp-task-brand'>{t('landing.from', { name: task.creator_name })}</Text>}
+            {!!(task.brand_company_name || task.creator_name) && <Text className='lp-task-brand'>{t('landing.from', { name: task.brand_company_name || task.creator_name })}</Text>}
             <View className='lp-task-payout'>
               <Text className='lp-payout-num'>{payout}</Text>
               <Text className='lp-payout-label'>{t('landing.reward')}</Text>

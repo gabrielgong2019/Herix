@@ -72,6 +72,35 @@
   color: var(--primary);
 }
 
+.search-bar {
+  display: flex;
+  align-items: center;
+  margin: 0 32px 20px;
+  padding: 16px 24px;
+  background: #f2f2f7;
+  border-radius: 24px;
+  gap: 16px;
+}
+
+.search-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  font-size: 26px;
+  color: var(--text);
+  background: transparent;
+}
+
+.search-clear {
+  font-size: 24px;
+  color: #aaa;
+  flex-shrink: 0;
+  padding: 4px 8px;
+}
+
 .filters {
   white-space: nowrap;
   padding: 4px 40px 24px;

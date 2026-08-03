@@ -1,6 +1,6 @@
 import { Component } from 'react';
 import Taro from '@tarojs/taro';
-import { View, Text, Image, ScrollView } from '@tarojs/components';
+import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import logoWide from '../../assets/herix-logo-wide.png';
 import { tasks as taskApi, categories as categoriesApi, communities as communitiesApi, ambassador } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
@@ -41,6 +41,7 @@ interface State {
   taskList: TaskCardTask[];
   categories: CategoryItem[];
   activeCategory: string;
+  searchText: string;
   loading: boolean;
   navMetrics: NavMetrics | null;
   communityId: string;
@@ -55,6 +56,7 @@ export default class Index extends Component<{}, State> {
     taskList: [],
     categories: [],
     activeCategory: '',
+    searchText: '',
     loading: true,
     navMetrics: getWeappNavMetrics(),
     communityId: '',
@@ -111,8 +113,13 @@ export default class Index extends Component<{}, State> {
   };
 
   render() {
-    const { taskList, categories, activeCategory, loading, navMetrics, communityId, communityName, allCommunities } = this.state;
-    const visibleTasks = activeCategory ? taskList.filter(t => t.category === activeCategory) : taskList;
+    const { taskList, categories, activeCategory, searchText, loading, navMetrics, communityId, communityName, allCommunities } = this.state;
+    const keyword = searchText.trim().toLowerCase();
+    const visibleTasks = taskList.filter(task => {
+      if (activeCategory && task.category !== activeCategory) return false;
+      if (keyword && !task.title?.toLowerCase().includes(keyword) && !task.description?.toLowerCase().includes(keyword)) return false;
+      return true;
+    });
     // 对齐 herix.html：分类胶囊只显示当前任务列表中实际有任务的分类（从全量列表算，别用过滤后的）
     const visibleCategories = categories.filter(c => taskList.some(t => t.category === c.id));
 
@@ -138,6 +145,21 @@ export default class Index extends Component<{}, State> {
             <Text className='slogan'>{t('index.slogan')}</Text>
           </View>
         )}
+
+        {/* 搜索栏 */}
+        <View className='search-bar'>
+          <Text className='search-icon'>🔍</Text>
+          <Input
+            className='search-input'
+            value={searchText}
+            placeholder={t('index.searchPh')}
+            placeholderStyle='color:#aaa'
+            onInput={e => this.setState({ searchText: e.detail.value })}
+          />
+          {!!searchText && (
+            <Text className='search-clear' onClick={() => this.setState({ searchText: '' })}>✕</Text>
+          )}
+        </View>
 
         {/* 社群过滤 banner（仅在有社群设置时展示） */}
         {!!communityId && (

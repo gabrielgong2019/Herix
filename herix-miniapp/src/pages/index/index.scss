@@ -3,9 +3,20 @@
 // 数值按 herix.html 真实设计 ×2 换算（Taro 750 设计宽度规则）
 
 .index-page {
+  // Taro H5 的 <View>/<ScrollView> 自定义元素默认 display:inline，会收缩包裹到最宽子元素
+  // （如 nowrap 的横向筛选条 586px），把页面撑宽造成底部横向滚动条。显式块级占满宽度根治。
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
   min-height: 100vh;
   background: var(--bg);
   padding-bottom: 100px;
+}
+
+.list {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .header {
@@ -125,6 +136,9 @@
 }
 
 .grid {
+  display: block;      // 同上：默认 inline 会收缩包裹；桌面端 bp.desktop 里改回 grid
+  width: 100%;
+  box-sizing: border-box;
   padding: 8px 32px 32px;
 }
 

@@ -1017,6 +1017,11 @@ export async function initDatabase() {
     `UPDATE tasks SET cover_image = regexp_replace(cover_image, '^/uploads/tasks/([^/]+)\\.webp$', '/uploads/tasks/\\1/cover.webp') WHERE cover_image ~ '^/uploads/tasks/[^/]+\\.webp$'`,
     `UPDATE tasks SET service_logo_url = regexp_replace(service_logo_url, '^/uploads/tasks/([^/]+)-logo\\.png$', '/uploads/tasks/\\1/service-logo.png') WHERE service_logo_url ~ '^/uploads/tasks/[^/]+-logo\\.png$'`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS service_name TEXT`,
+    // task_translations 扩展字段（2026-08-03）：覆盖 PERFORMANCE 任务其余商家文案
+    `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS invitee_benefit TEXT`,
+    `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS referral_script TEXT`,
+    `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS conversion_criteria_json TEXT`,
+    `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS service_name TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

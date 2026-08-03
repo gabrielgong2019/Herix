@@ -89,23 +89,81 @@ app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/brands', brandsRouter);
 app.use('/t', shortLinksRouter);
 
+const INVITE_I18N: Record<string, Record<string, string>> = {
+  zh: {
+    topLabel: '大使邀请',
+    codeLabel: '使用邀请码享受专属优惠',
+    copyBtn: '复制',
+    codeHint: '注册完成后请确保正确使用邀请码，如有问题请咨询邀请你的大使',
+    stepsLabel: '领取步骤',
+    step1: '复制邀请码',
+    step2: '完成注册并确保<br>正确使用邀请码',
+    conditionsLabel: '参与条件',
+    registerBtn: '立即注册',
+    copyPrimBtn: '复制邀请码',
+    copied: '邀请码已复制 ✓',
+  },
+  ja: {
+    topLabel: 'アンバサダー招待',
+    codeLabel: '紹介コードで特典をゲット',
+    copyBtn: 'コピー',
+    codeHint: '登録後、紹介コードを必ず使用してください。ご不明な点はご紹介いただいたアンバサダーへご連絡ください。',
+    stepsLabel: '受け取り手順',
+    step1: '紹介コードをコピー',
+    step2: '登録を完了し、<br>紹介コードを正しく使用',
+    conditionsLabel: '参加条件',
+    registerBtn: '今すぐ登録',
+    copyPrimBtn: '紹介コードをコピー',
+    copied: '紹介コードをコピーしました ✓',
+  },
+  en: {
+    topLabel: 'Ambassador Invitation',
+    codeLabel: 'Get your exclusive reward with referral code',
+    copyBtn: 'Copy',
+    codeHint: 'After registration, make sure to use the referral code correctly. Contact your Ambassador if you have questions.',
+    stepsLabel: 'How to claim',
+    step1: 'Copy referral code',
+    step2: 'Complete registration<br>and use the referral code',
+    conditionsLabel: 'Eligibility',
+    registerBtn: 'Register now',
+    copyPrimBtn: 'Copy referral code',
+    copied: 'Referral code copied ✓',
+  },
+};
+
+function detectInviteLocale(req: any): string {
+  const qLang = typeof req.query?.lang === 'string' ? req.query.lang.split('-')[0].toLowerCase() : null;
+  if (qLang && INVITE_I18N[qLang]) return qLang;
+  const accept: string = req.headers?.['accept-language'] || '';
+  for (const part of accept.split(',')) {
+    const l = part.trim().split(/[-;]/)[0].toLowerCase();
+    if (INVITE_I18N[l]) return l;
+  }
+  return 'zh';
+}
+
 /** GET /invite/:code — 公开邀请落地页（朋友扫码/点链接看到的页面） */
 app.get('/invite/:code', async (req, res) => {
   try {
   const code = (req.params.code || '').toUpperCase();
+  const locale = detectInviteLocale(req);
+  const i = INVITE_I18N[locale] ?? INVITE_I18N.zh;
   const row = await findOne<any>(
     `SELECT t.id as task_id, t.title, t.description, trs.register_url, t.service_logo_url,
             t.service_name,
             trs.invitee_benefit, trs.conversion_criteria,
             at.share_intro,
-            bp.company_name as brand_name, bp.logo_url as brand_logo_url
+            bp.company_name as brand_name, bp.logo_url as brand_logo_url,
+            tt.invitee_benefit as invitee_benefit_tr,
+            tt.conversion_criteria_json as conversion_criteria_tr
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
      LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
+     LEFT JOIN task_translations tt ON tt.task_id = t.id AND tt.locale = $2
      WHERE at.unique_code = $1 AND at.status = 'active'
      LIMIT 1`,
-    [code]
+    [code, locale]
   );
   if (!row) return res.status(404).send('<h2 style="font-family:sans-serif;padding:40px">推广码无效或已失效</h2>');
 
@@ -113,18 +171,23 @@ app.get('/invite/:code', async (req, res) => {
   const h5TaskUrl = `${base}/app/index.html#/pages/landing/index?task=${row.task_id}`;
   const esc = (s: string | null | undefined) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
-  // 转化条件：register label + convert 列表（对象或字符串均支持）
+  // 转化条件：优先用翻译版，fallback 原文；register label + convert 列表
   let criteriaLines: string[] = [];
   try {
-    const cc = typeof row.conversion_criteria === 'string' ? JSON.parse(row.conversion_criteria) : row.conversion_criteria;
-    if (cc?.register?.label) criteriaLines.push(cc.register.label);
-    if (Array.isArray(cc?.convert)) {
-      for (const item of cc.convert) {
+    const ccRaw = row.conversion_criteria_tr
+      ? (typeof row.conversion_criteria_tr === 'string' ? JSON.parse(row.conversion_criteria_tr) : row.conversion_criteria_tr)
+      : (typeof row.conversion_criteria === 'string' ? JSON.parse(row.conversion_criteria) : row.conversion_criteria);
+    if (ccRaw?.register?.label) criteriaLines.push(ccRaw.register.label);
+    if (Array.isArray(ccRaw?.convert)) {
+      for (const item of ccRaw.convert) {
         const label = typeof item === 'string' ? item : item?.label;
         if (label) criteriaLines.push(label);
       }
     }
   } catch {}
+
+  // 有翻译时覆盖 invitee_benefit
+  const inviteeBenefit = row.invitee_benefit_tr || row.invitee_benefit;
 
   // 服务 LOGO 优先用 service_logo_url，没有再用品牌 logo
   const logoUrl = row.service_logo_url || row.brand_logo_url;
@@ -134,7 +197,7 @@ app.get('/invite/:code', async (req, res) => {
   const oneliner = row.share_intro || row.title;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(`<!DOCTYPE html><html lang="zh"><head>
+  res.send(`<!DOCTYPE html><html lang="${locale}"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(row.title)} — Herix 邀请</title>
@@ -191,7 +254,7 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
     <img class="herix-logo" src="/merchant/logo.png" alt="Herix">
     <span class="herix-name">Herix</span>
     <span class="topbar-sep">|</span>
-    <span class="invite-label">大使邀请</span>
+    <span class="invite-label">${i.topLabel}</span>
   </div>
 
   <div class="card">
@@ -203,61 +266,61 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
           <div class="oneliner">${esc(oneliner)}</div>
         </div>
       </div>
-      ${row.invitee_benefit ? `<div class="benefit-hero">${esc(row.invitee_benefit)}</div>` : ''}
+      ${inviteeBenefit ? `<div class="benefit-hero">${esc(inviteeBenefit)}</div>` : ''}
     </div>
 
     <div class="divider"></div>
 
     <div class="code-section">
-      <div class="code-label">使用邀请码享受专属优惠</div>
+      <div class="code-label">${i.codeLabel}</div>
       <div class="code-row">
         <div class="scode">${esc(code)}</div>
-        <button class="scopy" id="scopyBtn" onclick="copyCode()">复制</button>
+        <button class="scopy" id="scopyBtn" onclick="copyCode()">${i.copyBtn}</button>
       </div>
-      <div class="code-hint">注册完成后请确保正确使用邀请码，如有问题请咨询邀请你的大使</div>
+      <div class="code-hint">${i.codeHint}</div>
     </div>
 
     <div class="divider"></div>
 
     <div class="steps-section">
-      <div class="steps-label">领取步骤</div>
+      <div class="steps-label">${i.stepsLabel}</div>
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
-          <div class="step-main">复制邀请码</div>
+          <div class="step-main">${i.step1}</div>
         </div>
         <div class="step">
           <div class="step-num">2</div>
-          <div class="step-main">完成注册并确保<br>正确使用邀请码</div>
+          <div class="step-main">${i.step2}</div>
         </div>
-        ${row.invitee_benefit ? `
+        ${inviteeBenefit ? `
         <div class="step">
           <div class="step-num">3</div>
-          <div class="step-main">${esc(row.invitee_benefit)}</div>
+          <div class="step-main">${esc(inviteeBenefit)}</div>
         </div>` : ''}
       </div>
     </div>
 
-    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section"><div style="font-weight:600;color:#636366;margin-bottom:6px">参与条件</div>${criteriaLines.map(l => `<div>· ${esc(l)}</div>`).join('')}</div>` : ''}
+    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section"><div style="font-weight:600;color:#636366;margin-bottom:6px">${i.conditionsLabel}</div>${criteriaLines.map(l => `<div>· ${esc(l)}</div>`).join('')}</div>` : ''}
   </div>
 
 </div>
 
 <div class="ctawrap"><div class="ctainner">
   ${row.register_url
-    ? `<button class="ctabtn" onclick="openApp()">立即注册</button>
-       <button class="ctabtn-sec" onclick="copyCode()">复制邀请码</button>`
-    : `<button class="ctabtn" onclick="copyCode()">复制邀请码</button>`}
+    ? `<button class="ctabtn" onclick="openApp()">${i.registerBtn}</button>
+       <button class="ctabtn-sec" onclick="copyCode()">${i.copyPrimBtn}</button>`
+    : `<button class="ctabtn" onclick="copyCode()">${i.copyPrimBtn}</button>`}
 </div></div>
 
-<div class="toast" id="toast">邀请码已复制 ✓</div>
+<div class="toast" id="toast">${i.copied}</div>
 <script>
 function copyCode(){
   navigator.clipboard&&navigator.clipboard.writeText('${code}');
   var b=document.getElementById('scopyBtn');
-  b.textContent='已复制';b.style.background='#34C759';
-  showToast('邀请码已复制 ✓');
-  setTimeout(function(){b.textContent='复制';b.style.background='';},2200);
+  b.textContent='${i.copied}';b.style.background='#34C759';
+  showToast('${i.copied}');
+  setTimeout(function(){b.textContent='${i.copyBtn}';b.style.background='';},2200);
 }
 function openApp(){
   var url='${esc(row.register_url || '')}';

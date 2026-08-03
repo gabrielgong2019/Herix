@@ -943,12 +943,18 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   // 语言覆盖：有翻译时用翻译字段覆盖原文
   if (lang && lang !== 'zh') {
     const tr = await findOne<any>(
-      'SELECT title, description FROM task_translations WHERE task_id = ? AND locale = ?',
+      'SELECT title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name FROM task_translations WHERE task_id = ? AND locale = ?',
       [req.params.id, lang]
     );
     if (tr) {
       if (tr.title)       task.title       = tr.title;
       if (tr.description) task.description = tr.description;
+      if (tr.invitee_benefit)  task.invitee_benefit  = tr.invitee_benefit;
+      if (tr.referral_script)  task.referral_script  = tr.referral_script;
+      if (tr.service_name)     task.service_name     = tr.service_name;
+      if (tr.conversion_criteria_json) {
+        try { task.conversion_criteria = JSON.parse(tr.conversion_criteria_json); } catch {}
+      }
     }
   }
 
@@ -1203,16 +1209,26 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
   const updated = await findOne<any>('SELECT * FROM tasks WHERE id = ?', [req.params.id]);
   res.json(updated);
 
-  // description 变更时触发重译，hash 兜底：纯标点/格式改动不调 API
-  if (description !== undefined && updated) {
-    translateTask(String(updated.id), String(updated.title ?? ''), String(updated.description ?? ''), updated.source_lang ?? 'zh', updated.target_communities ?? []).catch(() => {});
+  // 任何商家文案字段变更时触发重译（hash 兜底：纯格式改动不消耗 API 次数）
+  const needsRetranslate = title !== undefined || description !== undefined ||
+    inviteeBenefit !== undefined || referralScript !== undefined ||
+    conversionCriteria !== undefined || req.body.serviceName !== undefined;
+  if (needsRetranslate && updated) {
+    const specRow = task.mode === 'PERFORMANCE'
+      ? await findOne<any>('SELECT invitee_benefit, referral_script, conversion_criteria FROM task_referral_specs WHERE task_id = ?', [req.params.id])
+      : null;
+    translateTask(
+      String(updated.id), String(updated.title ?? ''), String(updated.description ?? ''),
+      updated.source_lang ?? 'zh', updated.target_communities ?? [],
+      specRow ? { inviteeBenefit: specRow.invitee_benefit, referralScript: specRow.referral_script, conversionCriteria: specRow.conversion_criteria, serviceName: updated.service_name } : undefined
+    ).catch(() => {});
   }
 });
 
 /** GET /api/tasks/:id/codes — 推广码池概览（商家用） */
 tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   const task = await findOne<any>(
-    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, description, source_lang, target_communities, trial_credit_amount, cover_image FROM tasks WHERE id = ?',
+    'SELECT id, creator_id, status, mode, payout_per_herald, currency, max_heralds, title, description, source_lang, target_communities, trial_credit_amount, cover_image, service_name FROM tasks WHERE id = ?',
     [req.params.id]
   );
   if (!task) return res.status(404).json({ error: '任务不存在' });
@@ -1357,7 +1373,15 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   });
 
   // fire-and-forget：翻译不阻塞发布响应
-  translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? []).catch(() => {});
+  if (task.mode === 'PERFORMANCE') {
+    findOne<any>('SELECT invitee_benefit, referral_script, conversion_criteria FROM task_referral_specs WHERE task_id = ?', [req.params.id]).then(specRow => {
+      translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? [],
+        specRow ? { inviteeBenefit: specRow.invitee_benefit, referralScript: specRow.referral_script, conversionCriteria: specRow.conversion_criteria, serviceName: task.service_name } : undefined
+      ).catch(() => {});
+    }).catch(() => {});
+  } else {
+    translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? []).catch(() => {});
+  }
 });
 
 // /escrow 端点已废弃，资金锁定在 /publish 时自动完成

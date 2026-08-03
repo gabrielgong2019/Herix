@@ -4,12 +4,23 @@ import { getLocalesForCommunities } from '../constants/communities';
 import { DEFAULT_TARGET_LOCALES, SUPPORTED_LOCALES } from '../constants/locales';
 const TASK_LIFETIME_CAP = 20;
 
-/**
- * 内容哈希：去除标点符号和空白后比较，纯标点/格式改动不触发重译。
- * 保留汉字、字母、数字（\p{L}\p{N}），其余全部剥离。
- */
-function contentHash(title: string, description: string): string {
-  const normalized = (title + '\n' + description)
+export interface TranslateExtras {
+  inviteeBenefit?: string | null;
+  referralScript?: string | null;
+  conversionCriteria?: any;
+  serviceName?: string | null;
+}
+
+function contentHash(title: string, description: string, extras?: TranslateExtras): string {
+  const extrasStr = extras ? [
+    extras.inviteeBenefit || '',
+    extras.referralScript || '',
+    extras.serviceName || '',
+    typeof extras.conversionCriteria === 'string'
+      ? extras.conversionCriteria
+      : JSON.stringify(extras.conversionCriteria ?? ''),
+  ].join('\n') : '';
+  const normalized = (title + '\n' + description + '\n' + extrasStr)
     .replace(/[^\p{L}\p{N}]/gu, '')
     .toLowerCase();
   return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
@@ -30,20 +41,21 @@ Herix 是面向日本华人社群的网红营销平台，连接品牌商家与�
 
 /** 发布/更新任务后异步翻译，fire-and-forget，不抛出。
  *  targetCommunities 为空 → 翻译为所有默认目标语言（ja/en/ko/vi）
- *  targetCommunities 非空 → 仅翻译目标社群所用的语言，跳过与 sourceLang 相同的部分 */
+ *  targetCommunities 非空 → 仅翻译目标社群所用的语言，跳过与 sourceLang 相同的部分
+ *  extras → PERFORMANCE 任务的额外商家文案字段 */
 export async function translateTask(
   taskId: string,
   title: string,
   description: string,
   sourceLang = 'zh',
-  targetCommunities: string[] = []
+  targetCommunities: string[] = [],
+  extras?: TranslateExtras
 ): Promise<void> {
   let locales: string[];
   if (targetCommunities.length > 0) {
     const communityLocales = getLocalesForCommunities(targetCommunities);
     locales = communityLocales.filter(l => l !== sourceLang && SUPPORTED_LOCALES.has(l));
     if (locales.length === 0) {
-      // 目标社群均使用源语言，无需翻译
       await pool.query(`UPDATE tasks SET translation_status = 'done' WHERE id = $1`, [taskId]).catch(() => {});
       return;
     }
@@ -57,8 +69,7 @@ export async function translateTask(
   }
 
   try {
-    // 兜底1：内容哈希——标点/格式改动不触发翻译
-    const hash = contentHash(title, description);
+    const hash = contentHash(title, description, extras);
     const hashRow = await pool.query<{ translation_source_hash: string | null }>(
       `SELECT translation_source_hash FROM tasks WHERE id = $1`, [taskId]
     );
@@ -68,7 +79,6 @@ export async function translateTask(
       return;
     }
 
-    // 兜底2：终身次数硬上限，防 bug 死循环
     const attemptsRow = await pool.query<{ translation_attempts: number }>(
       `SELECT translation_attempts FROM tasks WHERE id = $1`, [taskId]
     );
@@ -78,15 +88,34 @@ export async function translateTask(
       return;
     }
 
-    // 先计数再调 API，无论成功失败均消耗次数
     await pool.query(
       `UPDATE tasks SET translation_attempts = translation_attempts + 1 WHERE id = $1`, [taskId]
     );
 
+    const hasExtras = extras && (extras.inviteeBenefit || extras.referralScript || extras.conversionCriteria || extras.serviceName);
+    const extrasLines = hasExtras ? [
+      extras!.inviteeBenefit ? `invitee_benefit: ${extras!.inviteeBenefit}` : '',
+      extras!.serviceName ? `service_name: ${extras!.serviceName}` : '',
+      extras!.referralScript ? `referral_script: ${extras!.referralScript}` : '',
+      extras!.conversionCriteria ? `conversion_criteria (JSON，翻译所有 label/string 值，保留 JSON 结构): ${typeof extras!.conversionCriteria === 'string' ? extras!.conversionCriteria : JSON.stringify(extras!.conversionCriteria)}` : '',
+    ].filter(Boolean).join('\n') : '';
+
+    const responseFields = ['title', 'description'];
+    if (hasExtras) {
+      if (extras!.inviteeBenefit) responseFields.push('invitee_benefit');
+      if (extras!.serviceName) responseFields.push('service_name');
+      if (extras!.referralScript) responseFields.push('referral_script');
+      if (extras!.conversionCriteria) responseFields.push('conversion_criteria');
+    }
+    const sampleFields = responseFields.map(f =>
+      f === 'conversion_criteria' ? `"${f}": {...}` : `"${f}": "..."`
+    ).join(', ');
+
     const userPrompt =
       `请将以下任务内容翻译为：${locales.join('、')}。\n` +
-      `仅返回合法 JSON，格式：{"ja":{"title":"...","description":"..."},"en":{...},"ko":{...},"vi":{...}}（只包含需要翻译的语言）\n\n` +
-      `title: ${title}\ndescription: ${description}`;
+      `仅返回合法 JSON，格式：{"ja":{${sampleFields}},"en":{...}}（只包含需要翻译的语言和字段）\n\n` +
+      `title: ${title}\ndescription: ${description}` +
+      (extrasLines ? '\n' + extrasLines : '');
 
     const resp = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
@@ -116,18 +145,36 @@ export async function translateTask(
       return;
     }
 
-    const translations = JSON.parse(content) as Record<string, { title?: string; description?: string }>;
+    const translations = JSON.parse(content) as Record<string, {
+      title?: string;
+      description?: string;
+      invitee_benefit?: string;
+      referral_script?: string;
+      conversion_criteria?: any;
+      service_name?: string;
+    }>;
     const now = new Date().toISOString();
 
     for (const locale of locales) {
       const t = translations[locale];
       if (!t?.title) continue;
+      const ccJson = t.conversion_criteria != null
+        ? (typeof t.conversion_criteria === 'string' ? t.conversion_criteria : JSON.stringify(t.conversion_criteria))
+        : null;
       await pool.query(
-        `INSERT INTO task_translations (task_id, locale, title, description, translated_at)
-         VALUES ($1, $2, $3, $4, $5)
+        `INSERT INTO task_translations
+           (task_id, locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, translated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (task_id, locale) DO UPDATE
-           SET title = EXCLUDED.title, description = EXCLUDED.description, translated_at = EXCLUDED.translated_at`,
-        [taskId, locale, t.title, t.description ?? null, now]
+           SET title = EXCLUDED.title,
+               description = EXCLUDED.description,
+               invitee_benefit = EXCLUDED.invitee_benefit,
+               referral_script = EXCLUDED.referral_script,
+               conversion_criteria_json = EXCLUDED.conversion_criteria_json,
+               service_name = EXCLUDED.service_name,
+               translated_at = EXCLUDED.translated_at`,
+        [taskId, locale, t.title, t.description ?? null,
+         t.invitee_benefit ?? null, t.referral_script ?? null, ccJson, t.service_name ?? null, now]
       );
     }
 
@@ -135,7 +182,7 @@ export async function translateTask(
       `UPDATE tasks SET translation_status = 'done', translation_source_hash = $2 WHERE id = $1`,
       [taskId, hash]
     );
-    console.log(`[translate] task ${taskId} (${sourceLang}) → ${locales.join('/')}`);
+    console.log(`[translate] task ${taskId} (${sourceLang}) → ${locales.join('/')} [extras=${hasExtras ? 'yes' : 'no'}]`);
   } catch (err) {
     console.error('[translate] failed for task', taskId, err);
     await pool.query(

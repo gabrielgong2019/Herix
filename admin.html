@@ -311,13 +311,19 @@ function reviewsPage(){
   if(tab==='taskrv'){
     if(!taskRv.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审任务</div>';
     return h+taskRv.map(function(r){
-      return '<div class="acard"><div class="acard-hdr"><span class="acard-title">'+esc(r.title)+'</span>'
+      var previewUrl='/app/index.html#/pages/landing/index?task='+r.id;
+      return '<div class="acard">'
+        +(r.cover_image?'<img src="'+esc(r.cover_image)+'" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:10px;display:block">':'')
+        +'<div class="acard-hdr"><span class="acard-title">'+esc(r.title)+'</span>'
         +'<span style="font-size:11px;color:var(--muted)">'+(r.published_at?fmtLocal(r.published_at):'')+'</span></div>'
         +'<div class="acard-sub">'+esc(r.company_name||r.creator_name||'')+(r.is_agency?' <span style="color:#c2410c">[广告代理]</span>':'')+' · '+esc(r.creator_email||'')
-        +' · '+(r.mode==='PERFORMANCE'?'类A·推广码':'类B·内容')+' · ¥'+Number(r.payout_per_herald||0).toLocaleString()+'/人 × '+(r.max_heralds||0)+'</div>'
+        +' · '+(r.mode==='PERFORMANCE'?'类A·推广码':'类B·内容')+(r.service_name?' · '+esc(r.service_name):'')
+        +' · ¥'+Number(r.payout_per_herald||0).toLocaleString()+'/人 × '+(r.max_heralds||0)+'</div>'
         +'<div style="font-size:12px;color:#555;margin:8px 0;line-height:1.6;max-height:120px;overflow-y:auto;background:#f9fafb;border-radius:8px;padding:8px 10px">'+esc(r.description||'')+'</div>'
         +'<div class="acard-btns"><button class="btn btn-success btn-sm" onclick="doTaskReview(\''+r.id+'\',true)">✓ 通过上线</button>'
-        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doTaskReview(\''+r.id+'\',false)">✗ 拒绝</button></div></div>';
+        +'<button class="btn btn-outline btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="doTaskReview(\''+r.id+'\',false)">✗ 拒绝</button>'
+        +'<a href="'+previewUrl+'" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">🔍 预览任务</a>'
+        +'</div></div>';
     }).join('');
   }
   if(!decls.length) return h+'<div class="empty"><div class="empty-icon">✅</div>暂无待审声明</div>';

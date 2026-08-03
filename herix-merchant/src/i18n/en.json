@@ -3,6 +3,7 @@
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
+    "view": "View",
     "edit": "Edit",
     "confirm": "Confirm",
     "loading": "Loading...",
@@ -657,7 +658,8 @@
     "contentSection": "Task content",
     "viewUpgrade": "See how to increase",
     "reviewPendingShareHint": "This task is under platform review (usually within 1 business day). Share links are not visible to creators until approved.",
-    "reviewRejectedHint": "Task did not pass platform review: {{note}}. Returned to draft — revise and republish."
+    "reviewRejectedHint": "Task did not pass platform review: {{note}}. Returned to draft — revise and republish.",
+    "maxHeraldsTip": "can only increase"
   },
   "onboard": {
     "title": "Brand Registration",

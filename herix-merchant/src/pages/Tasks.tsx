@@ -245,13 +245,26 @@ export default function Tasks() {
                     {formatDate(task.created_at)}
                   </td>
                   <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
-                    <button
-                      className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors"
-                      style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
-                      onClick={(e) => { e.stopPropagation(); navigate(`/tasks/${task.id}/edit`) }}
-                    >
-                      {t('common.edit')}
-                    </button>
+                    {['DRAFT', 'PENDING_REVIEW', 'OPEN', 'IN_PROGRESS'].includes(task.status) ? (
+                      <button
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--text)' }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(task.status === 'DRAFT' ? `/tasks/${task.id}/edit` : `/tasks/${task.id}/meta`)
+                        }}
+                      >
+                        {t('common.edit')}
+                      </button>
+                    ) : (
+                      <button
+                        className="text-xs font-medium px-3 py-1.5 rounded-lg border transition-colors"
+                        style={{ borderColor: 'var(--border)', color: 'var(--muted)' }}
+                        onClick={(e) => { e.stopPropagation(); navigate(`/tasks/${task.id}`) }}
+                      >
+                        {t('common.view')}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

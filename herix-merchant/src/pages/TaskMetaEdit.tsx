@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksApi } from '@/lib/api'
 import { Topbar } from '@/components/layout/Topbar'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, ImagePlus, X } from 'lucide-react'
 
 export default function TaskMetaEdit() {
   const { t } = useTranslation()
@@ -12,15 +12,20 @@ export default function TaskMetaEdit() {
   const navigate = useNavigate()
   const qc = useQueryClient()
 
+  const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
+  const [coverImage, setCoverImage] = useState('')
   const [deadline, setDeadline] = useState('')
   const [maxHeralds, setMaxHeralds] = useState('')
   // PERFORMANCE 展示字段（OPEN 后可改）
+  const [serviceName, setServiceName] = useState('')
   const [registerLabel, setRegisterLabel] = useState('')
   const [convert, setConvert] = useState<string[]>([''])
   const [inviteeBenefit, setInviteeBenefit] = useState('')
   const [referralScript, setReferralScript] = useState('')
   const [saved, setSaved] = useState(false)
+
+  const coverFileRef = useRef<File | null>(null)
 
   const { data: task } = useQuery({
     queryKey: ['task', id],
@@ -30,27 +35,42 @@ export default function TaskMetaEdit() {
 
   useEffect(() => {
     if (!task) return
+    setTitle(task.title || '')
     setDescription(task.description || '')
+    setCoverImage(task.cover_image || '')
     setDeadline(task.deadline ? task.deadline.slice(0, 10) : '')
     setMaxHeralds(String(task.max_heralds || ''))
+    setServiceName((task as any).service_name || '')
     setRegisterLabel(task.conversion_criteria?.register?.label || '新用户（此前未注册过）')
     setConvert(task.conversion_criteria?.convert?.length ? task.conversion_criteria.convert : [''])
     setInviteeBenefit(task.invitee_benefit || '')
     setReferralScript(task.referral_script || '')
   }, [task])
 
+  const isPublished = ['OPEN', 'IN_PROGRESS', 'PENDING_REVIEW'].includes(task?.status ?? '')
+
   const saveMut = useMutation({
-    mutationFn: () =>
-      tasksApi.updateMeta(id!, {
+    mutationFn: async () => {
+      const payload = {
+        title: title.trim(),
         description,
+        coverImage: coverImage && !coverImage.startsWith('data:') ? coverImage : undefined,
         deadline: deadline || undefined,
         maxHeralds: maxHeralds ? Number(maxHeralds) : undefined,
         ...(task?.mode === 'PERFORMANCE' ? {
+          serviceName: serviceName.trim() || undefined,
           conversionCriteria: { register: { label: registerLabel.trim() || '新用户' }, convert: convert.map((c) => c.trim()).filter(Boolean) },
           inviteeBenefit: inviteeBenefit.trim(),
           referralScript: referralScript.trim(),
         } : {}),
-      }),
+      }
+      const res = isPublished ? await tasksApi.updateMeta(id!, payload) : await tasksApi.update(id!, payload)
+      if (coverFileRef.current) {
+        await tasksApi.uploadCover(id!, coverFileRef.current)
+        coverFileRef.current = null
+      }
+      return res
+    },
     onSuccess: () => {
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
@@ -74,17 +94,74 @@ export default function TaskMetaEdit() {
         </button>
 
         <div className="max-w-2xl">
-          {/* Locked fields notice */}
-          <div
-            className="rounded-2xl px-4 py-3 mb-5 text-xs"
-            style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}
-          >
-            {t('taskDetail.lockedFields')}
-          </div>
+          {isPublished && (
+            <div
+              className="rounded-2xl px-4 py-3 mb-5 text-xs"
+              style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}
+            >
+              {t('taskDetail.lockedFields')}
+            </div>
+          )}
 
           <div className="rounded-2xl p-6" style={{ background: '#fff' }}>
             <div className="space-y-5">
 
+              {/* 标题 */}
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                  {t('taskForm.fieldTitle')}
+                </label>
+                <input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                  style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
+                />
+              </div>
+
+              {/* 封面图 */}
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                  {t('taskForm.fieldCover')}
+                </label>
+                <div
+                  className="relative rounded-xl border-2 border-dashed overflow-hidden cursor-pointer transition-colors"
+                  style={{ borderColor: 'var(--border)', aspectRatio: '16/7', background: coverImage ? 'transparent' : '#fafafa' }}
+                  onClick={() => document.getElementById('meta-cover-input')?.click()}
+                >
+                  {coverImage ? (
+                    <>
+                      <img src={coverImage} className="w-full h-full object-cover" alt="cover" />
+                      <button
+                        type="button"
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/50 flex items-center justify-center text-white"
+                        onClick={(e) => { e.stopPropagation(); setCoverImage(''); coverFileRef.current = null }}
+                      >
+                        <X size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2" style={{ color: 'var(--muted)' }}>
+                      <ImagePlus size={24} />
+                      <span className="text-xs">{t('taskForm.coverClickUpload')}</span>
+                    </div>
+                  )}
+                </div>
+                <input
+                  id="meta-cover-input" type="file" accept="image/*" className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) {
+                      coverFileRef.current = file
+                      const reader = new FileReader()
+                      reader.onload = (ev) => setCoverImage(ev.target?.result as string)
+                      reader.readAsDataURL(file)
+                    }
+                  }}
+                />
+              </div>
+
+              {/* 简报正文 */}
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
                   {t('taskForm.fieldBrief')}
@@ -116,12 +193,13 @@ export default function TaskMetaEdit() {
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
                     {t('taskForm.fieldMaxHeralds')}
+                    {isPublished && <span className="font-normal ml-1" style={{ color: 'var(--muted)' }}>({t('taskDetail.maxHeraldsTip')})</span>}
                   </label>
                   <input
                     type="number"
                     value={maxHeralds}
                     onChange={(e) => setMaxHeralds(e.target.value)}
-                    min={1}
+                    min={task.max_heralds}
                     className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
                     style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
                   />
@@ -130,6 +208,21 @@ export default function TaskMetaEdit() {
 
               {task.mode === 'PERFORMANCE' && (
                 <>
+                  {/* 产品/服务名称 */}
+                  <div>
+                    <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                      {t('taskForm.fieldServiceName')}
+                      <span className="font-normal ml-1" style={{ color: 'var(--muted)' }}>({t('common.optional')})</span>
+                    </label>
+                    <input
+                      value={serviceName}
+                      onChange={(e) => setServiceName(e.target.value)}
+                      placeholder={t('taskForm.fieldServiceNamePh')}
+                      className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+                      style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
+                    />
+                  </div>
+
                   <div>
                     <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
                       {t('taskForm.conversionTitle')}

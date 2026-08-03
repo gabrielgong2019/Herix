@@ -31,6 +31,7 @@ import { createNotification } from './notifications';
 adminRouter.get('/task-reviews', async (_req: Request, res: Response) => {
   const rows = await findMany<any>(
     `SELECT t.id, t.title, t.description, t.mode, t.payout_per_herald, t.max_heralds, t.published_at,
+            t.cover_image, t.service_name,
             u.nickname as creator_name, u.email as creator_email, bp.company_name, bp.is_agency
      FROM tasks t JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id

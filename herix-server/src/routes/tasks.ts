@@ -1158,7 +1158,7 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '无权限' });
   }
-  if (!['OPEN', 'IN_PROGRESS'].includes(task.status)) {
+  if (!['OPEN', 'IN_PROGRESS', 'PENDING_REVIEW'].includes(task.status)) {
     return res.status(400).json({ error: '只有进行中的任务可以编辑' });
   }
 

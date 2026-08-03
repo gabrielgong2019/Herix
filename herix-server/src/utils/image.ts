@@ -6,11 +6,12 @@ const PROMO_HEIGHT = 675; // 16:9
 const COVER_WIDTH = 1200;
 const COVER_HEIGHT = 675;
 
-/** 品牌LOGO：统一适配为正方形。非方形图片用 contain + 透明背景填充，不裁切文字Logo */
+/** 品牌LOGO：先 trim 去除周围留白，再 contain 适配正方形，透明背景保留 */
 export async function processLogo(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)
+    .trim({ threshold: 10 })   // 剪掉周围接近透明/白色的留白
     .resize(LOGO_SIZE, LOGO_SIZE, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
-    .png()
+    .png({ compressionLevel: 8 })
     .toBuffer();
 }
 

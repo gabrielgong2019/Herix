@@ -76,6 +76,9 @@ interface State {
   /** 绑定邮箱弹层（微信注册用户） */
   beSheet: null | { email: string; code: string; password: string };
   beCountdown: number;
+  /** 修改密码弹层（已绑定邮箱的用户） */
+  pwSheet: null | { code: string; newPassword: string };
+  pwCountdown: number;
   /** 擅长领域标签 */
   allTags: { id: string; sort_order: number }[];
   myTagIds: string[];
@@ -105,6 +108,8 @@ export default class Profile extends Component<{}, State> {
     wxBindMode: false,
     beSheet: null,
     beCountdown: 0,
+    pwSheet: null,
+    pwCountdown: 0,
     allTags: [],
     myTagIds: [],
     tagSheetOpen: false,
@@ -240,10 +245,12 @@ export default class Profile extends Component<{}, State> {
   // ── 注册验证码 ──
   codeTimer: ReturnType<typeof setInterval> | null = null;
   beTimer: ReturnType<typeof setInterval> | null = null;
+  pwTimer: ReturnType<typeof setInterval> | null = null;
 
   componentWillUnmount() {
     if (this.codeTimer) clearInterval(this.codeTimer);
     if (this.beTimer) clearInterval(this.beTimer);
+    if (this.pwTimer) clearInterval(this.pwTimer);
   }
 
   sendRegCode = async () => {
@@ -301,6 +308,39 @@ export default class Profile extends Component<{}, State> {
       this.setState({ beSheet: null });
       Taro.showToast({ title: t('profile.emailBoundOk'), icon: 'success' });
       this.loadUser();
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
+  // ── 修改密码（已绑定邮箱用户，OTP 验证） ──
+  sendPwCode = async () => {
+    if (this.state.pwCountdown > 0) return;
+    try {
+      await authApi.sendSetPasswordCode();
+      this.setState({ pwCountdown: 60 });
+      Taro.showToast({ title: t('landing.codeSent'), icon: 'none' });
+      this.pwTimer = setInterval(() => {
+        const s = this.state.pwCountdown - 1;
+        if (s <= 0 && this.pwTimer) { clearInterval(this.pwTimer); this.pwTimer = null; }
+        this.setState({ pwCountdown: Math.max(0, s) });
+      }, 1000);
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
+  submitChangePassword = async () => {
+    const pw = this.state.pwSheet;
+    if (!pw) return;
+    if (!pw.code.trim() || pw.newPassword.length < 6) {
+      Taro.showToast({ title: t('profile.changePwInvalid'), icon: 'none' });
+      return;
+    }
+    try {
+      await authApi.changePassword({ newPassword: pw.newPassword, code: pw.code.trim() });
+      this.setState({ pwSheet: null });
+      Taro.showToast({ title: t('profile.passwordChanged'), icon: 'success' });
     } catch (err: any) {
       Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
     }
@@ -725,27 +765,46 @@ export default class Profile extends Component<{}, State> {
           </View>
         )}
 
-        {/* 绑定邮箱弹层（微信注册用户） */}
-        {this.state.beSheet && (() => {
+        {/* 绑定邮箱 / 修改密码：内联表单（fixed overlay 在小程序中与 Input 不兼容，改为普通页面流） */}
+        {!u.email && this.state.beSheet && (() => {
           const be = this.state.beSheet!;
           return (
-            <View className='ps-overlay' onClick={() => this.setState({ beSheet: null })}>
-              <View className='ps-sheet' onClick={e => e.stopPropagation()}>
-                <Text className='ps-title'>📧 {t('profile.bindEmail')}</Text>
-                <Text className='ps-hint'>{t('profile.bindEmailHint')}</Text>
-                <Text className='ps-label'>{t('profile.emailAddr')}</Text>
-                <Input className='input' type='text' placeholder={t('profile.emailAddr')} placeholderClass='ph' value={be.email} onInput={e => this.setState({ beSheet: { ...be, email: e.detail.value } })} />
-                <Text className='ps-label'>{t('landing.codePlaceholder')}</Text>
-                <View className='pf-code-row'>
-                  <Input className='input pf-code-input' type='number' maxlength={6} placeholder={t('landing.codePlaceholder')} placeholderClass='ph' value={be.code} onInput={e => this.setState({ beSheet: { ...be, code: e.detail.value } })} />
-                  <View className={`pf-code-btn ${this.state.beCountdown > 0 ? 'disabled' : ''}`} onClick={this.state.beCountdown > 0 ? undefined : this.sendBindCode}>
-                    {this.state.beCountdown > 0 ? t('landing.codeResend', { s: this.state.beCountdown }) : t('landing.codeSend')}
-                  </View>
+            <View className='auth-form-card'>
+              <Text className='afc-hint'>{t('profile.bindEmailHint')}</Text>
+              <Input className='afc-input' placeholder='you@example.com' placeholderClass='ph'
+                value={be.email} onInput={e => this.setState({ beSheet: { ...be, email: e.detail.value } })} />
+              <View className='pf-code-row'>
+                <Input className='afc-input pf-code-input' type='number' maxlength={6}
+                  placeholder={t('landing.codePlaceholder')} placeholderClass='ph'
+                  value={be.code} onInput={e => this.setState({ beSheet: { ...be, code: e.detail.value } })} />
+                <View className={`pf-code-btn ${this.state.beCountdown > 0 ? 'disabled' : ''}`}
+                  onClick={this.state.beCountdown > 0 ? undefined : this.sendBindCode}>
+                  {this.state.beCountdown > 0 ? t('landing.codeResend', { s: this.state.beCountdown }) : t('landing.codeSend')}
                 </View>
-                <Text className='ps-label'>{t('profile.setPassword')}</Text>
-                <Input className='input' password placeholder={t('profile.passwordMin')} placeholderClass='ph' value={be.password} onInput={e => this.setState({ beSheet: { ...be, password: e.detail.value } })} />
-                <View className='btn-primary' onClick={this.submitBindEmail}>{t('common.save')}</View>
               </View>
+              <Input className='afc-input' password placeholder={t('profile.passwordMin')} placeholderClass='ph'
+                value={be.password} onInput={e => this.setState({ beSheet: { ...be, password: e.detail.value } })} />
+              <View className='btn-primary' onClick={this.submitBindEmail}>{t('profile.bindEmail')}</View>
+            </View>
+          );
+        })()}
+        {!!u.email && this.state.pwSheet && (() => {
+          const pw = this.state.pwSheet!;
+          return (
+            <View className='auth-form-card'>
+              <Text className='afc-hint'>{t('profile.changePasswordHint', { email: u.email || '' })}</Text>
+              <View className='pf-code-row'>
+                <Input className='afc-input pf-code-input' type='number' maxlength={6}
+                  placeholder={t('landing.codePlaceholder')} placeholderClass='ph'
+                  value={pw.code} onInput={e => this.setState({ pwSheet: { ...pw, code: e.detail.value } })} />
+                <View className={`pf-code-btn ${this.state.pwCountdown > 0 ? 'disabled' : ''}`}
+                  onClick={this.state.pwCountdown > 0 ? undefined : this.sendPwCode}>
+                  {this.state.pwCountdown > 0 ? t('landing.codeResend', { s: this.state.pwCountdown }) : t('landing.codeSend')}
+                </View>
+              </View>
+              <Input className='afc-input' password placeholder={t('profile.passwordMin')} placeholderClass='ph'
+                value={pw.newPassword} onInput={e => this.setState({ pwSheet: { ...pw, newPassword: e.detail.value } })} />
+              <View className='btn-primary' onClick={this.submitChangePassword}>{t('common.save')}</View>
             </View>
           );
         })()}
@@ -817,10 +876,20 @@ export default class Profile extends Component<{}, State> {
           <Text className='action-item' onClick={this.switchLanguage}>
             🌐 {t('profile.language')}：{LOCALES.find(l => l.id === getLocale())?.label}
           </Text>
-          {/* 微信注册用户补绑邮箱（可用邮箱登录网页版 + 接收邮件提醒） */}
+          {/* 微信注册用户补绑邮箱 */}
           {!u.email && (
-            <Text className='action-item' onClick={() => this.setState({ beSheet: { email: '', code: '', password: '' } })}>
-              📧 {t('profile.bindEmail')}
+            <Text className='action-item' onClick={() => this.setState(
+              this.state.beSheet ? { beSheet: null } : { beSheet: { email: '', code: '', password: '' } }
+            )}>
+              📧 {t('profile.bindEmail')}{this.state.beSheet ? ` · ${t('common.cancel')}` : ''}
+            </Text>
+          )}
+          {/* 已绑定邮箱的用户可修改密码 */}
+          {!!u.email && (
+            <Text className='action-item' onClick={() => this.setState(
+              this.state.pwSheet ? { pwSheet: null } : { pwSheet: { code: '', newPassword: '' } }
+            )}>
+              🔐 {t('profile.changePassword')}{this.state.pwSheet ? ` · ${t('common.cancel')}` : ''}
             </Text>
           )}
           {!u.is_onboarded && <Text className='action-item primary' onClick={this.goOnboard}>{t('profile.finishOnboard')}</Text>}

@@ -570,3 +570,34 @@
     color: #ff3b30;
   }
 }
+
+// 绑定邮箱 / 修改密码内联表单卡片（替代fixed overlay，兼容小程序native Input）
+.auth-form-card {
+  background: var(--card-bg);
+  border-radius: 28px;
+  padding: 28px 32px 32px;
+  margin-bottom: 24px;
+  // 不加 overflow:hidden，保证小程序 native Input 可正常渲染和点击
+}
+.afc-hint {
+  display: block;
+  font-size: 24px;
+  color: var(--text-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.afc-input {
+  width: 100%;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 24px;
+  font-size: 28px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  &.pf-code-input {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}

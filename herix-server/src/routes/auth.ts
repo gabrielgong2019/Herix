@@ -199,6 +199,78 @@ authRouter.post('/bind-email', requireAuth, async (req: Request, res: Response) 
   res.json({ bound: true, email });
 });
 
+/** POST /api/auth/send-set-password-code — 给已登录用户自己的邮箱发验证码，用于修改/设置密码（requireAuth）
+ *  与 send-code 的区别：不检查"邮箱是否被占用"（邮箱就是自己的） */
+authRouter.post('/send-set-password-code', requireAuth, async (req: Request, res: Response) => {
+  const me = await findOne<{ email: string | null }>('SELECT email FROM users WHERE id = ?', [req.user!.userId]);
+  if (!me?.email) return res.status(400).json({ error: '请先绑定邮箱', code: 'NO_EMAIL' });
+
+  const email = me.email;
+  const purpose = 'SET_PASSWORD';
+
+  const last = await findOne<any>(
+    `SELECT created_at FROM verification_codes WHERE email = ? AND purpose = ? ORDER BY created_at DESC LIMIT 1`,
+    [email, purpose]
+  );
+  if (last && Date.now() - new Date(last.created_at).getTime() < 60_000) {
+    return res.status(429).json({ error: '发送太频繁，请 1 分钟后再试', code: 'CODE_TOO_FREQUENT' });
+  }
+  const hourAgo = new Date(Date.now() - 3600_000).toISOString();
+  const cnt = await findOne<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM verification_codes WHERE email = ? AND purpose = ? AND created_at > ?`,
+    [email, purpose, hourAgo]
+  );
+  if ((cnt?.n || 0) >= 5) {
+    return res.status(429).json({ error: '发送次数已达上限，请 1 小时后再试', code: 'CODE_HOURLY_LIMIT' });
+  }
+
+  const code = String(crypto.randomInt(100000, 1000000));
+  await insert('verification_codes', {
+    email, purpose, code,
+    expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
+    created_at: new Date().toISOString(),
+  });
+  await sendMail(
+    email,
+    '【Herix】修改密码验证码',
+    `你的 Herix 修改密码验证码是：${code}\n30 分钟内有效。如非本人操作，请忽略此邮件。\n\nYour Herix password verification code is ${code} (valid for 30 minutes).`
+  );
+  res.json({ sent: true });
+});
+
+/** POST /api/auth/change-password — 修改密码，requireAuth。
+ *  两种方式：① { newPassword, code } OTP 方式（微信注册用户无原密码时使用）
+ *           ② { newPassword, oldPassword } 原密码方式（有密码的老用户） */
+authRouter.post('/change-password', requireAuth, async (req: Request, res: Response) => {
+  const newPassword = String(req.body?.newPassword || '');
+  const code = req.body?.code ? String(req.body.code).trim() : '';
+  const oldPassword = req.body?.oldPassword ? String(req.body.oldPassword) : '';
+
+  if (newPassword.length < 6) return res.status(400).json({ error: '新密码至少6位', code: 'INVALID_PARAMS' });
+  if (!code && !oldPassword) return res.status(400).json({ error: '请提供验证码或原密码', code: 'INVALID_PARAMS' });
+
+  const user = await findOne<{ email: string | null; password_hash: string }>(
+    'SELECT email, password_hash FROM users WHERE id = ?', [req.user!.userId]
+  );
+  if (!user) return res.status(404).json({ error: '用户不存在', code: 'USER_NOT_FOUND' });
+
+  if (code) {
+    if (!user.email) return res.status(400).json({ error: '请先绑定邮箱', code: 'NO_EMAIL' });
+    const fail = await consumeCode(user.email, code, 'SET_PASSWORD');
+    if (fail) return res.status(fail.status).json({ error: fail.error, code: fail.code });
+  } else {
+    if (user.password_hash === '!') {
+      return res.status(400).json({ error: '请使用邮箱验证码方式修改密码', code: 'USE_OTP_INSTEAD' });
+    }
+    const valid = await bcrypt.compare(oldPassword, user.password_hash);
+    if (!valid) return res.status(401).json({ error: '原密码错误', code: 'BAD_CREDENTIALS' });
+  }
+
+  await update('users', { password_hash: await bcrypt.hash(newPassword, 10) }, 'id = ?', [req.user!.userId]);
+  console.log(`[change-password] user=${req.user!.userId} method=${code ? 'otp' : 'old-password'}`);
+  res.json({ changed: true });
+});
+
 /** POST /api/auth/register — 注册 */
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {

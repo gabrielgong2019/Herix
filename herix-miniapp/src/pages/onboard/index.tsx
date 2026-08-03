@@ -64,10 +64,17 @@ interface State {
   bePass: string;
   beCountdown: number;
   beSaving: boolean;
+  /** 用户已有邮箱时（step5 改为设置密码卡片） */
+  userEmail: string | null;
+  spCode: string;
+  spNewPassword: string;
+  spCountdown: number;
+  spSaving: boolean;
 }
 
 export default class Onboard extends Component<{}, State> {
   beTimer: ReturnType<typeof setInterval> | null = null;
+  spTimer: ReturnType<typeof setInterval> | null = null;
 
   state: State = {
     step: 1,
@@ -93,6 +100,11 @@ export default class Onboard extends Component<{}, State> {
     bePass: '',
     beCountdown: 0,
     beSaving: false,
+    userEmail: null,
+    spCode: '',
+    spNewPassword: '',
+    spCountdown: 0,
+    spSaving: false,
   };
 
   componentDidMount() {
@@ -100,6 +112,7 @@ export default class Onboard extends Component<{}, State> {
     if (params.taskId) this.setState({ taskId: params.taskId as string });
     if (!getToken()) Taro.showToast({ title: t('ob.needLogin'), icon: 'none' });
     communitiesApi.list().then(list => this.setState({ communityList: list })).catch(() => {});
+    authApi.me().then(u => { if (u?.email) this.setState({ userEmail: u.email }); }).catch(() => {});
   }
 
   set = <K extends keyof OnboardData>(key: K, val: OnboardData[K]) =>
@@ -180,6 +193,7 @@ export default class Onboard extends Component<{}, State> {
 
   finish = () => {
     if (this.beTimer) clearInterval(this.beTimer);
+    if (this.spTimer) clearInterval(this.spTimer);
     const { taskId } = this.state;
     if (taskId) Taro.redirectTo({ url: `/pages/task/task?id=${taskId}` });
     else Taro.switchTab({ url: '/pages/index/index' });
@@ -200,6 +214,38 @@ export default class Onboard extends Component<{}, State> {
       }, 1000);
     } catch (err: any) {
       Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
+  sendSpCode = async () => {
+    if (this.state.spCountdown > 0) return;
+    try {
+      await authApi.sendSetPasswordCode();
+      this.setState({ spCountdown: 60 });
+      Taro.showToast({ title: t('landing.codeSent'), icon: 'none' });
+      this.spTimer = setInterval(() => {
+        const s = this.state.spCountdown - 1;
+        if (s <= 0 && this.spTimer) { clearInterval(this.spTimer); this.spTimer = null; }
+        this.setState({ spCountdown: Math.max(0, s) });
+      }, 1000);
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
+  submitSetPassword = async () => {
+    const { spCode, spNewPassword } = this.state;
+    if (!spCode.trim() || spNewPassword.length < 6) {
+      Taro.showToast({ title: t('profile.changePwInvalid'), icon: 'none' }); return;
+    }
+    this.setState({ spSaving: true });
+    try {
+      await authApi.changePassword({ newPassword: spNewPassword, code: spCode.trim() });
+      Taro.showToast({ title: t('profile.passwordChanged'), icon: 'success' });
+      setTimeout(this.finish, 1200);
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+      this.setState({ spSaving: false });
     }
   };
 
@@ -414,36 +460,60 @@ export default class Onboard extends Component<{}, State> {
           </View>
         )}
 
-        {/* STEP 5: 完成 + 绑定邮箱（可选） */}
+        {/* STEP 5: 完成 + 绑定邮箱 / 设置密码（可选） */}
         {step === 5 && (
           <View className='done'>
             <Text className='done-emoji'>🎉</Text>
             <Text className='done-title'>{t('ob.doneTitle')}</Text>
             <Text className='done-sub'>{t('ob.doneSub')}</Text>
 
-            {/* 绑定邮箱（可选，用于接收任务通知和网页登录） */}
-            <View className='card be-card'>
-              <Text className='be-title'>📧 {t('profile.bindEmail')}</Text>
-              <Text className='be-hint'>{t('profile.bindEmailHint')}</Text>
-              <Input className='ob-input' type='text' placeholder='you@example.com' placeholderClass='ph'
-                value={this.state.beEmail} onInput={e => this.setState({ beEmail: e.detail.value })} />
-              <View className='pf-code-row'>
-                <Input className='ob-input pf-code-input' type='number' maxlength={6} placeholderClass='ph'
-                  placeholder={t('landing.codePlaceholder')} value={this.state.beCode}
-                  onInput={e => this.setState({ beCode: e.detail.value })} />
-                <View className={`pf-code-btn ${this.state.beCountdown > 0 ? 'disabled' : ''}`}
-                  onClick={this.state.beCountdown > 0 ? undefined : this.sendBeCode}>
-                  {this.state.beCountdown > 0 ? t('landing.codeResend', { s: this.state.beCountdown }) : t('landing.codeSend')}
+            {/* 已有邮箱：显示设置密码卡片 */}
+            {this.state.userEmail ? (
+              <View className='card be-card'>
+                <Text className='be-title'>🔐 {t('ob.setPasswordTitle')}</Text>
+                <Text className='be-hint'>{t('ob.setPasswordHint', { email: this.state.userEmail })}</Text>
+                <View className='pf-code-row'>
+                  <Input className='ob-input pf-code-input' type='number' maxlength={6} placeholderClass='ph'
+                    placeholder={t('landing.codePlaceholder')} value={this.state.spCode}
+                    onInput={e => this.setState({ spCode: e.detail.value })} />
+                  <View className={`pf-code-btn ${this.state.spCountdown > 0 ? 'disabled' : ''}`}
+                    onClick={this.state.spCountdown > 0 ? undefined : this.sendSpCode}>
+                    {this.state.spCountdown > 0 ? t('landing.codeResend', { s: this.state.spCountdown }) : t('landing.codeSend')}
+                  </View>
+                </View>
+                <Input className='ob-input' password placeholderClass='ph'
+                  placeholder={t('profile.passwordMin')} value={this.state.spNewPassword}
+                  onInput={e => this.setState({ spNewPassword: e.detail.value })} />
+                <View className={`btn-primary ${this.state.spSaving ? 'disabled' : ''}`}
+                  onClick={this.state.spSaving ? undefined : this.submitSetPassword}>
+                  {this.state.spSaving ? t('common.saving') : t('common.save')}
                 </View>
               </View>
-              <Input className='ob-input' password placeholderClass='ph'
-                placeholder={t('profile.passwordMin')} value={this.state.bePass}
-                onInput={e => this.setState({ bePass: e.detail.value })} />
-              <View className={`btn-primary ${this.state.beSaving ? 'disabled' : ''}`}
-                onClick={this.state.beSaving ? undefined : this.submitBeEmail}>
-                {this.state.beSaving ? t('common.saving') : t('profile.bindEmail')}
+            ) : (
+              /* 无邮箱：显示绑定邮箱卡片 */
+              <View className='card be-card'>
+                <Text className='be-title'>📧 {t('profile.bindEmail')}</Text>
+                <Text className='be-hint'>{t('profile.bindEmailHint')}</Text>
+                <Input className='ob-input' type='text' placeholder='you@example.com' placeholderClass='ph'
+                  value={this.state.beEmail} onInput={e => this.setState({ beEmail: e.detail.value })} />
+                <View className='pf-code-row'>
+                  <Input className='ob-input pf-code-input' type='number' maxlength={6} placeholderClass='ph'
+                    placeholder={t('landing.codePlaceholder')} value={this.state.beCode}
+                    onInput={e => this.setState({ beCode: e.detail.value })} />
+                  <View className={`pf-code-btn ${this.state.beCountdown > 0 ? 'disabled' : ''}`}
+                    onClick={this.state.beCountdown > 0 ? undefined : this.sendBeCode}>
+                    {this.state.beCountdown > 0 ? t('landing.codeResend', { s: this.state.beCountdown }) : t('landing.codeSend')}
+                  </View>
+                </View>
+                <Input className='ob-input' password placeholderClass='ph'
+                  placeholder={t('profile.passwordMin')} value={this.state.bePass}
+                  onInput={e => this.setState({ bePass: e.detail.value })} />
+                <View className={`btn-primary ${this.state.beSaving ? 'disabled' : ''}`}
+                  onClick={this.state.beSaving ? undefined : this.submitBeEmail}>
+                  {this.state.beSaving ? t('common.saving') : t('profile.bindEmail')}
+                </View>
               </View>
-            </View>
+            )}
 
             <Text className='skip' onClick={this.finish}>{t('ob.skip')}</Text>
           </View>

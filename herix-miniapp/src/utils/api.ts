@@ -149,6 +149,12 @@ export const auth = {
   /** 微信注册用户补绑邮箱+密码 */
   bindEmail: (data: { email: string; code: string; password: string }) =>
     request<{ bound: boolean; email: string }>('POST', '/auth/bind-email', data),
+  /** 给已登录用户自己的邮箱发修改密码验证码 */
+  sendSetPasswordCode: () =>
+    request<{ sent: boolean }>('POST', '/auth/send-set-password-code'),
+  /** 修改密码：OTP 方式 { newPassword, code } 或原密码方式 { newPassword, oldPassword } */
+  changePassword: (data: { newPassword: string; code?: string; oldPassword?: string }) =>
+    request<{ changed: boolean }>('POST', '/auth/change-password', data),
   login: (data: { account: string; password: string }) =>
     request<{ token: string; user: any }>('POST', '/auth/login', data, false),
   me: () => request<any>('GET', '/auth/me'),

@@ -54,6 +54,14 @@ body .taro_router > .taro_page {
   background-color: var(--bg);
 }
 
+// Taro H5 组件基类兜底：Taro 运行时本应注入 taro-view-core{display:block} /
+// taro-scroll-view-core{display:block;width:100%}，但在 H5 有时不可靠应用，导致自定义元素
+// 退回默认 inline、收缩包裹到最宽子元素（如 nowrap 横向筛选条）造成整页横向溢出。
+// 这里显式补一份（就是 Taro 自己的默认值），保证全局块级占满宽；有显式 display 的组件
+// 被其自身更高特异性规则覆盖，零副作用。weapp 端无 taro-*-core 自定义元素，规则天然空转。
+taro-view-core { display: block; }
+taro-scroll-view-core { display: block; width: 100%; }
+
 // H5 桌面宽屏时容器两侧露出的 body 底色，跟页面背景保持一致
 body {
   background-color: var(--bg);

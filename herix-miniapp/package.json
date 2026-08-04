@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "patch-package --error-on-fail",
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",
     "dev:h5": "taro build --type h5 --watch",
@@ -29,6 +30,7 @@
     "@tarojs/plugin-platform-weapp": "^4.0.0",
     "@tarojs/webpack5-runner": "^4.0.0",
     "@types/react": "^18.0.0",
+    "patch-package": "^8.0.1",
     "sass": "^1.0.0",
     "typescript": "^5.0.0"
   }

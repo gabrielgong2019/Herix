@@ -1,0 +1,42 @@
+diff --git a/node_modules/@tarojs/runtime/dist/dom/element.js b/node_modules/@tarojs/runtime/dist/dom/element.js
+index 17e9843..ee8089a 100644
+--- a/node_modules/@tarojs/runtime/dist/dom/element.js
++++ b/node_modules/@tarojs/runtime/dist/dom/element.js
+@@ -300,7 +300,8 @@ class TaroElement extends TaroNode {
+         hooks.call('modifyRemoveEventListener', this, sideEffect, getComponentsAlias);
+         if (sideEffect !== false && !this.isAnyEventBinded() && SPECIAL_NODES.indexOf(name) > -1) {
+             const componentsAlias = getComponentsAlias();
+-            const value = isHasExtractProp(this) ? `static-${name}` : `pure-${name}`;
++            // backport NervJS/taro main: 只有 view 有 pure 变体，text/image 降级到 pure-* 会取到 undefined
++            const value = name === VIEW && !isHasExtractProp(this) ? PURE_VIEW : `static-${name}`;
+             const valueAlias = componentsAlias[value]._num;
+             this.enqueueUpdate({
+                 path: `${this._path}.${"nn" /* Shortcuts.NodeName */}`,
+diff --git a/node_modules/@tarojs/runtime/dist/index.cjs.js b/node_modules/@tarojs/runtime/dist/index.cjs.js
+index ba95941..2dd7247 100644
+--- a/node_modules/@tarojs/runtime/dist/index.cjs.js
++++ b/node_modules/@tarojs/runtime/dist/index.cjs.js
+@@ -2428,7 +2428,8 @@ class TaroElement extends TaroNode {
+         shared.hooks.call('modifyRemoveEventListener', this, sideEffect, getComponentsAlias);
+         if (sideEffect !== false && !this.isAnyEventBinded() && SPECIAL_NODES.indexOf(name) > -1) {
+             const componentsAlias = getComponentsAlias();
+-            const value = isHasExtractProp(this) ? `static-${name}` : `pure-${name}`;
++            // backport NervJS/taro main: 只有 view 有 pure 变体，text/image 降级到 pure-* 会取到 undefined
++            const value = name === VIEW && !isHasExtractProp(this) ? PURE_VIEW : `static-${name}`;
+             const valueAlias = componentsAlias[value]._num;
+             this.enqueueUpdate({
+                 path: `${this._path}.${"nn" /* Shortcuts.NodeName */}`,
+diff --git a/node_modules/@tarojs/runtime/dist/runtime.esm.js b/node_modules/@tarojs/runtime/dist/runtime.esm.js
+index b513805..6529f58 100644
+--- a/node_modules/@tarojs/runtime/dist/runtime.esm.js
++++ b/node_modules/@tarojs/runtime/dist/runtime.esm.js
+@@ -2427,7 +2427,8 @@ class TaroElement extends TaroNode {
+         hooks.call('modifyRemoveEventListener', this, sideEffect, getComponentsAlias);
+         if (sideEffect !== false && !this.isAnyEventBinded() && SPECIAL_NODES.indexOf(name) > -1) {
+             const componentsAlias = getComponentsAlias();
+-            const value = isHasExtractProp(this) ? `static-${name}` : `pure-${name}`;
++            // backport NervJS/taro main: 只有 view 有 pure 变体，text/image 降级到 pure-* 会取到 undefined
++            const value = name === VIEW && !isHasExtractProp(this) ? PURE_VIEW : `static-${name}`;
+             const valueAlias = componentsAlias[value]._num;
+             this.enqueueUpdate({
+                 path: `${this._path}.${"nn" /* Shortcuts.NodeName */}`,

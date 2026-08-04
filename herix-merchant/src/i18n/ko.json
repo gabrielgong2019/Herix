@@ -6,7 +6,7 @@
     "view": "보기",
     "edit": "수정",
     "confirm": "확인",
-    "loading": "로딩 중...",
+    "loading": "로딩 중…",
     "submit": "제출",
     "back": "뒤로",
     "next": "다음",
@@ -21,7 +21,9 @@
     "publish": "게시",
     "draft": "초안",
     "new": "새로 만들기",
-    "remove": "삭제"
+    "remove": "삭제",
+    "refresh": "새로고침",
+    "prev": "이전"
   },
   "platform": {
     "xiaohongshu": "샤오홍수",
@@ -81,7 +83,8 @@
     "settings": "계정 설정",
     "logout": "로그아웃",
     "partner": "파트너 태스크",
-    "subscribe": "마케팅 고문"
+    "subscribe": "마케팅 고문",
+    "invoices": "인보이스"
   },
   "status": {
     "open": "진행 중",
@@ -159,7 +162,7 @@
     "fieldCover": "커버 이미지",
     "fieldCoverHint": "게시 시 필수 · 16:9 장면 사진이 가장 좋습니다",
     "fieldPayout": "1인당 보수",
-    "fieldPayoutUnit": "¥ / 명",
+    "fieldPayoutUnit": "¥ / 명 (세전)",
     "fieldMaxHeralds": "모집 인원",
     "fieldDeadline": "지원 마감일",
     "fieldDeadlineHint": "선택",
@@ -170,7 +173,9 @@
     "costPreview": "예산 미리보기",
     "costBase": "헤럴드 보수",
     "costFee": "플랫폼 수수료 (20%)",
-    "costTotal": "합계",
+    "costTotal": "소계 (세전)",
+    "costTax": "소비세 (10%)",
+    "costTotalIncl": "합계 (세후)",
     "costPerHerald": "명",
     "modeSelectTitle": "태스크 유형 선택",
     "modeSelectHint": "태스크 유형에 따라 헤럴드의 작업 방식과 정산 로직이 결정됩니다. 게시 후 변경 불가.",
@@ -246,7 +251,7 @@
     "perfEstCodesRow": "{{codes}}개 코드 × 평균 5회 전환 = {{convs}}회",
     "perfEstConvUnit": "회 전환",
     "perfEstPayoutRow": "앰배서더 보수 (추정)",
-    "perfEstTotal": "예상 총 지출",
+    "perfEstTotal": "예상 소계 (세전)",
     "perfEstNote": "코드당 평균 5회 전환 기준 추정. 실제 청구는 전환별로 발생합니다.",
     "errorDesc": "작업 개요를 입력해 주세요 (10자 이상)",
     "submitFailed": "제출에 실패했습니다. 잠시 후 다시 시도해 주세요",
@@ -961,5 +966,28 @@
     "shareText": "「{{title}}」에서 앰배서더를 모집 중입니다. 확인해보세요：{{url}}",
     "posterLangLabel": "포스터 언어",
     "linkLangHint": "문안 언어는 포스터 언어와 동일하게 적용"
+  },
+  "invoice": {
+    "download": "다운로드",
+    "generating": "생성 중…",
+    "empty": "인보이스가 없습니다",
+    "filter": {
+      "ALL": "전체",
+      "DEPOSIT": "보증금 청구서",
+      "MONTHLY": "월간 세금계산서"
+    },
+    "type": {
+      "DEPOSIT": "보증금 청구서",
+      "MONTHLY": "월간 적격계산서"
+    },
+    "col": {
+      "invoiceNo": "인보이스 번호",
+      "type": "유형",
+      "subtotal": "소계 (세전)",
+      "tax": "소비세",
+      "total": "합계 (세후)",
+      "issuedAt": "발행일",
+      "actions": ""
+    }
   }
 }

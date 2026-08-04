@@ -563,3 +563,33 @@ export interface BrandProfile {
   kyb_status?: 'none' | 'pending' | 'approved' | 'rejected'
   kyb_reject_reason?: string
 }
+
+// ── Invoice ───────────────────────────────────────────────────────
+export interface Invoice {
+  id: string
+  invoiceNo: string
+  type: 'DEPOSIT' | 'MONTHLY'
+  period: string | null     // 'YYYY-MM'（MONTHLY）或 null（DEPOSIT）
+  subtotal: number
+  taxAmount: number
+  total: number
+  issuedAt: string
+  hasPdf: boolean
+}
+
+export interface InvoiceList {
+  invoices: Invoice[]
+  total: number
+  page: number
+  limit: number
+}
+
+export const invoiceApi = {
+  list: (params?: { type?: 'DEPOSIT' | 'MONTHLY'; page?: number; limit?: number }) =>
+    http.get<InvoiceList>('/brand/invoices', { params }),
+  pdfUrl: (id: string) => `${http.defaults.baseURL}/brand/invoices/${id}/pdf`,
+  requestMonthly: (period: string) =>
+    http.post<{ id: string; invoiceNo: string; total: number }>(
+      `/brand/invoices/request-monthly?period=${period}`,
+    ),
+}

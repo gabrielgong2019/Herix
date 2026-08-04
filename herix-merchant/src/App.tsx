@@ -17,6 +17,7 @@ import DataUpload from './pages/DataUpload'
 import Onboard from './pages/Onboard'
 import PartnerTasks from './pages/PartnerTasks'
 import PartnerTaskDetail from './pages/PartnerTaskDetail'
+import Invoices from './pages/Invoices'
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -45,6 +46,7 @@ export default function App() {
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/csv" element={<DataUpload />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/invoices" element={<Invoices />} />
             </Route>
           </Routes>
         </BrowserRouter>

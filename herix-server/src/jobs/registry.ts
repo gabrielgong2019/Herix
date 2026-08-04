@@ -7,9 +7,11 @@ import { syncFxRates } from '../utils/fxSync';
 import { runSubmissionTimersOnce } from '../utils/submissionTimers';
 import { sweepSubscriptionsOnce } from '../utils/subscriptions';
 import { runTranslationRetryOnce } from '../utils/translateRetry';
+import { runMonthlyCron } from '../utils/monthly-invoice';
 
 const MIN = 60_000;
 const HOUR = 3600_000;
+const DAY  = 24 * HOUR;
 
 export const JOBS: Job[] = [
   // 汇率中间价自动同步（锁价基准）
@@ -20,4 +22,6 @@ export const JOBS: Job[] = [
   { name: 'subscription-sweep', everyMs: 1 * HOUR, firstDelayMs: 45_000, runOnce: sweepSubscriptionsOnce },
   // 翻译重试（发布时 fire-and-forget 失败的 + 编辑后 pending 的，批量补翻）
   { name: 'translation-retry',  everyMs: 30 * MIN, firstDelayMs: 20_000, runOnce: runTranslationRetryOnce },
+  // 月次适格请求书生成（幂等，每天扫一次，仅在月初实际写DB/生成PDF）
+  { name: 'monthly-invoice',    everyMs: 1 * DAY,  firstDelayMs: 60_000, runOnce: runMonthlyCron },
 ];

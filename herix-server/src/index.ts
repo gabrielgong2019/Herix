@@ -29,6 +29,7 @@ import { subscriptionsRouter } from './routes/subscriptions';
 import { brandsRouter } from './routes/brands';
 import { shortLinksRouter } from './routes/shortLinks';
 import { legalRouter } from './routes/legal';
+import { brandInvoicesRouter } from './routes/brand-invoices';
 import { UPLOADS_DIR } from './utils/uploads';
 import { findOne } from './utils/db';
 
@@ -89,6 +90,7 @@ app.use('/api/arbitrations', arbitrationsRouter);
 app.use('/api/subscriptions', subscriptionsRouter);
 app.use('/api/brands', brandsRouter);
 app.use('/api/legal', legalRouter);
+app.use('/api/brand/invoices', brandInvoicesRouter);
 app.use('/t', shortLinksRouter);
 
 const INVITE_I18N: Record<string, Record<string, string>> = {

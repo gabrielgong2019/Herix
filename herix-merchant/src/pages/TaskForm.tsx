@@ -55,6 +55,7 @@ const PLATFORMS: { id: string; name: string; icon: string; countLabel: 'follower
 ]
 
 const PLATFORM_FEE_RATE = 0.2
+const CONSUMPTION_TAX_RATE = 0.1
 // 与服务端 MAX_CUSTOM_CODES_PER_UPLOAD 同步（herix-server/src/routes/tasks.ts）
 const MAX_CUSTOM_CODES = 2000
 const AVG_CONVERSIONS_PER_CODE = 5
@@ -202,7 +203,9 @@ function StandardCostPreview({ payout, maxHeralds, balance, t }: {
   if (!payout || !maxHeralds) return null
   const base = payout * maxHeralds
   const fee = Math.ceil(base * PLATFORM_FEE_RATE)
-  const total = base + fee
+  const subtotal = base + fee
+  const tax = Math.ceil(subtotal * CONSUMPTION_TAX_RATE)
+  const total = subtotal + tax
 
   const credit = balance?.credit
   const trialGrant = credit?.trialEligible ? Math.min(credit.trialDefault, total) : 0
@@ -222,8 +225,16 @@ function StandardCostPreview({ payout, maxHeralds, balance, t }: {
             <span>{value}</span>
           </div>
         ))}
-        <div className="flex justify-between text-sm font-bold pt-2 border-t mt-2" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
-          <span>{t('taskForm.costTotal')}</span>
+        <div className="flex justify-between text-xs pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
+          <span style={{ color: 'var(--muted)' }}>{t('taskForm.costTotal')}</span>
+          <span>¥{subtotal.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between text-xs" style={{ color: 'var(--text)' }}>
+          <span style={{ color: 'var(--muted)' }}>{t('taskForm.costTax')}</span>
+          <span>¥{tax.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between text-sm font-bold pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
+          <span>{t('taskForm.costTotalIncl')}</span>
           <span style={{ color: 'var(--primary)' }}>¥{total.toLocaleString()}</span>
         </div>
         {capacity !== null && (
@@ -256,7 +267,9 @@ function PerformanceBudgetEstimate({ payout, codeCount, t }: {
   const estConversions = codeCount * AVG_CONVERSIONS_PER_CODE
   const estPayout = payout * estConversions
   const estFee = Math.ceil(estPayout * PLATFORM_FEE_RATE)
-  const estTotal = estPayout + estFee
+  const estSubtotal = estPayout + estFee
+  const estTax = Math.ceil(estSubtotal * CONSUMPTION_TAX_RATE)
+  const estTotal = estSubtotal + estTax
 
   return (
     <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--primary-light)', border: '1px solid #f7c4bb' }}>
@@ -272,8 +285,16 @@ function PerformanceBudgetEstimate({ payout, codeCount, t }: {
             <span>{value}</span>
           </div>
         ))}
-        <div className="flex justify-between text-sm font-bold pt-2 border-t mt-2" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
-          <span>{t('taskForm.perfEstTotal')}</span>
+        <div className="flex justify-between text-xs pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
+          <span style={{ color: 'var(--muted)' }}>{t('taskForm.perfEstTotal')}</span>
+          <span>¥{estSubtotal.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between text-xs" style={{ color: 'var(--text)' }}>
+          <span style={{ color: 'var(--muted)' }}>{t('taskForm.costTax')}</span>
+          <span>¥{estTax.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between text-sm font-bold pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
+          <span>{t('taskForm.costTotalIncl')}</span>
           <span style={{ color: 'var(--primary)' }}>¥{estTotal.toLocaleString()}</span>
         </div>
         <div className="text-xs pt-1" style={{ color: 'var(--muted)' }}>{t('taskForm.perfEstNote')}</div>

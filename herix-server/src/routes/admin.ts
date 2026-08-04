@@ -4,6 +4,9 @@ import { requireAuth, requireRole } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
 import { payoutProvider } from '../services/payout';
 import { topupBrand, debitWithdrawal, creditPlatformFee, PLATFORM_USER_ID } from '../utils/wallet';
+import { nextInvoiceNo } from '../utils/invoice-number';
+import { generateDepositPdf, detectJurisdiction } from '../utils/invoice-pdf';
+import { loadIssuerSettings } from '../utils/monthly-invoice';
 import pool from '../db';
 import { getSetting, setSetting, getEffectiveCommissionRate } from '../utils/settings';
 import { activateOrRenew, ensureInvoice, addMonths } from '../utils/subscriptions';
@@ -518,7 +521,62 @@ adminRouter.post('/topup-requests/:id/confirm', async (req: Request, res: Respon
   }
 
   const u = await findOne<any>('SELECT email, nickname FROM users WHERE id = ?', [row.brand_id]);
-  if (u?.email) await sendMail(u.email, '【HERIX】充值到账', `${u.nickname}，您的充值 ${row.currency} ${row.amount} 已确认到账，可用于发布任务。您的任务现已获得「极速打款」标签，赫使可优先选择您的任务。`);
+  if (u?.email) await sendMail(u.email, '【HERIX】充値到账', `${u.nickname}，您的充值 ${row.currency} ${row.amount} 已确认到账，可用于发布任务。您的任务现已获得「极速打款」标签，赫使可优先选择您的任务。`);
+
+  // 异步生成前受金請求書（不阻断 HTTP 响应）
+  setImmediate(async () => {
+    try {
+      const issuedAt   = new Date();
+      const invoiceNo  = await nextInvoiceNo('DEPOSIT', issuedAt);
+      const issuerInfo = await loadIssuerSettings();
+      const brand      = await findOne<any>(
+        `SELECT company_name, billing_address, billing_postal, brand_country FROM brand_profiles WHERE user_id = ?`,
+        [row.brand_id],
+      );
+      const recipientName = brand?.company_name || u?.nickname || u?.email || '';
+      const jurisdiction  = detectJurisdiction(brand?.brand_country);
+
+      let pdfPath: string | null = null;
+      try {
+        pdfPath = await generateDepositPdf({
+          invoiceNo,
+          issuedAt,
+          issuer: issuerInfo,
+          recipient: {
+            name:    recipientName,
+            address: brand?.billing_address || '',
+            postal:  brand?.billing_postal  || '',
+          },
+          amount: Number(row.amount),
+          note:   row.note || undefined,
+        }, jurisdiction);
+      } catch (pdfErr) {
+        console.error('[invoice] deposit PDF failed:', pdfErr);
+      }
+
+      await insert('merchant_invoices', {
+        invoice_no:        invoiceNo,
+        brand_id:          row.brand_id,
+        type:              'DEPOSIT',
+        topup_request_id:  row.id,
+        subtotal:          Number(row.amount),
+        tax_amount:        0,
+        total:             Number(row.amount),
+        recipient_name:    recipientName,
+        recipient_address: brand?.billing_address || '',
+        recipient_postal:  brand?.billing_postal  || '',
+        issuer_name:       issuerInfo.name,
+        issuer_reg_no:     issuerInfo.regNo,
+        issuer_address:    issuerInfo.address,
+        pdf_path:          pdfPath,
+        jurisdiction,
+        issued_at:         issuedAt.toISOString(),
+      });
+      console.log(`[invoice] deposit invoice generated: ${invoiceNo} for brand ${row.brand_id}`);
+    } catch (err) {
+      console.error('[invoice] deposit invoice error:', err);
+    }
+  });
 
   res.json({ success: true });
 });

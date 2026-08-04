@@ -1026,6 +1026,53 @@ export async function initDatabase() {
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS referral_script TEXT`,
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS conversion_criteria_json TEXT`,
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS service_name TEXT`,
+
+    // ── 商家发票模块（2026-08-04）────────────────────────────────────────────
+    // merchant_invoices: 两类发票——前受金請求書(DEPOSIT) + 月次適格請求書(MONTHLY)
+    `CREATE TABLE IF NOT EXISTS merchant_invoices (
+       id TEXT PRIMARY KEY,
+       invoice_no TEXT NOT NULL UNIQUE,
+       brand_id TEXT NOT NULL REFERENCES users(id),
+       type TEXT NOT NULL CHECK(type IN ('DEPOSIT','MONTHLY')),
+       period TEXT,                        -- 'YYYY-MM'，仅 MONTHLY 有值
+       topup_request_id TEXT REFERENCES topup_requests(id),
+       subtotal INTEGER NOT NULL DEFAULT 0, -- 税抜金额（日元，整数）
+       tax_amount INTEGER NOT NULL DEFAULT 0,
+       total INTEGER NOT NULL DEFAULT 0,   -- 税込合計
+       recipient_name TEXT NOT NULL DEFAULT '',
+       recipient_address TEXT DEFAULT '',
+       recipient_postal TEXT DEFAULT '',
+       issuer_name TEXT NOT NULL DEFAULT '',
+       issuer_reg_no TEXT DEFAULT '',
+       issuer_address TEXT DEFAULT '',
+       pdf_path TEXT,
+       jurisdiction TEXT NOT NULL DEFAULT 'JP',  -- 'JP' | 'CN' | ... 决定发票格式和税务规则
+       issued_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_merchant_invoices_brand ON merchant_invoices(brand_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_merchant_invoices_type ON merchant_invoices(type, period)`,
+    // 顺序号计数器：每个前缀独立递增，事务内 FOR UPDATE 保证无间隙连续
+    `CREATE TABLE IF NOT EXISTS invoice_sequences (
+       prefix TEXT PRIMARY KEY,
+       last_no INTEGER NOT NULL DEFAULT 0
+     )`,
+    // 商家可填账单地址（发票收件方信息）
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS billing_address TEXT`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS billing_postal TEXT`,
+    // jurisdiction 列：存量行迁移为 JP（CREATE TABLE 的 DEFAULT 只对新行生效）
+    `ALTER TABLE merchant_invoices ADD COLUMN IF NOT EXISTS jurisdiction TEXT NOT NULL DEFAULT 'JP'`,
+    // 平台发票发行方信息（admin 后台可配）
+    `INSERT INTO platform_settings (key, value, note) VALUES
+       ('issuer_invoice_reg_no', '', 'インボイス登録番号 T+13桁（空=免税期间不填）'),
+       ('issuer_address', '', '発行者住所（例：東京都渋谷区〇〇1-2-3）'),
+       ('issuer_postal', '', '発行者郵便番号（例：150-0001）'),
+       ('bank_name', '', '振込先銀行名'),
+       ('bank_branch', '', '振込先支店名'),
+       ('bank_account_type', '普通', '口座種別'),
+       ('bank_account_number', '', '口座番号'),
+       ('bank_account_name', '', '口座名義カナ')
+     ON CONFLICT(key) DO NOTHING`,
   ];
   for (const m of migrations) {
     await pool.query(m);

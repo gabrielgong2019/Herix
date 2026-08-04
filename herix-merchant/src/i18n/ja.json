@@ -6,7 +6,7 @@
     "view": "詳細",
     "edit": "編集",
     "confirm": "確認",
-    "loading": "読み込み中...",
+    "loading": "読み込み中…",
     "submit": "送信",
     "back": "戻る",
     "next": "次へ",
@@ -21,7 +21,9 @@
     "publish": "公開",
     "draft": "下書き",
     "new": "新規",
-    "remove": "削除"
+    "remove": "削除",
+    "refresh": "更新",
+    "prev": "前へ"
   },
   "platform": {
     "xiaohongshu": "小紅書",
@@ -81,7 +83,8 @@
     "settings": "アカウント設定",
     "logout": "ログアウト",
     "partner": "提携タスク",
-    "subscribe": "マーケ顧問"
+    "subscribe": "マーケ顧問",
+    "invoices": "請求書"
   },
   "status": {
     "open": "公開中",
@@ -159,7 +162,7 @@
     "fieldCover": "カバー画像",
     "fieldCoverHint": "公開時必須 · 16:9 のシーン写真が最適",
     "fieldPayout": "一人当たり報酬",
-    "fieldPayoutUnit": "¥ / 人",
+    "fieldPayoutUnit": "¥ / 人（税抜）",
     "fieldMaxHeralds": "募集人数",
     "fieldDeadline": "応募締切日",
     "fieldDeadlineHint": "任意",
@@ -170,7 +173,9 @@
     "costPreview": "予算プレビュー",
     "costBase": "ヘラルド報酬",
     "costFee": "プラットフォーム手数料 (20%)",
-    "costTotal": "合計",
+    "costTotal": "小計（税抜）",
+    "costTax": "消費税 (10%)",
+    "costTotalIncl": "合計（税込）",
     "costPerHerald": "人",
     "modeSelectTitle": "タスクタイプを選択",
     "modeSelectHint": "タスクタイプによってアンバサダーの作業方法と精算ロジックが決まります。公開後は変更不可。",
@@ -246,7 +251,7 @@
     "perfEstCodesRow": "{{codes}} 個のコード × 平均 5 回転換 = {{convs}} 回",
     "perfEstConvUnit": "回転換",
     "perfEstPayoutRow": "アンバサダー報酬（見積もり）",
-    "perfEstTotal": "予想総支出",
+    "perfEstTotal": "概算小計（税抜）",
     "perfEstNote": "1コードあたり平均5回転換で試算。実際の請求はコンバージョン毎に発生します。",
     "errorDesc": "タスク概要を入力してください（10文字以上）",
     "submitFailed": "送信に失敗しました。しばらくしてから再試行してください",
@@ -961,5 +966,28 @@
     "shareText": "「{{title}}」でアンバサダーを募集中です。ぜひご覧ください：{{url}}",
     "posterLangLabel": "海報言語",
     "linkLangHint": "文案の言語はポスター言語に合わせて切り替わります"
+  },
+  "invoice": {
+    "download": "ダウンロード",
+    "generating": "生成中…",
+    "empty": "請求書がありません",
+    "filter": {
+      "ALL": "すべて",
+      "DEPOSIT": "前受金請求書",
+      "MONTHLY": "月次適格請求書"
+    },
+    "type": {
+      "DEPOSIT": "前受金請求書",
+      "MONTHLY": "月次適格請求書"
+    },
+    "col": {
+      "invoiceNo": "請求番号",
+      "type": "種別",
+      "subtotal": "税抜金額",
+      "tax": "消費税",
+      "total": "合計（税込）",
+      "issuedAt": "発行日",
+      "actions": ""
+    }
   }
 }

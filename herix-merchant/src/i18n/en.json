@@ -6,7 +6,7 @@
     "view": "View",
     "edit": "Edit",
     "confirm": "Confirm",
-    "loading": "Loading...",
+    "loading": "Loading…",
     "submit": "Submit",
     "back": "Back",
     "next": "Next",
@@ -21,7 +21,9 @@
     "publish": "Publish",
     "draft": "Draft",
     "new": "New",
-    "remove": "Remove"
+    "remove": "Remove",
+    "refresh": "Refresh",
+    "prev": "Prev"
   },
   "platform": {
     "xiaohongshu": "Xiaohongshu (RED)",
@@ -81,7 +83,8 @@
     "settings": "Settings",
     "logout": "Log out",
     "partner": "Partner Tasks",
-    "subscribe": "Advisor"
+    "subscribe": "Advisor",
+    "invoices": "Invoices"
   },
   "status": {
     "open": "Active",
@@ -159,7 +162,7 @@
     "fieldCover": "Cover Image",
     "fieldCoverHint": "Required to publish · 16:9 scene photo works best",
     "fieldPayout": "Payout per Herald",
-    "fieldPayoutUnit": "¥ / person",
+    "fieldPayoutUnit": "¥ / person (excl. tax)",
     "fieldMaxHeralds": "Max Heralds",
     "fieldDeadline": "Application deadline",
     "fieldDeadlineHint": "Optional",
@@ -170,7 +173,9 @@
     "costPreview": "Budget Preview",
     "costBase": "Herald Payouts",
     "costFee": "Platform Fee (20%)",
-    "costTotal": "Total",
+    "costTotal": "Subtotal (excl. tax)",
+    "costTax": "Consumption Tax (10%)",
+    "costTotalIncl": "Total (incl. tax)",
     "costPerHerald": "heralds",
     "modeSelectTitle": "Select Task Type",
     "modeSelectHint": "Task type determines how ambassadors work and how they get paid. Cannot be changed after publishing.",
@@ -246,7 +251,7 @@
     "perfEstCodesRow": "{{codes}} codes × avg 5 conversions = {{convs}}",
     "perfEstConvUnit": "conversions",
     "perfEstPayoutRow": "Ambassador payout (estimated)",
-    "perfEstTotal": "Estimated total spend",
+    "perfEstTotal": "Est. subtotal (excl. tax)",
     "perfEstNote": "Based on avg 5 conversions per code. Actual billing is per conversion.",
     "errorDesc": "Please enter a task brief (at least 10 characters)",
     "submitFailed": "Submission failed, please try again later",
@@ -961,5 +966,28 @@
     "shareText": "\"{{title}}\" is recruiting ambassadors on Herix. Interested? {{url}}",
     "posterLangLabel": "Poster language",
     "linkLangHint": "Copy text language matches the poster language"
+  },
+  "invoice": {
+    "download": "Download",
+    "generating": "Generating…",
+    "empty": "No invoices yet",
+    "filter": {
+      "ALL": "All",
+      "DEPOSIT": "Deposit",
+      "MONTHLY": "Monthly"
+    },
+    "type": {
+      "DEPOSIT": "Deposit Receipt",
+      "MONTHLY": "Monthly Invoice"
+    },
+    "col": {
+      "invoiceNo": "Invoice No.",
+      "type": "Type",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total (incl. tax)",
+      "issuedAt": "Issued",
+      "actions": ""
+    }
   }
 }

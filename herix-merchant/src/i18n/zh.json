@@ -6,10 +6,10 @@
     "view": "查看",
     "edit": "编辑",
     "confirm": "确认",
-    "loading": "加载中...",
+    "loading": "加载中…",
     "submit": "提交",
     "back": "返回",
-    "next": "下一步",
+    "next": "下一页",
     "search": "搜索",
     "filter": "筛选",
     "all": "全部",
@@ -21,7 +21,9 @@
     "publish": "发布",
     "draft": "草稿",
     "new": "新建",
-    "remove": "移除"
+    "remove": "移除",
+    "refresh": "刷新",
+    "prev": "上一页"
   },
   "platform": {
     "xiaohongshu": "小红书",
@@ -81,7 +83,8 @@
     "settings": "账号设置",
     "logout": "退出登录",
     "partner": "合作任务",
-    "subscribe": "营销顾问"
+    "subscribe": "营销顾问",
+    "invoices": "发票管理"
   },
   "status": {
     "open": "进行中",
@@ -159,7 +162,7 @@
     "fieldCover": "任务封面图",
     "fieldCoverHint": "发布必填 · 16:9 场景图效果最佳",
     "fieldPayout": "每人报酬",
-    "fieldPayoutUnit": "¥ / 人",
+    "fieldPayoutUnit": "¥ / 人（税抜）",
     "fieldMaxHeralds": "招募人数",
     "fieldDeadline": "报名截止日",
     "fieldDeadlineHint": "选填",
@@ -170,7 +173,9 @@
     "costPreview": "预算预览",
     "costBase": "赫使报酬",
     "costFee": "平台服务费 (20%)",
-    "costTotal": "总计",
+    "costTotal": "小计（税抜）",
+    "costTax": "消費税 (10%)",
+    "costTotalIncl": "合计（税込）",
     "costPerHerald": "人",
     "modeSelectTitle": "选择任务类型",
     "modeSelectHint": "任务类型决定赫使的工作方式和结算逻辑，发布后不可修改",
@@ -246,7 +251,7 @@
     "perfEstCodesRow": "{{codes}} 个码 × 均值 5 次转化 = {{convs}} 次",
     "perfEstConvUnit": "次转化",
     "perfEstPayoutRow": "赫使报酬（预估）",
-    "perfEstTotal": "预估总支出",
+    "perfEstTotal": "预估小计（税抜）",
     "perfEstNote": "按每码均值 5 次转化估算，实际扣费以转化结算为准",
     "errorDesc": "请填写任务简报（至少10个字符）",
     "submitFailed": "提交失败，请稍后重试",
@@ -956,5 +961,28 @@
     "shareText": "「{{title}}」正在招募赫使，感兴趣来看看：{{url}}",
     "posterLangLabel": "海报语言",
     "linkLangHint": "文案语言与海报语言一致"
+  },
+  "invoice": {
+    "download": "下载",
+    "generating": "生成中…",
+    "empty": "暂无发票",
+    "filter": {
+      "ALL": "全部",
+      "DEPOSIT": "充值请求书",
+      "MONTHLY": "月次请求书"
+    },
+    "type": {
+      "DEPOSIT": "充值请求书",
+      "MONTHLY": "月次适格请求书"
+    },
+    "col": {
+      "invoiceNo": "发票号",
+      "type": "类型",
+      "subtotal": "税抜金额",
+      "tax": "消費税",
+      "total": "税込合计",
+      "issuedAt": "发行日",
+      "actions": ""
+    }
   }
 }

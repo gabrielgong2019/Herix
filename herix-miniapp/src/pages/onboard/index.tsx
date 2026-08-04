@@ -53,6 +53,10 @@ interface OnboardData {
 
 interface CommunityItem { id: string; labelKey: string; region: string; }
 
+// 协议同意闸：版本变更时重新征得同意；已同意记入本地存储，避免每次入驻重复弹
+const LEGAL_VERSION = '2026-08-03-v1';
+const LEGAL_KEY = 'herix_legal_agreed';
+
 interface State {
   step: number;
   data: OnboardData;
@@ -70,6 +74,9 @@ interface State {
   spNewPassword: string;
   spCountdown: number;
   spSaving: boolean;
+  /** 协议同意闸：consented=已同意（放行进入向导）；legalChecked=同意页勾选框临时态 */
+  consented: boolean;
+  legalChecked: boolean;
 }
 
 export default class Onboard extends Component<{}, State> {
@@ -105,18 +112,56 @@ export default class Onboard extends Component<{}, State> {
     spNewPassword: '',
     spCountdown: 0,
     spSaving: false,
+    consented: false,
+    legalChecked: false,
   };
 
   componentDidMount() {
     const params = Taro.getCurrentInstance().router?.params || {};
     if (params.taskId) this.setState({ taskId: params.taskId as string });
     if (!getToken()) Taro.showToast({ title: t('ob.needLogin'), icon: 'none' });
+    try { if (Taro.getStorageSync(LEGAL_KEY) === LEGAL_VERSION) this.setState({ consented: true }); } catch { /* 存储不可用则每次都需同意，安全侧默认 */ }
     communitiesApi.list().then(list => this.setState({ communityList: list })).catch(() => {});
     authApi.me().then(u => { if (u?.email) this.setState({ userEmail: u.email }); }).catch(() => {});
   }
 
   set = <K extends keyof OnboardData>(key: K, val: OnboardData[K]) =>
     this.setState({ data: { ...this.state.data, [key]: val } });
+
+  // ── 协议同意闸 ──
+  openLegal = (doc: 'user-agreement' | 'privacy-policy') =>
+    Taro.navigateTo({ url: `/pages/legal/legal?doc=${doc}` });
+
+  agreeAndContinue = () => {
+    if (!this.state.legalChecked) {
+      Taro.showToast({ title: t('ob.legalMust'), icon: 'none' });
+      return;
+    }
+    try { Taro.setStorageSync(LEGAL_KEY, LEGAL_VERSION); } catch { /* 忽略存储失败，本次会话内仍放行 */ }
+    this.setState({ consented: true });
+  };
+
+  renderConsentGate = () => {
+    const checked = this.state.legalChecked;
+    return (
+      <View className='onboard-page'>
+        <Text className='ob-title'>{t('ob.legalTitle')}</Text>
+        <Text className='ob-sub'>{t('ob.legalSub')}</Text>
+        <View className='card'>
+          <Text className='wx-desc'>{t('ob.legalIntro')}</Text>
+          <View className='legal-gate-links'>
+            <Text className='legal-link' onClick={() => this.openLegal('user-agreement')}>{t('legal.docAgreement')}</Text>
+            <Text className='legal-link' onClick={() => this.openLegal('privacy-policy')}>{t('legal.docPrivacy')}</Text>
+          </View>
+        </View>
+        <View className='agree-row' onClick={() => this.setState({ legalChecked: !checked })}>
+          <View className={`checkbox ${checked ? 'checked' : ''}`}>{checked ? '✓' : ''}</View>
+          <Text className='agree-label'>{t('ob.legalAgree')}</Text>
+        </View>
+        <View className={`btn-primary ${checked ? '' : 'disabled'}`} onClick={this.agreeAndContinue}>{t('ob.legalContinue')}</View>
+      </View>
+    );
+  };
 
   // step1 → step2
   nextPlatforms = () => {
@@ -266,6 +311,8 @@ export default class Onboard extends Component<{}, State> {
   };
 
   render() {
+    // 未同意协议前，只显示同意闸，拦住一切收集入口（含微信ID/手机号步骤）
+    if (!this.state.consented) return this.renderConsentGate();
     const { step, data: d, submitting, communityList } = this.state;
     // 按居住地过滤社群选项（有居住地则只展示对应 region）
     const residenceRegion = d.residence === 'japan' ? 'JP' : d.residence === 'overseas' ? null : null;

@@ -876,6 +876,9 @@ export default class Profile extends Component<{}, State> {
           <Text className='action-item' onClick={this.switchLanguage}>
             🌐 {t('profile.language')}：{LOCALES.find(l => l.id === getLocale())?.label}
           </Text>
+          <Text className='action-item' onClick={() => Taro.navigateTo({ url: '/pages/legal/legal?doc=user-agreement' })}>
+            📄 {t('profile.legalEntry')}
+          </Text>
           {/* 微信注册用户补绑邮箱 */}
           {!u.email && (
             <Text className='action-item' onClick={() => this.setState(

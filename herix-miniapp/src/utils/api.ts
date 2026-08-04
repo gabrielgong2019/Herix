@@ -310,6 +310,14 @@ export const i18n = {
   ),
 };
 
+// ── Legal（服务协议/隐私政策，公开，不需登录）──
+export const legal = {
+  get: (scope: 'weapp' | 'web', doc: 'user-agreement' | 'privacy-policy', lang: string) =>
+    request<{ scope: string; doc: string; lang: string; html: string }>(
+      'GET', `/legal/${scope}/${doc}?lang=${lang}`, undefined, false,
+    ),
+};
+
 // ── Brands（品牌主页，公开）──
 export const brands = {
   getProfile: (userId: string) =>

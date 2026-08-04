@@ -283,3 +283,16 @@
 .done .btn-primary {
   width: 100%;
 }
+
+/* 协议同意闸（2026-08-03） */
+.legal-gate-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+}
+.legal-link {
+  font-size: 28px;
+  color: var(--primary, #e8502e);
+  font-weight: 600;
+}

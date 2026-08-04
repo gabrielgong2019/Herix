@@ -11,6 +11,7 @@ const pages = [
   'pages/add-method/index', // 添加收款方式（次级）
   'pages/onboard/index', // 赫使入职引导（注册后进入）
   'pages/brand/brand', // 品牌主页（公开，任务卡品牌名点击进入）
+  'pages/legal/legal', // 服务协议与隐私政策（公开，次级；weapp=中文/h5=日英）
 ];
 
 if (process.env.TARO_ENV === 'h5') {

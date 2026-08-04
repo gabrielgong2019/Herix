@@ -91,15 +91,11 @@ export default class Index extends Component<{}, State> {
   loadData = async (allCommunities?: boolean) => {
     this.setState({ loading: true });
     try {
-      const taskRes = await taskApi.list({ allCommunities: allCommunities ?? this.state.allCommunities });
-      this.setState({ taskList: taskRes.tasks || [] });
-
-      try {
-        const categoryRes = await categoriesApi.list();
-        this.setState({ categories: categoryRes || [] });
-      } catch (err: any) {
-        console.error('Load categories error:', err);
-      }
+      const [taskRes, categoryRes] = await Promise.all([
+        taskApi.list({ allCommunities: allCommunities ?? this.state.allCommunities }),
+        categoriesApi.list().catch(() => []),
+      ]);
+      this.setState({ taskList: taskRes.tasks || [], categories: categoryRes || [] });
     } catch (err: any) {
       console.error('Load error:', err);
     }

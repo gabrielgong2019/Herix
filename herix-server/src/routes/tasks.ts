@@ -97,14 +97,17 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
             u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             bp.company_name as brand_company_name,
-            (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id) as application_count,
-            (SELECT ROUND(AVG(score),1) FROM task_ratings tr WHERE tr.task_id = t.id) as avg_rating,
-            (SELECT COUNT(*)::int FROM task_ratings tr WHERE tr.task_id = t.id) as rating_count,
-            (SELECT trs.data_mode FROM task_referral_specs trs WHERE trs.task_id = t.id) as data_mode
+            COALESCE(ac.application_count, 0) as application_count,
+            rs.avg_rating,
+            COALESCE(rs.rating_count, 0) as rating_count,
+            trs.data_mode
      FROM tasks t
      JOIN users u ON u.id = t.creator_id
      LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
      ${useLang ? 'LEFT JOIN task_translations tt ON tt.task_id = t.id AND tt.locale = ?' : ''}
+     LEFT JOIN (SELECT task_id, COUNT(*)::int AS application_count FROM task_applications GROUP BY task_id) ac ON ac.task_id = t.id
+     LEFT JOIN (SELECT task_id, ROUND(AVG(score),1) AS avg_rating, COUNT(*)::int AS rating_count FROM task_ratings GROUP BY task_id) rs ON rs.task_id = t.id
+     LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
      WHERE ${where}
      ORDER BY t.created_at DESC
      LIMIT ? OFFSET ?`,

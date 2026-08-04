@@ -130,14 +130,17 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       const id = params?.id as string;
       if (!id) return;
 
+      // 角色/身份信息以后端 /auth/me 为准，不信任本地缓存（缓存可能缺失或过期，
+      // 曾导致报名成功后本页判断不到"已报名"，一直显示可以继续报名）
+      // auth.me 与 taskApi.detail 并行发出，消除一个串行往返，报名按钮因此提前出现
+      const authPromise = getToken() ? auth.me().catch(() => null) : Promise.resolve(null);
+
       const task = await taskApi.detail(id);
       this.setState({ task, loading: false });
 
       try {
-        if (getToken()) {
-          // 角色/身份信息以后端 /auth/me 为准，不信任本地缓存（缓存可能缺失或过期，
-          // 曾导致报名成功后本页判断不到"已报名"，一直显示可以继续报名）
-          const userData = await auth.me();
+        const userData = await authPromise;
+        if (userData) {
           this.setState({ role: userData.role, userId: userData.id });
 
           if (userData.role === 'HERALD') {

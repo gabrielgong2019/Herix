@@ -1,6 +1,6 @@
 # Herix Terms of Service
 
-**Version: 2026-08-03-v1 (Draft)**
+**Version: 2026-08-03-v1**
 **Effective date: 2026-08-03**
 
 These Terms of Service ("Terms") govern your use of Herix (the "Service") as provided by the entity operating the Service (the "Operator"). By registering for or using the Service, you agree to be bound by all of these Terms. If you do not agree, please do not use the Service.

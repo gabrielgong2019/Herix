@@ -1,6 +1,6 @@
 # Herix Privacy Policy
 
-**Version: 2026-08-03-v1 (Draft)**
+**Version: 2026-08-03-v1**
 **Effective date: 2026-08-03**
 
 The entity operating Herix (the "Service"), referred to as the "Operator", uses this Privacy Policy to explain how it collects, uses, stores, and shares your personal information when you use the Service, and the rights you have regarding your personal information.

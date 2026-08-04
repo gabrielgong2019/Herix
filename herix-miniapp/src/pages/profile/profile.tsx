@@ -625,6 +625,7 @@ export default class Profile extends Component<{}, State> {
         {/* 账号信息 */}
         <View className='card'>
           <Text className='card-head'>{t('profile.accountInfo')}</Text>
+          {this.renderRow(t('profile.email'), u.email || t('profile.notSet'))}
           {isHerald && (
             <>
               {this.renderRow(t('profile.residence'), u.residence === 'japan' ? t('profile.resJapan') : u.residence === 'china' ? t('profile.resChina') : u.residence === 'overseas' ? t('profile.resOverseas') : t('profile.notSet'))}

@@ -247,6 +247,13 @@ export default class Withdraw extends Component<{}, State> {
           </View>
         </View>
 
+        {/* 余额不足门槛：提前告知用户当前无法提现及原因 */}
+        {avail < minAmount && (
+          <View className='below-min-notice'>
+            <Text>{t('withdraw.belowMinNotice', { avail: fmt(avail), min: fmt(minAmount) })}</Text>
+          </View>
+        )}
+
         {/* 收款方式横向选择 */}
         <Text className='field-label'>{t('wallet.methods')}</Text>
         <ScrollView scrollX className='method-scroll'>

@@ -102,6 +102,7 @@ export default function Reviews() {
     queryFn: () => reviewsApi.pendingApplications().then((r) => r.data),
   })
   const [drawerApp, setDrawerApp] = useState<Application | null>(null)
+  const [noteModal, setNoteModal] = useState<null | { type: 'reject' | 'arbitrate'; sub: Submission; note: string }>(null)
   const [creditShort, setCreditShort] = useState(false)
   const onAppReviewed = () => {
     setErr(''); setCreditShort(false); setDrawerApp(null)
@@ -134,11 +135,19 @@ export default function Reviews() {
   })
 
   const doReject = (sub: Submission) => {
-    // 拒绝理由服务端必填（REASON_REQUIRED）：不填直接不发请求
-    const note = window.prompt(t('reviews.rejectReasonPrompt'))
-    if (note === null) return
-    if (!note.trim()) { setErr(t('reviews.rejectReasonRequired')); return }
-    reviewMut.mutate({ id: sub.id, status: 'REJECTED', note: note.trim() })
+    setNoteModal({ type: 'reject', sub, note: '' })
+  }
+
+  const confirmNote = () => {
+    if (!noteModal) return
+    const note = noteModal.note.trim()
+    if (!note) { setErr(t('reviews.rejectReasonRequired')); setNoteModal(null); return }
+    if (noteModal.type === 'reject') {
+      reviewMut.mutate({ id: noteModal.sub.id, status: 'REJECTED', note })
+    } else {
+      arbMut.mutate({ id: noteModal.sub.id, reason: note })
+    }
+    setNoteModal(null)
   }
 
   const arbMut = useMutation({
@@ -152,10 +161,7 @@ export default function Reviews() {
 
   // 额度用尽后的出口：开平台仲裁案（开案期间超时计时冻结，商家直接通过则争议自动消解）
   const doArbitrate = (sub: Submission) => {
-    const reason = window.prompt(t('reviews.arbitrateReasonPrompt'))
-    if (reason === null) return
-    if (!reason.trim()) { setErr(t('reviews.rejectReasonRequired')); return }
-    arbMut.mutate({ id: sub.id, reason: reason.trim() })
+    setNoteModal({ type: 'arbitrate', sub, note: '' })
   }
 
   return (
@@ -336,6 +342,46 @@ export default function Reviews() {
         approving={appApproveMut.isPending}
         rejecting={appRejectMut.isPending}
       />
+
+      {noteModal && (
+        <div
+          onClick={() => setNoteModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 16, padding: '28px 32px', width: 520, maxWidth: 'calc(100vw - 48px)', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}>
+            <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 16, lineHeight: 1.5 }}>
+              {t(noteModal.type === 'reject' ? 'reviews.rejectReasonPrompt' : 'reviews.arbitrateReasonPrompt')}
+            </div>
+            <textarea
+              autoFocus
+              value={noteModal.note}
+              onChange={e => setNoteModal({ ...noteModal, note: e.target.value })}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) confirmNote() }}
+              style={{
+                width: '100%', minHeight: 160, padding: '12px 14px', borderRadius: 10,
+                border: '1px solid var(--border)', fontSize: 14, lineHeight: 1.6,
+                resize: 'vertical', boxSizing: 'border-box', outline: 'none',
+                fontFamily: 'inherit', color: 'var(--text)',
+              }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 20 }}>
+              <button
+                onClick={() => setNoteModal(null)}
+                style={{ padding: '9px 22px', borderRadius: 10, border: '1px solid var(--border)', background: '#fff', fontSize: 14, cursor: 'pointer', color: 'var(--text)' }}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={confirmNote}
+                disabled={reviewMut.isPending || arbMut.isPending}
+                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: 'var(--primary)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer', opacity: (reviewMut.isPending || arbMut.isPending) ? 0.6 : 1 }}
+              >
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

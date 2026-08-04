@@ -31,6 +31,10 @@ function parseTiers(raw?: string): Record<string, string> {
   try { return JSON.parse(raw) } catch { return {} }
 }
 
+function isValidUrl(u?: string | null): u is string {
+  return !!u && /^https?:\/\//i.test(u)
+}
+
 function fmtFollowers(n: number): string {
   if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万'
   if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K'
@@ -139,7 +143,7 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
                     padding: '9px 0', borderBottom: '1px solid var(--border)',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-                      {p.url ? (
+                      {isValidUrl(p.url) ? (
                         <a href={p.url} target="_blank" rel="noopener noreferrer"
                           style={{ fontSize: 13, fontWeight: 500, color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: 4, textDecoration: 'none' }}>
                           {platformName}

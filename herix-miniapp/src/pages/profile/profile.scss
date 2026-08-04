@@ -587,15 +587,18 @@
   line-height: 1.5;
 }
 .afc-input {
+  display: block;
   width: 100%;
-  background: var(--bg);
-  border-radius: 12px;
-  padding: 24px;
-  font-size: 28px;
-  margin-bottom: 20px;
   box-sizing: border-box;
+  height: 88px;
+  line-height: 88px;
+  padding: 0 28px;
+  background: var(--bg);
   border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 28px;
   color: var(--text-primary);
+  margin-bottom: 20px;
   &.pf-code-input {
     flex: 1;
     margin-bottom: 0;

@@ -86,6 +86,10 @@
 .btn-primary:active {
   opacity: 0.9;
 }
+.btn-primary--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
 
 /* ── 两阶段交付(2026-07-26)：多链接行 / 提交图片九宫格 / 草稿说明条 ── */
 .draft-banner {

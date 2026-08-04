@@ -1,5 +1,5 @@
 import { Component } from 'react';
-import { View, Text, Input, Textarea, Button, Image } from '@tarojs/components';
+import { View, Text, Input, Textarea, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { submissions, uploadSubmissionImage } from '../../utils/api';
 import './apply.scss';
@@ -277,9 +277,12 @@ export default class Apply extends Component<{}, State> {
           </>
         )}
 
-        <Button className='btn-primary' onClick={this.handleSubmit} loading={submitting} disabled={submitting || uploading}>
-          {isDraft ? t('apply.submitDraftBtn') : t('apply.submitReview')}
-        </Button>
+        <View
+          className={`btn-primary${submitting || uploading ? ' btn-primary--disabled' : ''}`}
+          onClick={submitting || uploading ? undefined : this.handleSubmit}
+        >
+          {submitting ? t('common.loading') : (isDraft ? t('apply.submitDraftBtn') : t('apply.submitReview'))}
+        </View>
       </View>
     );
   }

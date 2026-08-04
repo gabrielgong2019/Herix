@@ -625,7 +625,32 @@ export default class Profile extends Component<{}, State> {
         {/* 账号信息 */}
         <View className='card'>
           <Text className='card-head'>{t('profile.accountInfo')}</Text>
-          {this.renderRow(t('profile.email'), u.email || t('profile.notSet'))}
+          {/* 邮箱：未绑定时可点触发绑定流程 */}
+          <View className='info-row'>
+            <Text className='info-label'>{t('profile.email')}</Text>
+            {u.email ? (
+              <Text className='info-val'>{u.email}</Text>
+            ) : (
+              <Text className='info-val link' onClick={() => this.setState(
+                this.state.beSheet ? { beSheet: null } : { beSheet: { email: '', code: '', password: '' } }
+              )}>
+                {t('profile.notSet')}{this.state.beSheet ? ` · ${t('common.cancel')}` : ' ›'}
+              </Text>
+            )}
+          </View>
+          {/* 密码：有邮箱才可改密码 */}
+          <View className='info-row'>
+            <Text className='info-label'>{t('profile.password')}</Text>
+            {u.email ? (
+              <Text className='info-val link' onClick={() => this.setState(
+                this.state.pwSheet ? { pwSheet: null } : { pwSheet: { code: '', newPassword: '' } }
+              )}>
+                {t('profile.isSet')}{this.state.pwSheet ? ` · ${t('common.cancel')}` : ' ›'}
+              </Text>
+            ) : (
+              <Text className='info-val'>{t('profile.notSet')}</Text>
+            )}
+          </View>
           {isHerald && (
             <>
               {this.renderRow(t('profile.residence'), u.residence === 'japan' ? t('profile.resJapan') : u.residence === 'china' ? t('profile.resChina') : u.residence === 'overseas' ? t('profile.resOverseas') : t('profile.notSet'))}
@@ -880,22 +905,6 @@ export default class Profile extends Component<{}, State> {
           <Text className='action-item' onClick={() => Taro.navigateTo({ url: '/pages/legal/legal?doc=user-agreement' })}>
             📄 {t('profile.legalEntry')}
           </Text>
-          {/* 微信注册用户补绑邮箱 */}
-          {!u.email && (
-            <Text className='action-item' onClick={() => this.setState(
-              this.state.beSheet ? { beSheet: null } : { beSheet: { email: '', code: '', password: '' } }
-            )}>
-              📧 {t('profile.bindEmail')}{this.state.beSheet ? ` · ${t('common.cancel')}` : ''}
-            </Text>
-          )}
-          {/* 已绑定邮箱的用户可修改密码 */}
-          {!!u.email && (
-            <Text className='action-item' onClick={() => this.setState(
-              this.state.pwSheet ? { pwSheet: null } : { pwSheet: { code: '', newPassword: '' } }
-            )}>
-              🔐 {t('profile.changePassword')}{this.state.pwSheet ? ` · ${t('common.cancel')}` : ''}
-            </Text>
-          )}
           {!u.is_onboarded && <Text className='action-item primary' onClick={this.goOnboard}>{t('profile.finishOnboard')}</Text>}
           {!roles.includes('BRAND') && roles.includes('HERALD') && (
             <Text className='action-item' onClick={this.addBrandRole}>{t('profile.enableBrand')}</Text>

@@ -24,7 +24,7 @@ def fe_calls():
 def server_routes():
     idx = open(f'{ROOT}/herix-server/src/index.ts').read()
     prefix = dict((m.group(2), m.group(1)) for m in re.finditer(r"app\.use\('(/api[^']*)',\s*(\w+)\)", idx))
-    imports = dict(re.findall(r"import \{ (\w+) \} from '\./routes/(\w+)'", idx))
+    imports = dict(re.findall(r"import \{ (\w+) \} from '\./routes/([\w-]+)'", idx))
     routes = set()
     for m in re.finditer(r"app\.(get|post|patch|put|delete)\('(/api[^']*)'", idx):
         routes.add((m.group(1).upper(), re.sub(r":\w+", ":x", m.group(2)).replace('/api', '', 1)))

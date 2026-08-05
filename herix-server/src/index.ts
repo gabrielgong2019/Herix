@@ -159,7 +159,9 @@ app.get('/invite/:code', async (req, res) => {
             at.share_intro,
             bp.company_name as brand_name, bp.logo_url as brand_logo_url,
             tt.invitee_benefit as invitee_benefit_tr,
-            tt.conversion_criteria_json as conversion_criteria_tr
+            tt.conversion_criteria_json as conversion_criteria_tr,
+            tt.title as title_tr,
+            tt.service_name as service_name_tr
      FROM ambassador_tasks at
      JOIN tasks t ON t.id = at.task_id
      LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
@@ -192,19 +194,21 @@ app.get('/invite/:code', async (req, res) => {
 
   // 有翻译时覆盖 invitee_benefit
   const inviteeBenefit = row.invitee_benefit_tr || row.invitee_benefit;
+  // 标题与服务名同样取翻译（2026-08-05：此前邀请页只有 invitee_benefit/转化条件本地化）
+  const title = row.title_tr || row.title;
 
   // 服务 LOGO 优先用 service_logo_url，没有再用品牌 logo
   const logoUrl = row.service_logo_url || row.brand_logo_url;
   // 品牌/服务显示名：任务填写的 service_name > 商家公司名
-  const displayBrandName = row.service_name || row.brand_name;
+  const displayBrandName = row.service_name_tr || row.service_name || row.brand_name;
   // 一句话：赫使自定义文案 > 任务标题（不用 description 避免内部细节泄漏）
-  const oneliner = row.share_intro || row.title;
+  const oneliner = row.share_intro || title;
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!DOCTYPE html><html lang="${locale}"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(row.title)} — Herix 邀请</title>
+<title>${esc(title)} — Herix 邀请</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;font-size:14px}

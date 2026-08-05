@@ -32,11 +32,15 @@ interface State {
   methods: any[];
   /** 服务端费用预览（阶梯手续费 + 跨境锁价汇率） */
   feeInfo: any;
+  /** 费用预览失败信息（如 AMOUNT_TOO_LOW 时带 fee，用于禁用按钮并提示差额） */
+  feeErr: { code?: string; fee?: number } | null;
   selMethodId: string;
   amount: string;
   submitting: boolean;
-  minAmount: number; // 后端下发的最低提现额(platform_settings), 兜底1000
 }
+
+// 2026-08 微信审核：取消最低提现门槛。唯一下限是算术性的"到手金额 > 0"
+// （提现金额须大于手续费），由服务端 AMOUNT_TOO_LOW 裁决，前端据此禁用提交。
 
 export default class Withdraw extends Component<{}, State> {
   state: State = {
@@ -45,10 +49,10 @@ export default class Withdraw extends Component<{}, State> {
     balance: {},
     methods: [],
     feeInfo: null,
+    feeErr: null,
     selMethodId: '',
     amount: '',
     submitting: false,
-    minAmount: 1000,
   };
 
   componentDidShow() {
@@ -68,7 +72,6 @@ export default class Withdraw extends Component<{}, State> {
         balance: bal || {},
         methods: list,
         selMethodId: this.state.selMethodId || (list[0]?.id ?? ''),
-        minAmount: Number(bal?.withdrawalMin) || 1000,
         loading: false,
       });
     } catch (err) {
@@ -85,15 +88,16 @@ export default class Withdraw extends Component<{}, State> {
   scheduleFeeRefresh = () => {
     if (this.feeTimer) clearTimeout(this.feeTimer);
     this.feeTimer = setTimeout(async () => {
-      const { amount, methods, selMethodId, minAmount } = this.state;
+      const { amount, methods, selMethodId } = this.state;
       const amt = parseFloat(amount) || 0;
       const sel = methods.find(m => m.id === selMethodId) || methods[0];
-      if (!sel || amt < minAmount) { this.setState({ feeInfo: null }); return; }
+      if (!sel || amt <= 0) { this.setState({ feeInfo: null, feeErr: null }); return; }
       try {
         const info = await walletApi.withdrawalInfo(amt, sel.id);
-        this.setState({ feeInfo: info });
-      } catch {
-        this.setState({ feeInfo: null });
+        this.setState({ feeInfo: info, feeErr: null });
+      } catch (err: any) {
+        // AMOUNT_TOO_LOW 等：服务端 body 里带 code/fee（ApiError.data）
+        this.setState({ feeInfo: null, feeErr: err?.data || {} });
       }
     }, 400);
   };
@@ -111,10 +115,6 @@ export default class Withdraw extends Component<{}, State> {
       return;
     }
     const amt = parseFloat(amount) || 0;
-    if (amt < this.state.minAmount) {
-      Taro.showToast({ title: t('withdraw.errMin', { min: fmt(this.state.minAmount) }), icon: 'none' });
-      return;
-    }
     this.setState({ submitting: true });
     try {
       // ⚠️ herix.html 新版调 POST /wallet/withdraw（method_id+amount），但后端尚未实现
@@ -127,16 +127,42 @@ export default class Withdraw extends Component<{}, State> {
         methodId: sel.id,  // 服务端据此定收款国 → 阶梯/汇率规则
         accountDetails: detail || {},
       });
-      Taro.showToast({ title: t('withdraw.success'), icon: 'success' });
-      setTimeout(() => Taro.navigateBack(), 800);
+      // icon:'none' 才能完整显示长文案（success 图标模式下 title 超 7 字被截断）
+      Taro.showToast({ title: t('withdraw.success'), icon: 'none', duration: 2500 });
+      setTimeout(() => Taro.navigateBack(), 1600);
     } catch (err: any) {
       Taro.showToast({ title: err?.message || t('withdraw.failed'), icon: 'none' });
       this.setState({ submitting: false });
     }
   };
 
+  /** 提现规则卡（无门槛版）：空态与主路径共用同一份 */
+  renderRules = () => (
+    <View className='rules-card'>
+      <Text className='rules-title'>{t('withdraw.rulesTitle')}</Text>
+      <View className='rules-row'>
+        <Text className='rules-label'>{t('withdraw.rulesDaily')}</Text>
+        <Text className='rules-val'>{t('withdraw.rulesDailyVal')}</Text>
+      </View>
+      <View className='rules-row'>
+        <Text className='rules-label'>{t('withdraw.rulesProcess')}</Text>
+        <Text className='rules-val'>{t('withdraw.rulesProcessVal')}</Text>
+      </View>
+      <View className='rules-row'>
+        <Text className='rules-label'>{t('withdraw.rulesArrival')}</Text>
+        <Text className='rules-val'>{t('withdraw.rulesArrivalVal')}</Text>
+      </View>
+      <View className='rules-row'>
+        <Text className='rules-label'>{t('withdraw.rulesFee')}</Text>
+        <Text className='rules-val'>{t('withdraw.rulesFeeVal')}</Text>
+      </View>
+      {/* 备注：无起提门槛，唯一限制是金额需大于手续费（到手 > 0），否则无法提交 */}
+      <Text className='rules-note'>{t('withdraw.rulesFeeNote')}</Text>
+    </View>
+  );
+
   render() {
-    const { loading, loggedIn, balance: bal, methods, selMethodId, amount, submitting, minAmount } = this.state;
+    const { loading, loggedIn, balance: bal, methods, selMethodId, amount, submitting, feeErr } = this.state;
 
     if (!loggedIn) {
       return (
@@ -167,29 +193,7 @@ export default class Withdraw extends Component<{}, State> {
           <Text className='avail-line'>
             {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
           </Text>
-          <View className='rules-card'>
-            <Text className='rules-title'>{t('withdraw.rulesTitle')}</Text>
-            <View className='rules-row'>
-              <Text className='rules-label'>{t('withdraw.rulesMin')}</Text>
-              <Text className='rules-val'>¥{fmt(minAmount)}</Text>
-            </View>
-            <View className='rules-row'>
-              <Text className='rules-label'>{t('withdraw.rulesDaily')}</Text>
-              <Text className='rules-val'>{t('withdraw.rulesDailyVal')}</Text>
-            </View>
-            <View className='rules-row'>
-              <Text className='rules-label'>{t('withdraw.rulesProcess')}</Text>
-              <Text className='rules-val'>{t('withdraw.rulesProcessVal')}</Text>
-            </View>
-            <View className='rules-row'>
-              <Text className='rules-label'>{t('withdraw.rulesArrival')}</Text>
-              <Text className='rules-val'>{t('withdraw.rulesArrivalVal')}</Text>
-            </View>
-            <View className='rules-row'>
-              <Text className='rules-label'>{t('withdraw.rulesFee')}</Text>
-              <Text className='rules-val'>{t('withdraw.rulesFeeVal')}</Text>
-            </View>
-          </View>
+          {this.renderRules()}
           <View className='no-method'>
             <Text className='nm-icon'>💳</Text>
             <Text className='nm-title'>{t('withdraw.noMethod')}</Text>
@@ -204,16 +208,18 @@ export default class Withdraw extends Component<{}, State> {
 
     const sel = methods.find(m => m.id === selMethodId) || methods[0];
     const amt = parseFloat(amount) || 0;
-    const valid = amt >= minAmount && amt <= avail;
     const fi = this.state.feeInfo;
     const fee = fi ? fi.fee : null;
     const net = fi ? fi.netAmount : null;
+    // 可提交 = 服务端费用预览通过（隐含 净额>0）且不超余额。无门槛：唯一下限是 AMOUNT_TOO_LOW
+    const valid = amt > 0 && amt <= avail && net !== null && net > 0;
     const eta = t(sel ? METHOD_ETA_KEYS[sel.type] || 'withdraw.etaBank' : 'withdraw.etaBank');
 
     let btnText = t('withdraw.btnEnter');
     if (amt > avail) btnText = t('withdraw.btnExceed');
-    else if (valid && net !== null) btnText = t('withdraw.btnConfirm', { n: fmt(net) });
-    else if (valid) btnText = t('withdraw.btnEnter');
+    else if (amt > 0 && feeErr?.code === 'AMOUNT_TOO_LOW')
+      btnText = feeErr.fee != null ? t('withdraw.btnFeeLow', { fee: fmt(feeErr.fee) }) : t('withdraw.btnFeeLowNoFee');
+    else if (valid) btnText = t('withdraw.btnConfirm', { n: fmt(net) });
 
     return (
       <View className='withdraw-page'>
@@ -222,37 +228,8 @@ export default class Withdraw extends Component<{}, State> {
           {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
         </Text>
 
-        {/* 提现规则（审核要求：明确展示规则） */}
-        <View className='rules-card'>
-          <Text className='rules-title'>{t('withdraw.rulesTitle')}</Text>
-          <View className='rules-row'>
-            <Text className='rules-label'>{t('withdraw.rulesMin')}</Text>
-            <Text className='rules-val'>¥{fmt(minAmount)}</Text>
-          </View>
-          <View className='rules-row'>
-            <Text className='rules-label'>{t('withdraw.rulesDaily')}</Text>
-            <Text className='rules-val'>{t('withdraw.rulesDailyVal')}</Text>
-          </View>
-          <View className='rules-row'>
-            <Text className='rules-label'>{t('withdraw.rulesProcess')}</Text>
-            <Text className='rules-val'>{t('withdraw.rulesProcessVal')}</Text>
-          </View>
-          <View className='rules-row'>
-            <Text className='rules-label'>{t('withdraw.rulesArrival')}</Text>
-            <Text className='rules-val'>{t('withdraw.rulesArrivalVal')}</Text>
-          </View>
-          <View className='rules-row'>
-            <Text className='rules-label'>{t('withdraw.rulesFee')}</Text>
-            <Text className='rules-val'>{t('withdraw.rulesFeeVal')}</Text>
-          </View>
-        </View>
-
-        {/* 余额不足门槛：提前告知用户当前无法提现及原因 */}
-        {avail < minAmount && (
-          <View className='below-min-notice'>
-            <Text>{t('withdraw.belowMinNotice', { avail: fmt(avail), min: fmt(minAmount) })}</Text>
-          </View>
-        )}
+        {/* 提现规则（审核要求：明确展示规则；无起提门槛） */}
+        {this.renderRules()}
 
         {/* 收款方式横向选择 */}
         <Text className='field-label'>{t('wallet.methods')}</Text>
@@ -298,7 +275,7 @@ export default class Withdraw extends Component<{}, State> {
             {t('withdraw.all')}
           </Text>
         </View>
-        <Text className='amount-hint'>{t('withdraw.minHint', { min: fmt(minAmount) })}</Text>
+        <Text className='amount-hint'>{t('withdraw.minHint')}</Text>
 
         {/* 费用预览 */}
         {valid && (

@@ -95,9 +95,12 @@ export interface WithdrawalFeeInfo {
 /** 计算提现费用（2026-07-17 重写：payout_fee_rules 阶梯 + 跨境汇率加点，申请时锁价）。
  *  查无规则回退旧 flat 逻辑（兼容未配置的目的国）。 */
 export async function calcWithdrawalFee(requestAmount: number, toCountryRaw?: string | null): Promise<WithdrawalFeeInfo> {
-  const minAmt = Number(await getSetting('withdrawal_min_amount')) || 1000;
+  // 0 = 无起提门槛（2026-08 微信审核要求取消门槛，改为"到手>0"的算术下限）。
+  // 不能写 `|| 1000`：配置 0 会被 falsy 兜底顶回 1000。
+  const minRaw = Number(await getSetting('withdrawal_min_amount'));
+  const minAmt = Number.isFinite(minRaw) ? minRaw : 1000;
   const mode   = await getSetting('withdrawal_schedule_mode');
-  if (requestAmount < minAmt) {
+  if (minAmt > 0 && requestAmount < minAmt) {
     throw Object.assign(new Error(`最低提现金额 ¥${minAmt}`), { code: 'MIN_AMOUNT' });
   }
   const payoutDate = mode === 'FIXED_DATES' ? nextPayoutDate() : 'immediate';
@@ -118,7 +121,8 @@ export async function calcWithdrawalFee(requestAmount: number, toCountryRaw?: st
     fee = type === 'NONE' ? 0 : Number(await getSetting('withdrawal_fee_flat')) || 500;
   }
   if (requestAmount <= fee) {
-    throw Object.assign(new Error(`提现金额须高于手续费 ¥${fee}`), { code: 'AMOUNT_TOO_LOW' });
+    // fee 挂在异常上：前端据此显示"金额需大于手续费 ¥X"并禁用提交按钮
+    throw Object.assign(new Error(`提现金额须高于手续费 ¥${fee}`), { code: 'AMOUNT_TOO_LOW', fee });
   }
   const netAmount = requestAmount - fee;
 

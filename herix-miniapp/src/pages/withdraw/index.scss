@@ -63,16 +63,14 @@
   color: var(--text-primary);
   text-align: right;
 }
-
-.below-min-notice {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  border-radius: 16px;
-  padding: 20px 24px;
-  margin-bottom: 32px;
-  font-size: 24px;
-  color: #c2410c;
+.rules-note {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
   line-height: 1.6;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .field-label {

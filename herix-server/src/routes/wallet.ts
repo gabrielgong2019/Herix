@@ -40,7 +40,9 @@ walletRouter.get('/balance', async (req: Request, res: Response) => {
   }
 
   // 最低提现金额下发给前端(单一事实源: platform_settings.withdrawal_min_amount)
-  const withdrawalMin = Number(await getSetting('withdrawal_min_amount')) || 1000;
+  // 0 = 无门槛,不能写 `|| 1000`(falsy 兜底会把 0 顶回 1000)
+  const minRaw = Number(await getSetting('withdrawal_min_amount'));
+  const withdrawalMin = Number.isFinite(minRaw) ? minRaw : 1000;
 
   res.json({
     available: bal.available,
@@ -314,7 +316,8 @@ walletRouter.get('/withdrawal-info', async (req: Request, res: Response) => {
         : {}),
     });
   } catch (err: any) {
-    res.status(400).json({ error: err.message, code: err.code });
+    // AMOUNT_TOO_LOW 时带 fee：前端显示"金额需大于手续费 ¥X"并禁用提交
+    res.status(400).json({ error: err.message, code: err.code, ...(err.fee != null ? { fee: err.fee } : {}) });
   }
 });
 
@@ -342,7 +345,7 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
     const toCountry = await resolveToCountry(userId, methodId ? String(methodId) : undefined);
     feeInfo = await calcWithdrawalFee(amt, toCountry);
   } catch (err: any) {
-    return res.status(400).json({ error: err.message, code: err.code });
+    return res.status(400).json({ error: err.message, code: err.code, ...(err.fee != null ? { fee: err.fee } : {}) });
   }
 
   // 预检仅为友好报错；最终裁决在事务内的 freezeWithdrawal（余额守卫）

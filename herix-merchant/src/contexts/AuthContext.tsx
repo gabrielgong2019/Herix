@@ -15,11 +15,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<MerchantUser | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const fetchMe = async () => {
+    const r = await authApi.me()
+    const data = r.data as MerchantUser & { _refreshedToken?: string }
+    if (data._refreshedToken) {
+      localStorage.setItem('herix-merchant-token', data._refreshedToken)
+      delete data._refreshedToken
+    }
+    setUser(data)
+    return data
+  }
+
   useEffect(() => {
     const token = localStorage.getItem('herix-merchant-token')
     if (!token) { setLoading(false); return }
-    authApi.me()
-      .then((r) => setUser(r.data))
+    fetchMe()
       .catch(() => localStorage.removeItem('herix-merchant-token'))
       .finally(() => setLoading(false))
   }, [])
@@ -36,8 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const refreshUser = async () => {
-    const r = await authApi.me()
-    setUser(r.data)
+    await fetchMe()
   }
 
   return <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>{children}</AuthContext.Provider>

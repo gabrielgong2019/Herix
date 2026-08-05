@@ -71,7 +71,10 @@ export default function Onboard() {
         isAgency,
         agreedToTerms: agreed,
       }),
-    onSuccess: async () => {
+    onSuccess: async (res) => {
+      // 若后端检测到角色缺失，会随 onboard 响应附带含 BRAND 的新 token，需立即更换存储
+      const newToken = (res?.data as any)?.token
+      if (newToken) localStorage.setItem('herix-merchant-token', newToken)
       await refreshUser()
       qc.invalidateQueries({ queryKey: ['merchant-profile'] })
       navigate('/tasks/new?from=onboard', { replace: true })

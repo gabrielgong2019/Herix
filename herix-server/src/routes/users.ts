@@ -165,10 +165,24 @@ usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Respon
   const existingBp = await findOne('SELECT user_id FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
   if (!existingBp) {
     await insert('brand_profiles', { user_id: req.user!.userId, ...data });
-    return res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION });
+  } else {
+    await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
   }
-  await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
-  res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION });
+
+  // 无论注册时走哪条路径（赫使端/邮箱直注册），onboard 完成后必须确保 users.roles 含 BRAND。
+  // 此前仅依赖 add-role 端点添加角色，但向导流程跳过了 add-role，导致入驻后仍无 BRAND 角色。
+  const userRow = await findOne<any>('SELECT role, roles FROM users WHERE id = ?', [req.user!.userId]);
+  let currentRoles: string[] = [];
+  try { currentRoles = JSON.parse(userRow?.roles || '[]'); } catch { currentRoles = [userRow?.role]; }
+  if (!currentRoles.includes(userRow?.role)) currentRoles.unshift(userRow?.role);
+  let token: string | undefined;
+  if (!currentRoles.includes('BRAND')) {
+    const newRoles = [...currentRoles, 'BRAND'];
+    await update('users', { roles: JSON.stringify(newRoles) }, 'id = ?', [req.user!.userId]);
+    token = signToken({ userId: req.user!.userId, role: userRow?.role, roles: newRoles });
+  }
+
+  res.json({ success: true, currency: 'JPY', agreedAt: data.agreed_at, agreedVersion: AGREEMENT_VERSION, ...(token ? { token } : {}) });
 });
 
 /** GET /api/users/heralds — 赫使列表 (公开) */

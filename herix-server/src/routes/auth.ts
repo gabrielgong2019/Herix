@@ -419,6 +419,15 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
     user.commission_rate = rate;
   }
 
+  // 若 DB 中的 roles 与 JWT 里的 roles 不一致（常见于向导流程漏加角色），
+  // 随 /me 响应附带修复后的 token，前端收到后静默替换 localStorage，下次请求即生效。
+  const jwtRoles: string[] = req.user!.roles || [req.user!.role];
+  const dbRoles: string[] = user.roles || [];
+  const rolesOutOfSync = dbRoles.some((r: string) => !jwtRoles.includes(r));
+  if (rolesOutOfSync) {
+    user._refreshedToken = signToken({ userId: user.id, role: user.role, roles: dbRoles });
+  }
+
   res.json(user);
 });
 

@@ -86,7 +86,7 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
           <Input
             className='ob-input'
             style={{ flex: 1, margin: 0 }}
-            placeholder={t('wx.placeholder')}
+            placeholder={t(this.state.isPhone ? 'wx.phonePh' : 'wx.wechatPh')}
             value={value}
             onInput={e => this.handleInput(e.detail.value)}
           />

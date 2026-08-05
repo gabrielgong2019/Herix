@@ -244,6 +244,19 @@ export default class TaskDetail extends Component<{ id: string }, State> {
   }
 
   closeReqModal = () => {
+    const hasInput = Object.values(this.state.reqFormValues).some(v =>
+      v && (v.accountId || v.url || v.followers != null)
+    );
+    if (hasInput) {
+      Taro.showModal({
+        title: t('req.cancelConfirmTitle'),
+        content: t('req.cancelConfirmBody'),
+        confirmText: t('req.cancelConfirmOk'),
+        cancelText: t('req.cancelConfirmNo'),
+        success: (res) => { if (res.confirm) this.setState({ showReqModal: false }); },
+      });
+      return;
+    }
     this.setState({ showReqModal: false });
   };
 
@@ -282,6 +295,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
       await ambassador.updateProfile({ socialPlatforms: merged });
       const updated = await getAmbassadorProfile({ force: true });
       this.setState({ ambassadorProfile: updated });
+      Taro.showToast({ title: t('req.saved'), icon: 'success' });
       if (this.state.task?.require_proposal) {
         this.setState({ showReqModal: false, proposalSheetOpen: true, proposalText: '', proposalLinks: [], proposalLinkInput: '' });
       } else {
@@ -381,6 +395,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     if (!showReqModal) return null;
 
     const hasMissing = reqFailures.some(f => f.type === 'MISSING');
+    const hasInput = Object.values(reqFormValues).some(v => v && (v.accountId || v.url || v.followers != null));
 
     return (
       <View className='req-modal-overlay'>
@@ -388,40 +403,46 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           <Text className='req-modal-title'>{t('task.reqModalTitle')}</Text>
           <Text className='req-modal-sub'>{t('task.reqModalSub')}</Text>
 
-          {reqFailures.map(f => {
-            const p = platformById(f.platformId);
-            if (f.type === 'INSUFFICIENT') {
-              return (
-                <View key={f.platformId} className='req-fail-row req-fail-hard'>
-                  <Text className='req-fail-icon'>{p.icon}</Text>
-                  <View>
-                    <Text className='req-fail-name req-fail-name-hard'>{t('task.reqInsufficientName', { name: p.name })}</Text>
-                    <Text className='req-fail-desc req-fail-desc-hard'>
-                      {t('task.reqInsufficientDesc', { c: f.current.toLocaleString(), r: f.required.toLocaleString() })}
-                    </Text>
+          <View className='req-form-scroll'>
+            {reqFailures.map(f => {
+              const p = platformById(f.platformId);
+              if (f.type === 'INSUFFICIENT') {
+                return (
+                  <View key={f.platformId} className='req-fail-row req-fail-hard'>
+                    <Text className='req-fail-icon'>{p.icon}</Text>
+                    <View>
+                      <Text className='req-fail-name req-fail-name-hard'>{t('task.reqInsufficientName', { name: p.name })}</Text>
+                      <Text className='req-fail-desc req-fail-desc-hard'>
+                        {t('task.reqInsufficientDesc', { c: f.current.toLocaleString(), r: f.required.toLocaleString() })}
+                      </Text>
+                    </View>
                   </View>
+                );
+              }
+              return (
+                <View key={f.platformId} className='req-account-card'>
+                  <PlatformAccountInput
+                    platformId={f.platformId}
+                    existingValue={reqFormValues[f.platformId]}
+                    onChange={val => this.handleReqFieldChange(f.platformId, val)}
+                    required
+                    countRequired
+                  />
                 </View>
               );
-            }
-            return (
-              <View key={f.platformId} className='req-fail-row req-fail-soft'>
-                <PlatformAccountInput
-                  platformId={f.platformId}
-                  existingValue={reqFormValues[f.platformId]}
-                  onChange={val => this.handleReqFieldChange(f.platformId, val)}
-                />
-              </View>
-            );
-          })}
+            })}
+          </View>
 
-          {reqCanRetry && hasMissing ? (
-            <Button className='btn-primary' loading={reqSubmitting} onClick={this.submitReqModal}>
-              {t('task.saveAndApply')}
+          <View className='req-footer'>
+            <Button className='btn-outline req-btn-secondary' onClick={this.closeReqModal}>
+              {t('common.cancel')}
             </Button>
-          ) : null}
-          <Button className='btn-outline' onClick={this.closeReqModal}>
-            {t('common.cancel')}
-          </Button>
+            {reqCanRetry && hasMissing ? (
+              <Button className='btn-primary req-btn-primary' loading={reqSubmitting} disabled={!hasInput} onClick={this.submitReqModal}>
+                {t('task.saveAndApply')}
+              </Button>
+            ) : null}
+          </View>
         </View>
       </View>
     );

@@ -465,11 +465,12 @@
 .req-modal-card {
   width: 640px;
   max-height: 80vh;
-  overflow-y: auto;
   background: var(--card-bg);
   border-radius: var(--radius);
   padding: 40px 32px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .req-modal-title {
@@ -526,6 +527,37 @@
 }
 
 .req-fail-desc-hard { color: #ef4444; }
+
+.req-form-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.req-account-card {
+  background: #fafafa;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.req-footer {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding-top: 24px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.req-btn-primary {
+  flex: 1;
+}
+
+.req-btn-secondary {
+  flex: 1;
+}
 
 // ── 任务规格网格 ──────────────────────────────────────────────
 

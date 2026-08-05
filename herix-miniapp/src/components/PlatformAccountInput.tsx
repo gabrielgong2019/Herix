@@ -2,7 +2,6 @@ import { Component } from 'react';
 import { View, Text, Input } from '@tarojs/components';
 import WechatOrPhoneInput, { validateWechatOrPhone } from './WechatOrPhoneInput';
 import { platformById } from '../utils/platforms';
-import { DEFAULT_FRIEND_COUNT } from '../utils/platformEntry';
 import './PlatformAccountInput.scss';
 import { t } from '../utils/i18n';
 
@@ -37,7 +36,7 @@ export default class PlatformAccountInput extends Component<Props, State> {
       rawValue: existing?.accountId || existing?.url || '',
       followersText: existing?.followers != null
         ? String(existing.followers)
-        : (platformById(props.platformId).countLabel === 'friends' ? String(DEFAULT_FRIEND_COUNT) : ''),
+        : '',
     };
   }
 
@@ -87,9 +86,13 @@ export default class PlatformAccountInput extends Component<Props, State> {
 
     return (
       <View className='platform-account-input'>
-        <Text style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px', display: 'block' }}>
-          {platform.icon} {platform.name} {platform.inputType === 'id' ? t('pai.accountId') : t('pai.homeLink')}
-        </Text>
+        <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+          <Text style={{ fontSize: '13px', fontWeight: 600 }}>
+            {platform.icon} {platform.name}{' '}
+            {platformId === 'wechat' ? t('pai.wechatTitle') : (platform.inputType === 'id' ? t('pai.accountOrPhone') : t('pai.homeLink'))}
+          </Text>
+          {platformId === 'wechat' && <Text style={{ fontSize: '11px', color: '#9ca3af' }}>{t('pai.wechatHint')}</Text>}
+        </View>
         {platformId === 'wechat' ? (
           <WechatOrPhoneInput value={rawValue} onChange={this.handleRawChange} />
         ) : (
@@ -101,17 +104,20 @@ export default class PlatformAccountInput extends Component<Props, State> {
             onInput={e => this.handleRawChange(e.detail.value)}
           />
         )}
+        <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
+          <Text style={{ fontSize: '12px', fontWeight: 600 }}>
+            {t(platform.countLabel === 'friends' ? 'pai.friendsLabel' : 'pai.followersLabel')}
+          </Text>
+          <Text style={{ fontSize: '11px', color: '#9ca3af' }}>{t('pai.countHint')}</Text>
+        </View>
         <Input
           className='ob-input'
           style={{ margin: '6px 0 0', fontSize: '13px' }}
           type='number'
-          placeholder={t(platform.countLabel === 'friends' ? 'pai.friends' : 'pai.followers')}
+          placeholder={t(platform.countLabel === 'friends' ? 'pai.friendsPlaceholder' : 'pai.followersPlaceholder')}
           value={followersText}
           onInput={e => this.handleFollowersChange(e.detail.value)}
         />
-        {platform.countLabel === 'friends' && (
-          <Text style={{ fontSize: '11px', color: '#9ca3af', marginTop: '4px', display: 'block' }}>{t('pai.friendsHint')}</Text>
-        )}
       </View>
     );
   }

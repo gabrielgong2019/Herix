@@ -664,7 +664,7 @@
   "wx.continuePhone": "Tiếp tục nhập (11 số)",
   "wx.phoneInvalid": "Số điện thoại không đúng định dạng",
   "wx.phoneInvalidFull": "Số điện thoại không đúng định dạng (cần 11 số, bắt đầu bằng 1)",
-  "wx.placeholder": "WeChat ID hoặc số điện thoại",
+  "wx.placeholder": "Nhập WeChat ID hoặc số điện thoại đã liên kết",
   "wx.wechatLen": "WeChat ID cần 6-20 ký tự",
   "wx.wechatMin": "WeChat ID ít nhất 6 ký tự",
   "wx.wechatOk": "✓ WeChat ID",
@@ -718,5 +718,13 @@
   "index.searchPh": "Tìm kiếm nhiệm vụ…",
   "withdraw.rulesFeeNote": "Không có mức rút tối thiểu. Số tiền rút phải lớn hơn phí mới gửi được; số dư không hết hạn, có thể tích lũy và rút bất cứ lúc nào.",
   "withdraw.btnFeeLow": "Số tiền phải lớn hơn phí ¥{fee}",
-  "withdraw.btnFeeLowNoFee": "Số tiền phải lớn hơn phí"
+  "withdraw.btnFeeLowNoFee": "Số tiền phải lớn hơn phí",
+  "pai.wechatTitle": "Liên hệ (WeChat ID / số điện thoại)",
+  "pai.accountOrPhone": "ID tài khoản / số điện thoại",
+  "pai.wechatHint": "Chỉ cần một trong hai",
+  "pai.friendsLabel": "Số bạn bè (khoảng)",
+  "pai.followersLabel": "Số người theo dõi (khoảng)",
+  "pai.countHint": "Chỉ dùng để khớp nhiệm vụ — ước lượng là được",
+  "pai.friendsPlaceholder": "khoảng 50",
+  "pai.followersPlaceholder": "vd: 5000"
 }

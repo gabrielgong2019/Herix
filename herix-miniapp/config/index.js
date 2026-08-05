@@ -31,6 +31,11 @@ export default {
     publicPath: '/app/', // H5 挂在 herix.huaxuex.com/app 路径下（子域名方案需付费多级证书，弃用）
     staticDirectory: 'static',
     template: 'src/index.html',
+    // 内容哈希文件名：发布即换 URL，绕开浏览器/Cloudflare 对未哈希 app.js 的缓存（2026-08-05）
+    webpackChain(chain) {
+      chain.output.filename('js/[name].[contenthash:8].js');
+      chain.output.chunkFilename('js/[name].[contenthash:8].js');
+    },
     router: { mode: 'hash' },
     devServer: {
       port: 10086,

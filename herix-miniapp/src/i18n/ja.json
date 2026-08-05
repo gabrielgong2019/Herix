@@ -213,7 +213,6 @@
   "wx.phoneInvalid": "電話番号が正しくありません",
   "wx.wechatOk": "✓ WeChat ID",
   "wx.wechatMin": "WeChat IDは6文字以上です",
-  "wx.autoDetect": "WeChat IDまたは電話番号のどちらかを入力",
   "pai.accountId": "— アカウントID",
   "pai.homeLink": "— プロフィールURL",
   "pai.followers": "フォロワー数",
@@ -1264,12 +1263,11 @@
   "withdraw.rulesFeeNote": "最低出金額はありません。出金額が手数料を上回る場合のみ申請できます。残高は失効せず、いつでも累積して出金できます。",
   "withdraw.btnFeeLow": "手数料 ¥{fee} を上回る金額が必要",
   "withdraw.btnFeeLowNoFee": "手数料を上回る金額が必要",
-  "pai.wechatTitle": "連絡先（WeChat ID / 電話番号）",
+  "pai.wechatTitle": "連絡先",
   "pai.accountOrPhone": "アカウントID / 電話番号",
-  "pai.wechatHint": "どちらか一方でOK",
   "pai.friendsLabel": "友だち数（およそ）",
   "pai.followersLabel": "フォロワー数（およそ）",
   "pai.countHint": "タスクマッチングにのみ使用。おおよその数でOK",
-  "pai.friendsPlaceholder": "約50",
-  "pai.followersPlaceholder": "例: 5000"
+  "pai.friendsPlaceholder": "50",
+  "pai.followersPlaceholder": "5000"
 }

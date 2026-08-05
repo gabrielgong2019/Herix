@@ -660,7 +660,6 @@
   "withdraw.rulesArrivalVal": "Sau xử lý thứ Sáu: chuyển khoản ngân hàng 1–5 ngày làm việc; Alipay/WeChat/PayPal trong 24 giờ",
   "withdraw.rulesFee": "Phí dịch vụ",
   "withdraw.rulesFeeVal": "Nội địa ¥200 / Quốc tế từ ¥400",
-  "wx.autoDetect": "Nhập WeChat ID hoặc số điện thoại",
   "wx.continuePhone": "Tiếp tục nhập (11 số)",
   "wx.phoneInvalid": "Số điện thoại không đúng định dạng",
   "wx.phoneInvalidFull": "Số điện thoại không đúng định dạng (cần 11 số, bắt đầu bằng 1)",
@@ -719,12 +718,11 @@
   "withdraw.rulesFeeNote": "Không có mức rút tối thiểu. Số tiền rút phải lớn hơn phí mới gửi được; số dư không hết hạn, có thể tích lũy và rút bất cứ lúc nào.",
   "withdraw.btnFeeLow": "Số tiền phải lớn hơn phí ¥{fee}",
   "withdraw.btnFeeLowNoFee": "Số tiền phải lớn hơn phí",
-  "pai.wechatTitle": "Liên hệ (WeChat ID / số điện thoại)",
+  "pai.wechatTitle": "Liên hệ",
   "pai.accountOrPhone": "ID tài khoản / số điện thoại",
-  "pai.wechatHint": "Chỉ cần một trong hai",
   "pai.friendsLabel": "Số bạn bè (khoảng)",
   "pai.followersLabel": "Số người theo dõi (khoảng)",
   "pai.countHint": "Chỉ dùng để khớp nhiệm vụ — ước lượng là được",
-  "pai.friendsPlaceholder": "khoảng 50",
-  "pai.followersPlaceholder": "vd: 5000"
+  "pai.friendsPlaceholder": "50",
+  "pai.followersPlaceholder": "5000"
 }

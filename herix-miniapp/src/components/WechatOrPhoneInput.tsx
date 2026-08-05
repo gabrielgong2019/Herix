@@ -52,6 +52,7 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
 
   renderHint() {
     const val = (this.props.value || '').trim();
+    if (!val) return null;
     if (this.state.isPhone) {
       if (val.length < 11) return { color: '#999', text: t('wx.continuePhone') };
       const ok = /^1[3-9]\d{9}$/.test(val);
@@ -59,7 +60,7 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
     }
     if (val.length >= 6) return { color: '#10b981', text: t('wx.wechatOk') };
     if (val.length > 0) return { color: '#ef4444', text: t('wx.wechatMin') };
-    return { color: '#999', text: t('wx.autoDetect') };
+    return null;
   }
 
   render() {
@@ -93,7 +94,7 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
             onInput={e => this.handleInput(e.detail.value)}
           />
         </View>
-        <Text style={{ fontSize: '11px', marginTop: '3px', color: hint.color }}>{hint.text}</Text>
+        {hint && <Text style={{ fontSize: '11px', marginTop: '3px', color: hint.color }}>{hint.text}</Text>}
       </View>
     );
   }

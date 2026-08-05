@@ -274,7 +274,6 @@
   "wx.phoneInvalid": "实时错误:手机号格式(短版)",
   "wx.wechatOk": "实时通过:识别为微信ID(带✓)",
   "wx.wechatMin": "实时提示:微信号太短",
-  "wx.autoDetect": "输入框下方默认提示：微信ID或手机号二选一",
   "pai.accountId": "平台名后的输入类型标注(带—):填账号ID",
   "pai.homeLink": "平台名后的输入类型标注(带—):填主页URL",
   "pai.followers": "粉丝数输入框占位(标注选填)",
@@ -1084,12 +1083,11 @@
   "withdraw.btnFeeLow": "提现按钮禁用态文案：金额不足以覆盖手续费，{fee}为当前方式的手续费",
   "withdraw.btnFeeLowNoFee": "提现按钮禁用态文案（手续费未知时的兜底）",
   "task.instantPayout": "任务详情页标签：商家资金已托管（原\"即时结算\"因审核要求改名）",
-  "pai.wechatTitle": "微信账号字段标题：联系方式（微信ID / 手机号）",
+  "pai.wechatTitle": "微信账号字段标题：联系方式（平台名前已含微信，不再重复）",
   "pai.accountOrPhone": "联系类平台账号字段标题（非微信）：账号 ID / 手机号",
-  "pai.wechatHint": "微信字段标题右侧小字：二选一即可",
   "pai.friendsLabel": "联系类平台数量字段标签：好友数（大约）",
   "pai.followersLabel": "内容平台数量字段标签：粉丝数（大约）",
   "pai.countHint": "数量字段标签行右侧提示：仅用于任务匹配，可填大致范围",
-  "pai.friendsPlaceholder": "好友数输入框占位示例（不预填）",
-  "pai.followersPlaceholder": "粉丝数输入框占位示例（不预填）"
+  "pai.friendsPlaceholder": "好友数输入框占位示例（纯数字）",
+  "pai.followersPlaceholder": "粉丝数输入框占位示例（纯数字）"
 }

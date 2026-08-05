@@ -91,7 +91,6 @@ export default class PlatformAccountInput extends Component<Props, State> {
             {platform.icon} {platform.name}{' '}
             {platformId === 'wechat' ? t('pai.wechatTitle') : (platform.inputType === 'id' ? t('pai.accountOrPhone') : t('pai.homeLink'))}
           </Text>
-          {platformId === 'wechat' && <Text style={{ fontSize: '11px', color: '#9ca3af' }}>{t('pai.wechatHint')}</Text>}
         </View>
         {platformId === 'wechat' ? (
           <WechatOrPhoneInput value={rawValue} onChange={this.handleRawChange} />
@@ -101,6 +100,8 @@ export default class PlatformAccountInput extends Component<Props, State> {
             style={{ margin: 0 }}
             placeholder={platform.placeholder}
             value={rawValue}
+            adjustPosition
+            cursorSpacing={20}
             onInput={e => this.handleRawChange(e.detail.value)}
           />
         )}
@@ -116,6 +117,8 @@ export default class PlatformAccountInput extends Component<Props, State> {
           type='number'
           placeholder={t(platform.countLabel === 'friends' ? 'pai.friendsPlaceholder' : 'pai.followersPlaceholder')}
           value={followersText}
+          adjustPosition
+          cursorSpacing={20}
           onInput={e => this.handleFollowersChange(e.detail.value)}
         />
       </View>

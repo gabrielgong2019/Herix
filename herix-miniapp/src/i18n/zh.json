@@ -213,7 +213,6 @@
   "wx.phoneInvalid": "手机号格式有误",
   "wx.wechatOk": "✓ 微信 ID",
   "wx.wechatMin": "微信ID至少6位",
-  "wx.autoDetect": "微信ID或手机号二选一",
   "pai.accountId": "— 账号 ID",
   "pai.homeLink": "— 主页链接",
   "pai.followers": "粉丝数",
@@ -1264,12 +1263,11 @@
   "withdraw.rulesFeeNote": "无最低提现额；提现金额需大于手续费方可提交，收益余额可累积随时提现。",
   "withdraw.btnFeeLow": "金额需大于手续费 ¥{fee}",
   "withdraw.btnFeeLowNoFee": "金额需大于手续费",
-  "pai.wechatTitle": "联系方式（微信ID / 手机号）",
+  "pai.wechatTitle": "联系方式",
   "pai.accountOrPhone": "账号 ID / 手机号",
-  "pai.wechatHint": "二选一即可",
   "pai.friendsLabel": "好友数（大约）",
   "pai.followersLabel": "粉丝数（大约）",
   "pai.countHint": "仅用于任务匹配，请放心填写大致范围",
-  "pai.friendsPlaceholder": "约 50",
-  "pai.followersPlaceholder": "如 5000"
+  "pai.friendsPlaceholder": "50",
+  "pai.followersPlaceholder": "5000"
 }

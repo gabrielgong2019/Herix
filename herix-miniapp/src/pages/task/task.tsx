@@ -709,8 +709,9 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         {/* 品牌卡 */}
         {(task.brand_logo_url || task.service_logo_url || task.brand_company_name) && (
           <View className='brand-card'>
-            {(task.service_logo_url || task.brand_logo_url)
-              ? <Image className='brand-logo' src={assetUrl(task.service_logo_url || task.brand_logo_url)} mode='aspectFill' />
+            {/* 该区域是商家品牌商标：默认品牌 LOGO，未上传时 fallback 到任务的产品/服务 LOGO（2026-08-05 定稿 B） */}
+            {(task.brand_logo_url || task.service_logo_url)
+              ? <Image className='brand-logo' src={assetUrl(task.brand_logo_url || task.service_logo_url)} mode='aspectFill' />
               : <View className='brand-logo brand-logo-placeholder' />}
             <View className='brand-info'>
               <Text className='brand-name'>{task.brand_company_name || task.creator_name}</Text>

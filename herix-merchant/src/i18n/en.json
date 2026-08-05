@@ -691,7 +691,12 @@
     "submitting": "Submitting…",
     "submitFailed": "Submission failed, please try again",
     "prev": "Back",
-    "next": "Next"
+    "next": "Next",
+    "logoLabel": "Brand logo",
+    "logoHint": "Optional — you can add it later in Settings",
+    "logoPh": "Not set",
+    "logoUpload": "Choose image",
+    "logoRemove": "Remove"
   },
   "partner": {
     "title": "Partner Tasks",

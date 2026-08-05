@@ -691,7 +691,12 @@
     "submitting": "제출 중…",
     "submitFailed": "제출에 실패했습니다. 다시 시도하세요",
     "prev": "이전",
-    "next": "다음"
+    "next": "다음",
+    "logoLabel": "브랜드 로고",
+    "logoHint": "건너뛸 수 있음. 나중에 설정에서 추가 가능",
+    "logoPh": "없음",
+    "logoUpload": "이미지 선택",
+    "logoRemove": "제거"
   },
   "partner": {
     "title": "파트너 태스크",

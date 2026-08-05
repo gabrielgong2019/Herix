@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { authApi } from '@/lib/api'
+import { authApi, settingsApi } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { Check } from 'lucide-react'
 
@@ -57,6 +57,14 @@ export default function Onboard() {
   const [billingEmail, setBillingEmail] = useState('')
   const [companyDesc, setCompanyDesc] = useState('')
   const [agreed, setAgreed] = useState(false)
+  const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState('')
+
+  function handleLogoFile(file: File | undefined) {
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
 
   const submitMut = useMutation({
     mutationFn: () =>
@@ -75,6 +83,10 @@ export default function Onboard() {
       // 若后端检测到角色缺失，会随 onboard 响应附带含 BRAND 的新 token，需立即更换存储
       const newToken = (res?.data as any)?.token
       if (newToken) localStorage.setItem('herix-merchant-token', newToken)
+      // 可选品牌 LOGO：入驻成功后异步上传，失败不阻塞（非必填字段）
+      if (logoFile) {
+        settingsApi.uploadBrandAsset('logo', logoFile).catch(() => {})
+      }
       await refreshUser()
       qc.invalidateQueries({ queryKey: ['merchant-profile'] })
       navigate('/tasks/new?from=onboard', { replace: true })
@@ -184,6 +196,37 @@ export default function Onboard() {
                   className="w-full px-3 py-2.5 rounded-xl text-sm outline-none resize-none"
                   style={inputStyle}
                 />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#374151' }}>
+                  {t('onboard.logoLabel')}{' '}
+                  <span className="text-xs font-normal" style={{ color: '#6b7280' }}>{t('onboard.logoHint')}</span>
+                </label>
+                <div className="flex items-center gap-3">
+                  {logoPreview ? (
+                    <img src={logoPreview} className="w-16 h-16 rounded-xl object-contain border" alt="logo" />
+                  ) : (
+                    <div
+                      className="w-16 h-16 rounded-xl border-dashed border flex items-center justify-center text-xs text-center px-1"
+                      style={{ borderColor: '#d1d5db', color: '#9ca3af' }}
+                    >
+                      {t('onboard.logoPh')}
+                    </div>
+                  )}
+                  <input type="file" accept="image/*" id="onboard-logo" className="hidden"
+                    onChange={(e) => handleLogoFile(e.target.files?.[0])} />
+                  <label htmlFor="onboard-logo" className="px-3 py-2 rounded-xl text-xs font-medium cursor-pointer"
+                    style={{ background: '#f3f4f6', color: 'var(--text)' }}>
+                    {t('onboard.logoUpload')}
+                  </label>
+                  {logoPreview && (
+                    <button type="button" className="px-3 py-2 rounded-xl text-xs font-medium"
+                      style={{ background: '#fee2e2', color: '#dc2626' }}
+                      onClick={() => { setLogoFile(null); setLogoPreview(''); }}>
+                      {t('onboard.logoRemove')}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           )}

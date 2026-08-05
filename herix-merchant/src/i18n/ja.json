@@ -691,7 +691,12 @@
     "submitting": "送信中…",
     "submitFailed": "送信に失敗しました。再度お試しください",
     "prev": "戻る",
-    "next": "次へ"
+    "next": "次へ",
+    "logoLabel": "ブランドLOGO",
+    "logoHint": "スキップ可。後で設定から追加できます",
+    "logoPh": "未設定",
+    "logoUpload": "画像を選択",
+    "logoRemove": "削除"
   },
   "partner": {
     "title": "提携タスク",

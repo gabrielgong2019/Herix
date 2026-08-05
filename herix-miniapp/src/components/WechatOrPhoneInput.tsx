@@ -88,6 +88,8 @@ export default class WechatOrPhoneInput extends Component<Props, State> {
             style={{ flex: 1, margin: 0 }}
             placeholder={t('wx.placeholder')}
             value={value}
+            adjustPosition
+            cursorSpacing={20}
             onInput={e => this.handleInput(e.detail.value)}
           />
         </View>

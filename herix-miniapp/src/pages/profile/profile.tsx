@@ -19,6 +19,7 @@ import { refreshUnreadBadge } from '../../utils/badge';
 import './profile.scss';
 import { fmt } from '../../utils/format';
 import { validateWechatOrPhone } from '../../components/WechatOrPhoneInput';
+import PlatformAccountInput from '../../components/PlatformAccountInput';
 
 const AVATAR_COLORS = ['#D43B27', '#34c759', '#f5a623', '#ff3b30', '#5856d6', '#ff9500'];
 
@@ -864,30 +865,25 @@ export default class Profile extends Component<{}, State> {
         {this.state.socialSheet && (() => {
           const sheet = this.state.socialSheet!;
           const p = platformById(sheet.platformId);
-          const isWechat = sheet.platformId === 'wechat';
           return (
             <View className='ps-overlay' onClick={() => this.setState({ socialSheet: null })}>
               <View className='ps-sheet' onClick={e => e.stopPropagation()}>
                 <Text className='ps-title'>{p.icon} {p.name}</Text>
-                <Text className='ps-label'>{isWechat ? t('profile.wechatLabel') : (p.inputType === 'id' ? t('profile.accountId') : t('profile.homepageUrl'))}</Text>
-                <Input
-                  className='input'
-                  placeholder={isWechat ? t('profile.wechatOptionalPh') : p.placeholder}
-                  value={sheet.account}
-                  onInput={e => this.setState({ socialSheet: { ...sheet, account: e.detail.value } })}
+                {/* 账号表单统一走共享组件，与任务报名补充信息入口保持一致（2026-08-05） */}
+                <PlatformAccountInput
+                  platformId={sheet.platformId}
+                  existingValue={{
+                    platformId: sheet.platformId,
+                    accountId: p.inputType === 'id' ? (sheet.account || null) : null,
+                    url: p.inputType === 'url' ? (sheet.account || null) : null,
+                    followers: sheet.followers ? parseInt(sheet.followers, 10) : null,
+                  }}
+                  onChange={val => this.setState({ socialSheet: {
+                    ...sheet,
+                    account: val.accountId || val.url || '',
+                    followers: val.followers != null ? String(val.followers) : '',
+                  } })}
                 />
-                {isWechat && <Text className='ps-hint'>{t('wx.autoDetect')}</Text>}
-                <View>
-                  <Text className='ps-label'>{p.countLabel === 'friends' ? t('profile.friendsLabel') : t('profile.followersLabel')}</Text>
-                  <Input
-                    className='input'
-                    type='number'
-                    placeholder={p.countLabel === 'friends' ? t('pai.friends') : t('pai.followers')}
-                    value={sheet.followers}
-                    onInput={e => this.setState({ socialSheet: { ...sheet, followers: e.detail.value } })}
-                  />
-                  {p.countLabel === 'friends' && <Text className='ps-hint'>{t('profile.friendsHint')}</Text>}
-                </View>
                 <View className='btn-primary' onClick={this.saveSheet}>{t('common.save')}</View>
                 {sheet.mode === 'edit' && (
                   <Text className='ps-delete' onClick={this.deleteAccount}>{t('profile.deleteAccount')}</Text>

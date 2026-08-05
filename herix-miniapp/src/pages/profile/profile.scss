@@ -427,6 +427,7 @@
   padding: 40px 40px 56px;
   max-height: 75vh;
   overflow-y: auto;
+  padding-bottom: calc(56px + env(safe-area-inset-bottom));
 }
 .ps-title {
   display: block;

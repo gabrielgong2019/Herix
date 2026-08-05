@@ -22,9 +22,6 @@ export async function sendMail(to: string, subject: string, text: string): Promi
     console.log(`[MAIL] To: ${to} | ${subject}\n${text}\n`);
     return;
   }
-  try {
-    await transporter.sendMail({ from: `"${FROM_NAME}" <${SMTP_FROM}>`, to, subject, text });
-  } catch (err) {
-    console.error('[MAIL ERROR]', err);
-  }
+  // 失败必须抛出，调用方据此告知用户/重试；不能静默吞掉假装已发送（2026-08-06）
+  await transporter.sendMail({ from: `"${FROM_NAME}" <${SMTP_FROM}>`, to, subject, text });
 }

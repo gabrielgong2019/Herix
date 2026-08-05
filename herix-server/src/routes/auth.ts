@@ -47,11 +47,16 @@ authRouter.post('/send-code', async (req: Request, res: Response) => {
     expires_at: new Date(Date.now() + 30 * 60_000).toISOString(),
     created_at: new Date().toISOString(),
   });
-  await sendMail(
-    email,
-    '【Herix】注册验证码',
-    `你的 Herix 注册验证码是：${code}\n30 分钟内有效。如非本人操作，请忽略此邮件。\n\nYour Herix verification code is ${code} (valid for 30 minutes).`
-  );
+  try {
+    await sendMail(
+      email,
+      '【Herix】注册验证码',
+      `你的 Herix 注册验证码是：${code}\n30 分钟内有效。如非本人操作，请忽略此邮件。\n\nYour Herix verification code is ${code} (valid for 30 minutes).`
+    );
+  } catch (err) {
+    console.error('[send-code] MAIL SEND FAILED', err);
+    return res.status(502).json({ error: '邮件发送失败，请稍后重试或联系平台', code: 'MAIL_SEND_FAILED' });
+  }
   res.json({ sent: true });
 });
 
@@ -430,4 +435,3 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
 
   res.json(user);
 });
-

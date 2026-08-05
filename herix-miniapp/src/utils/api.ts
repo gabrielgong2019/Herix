@@ -179,7 +179,7 @@ export const applications = {
     request<any>('POST', `/applications/${taskId}`, { message, proposalText, proposalLinks }),
   review: (id: string, status: ReviewDecision) =>
     request<any>('PATCH', `/applications/${id}/review`, { status }),
-  my: () => request<any[]>('GET', '/applications/my'),
+  my: () => request<any[]>('GET', '/applications/my', { lang: getLocale() }),
 };
 
 // ── Submissions ──
@@ -279,7 +279,7 @@ export const wallet = {
 
 // ── Referrals ──
 export const referrals = {
-  myCodes: () => request<any[]>('GET', '/referrals/my-codes'),
+  myCodes: () => request<any[]>('GET', '/referrals/my-codes', { lang: getLocale() }),
   /** 明细模式：本人在某任务下的邀请进度（脱敏标识） */
   myRecords: (taskId: string) => request<any[]>('GET', `/referrals/my-records/${taskId}`),
   /** 保存赫使自定义推广文案 */

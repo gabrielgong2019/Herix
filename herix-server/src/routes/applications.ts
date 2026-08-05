@@ -6,6 +6,7 @@ import { ZodError } from 'zod';
 import { notify } from '../utils/notify';
 import { getBrandCreditInfo } from '../utils/settings';
 import { fetchPendingApplications } from '../utils/applicationQueries';
+import { getTaskTranslations } from '../utils/taskLocalize';
 import crypto from 'crypto';
 
 function genPromoCode(): string {
@@ -268,5 +269,14 @@ applicationRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Req
      WHERE ta.herald_id = ?
      ORDER BY ta.created_at DESC`, [req.user!.userId]
   );
+  // 我的报名历史按赫使语言本地化任务标题（2026-08-05）
+  const lang = String(req.query.lang || '');
+  if (lang && lang !== 'zh') {
+    const tr = await getTaskTranslations(apps.map((a: any) => a.task_id), lang);
+    for (const a of apps) {
+      const t = tr.get(a.task_id);
+      if (t?.title) a.task_title = t.title;
+    }
+  }
   res.json(apps);
 });

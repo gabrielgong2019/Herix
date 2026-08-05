@@ -1,6 +1,7 @@
 import pool from '../db';
 import { createNotification } from '../routes/notifications';
 import { sendMail } from './mailer';
+import { getTaskTranslations } from './taskLocalize';
 
 // Stage names per locale (used to resolve {{stage}} variable before interpolation)
 const STAGE_NAMES: Record<string, Record<string, string>> = {
@@ -73,6 +74,19 @@ export async function notify(opts: NotifyOptions): Promise<void> {
   if (typeof vars.stage === 'string' && STAGE_NAMES[vars.stage]) {
     vars.stage = STAGE_NAMES[vars.stage][lang] ?? STAGE_NAMES[vars.stage]['zh'];
   }
+  // 任务标题变量本地化（2026-08-05）：调用方传的是源语言 title，这里按用户语言覆盖
+  const taskId = opts.metadata?.taskId;
+  if (taskId && typeof vars.task === 'string') {
+    const tr = await getTaskTranslations([taskId], lang);
+    const localized = tr.get(taskId);
+    if (localized?.title) vars.task = localized.title;
+  }
+  const metadata = opts.metadata ? { ...opts.metadata } : undefined;
+  if (metadata && taskId && typeof metadata.taskTitle === 'string') {
+    const tr = await getTaskTranslations([taskId], lang);
+    const localized = tr.get(taskId);
+    if (localized?.title) metadata.taskTitle = localized.title;
+  }
 
   const title = titleTmpl ? interpolate(titleTmpl, vars) : (opts.title ?? opts.type);
   const body  = bodyTmpl  ? interpolate(bodyTmpl,  vars) : (opts.body  ?? '');
@@ -84,7 +98,7 @@ export async function notify(opts: NotifyOptions): Promise<void> {
     title,
     body,
     targetRole: opts.targetRole,
-    metadata: opts.metadata,
+    metadata,
   });
 
   if (opts.email) {

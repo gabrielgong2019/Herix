@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { findMany, update, insert, genId } from '../utils/db';
 import pool from '../db';
+import { getTaskTranslations } from '../utils/taskLocalize';
 
 export const notificationsRouter = Router();
 notificationsRouter.use(requireAuth);
@@ -59,6 +60,28 @@ notificationsRouter.get('/', async (req: Request, res: Response) => {
     [userId, roleFilter],
   );
   const unread = rows.rows.filter((r: any) => !r.is_read).length;
+  // 历史通知 metadata.taskTitle 是按创建时源语言落库的，这里按用户语言就地覆盖（2026-08-05）
+  const langRow = await pool.query<{ preferred_lang: string }>(
+    `SELECT preferred_lang FROM users WHERE id = $1`, [userId]
+  );
+  const lang = (langRow.rows[0]?.preferred_lang as string) || 'zh';
+  if (lang && lang !== 'zh') {
+    const taskIds: string[] = [];
+    const parsed: Array<{ meta: any; row: any }> = [];
+    for (const row of rows.rows) {
+      let meta: any = {};
+      try { meta = typeof row.metadata === 'string' ? JSON.parse(row.metadata || '{}') : row.metadata || {}; } catch { meta = {}; }
+      if (meta.taskId) { taskIds.push(meta.taskId); parsed.push({ meta, row }); }
+    }
+    const tr = await getTaskTranslations(taskIds, lang);
+    for (const { meta, row } of parsed) {
+      const localized = tr.get(meta.taskId);
+      if (localized?.title) {
+        meta.taskTitle = localized.title;
+        row.metadata = JSON.stringify(meta);
+      }
+    }
+  }
   res.json({ unread, notifications: rows.rows });
 });
 

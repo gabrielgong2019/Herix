@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import pool from '../db';
 import { findOne, findMany, insert, update } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
+import { getTaskTranslations } from '../utils/taskLocalize';
 import crypto from 'crypto';
 
 export const referralsRouter = Router();
@@ -80,6 +81,20 @@ referralsRouter.get('/my-codes', requireAuth, requireRole('HERALD'), async (req:
      WHERE at.herald_id = ?
      ORDER BY at.joined_at DESC`, [req.user!.userId]
   );
+  // 任务标题/商家文案按赫使语言本地化（2026-08-05：分享弹窗与历史卡此前全是源语言）
+  const lang = String(req.query.lang || '');
+  if (lang && lang !== 'zh') {
+    const tr = await getTaskTranslations(codes.map((c: any) => c.task_id), lang);
+    for (const c of codes) {
+      const t = tr.get(c.task_id);
+      if (!t) continue;
+      if (t.title) c.task_title = t.title;
+      if (t.description) c.task_description = t.description;
+      if (t.invitee_benefit) c.invitee_benefit = t.invitee_benefit;
+      if (t.referral_script) c.referral_script = t.referral_script;
+      if (t.service_name) c.service_name = t.service_name;
+    }
+  }
   res.json(codes);
 });
 

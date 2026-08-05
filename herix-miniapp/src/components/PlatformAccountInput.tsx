@@ -21,10 +21,6 @@ interface Props {
   platformId: string;
   existingValue?: Partial<PlatformAccountValue>;
   onChange: (value: PlatformAccountValue) => void;
-  /** 联系方式是否必填（报名前置补充信息场景为必填） */
-  required?: boolean;
-  /** 数量字段是否必填（任务要求数量门槛时为必填，否则选填） */
-  countRequired?: boolean;
 }
 
 interface State {
@@ -92,7 +88,6 @@ export default class PlatformAccountInput extends Component<Props, State> {
       <View className='platform-account-input'>
         <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
           <Text style={{ fontSize: '13px', fontWeight: 600 }}>
-            {this.props.required && <Text style={{ color: '#ef4444' }}>* </Text>}
             {platform.icon} {platform.name}{' '}
             {platformId === 'wechat' ? t('pai.wechatTitle') : (platform.inputType === 'id' ? t('pai.accountOrPhone') : t('pai.homeLink'))}
           </Text>
@@ -110,14 +105,9 @@ export default class PlatformAccountInput extends Component<Props, State> {
           />
         )}
         <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
-          <View style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Text style={{ fontSize: '12px', fontWeight: 600 }}>
-              {t(platform.countLabel === 'friends' ? 'pai.friendsLabel' : 'pai.followersLabel')}
-            </Text>
-            <Text style={{ fontSize: '10px', padding: '1px 8px', borderRadius: '8px', color: this.props.countRequired ? '#dc2626' : '#6b7280', background: this.props.countRequired ? '#fee2e2' : '#f3f4f6' }}>
-              {t(this.props.countRequired ? 'req.required' : 'req.optional')}
-            </Text>
-          </View>
+          <Text style={{ fontSize: '12px', fontWeight: 600 }}>
+            {t(platform.countLabel === 'friends' ? 'pai.friendsLabel' : 'pai.followersLabel')}
+          </Text>
           <Text style={{ fontSize: '11px', color: '#9ca3af' }}>{t('pai.countHint')}</Text>
         </View>
         <Input

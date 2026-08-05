@@ -3,6 +3,8 @@
  * 是任务详情页资质预检面板、以及报名失败提示两处共用的唯一逻辑来源。
  */
 
+import type { ReqMode } from '@herix/shared';
+
 export interface PlatformRequirement {
   platformId: string;
   required: boolean;
@@ -23,7 +25,7 @@ export interface RequirementsCheckResult {
   status: 'ok' | 'missing' | 'insufficient';
   failures: RequirementFailure[];
   /** 满足模式：ALL=required项全须满足；ANY_N=候选项满足任意 needCount 项即可 */
-  mode: 'ALL' | 'ANY_N';
+  mode: ReqMode;
   needCount: number;
   satisfiedCount: number;
 }

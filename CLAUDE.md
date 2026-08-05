@@ -193,10 +193,11 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
 - **pre-push hook**：`git config core.hooksPath scripts/git-hooks`（新 clone 后执行一次）。
   推送前自动跑 tsc×3 + merchant build + check-terms，全绿才放行（~8秒）。
   GitHub Actions（.github/workflows/ci.yml）做第二道网。
-- **共享契约**：枚举/状态值唯一事实源 = `herix-server/src/shared/contracts.ts`
-  （零依赖纯类型，merchant 经 `@contracts` 别名引入）。新增枚举值：改契约 →
-  两端编译期自动对齐 → **带 DB-CHECK 标记的还须同步 db.ts 幂等重建约束**。
-  禁止在两端重新手写字面量 union。
+- **共享契约**：枚举/状态值唯一事实源 = `@herix/shared` 包（`herix-shared/src/index.ts`，
+  零依赖纯类型，三端统一从这里 import；服务端 `herix-server/src/shared/contracts.ts` 是
+  兼容 shim）。改契约：改 `herix-shared/src/index.ts` → `cd herix-shared && npm run build`
+  （pre-push 钩子会自动跑）→ 三端编译期自动对齐 → **带 DB-CHECK 标记的还须同步 db.ts
+  幂等重建约束**。禁止在两端重新手写字面量 union 或维护镜像。
 - **测试守则**：e2e 的写路径必须打真实 API，禁止 SQL 直改绕过（曾致 admin
   参数 API 被路由遮蔽成死代码多日未暴露）；每个新流程至少测一条失败分支；
   校验命令别用 `cmd | head` 形式吞 exit code（曾致带语法错误的 commit 推上 main）。
@@ -225,7 +226,8 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
   将来商家侧若真要加语言，是独立决策——别顺手"补齐"。
 - **钱包代码**：余额读写必须走 `utils/wallet.ts` 的 `applyWalletEntry`（行锁+幂等+事务）；多步业务+钱包操作用 extClient 合并进单事务
 - **金额展示**统一用 `utils/format.ts` 的 `fmt`，不要 `toLocaleString`（小程序引擎差异）
-- **配置类数值**（提现最低额等）走 `platform_settings` 单一事实源，前端由接口下发，禁止写死
+- **配置类数值**（提现最低额、每码预估转化数、终稿拒绝上限、数据缓冲期、自定义码上限等）走
+  `platform_settings` 单一事实源，前端由接口下发（如 `GET /api/brands/budget-config`），禁止写死
 - **枚举/分类字段一律存稳定 ASCII id，禁止存显示文本**（2026-07-18 立）：DB 里存 `beauty`/`permanent` 这类 id，
   显示文本属于展示层（i18n 词条或前端映射表）。存文本的代价是三连锁：没法翻译、没法改文案（改了和历史数据对不上）、
   没法做逻辑分支（字符串比对撞上简繁/全半角）。已踩过的实例：`industry` 存"美妆"、`visa_type` 存"永住者"，

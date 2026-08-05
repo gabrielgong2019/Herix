@@ -49,7 +49,7 @@ arbitrationsRouter.post('/', requireAuth, requireRole('BRAND', 'HERALD', 'ADMIN'
 
     // 开案门槛：当前阶段拒绝额度已用尽（额度没用尽先走正常审核流程）
     const rejects = await countRejects(sub.task_id, sub.herald_id);
-    const verdict = canReject(sub.stage, !!sub.require_draft_review, sub.max_revisions, rejects.draft, rejects.final);
+    const verdict = await canReject(sub.stage, !!sub.require_draft_review, sub.max_revisions, rejects.draft, rejects.final);
     if (verdict.allowed) {
       return res.status(400).json({
         error: '当前改稿额度未用尽，请先走正常审核/重提流程',

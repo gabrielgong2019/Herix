@@ -516,7 +516,12 @@ export async function initDatabase() {
       ('withdrawal_schedule_mode', 'FIXED_DATES',   '打款模式：FIXED_DATES=月中/月末，ON_DEMAND=即时'),
       ('withdrawal_monthly_limit', '2',             '每月提现次数上限（ON_DEMAND 模式生效）'),
       ('withdrawal_min_amount',    '1000',          '最低提现申请金额（JPY）'),
-      ('topup_cc_rate',            '0.03',          '信用卡充值手续费率（pass-through）')
+      ('topup_cc_rate',            '0.03',          '信用卡充值手续费率（pass-through）'),
+      ('referral_avg_conversions_per_code', '1',    '每码预估转化数（商家端预算估算展示用，非配额；2026-08-05 改按一码一人）'),
+      ('consumption_tax_rate',     '0.10',          '消费税估算比例（商家端预算展示用，服务端不扣税）'),
+      ('submission_final_reject_limit', '2',        '终稿阶段固定拒绝上限（草稿前置任务，商家核验非创意）'),
+      ('task_data_grace_days',     '30',            '任务关闭后的数据上传缓冲期（天）'),
+      ('max_custom_codes_per_upload', '2000',       '自定义推广码单次上传上限')
      ON CONFLICT (key) DO NOTHING`,
     // i18n_entries 语义背景（key级元数据，seed 维护，给运营/机翻提供语境）
     `ALTER TABLE i18n_entries ADD COLUMN IF NOT EXISTS context TEXT`,
@@ -1079,4 +1084,3 @@ export async function initDatabase() {
     await pool.query(m);
   }
 }
-

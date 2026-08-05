@@ -3,7 +3,7 @@ import axios from 'axios'
 // 此前两边手写互抄导致 difficulty 大小写漂移(创建全挂)、content_type 漏值等一整类 bug
 import type {
   TaskMode, Difficulty, ContentType, TaskStatus, TaskVisibility,
-  SubmissionStage, BillingCycle, SubscriptionStatus, PublishTier,
+  SubmissionStage, BillingCycle, SubscriptionStatus, InvoiceStatus, ReviewDecision, PublishTier,
 } from '@contracts'
 
 const BASE = import.meta.env.VITE_API_URL || '/api'
@@ -103,7 +103,7 @@ export const reviewsApi = {
   pendingApplications: () => http.get<Application[]>('/applications/pending'),
   // 2026-07-26 接到真实端点（此前 /merchant/submissions/pending 与 approve/reject POST 均不存在，页面是坏的）
   list: () => http.get<Submission[]>('/submissions/pending'),
-  review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
+  review: (id: string, status: ReviewDecision, reviewNote?: string) =>
     http.patch(`/submissions/${id}/review`, { status, reviewNote }),
   revisions: (id: string) => http.get<SubmissionRevision[]>(`/submissions/${id}/revisions`),
   // 改稿额度用尽后的出口：开平台仲裁案（一个提交终身一案，开案期间超时计时冻结）
@@ -149,7 +149,7 @@ export interface SubscriptionInvoice {
   id: string
   invoice_no: string
   amount: number
-  status: 'PENDING' | 'PAID' | 'VOID'
+  status: InvoiceStatus
   created_at: string
   paid_at: string | null
 }
@@ -191,6 +191,8 @@ export const metaApi = {
 export const settingsApi = {
   // profile is fetched via authApi.me() — auth/me includes all brand_profile fields
   profile: () => http.get<MerchantUser>('/auth/me'),
+  budgetConfig: () =>
+    http.get<{ platformFeeRate: number; consumptionTaxRate: number; avgConversionsPerCode: number; maxCustomCodesPerUpload: number }>('/brands/budget-config'),
   updateProfile: (data: {
     companyName: string
     industry?: string
@@ -385,7 +387,7 @@ export interface Submission {
 }
 
 export interface SubmissionRevision {
-  stage: 'DRAFT' | 'FINAL'
+  stage: SubmissionStage
   kind: 'SUBMIT' | 'REVIEW'
   action: string
   content_urls?: string | null

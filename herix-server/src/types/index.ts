@@ -1,6 +1,6 @@
 import { z } from 'zod';
 // 枚举唯一事实源：shared/contracts.ts（前后端共享，勿在此处重复字面量）
-import { TASK_MODES, CONTENT_TYPES, DIFFICULTIES, TASK_VISIBILITIES, SOCIAL_PLATFORM_IDS } from '../shared/contracts';
+import { TASK_MODES, CONTENT_TYPES, DIFFICULTIES, TASK_VISIBILITIES, CODE_MODES, DATA_MODES, SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { LOCALE_CODES } from '../constants/locales';
 
 // ── 段位阈值（粉丝数） ──
@@ -69,7 +69,7 @@ export const CreateTaskSchema = z.object({
   // base64 进 JSON 会撞 express.json 100KB 上限(413)，进 DB 会拖垮所有任务列表接口(2026-07-20 实测)
   coverImage: z.string().refine((v) => !v.startsWith('data:'), { message: '封面请使用图片上传接口，不支持 base64 内嵌' }).optional(),
   userBenefit: z.string().optional(),
-  codeMode: z.enum(['auto', 'custom']).default('auto'),
+  codeMode: z.enum(CODE_MODES).default('auto'),
   visibility: z.enum(TASK_VISIBILITIES).default('PUBLIC'),
   platformRequirements: z.array(z.object({
     platformId: z.string().refine((id) => SOCIAL_PLATFORM_IDS.includes(id), { message: '未知社交平台' }),
@@ -80,7 +80,7 @@ export const CreateTaskSchema = z.object({
   reqMode: z.enum(['ALL', 'ANY_N']).default('ALL'),
   reqMinCount: z.number().int().min(1).optional(),
   // 数据回传模式（仅 PERFORMANCE 有意义）：AGGREGATE=累计计数；DETAIL=逐用户明细。发布后锁定
-  dataMode: z.enum(['AGGREGATE', 'DETAIL']).default('AGGREGATE'),
+  dataMode: z.enum(DATA_MODES).default('AGGREGATE'),
   // 邀请任务展示（PERFORMANCE）：合格转化条件 register(必)+convert(可选文本行) / 被邀请人激励 / 话术
   conversionCriteria: z.object({
     register: z.object({ label: z.string().min(1) }),

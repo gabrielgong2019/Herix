@@ -1,0 +1,14 @@
+{
+  "name": "@herix/shared",
+  "version": "0.1.0",
+  "description": "Herix 前后端共享契约（枚举/状态值唯一事实源）",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

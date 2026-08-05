@@ -2,10 +2,21 @@ import { Router, Request, Response } from 'express';
 import { findOne, findMany, insert, update } from '../utils/db';
 import { optionalAuth, requireAuth, requireRole } from '../middleware/auth';
 import { runKybAutoChecks, qualifiesForAutoApprove } from '../utils/kyb';
-import { getSetting } from '../utils/settings';
+import { getSetting, getEffectiveCommissionRate } from '../utils/settings';
 import { createNotification } from './notifications';
 
 export const brandsRouter = Router();
+
+/** GET /api/brands/budget-config — 商家端预算估算配置（费率为该商家实际协议价，
+ *  数值在 platform_settings 维护；仅用于前端估算展示，非结算依据）
+ *  ⚠️ 必须注册在 GET /:userId 之前，防止被参数路由吃掉 */
+brandsRouter.get('/budget-config', requireAuth, requireRole('BRAND'), async (req: Request, res: Response) => {
+  const { rate } = await getEffectiveCommissionRate(req.user!.userId);
+  const consumptionTaxRate = Number(await getSetting('consumption_tax_rate')) || 0.10;
+  const avgConversionsPerCode = Number(await getSetting('referral_avg_conversions_per_code')) || 1;
+  const maxCustomCodesPerUpload = Number(await getSetting('max_custom_codes_per_upload')) || 2000;
+  res.json({ platformFeeRate: rate, consumptionTaxRate, avgConversionsPerCode, maxCustomCodesPerUpload });
+});
 
 /** POST /api/brands/kyb — 结构化提交企业认证（2026-07-29 流程化改造）
  *  取代"传图即提交"：公司名/注册国/法人番号 + 证件图 URL 一起提交，

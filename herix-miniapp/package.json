@@ -3,6 +3,7 @@
   "version": "1.0.4",
   "private": true,
   "scripts": {
+    "prebuild": "cd ../herix-shared && npm run build",
     "postinstall": "patch-package --error-on-fail",
     "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp",
@@ -10,6 +11,7 @@
     "build:h5": "taro build --type h5"
   },
   "dependencies": {
+    "@herix/shared": "file:../herix-shared",
     "@pmmmwh/react-refresh-webpack-plugin": "^0.6.2",
     "@tarojs/components": "^4.0.0",
     "@tarojs/plugin-framework-react": "^4.2.0",

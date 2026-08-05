@@ -4,10 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",
+    "prebuild": "cd ../herix-shared && npm run build",
     "build": "tsc",
     "start": "tsx --env-file=.env src/index.ts"
   },
   "dependencies": {
+    "@herix/shared": "file:../herix-shared",
     "@types/nodemailer": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",

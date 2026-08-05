@@ -4,7 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { tasksApi, metaApi, walletApi, settingsApi, type TaskFormData, type Task, type BrandBalance } from '@/lib/api'
 import { extractBrief, type ExtractHit } from '@/lib/extract'
-import { DIFFICULTIES } from '@contracts'
+import {
+  DIFFICULTIES, TASK_MODES, TASK_VISIBILITIES, CODE_MODES, DATA_MODES, STANDARD_CONTENT_TYPES,
+  type TaskMode, type TaskVisibility, type CodeMode, type DataMode, type Difficulty, type StandardContentType,
+} from '@contracts'
 import { Topbar } from '@/components/layout/Topbar'
 import { cn } from '@/lib/utils'
 import { ChevronDown, ChevronUp, ImagePlus, X } from 'lucide-react'
@@ -54,11 +57,6 @@ const PLATFORMS: { id: string; name: string; icon: string; countLabel: 'follower
   { id: 'whatsapp', name: 'WhatsApp', icon: '📱', countLabel: 'friends' },
 ]
 
-const PLATFORM_FEE_RATE = 0.2
-const CONSUMPTION_TAX_RATE = 0.1
-// 与服务端 MAX_CUSTOM_CODES_PER_UPLOAD 同步（herix-server/src/routes/tasks.ts）
-const MAX_CUSTOM_CODES = 2000
-const AVG_CONVERSIONS_PER_CODE = 5
 
 /** 平台要求实时摘要文案（ALL：必须/展示两组；ANY_N：候选池+需满足数） */
 function platformReqSummary(form: FormState, t: (k: string, params?: Record<string, unknown>) => string): string {
@@ -195,16 +193,17 @@ function RadioCard({
 // ── Cost preview panel ────────────────────────────────────────────
 
 // ── 标准任务：确定性成本，发布时锁定金额 ────────────────────────────
-function StandardCostPreview({ payout, maxHeralds, balance, t }: {
+function StandardCostPreview({ payout, maxHeralds, balance, feeRate, taxRate, t }: {
   payout: number; maxHeralds: number
   balance?: BrandBalance
+  feeRate: number; taxRate: number
   t: (k: string, params?: Record<string, unknown>) => string
 }) {
   if (!payout || !maxHeralds) return null
   const base = payout * maxHeralds
-  const fee = Math.ceil(base * PLATFORM_FEE_RATE)
+  const fee = Math.ceil(base * feeRate)
   const subtotal = base + fee
-  const tax = Math.ceil(subtotal * CONSUMPTION_TAX_RATE)
+  const tax = Math.ceil(subtotal * taxRate)
   const total = subtotal + tax
 
   const credit = balance?.credit
@@ -259,16 +258,17 @@ function StandardCostPreview({ payout, maxHeralds, balance, t }: {
 }
 
 // ── 邀请码任务：概率估算，按转化实时结算 ────────────────────────────
-function PerformanceBudgetEstimate({ payout, codeCount, t }: {
+function PerformanceBudgetEstimate({ payout, codeCount, avgConversions, feeRate, taxRate, t }: {
   payout: number; codeCount: number
+  avgConversions: number; feeRate: number; taxRate: number
   t: (k: string, params?: Record<string, unknown>) => string
 }) {
   if (!payout || !codeCount) return null
-  const estConversions = codeCount * AVG_CONVERSIONS_PER_CODE
+  const estConversions = codeCount * avgConversions
   const estPayout = payout * estConversions
-  const estFee = Math.ceil(estPayout * PLATFORM_FEE_RATE)
+  const estFee = Math.ceil(estPayout * feeRate)
   const estSubtotal = estPayout + estFee
-  const estTax = Math.ceil(estSubtotal * CONSUMPTION_TAX_RATE)
+  const estTax = Math.ceil(estSubtotal * taxRate)
   const estTotal = estSubtotal + estTax
 
   return (
@@ -316,16 +316,16 @@ interface FormState {
   reqMinCount: number
   // ⚠️ 小写——服务端 zod 枚举与 DB 均为小写；此前写大写 'MEDIUM' 导致从 UI 创建任务
   // 100% 被 400 拒（2026-07-26 用户报"带图保存失败"排查出，实与图片无关）
-  difficulty: 'easy' | 'medium' | 'hard'
-  contentType: 'photo' | 'video' | 'both'
+  difficulty: Difficulty
+  contentType: StandardContentType
   coverImage: string
   payoutPerHerald: number | ''
   maxHeralds: number | ''
   deadline: string
-  visibility: 'PUBLIC' | 'INVITE'
-  mode: 'STANDARD' | 'PERFORMANCE'
-  codeMode: 'auto' | 'custom'
-  dataMode: 'AGGREGATE' | 'DETAIL'
+  visibility: TaskVisibility
+  mode: TaskMode
+  codeMode: CodeMode
+  dataMode: DataMode
   conversionRegisterLabel: string
   conversionConvert: string[]
   inviteeBenefit: string
@@ -347,11 +347,11 @@ const DEFAULT_STATE: FormState = {
   title: '', description: '', category: 'food',
   siteId: 'jp',
   targetCommunities: [], platformRequirements: [], reqMode: 'ALL', reqMinCount: 1,
-  difficulty: 'medium', contentType: 'photo',
+  difficulty: DIFFICULTIES[1], contentType: STANDARD_CONTENT_TYPES[0],
   coverImage: '',
   payoutPerHerald: '', maxHeralds: '',
-  deadline: '', visibility: 'PUBLIC',
-  mode: 'STANDARD', codeMode: 'auto', dataMode: 'DETAIL',
+  deadline: '', visibility: TASK_VISIBILITIES[0],
+  mode: TASK_MODES[0], codeMode: CODE_MODES[0], dataMode: DATA_MODES[1],
   conversionRegisterLabel: '新用户（此前未注册过）', conversionConvert: [''], inviteeBenefit: '', referralScript: '', registerUrl: '', serviceLogo: '', serviceName: '',
   minImages: '', minVideoSeconds: '', maxRevisions: 2, requireProposal: false, requireDraftReview: false, submitDeadline: '',
   customCodes: '',
@@ -454,6 +454,12 @@ export default function TaskForm() {
   const { data: brandBalance } = useQuery({
     queryKey: ['brandBalance'],
     queryFn: () => walletApi.brandBalance().then((r) => r.data),
+  })
+  // 预算估算配置：费率/税/每码预估转化数由服务端 platform_settings 下发（2026-08-05）
+  const { data: budgetConfig } = useQuery({
+    queryKey: ['budgetConfig'],
+    queryFn: () => settingsApi.budgetConfig().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
   })
 
   // 两类型统一 1-5 段：简报 → 找谁 → 类型专属 → 时间线 → 报酬与质量
@@ -638,7 +644,7 @@ export default function TaskForm() {
     // 发布必须有封面（服务端 publish 闸同款规则，前端先挡一道）；存草稿不强制
     if (status === 'open' && !form.coverImage && !coverFileRef.current) { setError(t('taskForm.errorCover')); return false }
     if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
-    if (isCustomCodes && customCodeList.length > MAX_CUSTOM_CODES) { setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: MAX_CUSTOM_CODES })); return false }
+    if (isCustomCodes && customCodeList.length > (budgetConfig?.maxCustomCodesPerUpload ?? 2000)) { setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: budgetConfig?.maxCustomCodesPerUpload ?? 2000 })); return false }
     return true
   }
 
@@ -665,8 +671,8 @@ export default function TaskForm() {
     if (step === 2 && !form.inviteeBenefit.trim()) { setError(t('taskForm.errorInviteeBenefit')); return false }
     if (step === 4) {
       if (isCustomCodes && customCodeList.length === 0) { setError(t('taskForm.errorCustomCodes')); return false }
-      if (isCustomCodes && customCodeList.length > MAX_CUSTOM_CODES) {
-        setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: MAX_CUSTOM_CODES }))
+      if (isCustomCodes && customCodeList.length > (budgetConfig?.maxCustomCodesPerUpload ?? 2000)) {
+        setError(t('taskForm.errorTooManyCodes', { n: customCodeList.length, max: budgetConfig?.maxCustomCodesPerUpload ?? 2000 }))
         return false
       }
     }
@@ -1178,7 +1184,7 @@ export default function TaskForm() {
                 <div className="text-sm font-semibold mb-3" style={{ color: 'var(--text)' }}>{t('taskForm.perfStep4Sec1')}</div>
                 <Field label={t('taskForm.fieldCodeSource')}>
                   <div className="flex flex-col gap-2">
-                    {(['auto', 'custom'] as const).map((m) => (
+                    {CODE_MODES.map((m) => (
                       <label key={m} className="flex items-center gap-2 cursor-pointer text-sm">
                         <input type="radio" name="codeMode" value={m} checked={form.codeMode === m} onChange={() => set('codeMode', m)} />
                         {t(`taskForm.code${m[0].toUpperCase()}${m.slice(1)}`)}
@@ -1210,7 +1216,7 @@ export default function TaskForm() {
                   <div className="text-sm font-semibold mb-1" style={{ color: 'var(--text)' }}>{t('taskForm.perfStep4Sec2')}</div>
                   <div className="text-xs mb-3" style={{ color: 'var(--muted)' }}>{t('taskForm.dataModeNote')}</div>
                   <div className="flex gap-3">
-                    {(['AGGREGATE', 'DETAIL'] as const).map((m) => (
+                    {DATA_MODES.map((m) => (
                       <RadioCard key={m} selected={form.dataMode === m} onClick={() => set('dataMode', m)}
                         title={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}`)}
                         desc={t(`taskForm.dataMode${m[0]}${m.slice(1).toLowerCase()}Desc`)} />
@@ -1225,7 +1231,14 @@ export default function TaskForm() {
               <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
                 <SectionHeader num={5} title={t('taskForm.perfStep5Title')} hint={t('taskForm.perfStep5Hint')} />
 
-                <PerformanceBudgetEstimate payout={Number(form.payoutPerHerald) || 0} codeCount={effectiveMaxHeralds} t={t} />
+                <PerformanceBudgetEstimate
+                  payout={Number(form.payoutPerHerald) || 0}
+                  codeCount={effectiveMaxHeralds}
+                  avgConversions={budgetConfig?.avgConversionsPerCode ?? 5}
+                  feeRate={budgetConfig?.platformFeeRate ?? 0.2}
+                  taxRate={budgetConfig?.consumptionTaxRate ?? 0.1}
+                  t={t}
+                />
 
                 <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>
                   <Input type="number" min={0} value={form.payoutPerHerald}
@@ -1701,7 +1714,14 @@ export default function TaskForm() {
           <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
             <SectionHeader num={sn.payout} title={t('taskForm.sec4Title')} hint={t('taskForm.sec4Hint')} />
 
-            <StandardCostPreview payout={Number(form.payoutPerHerald) || 0} maxHeralds={effectiveMaxHeralds} balance={brandBalance} t={t} />
+            <StandardCostPreview
+              payout={Number(form.payoutPerHerald) || 0}
+              maxHeralds={effectiveMaxHeralds}
+              balance={brandBalance}
+              feeRate={budgetConfig?.platformFeeRate ?? 0.2}
+              taxRate={budgetConfig?.consumptionTaxRate ?? 0.1}
+              t={t}
+            />
 
             <div className={`grid gap-4 ${isCustomCodes ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>

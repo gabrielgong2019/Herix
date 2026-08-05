@@ -840,6 +840,11 @@ TaskPlatformRequirement {
 - 任务创建后即可下载（含未分配的码）
 - 字段：`promo_code, status, herald_name, herald_email, country, residence, assigned_at, total_referrals, qualified_count`
 
+**名额与转化口径（2026-08-05 定稿，数值事实源=代码/配置，此处仅记录决策）**
+- **一码一赫使**：`max_heralds` = 任务总名额；每个赫使领取任务时生成唯一推广码（`ambassador_tasks.unique_code`），不按码限制邀请人数。
+- **转化不封顶**：CSV 回传 `used_count` 后，新增转化数（`新used_count − 已结算数`）全量结算，每个码可带任意多转化。
+- **预算估算展示**：商家端「每码预估转化数」仅为成本估算（预算面板展示用），**不是配额、不参与结算**。口径为**一码一人**（保守估算），数值存 `platform_settings.referral_avg_conversions_per_code`（默认 1，2026-08-05 从 5 下调）；消费税估算 `platform_settings.consumption_tax_rate`（默认 10%），服务端不扣税；费率以该商家实际协议价（`getEffectiveCommissionRate`）下发。商家端通过 `GET /api/brands/budget-config` 拉取，禁止前端硬编码。
+
 ---
 
 ### 15.4 入驻流程

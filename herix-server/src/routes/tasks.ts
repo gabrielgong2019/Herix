@@ -232,9 +232,6 @@ tasksRouter.get('/:id/codes/export', requireAuth, requireRole('BRAND', 'ADMIN'),
   res.send('﻿' + csv); // BOM for Excel compatibility
 });
 
-// 单次上传数量上限：express.json() 默认 100KB 请求体，短码(~12字符/条)约几千条就会撞 413。
-// 给一个明确、留足余量的数字，好过让商家撞一个不可预期的"请求体过大"（2026-07-27 排查坐实）
-const MAX_CUSTOM_CODES_PER_UPLOAD = 2000;
 const SHORT_LINK_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
 const BASE_URL = process.env.BASE_URL || 'https://herix.huaxuex.com';
 
@@ -274,11 +271,12 @@ tasksRouter.post('/:id/codes/upload', requireAuth, requireRole('BRAND', 'ADMIN')
 
     const { codes } = req.body as { codes: string[] };
     if (!Array.isArray(codes) || codes.length === 0) return res.status(400).json({ error: 'codes 数组不能为空' });
-    if (codes.length > MAX_CUSTOM_CODES_PER_UPLOAD) {
+    const maxCustomCodes = Number(await getSetting('max_custom_codes_per_upload')) || 2000;
+    if (codes.length > maxCustomCodes) {
       return res.status(400).json({
-        error: `单次最多上传 ${MAX_CUSTOM_CODES_PER_UPLOAD} 个推广码（本次 ${codes.length} 个），请分批上传`,
+        error: `单次最多上传 ${maxCustomCodes} 个推广码（本次 ${codes.length} 个），请分批上传`,
         code: 'MAX_CODES_EXCEEDED',
-        limit: MAX_CUSTOM_CODES_PER_UPLOAD,
+        limit: maxCustomCodes,
       });
     }
 
@@ -382,24 +380,26 @@ tasksRouter.get('/:id/weapp-qrcode', requireAuth, requireRole('BRAND', 'ADMIN'),
 /** 品牌上传页数据条款版本（改条款文案时同步升版本）。v2：明细模式一人多码分别计费 */
 const UPLOAD_TERMS_VERSION = '2026-07-17-v2';
 
-/** 任务关闭后的数据缓冲期：COMPLETED 后 30 天内仍可上传/查看，此后惰性失效（无定时任务） */
-const GRACE_DAYS = 30;
+/** 任务关闭后的数据缓冲期：COMPLETED 后 N 天内仍可上传/查看（天数值在 platform_settings），此后惰性失效（无定时任务） */
+async function getGraceDays(): Promise<number> {
+  return Number(await getSetting('task_data_grace_days')) || 30;
+}
 
-function graceDeadline(task: { status?: string; completed_at?: string | null }): Date | null {
+async function graceDeadline(task: { status?: string; completed_at?: string | null }): Promise<Date | null> {
   if (task.status !== 'COMPLETED' || !task.completed_at) return null;
-  return new Date(new Date(task.completed_at).getTime() + GRACE_DAYS * 24 * 3600_000);
+  return new Date(new Date(task.completed_at).getTime() + (await getGraceDays()) * 24 * 3600_000);
 }
 
 /** 数据通道是否开放：进行中，或已完成且在 30 天缓冲期内。CANCELLED/DRAFT 一律关闭 */
-function uploadWindowOpen(task: { status?: string; completed_at?: string | null }): boolean {
+async function uploadWindowOpen(task: { status?: string; completed_at?: string | null }): Promise<boolean> {
   if (['PENDING_REVIEW', 'OPEN', 'IN_PROGRESS'].includes(String(task.status))) return true;
-  const d = graceDeadline(task);
+  const d = await graceDeadline(task);
   return !!d && d.getTime() > Date.now();
 }
 
 /** SQL 片段：任务对品牌方仍"活跃"（进行中或缓冲期内），参数为 30 天前的 ISO 时间 */
 const BINDING_ACTIVE_SQL = `(t.status IN ('PENDING_REVIEW','OPEN','IN_PROGRESS') OR (t.status = 'COMPLETED' AND t.completed_at > ?))`;
-const graceCutoffIso = () => new Date(Date.now() - GRACE_DAYS * 24 * 3600_000).toISOString();
+const graceCutoffIso = async () => new Date(Date.now() - (await getGraceDays()) * 24 * 3600_000).toISOString();
 
 async function isBrandPartyOf(taskId: string, userId?: string): Promise<boolean> {
   if (!userId) return false;
@@ -420,7 +420,7 @@ tasksRouter.post('/:id/brand-bind', requireAuth, requireRole('BRAND'), async (re
   if (task.creator_id === req.user!.userId) {
     return res.status(400).json({ error: '不能绑定自己创建的任务', code: 'CANNOT_BIND_OWN' });
   }
-  if (!uploadWindowOpen(task)) {
+  if (!(await uploadWindowOpen(task))) {
     return res.status(400).json({ error: '任务已关闭且超过数据缓冲期，无法绑定', code: 'TASK_CLOSED' });
   }
   // 多账号绑定（品牌可能多个员工账号），同账号重复绑定幂等
@@ -462,7 +462,7 @@ tasksRouter.get('/partner/mine', requireAuth, requireRole('BRAND'), async (req: 
      JOIN users u ON u.id = t.creator_id
      WHERE tbp.user_id = ? AND ${BINDING_ACTIVE_SQL}
      ORDER BY t.created_at DESC`,
-    [req.user!.userId, graceCutoffIso()]
+    [req.user!.userId, await graceCutoffIso()]
   );
   res.json(rows);
 });
@@ -492,7 +492,7 @@ tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), as
   const isCreatorOrAdmin = task.creator_id === req.user!.userId || req.user!.role === 'ADMIN';
   if (!isCreatorOrAdmin) {
     const bound = await isBrandPartyOf(task.id, req.user!.userId);
-    if (!bound || !uploadWindowOpen(task)) {
+    if (!bound || !(await uploadWindowOpen(task))) {
       return res.status(403).json({ error: '无权限', code: 'FORBIDDEN' });
     }
   }
@@ -527,7 +527,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   if (task.mode !== 'PERFORMANCE') return res.status(400).json({ error: '只有成果报酬任务支持数据上传' });
 
   // 生命周期闸门：进行中或关闭后 30 天缓冲期内可收数；此前无此检查——已关闭任务凭 token 仍能触发结算（口子，2026-07-17 堵）
-  if (!uploadWindowOpen(task)) {
+  if (!(await uploadWindowOpen(task))) {
     return res.status(400).json({ error: '任务已关闭且超过 30 天数据缓冲期，不再接收数据', code: 'TASK_CLOSED' });
   }
 
@@ -1400,7 +1400,7 @@ tasksRouter.patch('/:id/complete', requireAuth, requireRole('BRAND'), async (req
 
   // 推广任务关闭 → 通知全部持码赫使：还有 30 天数据缓冲期，抓紧催邀请用户转化（站内信三语 + 邮件）
   if (task.mode === 'PERFORMANCE') {
-    const deadline = new Date(new Date(completedAt).getTime() + GRACE_DAYS * 24 * 3600_000).toISOString().slice(0, 10);
+    const deadline = new Date(new Date(completedAt).getTime() + (await getGraceDays()) * 24 * 3600_000).toISOString().slice(0, 10);
     const holders = await findMany<any>(
       `SELECT at.herald_id, at.unique_code, u.email FROM ambassador_tasks at JOIN users u ON u.id = at.herald_id WHERE at.task_id = ?`,
       [task.id]

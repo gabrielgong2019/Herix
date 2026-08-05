@@ -24,7 +24,7 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@contracts": ["../herix-server/src/shared/contracts.ts"],
+      "@contracts": ["../herix-shared/src/index.ts"],
       "@/*": ["./src/*"]
     }
   },

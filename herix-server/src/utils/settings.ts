@@ -16,6 +16,11 @@ const DEFAULTS: Record<string, string> = {
   max_open_tasks_kyb:       '10',
   max_open_tasks_funded:    '20',
   funded_topup_threshold:   '300000',
+  referral_avg_conversions_per_code: '1',
+  consumption_tax_rate:     '0.10',
+  submission_final_reject_limit: '2',
+  task_data_grace_days:     '30',
+  max_custom_codes_per_upload: '2000',
 };
 
 export async function getSetting(key: string): Promise<string> {

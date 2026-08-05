@@ -160,7 +160,7 @@ submissionsRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
       }
       // 改稿额度闸门：约束的是商家（额度用尽只能通过或仲裁），次数从留痕表派生
       const rejects = await countRejects(submission.task_id, submission.herald_id);
-      const verdict = canReject(stage, !!(spec?.require_draft_review), spec?.max_revisions ?? 2, rejects.draft, rejects.final);
+      const verdict = await canReject(stage, !!(spec?.require_draft_review), spec?.max_revisions ?? 2, rejects.draft, rejects.final);
       if (!verdict.allowed) {
         return res.status(400).json({ error: verdict.error, code: verdict.code, used: verdict.used, limit: verdict.limit });
       }

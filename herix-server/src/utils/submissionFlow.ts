@@ -19,8 +19,6 @@
  *   改稿次数一律从 submission_revisions 派生（COUNT 拒绝事件），无计数列，单一来源。
  */
 
-export const FINAL_REJECT_LIMIT = 2;
-
 export interface SubmissionRowLike {
   stage: 'DRAFT' | 'FINAL';
   status: 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
@@ -74,13 +72,15 @@ export function computeNextAction(requireDraft: boolean, row: SubmissionRowLike 
 export type RejectDecision = { allowed: true } | { allowed: false; code: string; error: string; used: number; limit: number };
 
 /** 商家拒绝时：按阶段与既往拒绝次数判定是否还有额度 */
-export function canReject(
+export async function canReject(
   stage: 'DRAFT' | 'FINAL',
   requireDraft: boolean,
   maxRevisions: number,
   draftRejects: number,
   finalRejects: number,
-): RejectDecision {
+): Promise<RejectDecision> {
+  const { getSetting } = await import('./settings');
+  const finalRejectLimit = Number(await getSetting('submission_final_reject_limit')) || 2;
   if (stage === 'DRAFT') {
     if (draftRejects >= maxRevisions) {
       return {
@@ -90,7 +90,7 @@ export function canReject(
     }
     return { allowed: true };
   }
-  const limit = requireDraft ? FINAL_REJECT_LIMIT : maxRevisions;
+  const limit = requireDraft ? finalRejectLimit : maxRevisions;
   if (finalRejects >= limit) {
     return {
       allowed: false, code: 'REVISION_LIMIT_REACHED', used: finalRejects, limit,

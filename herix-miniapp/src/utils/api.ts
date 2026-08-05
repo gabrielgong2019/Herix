@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro';
+import type { ReviewDecision, UserRole } from '@herix/shared';
 import { t } from './i18n'; // 循环引用安全：仅在函数体内使用
 
 // 微信原生 wx.cloud API，Taro 未完整封装，运行时在 weapp 端全局存在
@@ -176,7 +177,7 @@ export const tasks = {
 export const applications = {
   apply: (taskId: string, message?: string, proposalText?: string, proposalLinks?: string[]) =>
     request<any>('POST', `/applications/${taskId}`, { message, proposalText, proposalLinks }),
-  review: (id: string, status: 'APPROVED' | 'REJECTED') =>
+  review: (id: string, status: ReviewDecision) =>
     request<any>('PATCH', `/applications/${id}/review`, { status }),
   my: () => request<any[]>('GET', '/applications/my'),
 };
@@ -212,7 +213,7 @@ export interface TaskSubmissionContext {
 export const submissions = {
   submit: (taskId: string, data: { contentUrls?: string[]; description?: string; screenshotUrls?: string[] }) =>
     request<any>('POST', `/submissions/${taskId}`, data),
-  review: (id: string, status: 'APPROVED' | 'REJECTED', reviewNote?: string) =>
+  review: (id: string, status: ReviewDecision, reviewNote?: string) =>
     request<any>('PATCH', `/submissions/${id}/review`, { status, reviewNote }),
   byTask: (taskId: string) => request<any[]>('GET', `/submissions/task/${taskId}`),
   /** 赫使侧：单次获取提交状态 + 下一步动作 + 任务配置，替代原来两次串行请求 */
@@ -230,7 +231,7 @@ export const arbitrations = {
 
 // ── Users ──
 export const users = {
-  addRole: (role: 'HERALD' | 'BRAND') =>
+  addRole: (role: Extract<UserRole, 'HERALD' | 'BRAND'>) =>
     request<{ token: string; roles: string[] }>('POST', '/users/add-role', { role }),
   updateMe: (data: { nickname?: string; lang?: string }) => request<any>('PATCH', '/users/me', data),
 };

@@ -4,6 +4,8 @@
 # 背景：曾有带 TS 语法错误的 commit 因校验管道 exit code 被吞而推上 main。
 set -e
 ROOT="$(git rev-parse --show-toplevel)"
+echo "[pre-push] shared build..."
+(cd "$ROOT/herix-shared" && npm run build --silent)
 echo "[pre-push] server tsc..."
 (cd "$ROOT/herix-server" && npx tsc --noEmit)
 echo "[pre-push] merchant tsc + build..."

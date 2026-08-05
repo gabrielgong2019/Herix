@@ -9,6 +9,7 @@ export interface TranslateExtras {
   referralScript?: string | null;
   conversionCriteria?: any;
   serviceName?: string | null;
+  brandDesc?: string | null;
 }
 
 function contentHash(title: string, description: string, extras?: TranslateExtras): string {
@@ -16,6 +17,7 @@ function contentHash(title: string, description: string, extras?: TranslateExtra
     extras.inviteeBenefit || '',
     extras.referralScript || '',
     extras.serviceName || '',
+    extras.brandDesc || '',
     typeof extras.conversionCriteria === 'string'
       ? extras.conversionCriteria
       : JSON.stringify(extras.conversionCriteria ?? ''),
@@ -106,10 +108,11 @@ export async function translateTask(
       `UPDATE tasks SET translation_attempts = translation_attempts + 1 WHERE id = $1`, [taskId]
     );
 
-    const hasExtras = extras && (extras.inviteeBenefit || extras.referralScript || extras.conversionCriteria || extras.serviceName);
+    const hasExtras = extras && (extras.inviteeBenefit || extras.referralScript || extras.conversionCriteria || extras.serviceName || extras.brandDesc);
     const extrasLines = hasExtras ? [
       extras!.inviteeBenefit ? `invitee_benefit: ${extras!.inviteeBenefit}` : '',
       extras!.serviceName ? `service_name: ${extras!.serviceName}` : '',
+      extras!.brandDesc ? `brand_desc: ${extras!.brandDesc}` : '',
       extras!.referralScript ? `referral_script: ${extras!.referralScript}` : '',
       extras!.conversionCriteria ? `conversion_criteria (JSON，翻译所有 label/string 值，保留 JSON 结构): ${typeof extras!.conversionCriteria === 'string' ? extras!.conversionCriteria : JSON.stringify(extras!.conversionCriteria)}` : '',
     ].filter(Boolean).join('\n') : '';
@@ -118,6 +121,7 @@ export async function translateTask(
     if (hasExtras) {
       if (extras!.inviteeBenefit) responseFields.push('invitee_benefit');
       if (extras!.serviceName) responseFields.push('service_name');
+      if (extras!.brandDesc) responseFields.push('brand_desc');
       if (extras!.referralScript) responseFields.push('referral_script');
       if (extras!.conversionCriteria) responseFields.push('conversion_criteria');
     }
@@ -166,11 +170,13 @@ export async function translateTask(
       referral_script?: string;
       conversion_criteria?: any;
       service_name?: string;
+      brand_desc?: string;
     }>;
     // 完整性校验（2026-08-05）：每个目标 locale 的必翻字段必须齐全，缺字段不落库、
     // 整单标 failed 交给 retry 重试——防止"部分翻译"被当成 done 永久固化。
     const requiredFields: string[] = ['title', 'description'];
     if (extras?.serviceName) requiredFields.push('service_name');
+    if (extras?.brandDesc) requiredFields.push('brand_desc');
     if (extras?.inviteeBenefit) requiredFields.push('invitee_benefit');
     if (extras?.referralScript) requiredFields.push('referral_script');
     if (extras?.conversionCriteria) requiredFields.push('conversion_criteria');
@@ -190,8 +196,8 @@ export async function translateTask(
         : null;
       await pool.query(
         `INSERT INTO task_translations
-           (task_id, locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, translated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+           (task_id, locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, brand_desc, translated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (task_id, locale) DO UPDATE
            SET title = EXCLUDED.title,
                description = EXCLUDED.description,
@@ -199,9 +205,10 @@ export async function translateTask(
                referral_script = EXCLUDED.referral_script,
                conversion_criteria_json = EXCLUDED.conversion_criteria_json,
                service_name = EXCLUDED.service_name,
+               brand_desc = EXCLUDED.brand_desc,
                translated_at = EXCLUDED.translated_at`,
         [taskId, locale, t.title, t.description ?? null,
-         t.invitee_benefit ?? null, t.referral_script ?? null, ccJson, t.service_name ?? null, now]
+         t.invitee_benefit ?? null, t.referral_script ?? null, ccJson, t.service_name ?? null, t.brand_desc ?? null, now]
       );
     }
 

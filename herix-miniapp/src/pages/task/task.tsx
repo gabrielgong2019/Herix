@@ -30,6 +30,7 @@ interface TaskDetailData {
   creator_name: string;
   creator_id: string;
   brand_logo_url?: string;
+  service_logo_url?: string;
   brand_promo_image_url?: string;
   brand_company_name?: string;
   brand_company_desc?: string;
@@ -706,10 +707,10 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         )}
 
         {/* 品牌卡 */}
-        {(task.brand_logo_url || task.brand_company_name) && (
+        {(task.brand_logo_url || task.service_logo_url || task.brand_company_name) && (
           <View className='brand-card'>
-            {task.brand_logo_url
-              ? <Image className='brand-logo' src={task.brand_logo_url} mode='aspectFill' />
+            {(task.service_logo_url || task.brand_logo_url)
+              ? <Image className='brand-logo' src={assetUrl(task.service_logo_url || task.brand_logo_url)} mode='aspectFill' />
               : <View className='brand-logo brand-logo-placeholder' />}
             <View className='brand-info'>
               <Text className='brand-name'>{task.brand_company_name || task.creator_name}</Text>

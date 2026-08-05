@@ -1031,6 +1031,7 @@ export async function initDatabase() {
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS referral_script TEXT`,
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS conversion_criteria_json TEXT`,
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS service_name TEXT`,
+    `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS brand_desc TEXT`,
 
     // ── 商家发票模块（2026-08-04）────────────────────────────────────────────
     // merchant_invoices: 两类发票——前受金請求書(DEPOSIT) + 月次適格請求書(MONTHLY)

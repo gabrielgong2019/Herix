@@ -946,7 +946,7 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   // 语言覆盖：有翻译时用翻译字段覆盖原文
   if (lang && lang !== 'zh') {
     const tr = await findOne<any>(
-      'SELECT title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name FROM task_translations WHERE task_id = ? AND locale = ?',
+      'SELECT title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, brand_desc FROM task_translations WHERE task_id = ? AND locale = ?',
       [req.params.id, lang]
     );
     if (tr) {
@@ -955,6 +955,7 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
       if (tr.invitee_benefit)  task.invitee_benefit  = tr.invitee_benefit;
       if (tr.referral_script)  task.referral_script  = tr.referral_script;
       if (tr.service_name)     task.service_name     = tr.service_name;
+      if (tr.brand_desc)       task.brand_company_desc = tr.brand_desc;
       if (tr.conversion_criteria_json) {
         try { task.conversion_criteria = JSON.parse(tr.conversion_criteria_json); } catch {}
       }
@@ -1220,8 +1221,9 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     const specRow = task.mode === 'PERFORMANCE'
       ? await findOne<any>('SELECT invitee_benefit, referral_script, conversion_criteria FROM task_referral_specs WHERE task_id = ?', [req.params.id])
       : null;
+    const brandRow = await findOne<any>('SELECT company_desc FROM brand_profiles WHERE user_id = ?', [updated.creator_id]);
     // service_name 是任务通用字段，两类型都翻；邀请码任务再叠加其余商家文案
-    const extras: any = { serviceName: updated.service_name };
+    const extras: any = { serviceName: updated.service_name, brandDesc: brandRow?.company_desc ?? null };
     if (specRow) {
       extras.inviteeBenefit = specRow.invitee_benefit;
       extras.referralScript = specRow.referral_script;
@@ -1383,9 +1385,11 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   });
 
   // fire-and-forget：翻译不阻塞发布响应
+  const brandRow = await findOne<any>('SELECT company_desc FROM brand_profiles WHERE user_id = ?', [task.creator_id]);
+  const brandDesc = brandRow?.company_desc ?? null;
   if (task.mode === 'PERFORMANCE') {
     findOne<any>('SELECT invitee_benefit, referral_script, conversion_criteria FROM task_referral_specs WHERE task_id = ?', [req.params.id]).then(specRow => {
-      const extras: any = { serviceName: task.service_name };
+      const extras: any = { serviceName: task.service_name, brandDesc };
       if (specRow) {
         extras.inviteeBenefit = specRow.invitee_benefit;
         extras.referralScript = specRow.referral_script;
@@ -1397,7 +1401,7 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     }).catch(() => {});
   } else {
     translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? [],
-      { serviceName: task.service_name }).catch(() => {});
+      { serviceName: task.service_name, brandDesc }).catch(() => {});
   }
 });
 

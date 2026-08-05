@@ -1073,6 +1073,7 @@ export async function initDatabase() {
        ('bank_account_number', '', '口座番号'),
        ('bank_account_name', '', '口座名義カナ')
      ON CONFLICT(key) DO NOTHING`,
+    `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false`,
   ];
   for (const m of migrations) {
     await pool.query(m);

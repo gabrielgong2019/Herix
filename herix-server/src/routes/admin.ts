@@ -538,7 +538,7 @@ adminRouter.post('/topup-requests/:id/confirm', async (req: Request, res: Respon
       const invoiceNo  = await nextInvoiceNo('DEPOSIT', issuedAt);
       const issuerInfo = await loadIssuerSettings();
       const brand      = await findOne<any>(
-        `SELECT company_name, billing_address, billing_postal, brand_country FROM brand_profiles WHERE user_id = ?`,
+        `SELECT company_name, billing_address, billing_postal, country as brand_country FROM brand_profiles WHERE user_id = ?`,
         [row.brand_id],
       );
       const recipientName = brand?.company_name || u?.nickname || u?.email || '';

@@ -65,7 +65,7 @@ export async function generateMonthlyInvoice(
   // 拉取发行方 + 收件方信息
   const [issuerSettings, brand, brandUser] = await Promise.all([
     loadIssuerSettings(),
-    findOne<any>(`SELECT company_name, billing_address, billing_postal, brand_country FROM brand_profiles WHERE user_id = $1`, [brandId]),
+    findOne<any>(`SELECT company_name, billing_address, billing_postal, country as brand_country FROM brand_profiles WHERE user_id = $1`, [brandId]),
     findOne<any>(`SELECT email, nickname FROM users WHERE id = $1`, [brandId]),
   ]);
 

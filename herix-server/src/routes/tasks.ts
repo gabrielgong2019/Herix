@@ -1220,10 +1220,17 @@ tasksRouter.patch('/:id/meta', requireAuth, requireRole('BRAND', 'ADMIN'), async
     const specRow = task.mode === 'PERFORMANCE'
       ? await findOne<any>('SELECT invitee_benefit, referral_script, conversion_criteria FROM task_referral_specs WHERE task_id = ?', [req.params.id])
       : null;
+    // service_name 是任务通用字段，两类型都翻；邀请码任务再叠加其余商家文案
+    const extras: any = { serviceName: updated.service_name };
+    if (specRow) {
+      extras.inviteeBenefit = specRow.invitee_benefit;
+      extras.referralScript = specRow.referral_script;
+      extras.conversionCriteria = specRow.conversion_criteria;
+    }
     translateTask(
       String(updated.id), String(updated.title ?? ''), String(updated.description ?? ''),
       updated.source_lang ?? 'zh', updated.target_communities ?? [],
-      specRow ? { inviteeBenefit: specRow.invitee_benefit, referralScript: specRow.referral_script, conversionCriteria: specRow.conversion_criteria, serviceName: updated.service_name } : undefined
+      extras
     ).catch(() => {});
   }
 });
@@ -1378,12 +1385,19 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
   // fire-and-forget：翻译不阻塞发布响应
   if (task.mode === 'PERFORMANCE') {
     findOne<any>('SELECT invitee_benefit, referral_script, conversion_criteria FROM task_referral_specs WHERE task_id = ?', [req.params.id]).then(specRow => {
+      const extras: any = { serviceName: task.service_name };
+      if (specRow) {
+        extras.inviteeBenefit = specRow.invitee_benefit;
+        extras.referralScript = specRow.referral_script;
+        extras.conversionCriteria = specRow.conversion_criteria;
+      }
       translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? [],
-        specRow ? { inviteeBenefit: specRow.invitee_benefit, referralScript: specRow.referral_script, conversionCriteria: specRow.conversion_criteria, serviceName: task.service_name } : undefined
+        extras
       ).catch(() => {});
     }).catch(() => {});
   } else {
-    translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? []).catch(() => {});
+    translateTask(String(req.params.id), String(task.title ?? ''), String(task.description ?? ''), task.source_lang ?? 'zh', task.target_communities ?? [],
+      { serviceName: task.service_name }).catch(() => {});
   }
 });
 

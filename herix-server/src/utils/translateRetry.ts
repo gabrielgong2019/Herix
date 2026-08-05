@@ -23,12 +23,14 @@ export async function runTranslationRetryOnce(): Promise<void> {
        LIMIT 10`
     );
     for (const row of rows.rows) {
-      const extras = row.mode === 'PERFORMANCE' ? {
-        inviteeBenefit: row.invitee_benefit,
-        referralScript: row.referral_script,
-        conversionCriteria: row.conversion_criteria,
-        serviceName: row.service_name,
-      } : undefined;
+      // service_name 是任务通用字段，STANDARD/PERFORMANCE 都要翻；
+      // 邀请码任务的其余商家文案（好友得到/参考话术/转化条件）仅 PERFORMANCE 有
+      const extras: any = { serviceName: row.service_name };
+      if (row.mode === 'PERFORMANCE') {
+        extras.inviteeBenefit = row.invitee_benefit;
+        extras.referralScript = row.referral_script;
+        extras.conversionCriteria = row.conversion_criteria;
+      }
       translateTask(row.id, row.title, row.description ?? '', row.source_lang ?? 'zh', row.target_communities ?? [], extras).catch(() => {});
     }
   } catch (err) {

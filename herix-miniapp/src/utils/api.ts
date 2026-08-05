@@ -1,6 +1,6 @@
 import Taro from '@tarojs/taro';
 import type { ReviewDecision, UserRole } from '@herix/shared';
-import { t } from './i18n'; // 循环引用安全：仅在函数体内使用
+import { t, getLocale } from './i18n'; // 循环引用安全：仅在函数体内使用
 
 // 微信原生 wx.cloud API，Taro 未完整封装，运行时在 weapp 端全局存在
 declare const wx: any;
@@ -165,8 +165,8 @@ export const auth = {
 // ── Tasks ──
 export const tasks = {
   list: (params?: { status?: string; mode?: string; page?: number; allCommunities?: boolean }) =>
-    request<{ tasks: any[]; pagination: any }>('GET', '/tasks', params, false),
-  detail: (id: string) => request<any>('GET', `/tasks/${id}`, undefined, false),
+    request<{ tasks: any[]; pagination: any }>('GET', '/tasks', { ...params, lang: getLocale() }, false),
+  detail: (id: string) => request<any>('GET', `/tasks/${id}`, { lang: getLocale() }, false),
   create: (data: any) => request<any>('POST', '/tasks', data),
   publish: (id: string) => request<any>('PATCH', `/tasks/${id}/publish`),
   escrow: (id: string) => request<any>('PATCH', `/tasks/${id}/escrow`),

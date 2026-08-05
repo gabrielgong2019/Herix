@@ -167,6 +167,19 @@ export async function translateTask(
       conversion_criteria?: any;
       service_name?: string;
     }>;
+    // 完整性校验（2026-08-05）：每个目标 locale 的必翻字段必须齐全，缺字段不落库、
+    // 整单标 failed 交给 retry 重试——防止"部分翻译"被当成 done 永久固化。
+    const requiredFields: string[] = ['title', 'description'];
+    if (extras?.serviceName) requiredFields.push('service_name');
+    if (extras?.inviteeBenefit) requiredFields.push('invitee_benefit');
+    if (extras?.referralScript) requiredFields.push('referral_script');
+    if (extras?.conversionCriteria) requiredFields.push('conversion_criteria');
+    for (const locale of locales) {
+      const t = translations[locale];
+      if (!t) throw new Error(`[translate] missing locale ${locale}`);
+      const missing = requiredFields.filter(f => (t as any)[f] === undefined || (t as any)[f] === null || (t as any)[f] === '');
+      if (missing.length) throw new Error(`[translate] ${locale} 缺字段: ${missing.join(', ')}`);
+    }
     const now = new Date().toISOString();
 
     for (const locale of locales) {

@@ -1,6 +1,6 @@
 {
   "name": "herix-server",
-  "version": "0.1.0",
+  "version": "1.0.4",
   "private": true,
   "scripts": {
     "dev": "tsx watch --env-file=.env src/index.ts",

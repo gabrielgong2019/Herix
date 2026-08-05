@@ -14,3 +14,16 @@
   box-sizing: border-box;
   margin-top: 12px;
 }
+
+/* H5：Taro 的 Input 外包一层 taro-input-core，原生 input 默认不撑满外层，
+   导致 88px 高的输入框只有上半部分可点（2026-08-05 实测）。这里把内层撑满。 */
+.ob-input taro-input-core {
+  height: 100%;
+  display: block;
+}
+
+.ob-input input {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}

@@ -17,9 +17,16 @@ jobs:
           node-version: 20
           cache: npm
           cache-dependency-path: |
+            herix-shared/package-lock.json
             herix-server/package-lock.json
             herix-merchant/package-lock.json
             herix-miniapp/package-lock.json
+
+      - name: shared deps + build（契约唯一事实源，三端编译前置）
+        working-directory: herix-shared
+        run: |
+          npm ci
+          npm run build
 
       - name: server deps + tsc + build
         working-directory: herix-server

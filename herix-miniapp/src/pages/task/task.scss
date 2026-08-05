@@ -463,7 +463,8 @@
 }
 
 .req-modal-card {
-  width: 700px; /* H5 端加宽，避免提示文案断行（2026-08-05） */
+  width: 92%;
+  max-width: 700px; /* 响应式：桌面加宽、手机不溢出，避免提示文案断行（2026-08-05） */
   max-height: 80vh;
   overflow-y: auto;
   background: var(--card-bg);

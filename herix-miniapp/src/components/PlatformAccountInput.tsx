@@ -105,11 +105,11 @@ export default class PlatformAccountInput extends Component<Props, State> {
             onInput={e => this.handleRawChange(e.detail.value)}
           />
         )}
-        <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '14px' }}>
+        <View style={{ marginTop: '14px' }}>
           <Text style={{ fontSize: '12px', fontWeight: 600 }}>
             {t(platform.countLabel === 'friends' ? 'pai.friendsLabel' : 'pai.followersLabel')}
           </Text>
-          <Text style={{ fontSize: '11px', color: '#9ca3af' }}>{t('pai.countHint')}</Text>
+          <Text style={{ fontSize: '11px', color: '#9ca3af', display: 'block', marginTop: '2px' }}>{t('pai.countHint')}</Text>
         </View>
         <Input
           className='ob-input'

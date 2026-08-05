@@ -46,7 +46,9 @@ app.use(cors());
 // H5 应用挂在 /app 路径（hash 路由，深链形如 /app/#/pages/...）。
 // 曾试过 app.herix.huaxuex.com 子域名：三级子域名超出 Universal SSL 覆盖（*.huaxuex.com 只到一级），弃用
 const H5_DIR = path.join(__dirname, '../../herix-miniapp/dist/h5');
-app.use('/app', express.static(H5_DIR));
+// H5 产物是未哈希文件名（app.js 等），必须 no-cache 让浏览器每次都回源校验，
+// 否则发布后用户最长会拿着旧 bundle 4 小时（2026-08-05 实测踩坑）
+app.use('/app', express.static(H5_DIR, { setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache, max-age=0') }));
 app.get('/app/*', (_req, res) => res.sendFile(path.join(H5_DIR, 'index.html')));
 // 新版商家后台（React SPA）挂在 /merchant；旧 merchant.html 保留在 /merchant.html 过渡期并存
 const MERCHANT_DIR = path.join(__dirname, '../../herix-merchant/dist');

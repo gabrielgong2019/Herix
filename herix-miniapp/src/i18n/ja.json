@@ -1269,5 +1269,11 @@
   "pai.followersLabel": "フォロワー数（およそ）",
   "pai.countHint": "タスクマッチングにのみ使用。おおよその数でOK",
   "pai.friendsPlaceholder": "50",
-  "pai.followersPlaceholder": "5000"
+  "pai.followersPlaceholder": "5000",
+  "task.withdraw": "応募をキャンセル",
+  "task.withdrawConfirmTitle": "応募をキャンセルしますか？",
+  "task.withdrawConfirmBody": "キャンセルすると枠が解放されます。すでに納品を始めたタスクはキャンセルできません。",
+  "task.withdrawConfirmOk": "キャンセルする",
+  "task.withdrawConfirmNo": "やめておく",
+  "task.withdrawSuccess": "応募をキャンセルしました"
 }

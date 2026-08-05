@@ -228,6 +228,19 @@ const BRAND: Templates = {
     ko: '{{heraldName}}님이 "{{task}}" 작업에 지원했습니다. 지원서를 검토해 주세요.',
   },
 
+  'notify.APP_WITHDRAWN.title': {
+    zh: '报名取消：{{task}}',
+    en: 'Application withdrawn: {{task}}',
+    ja: '応募キャンセル：{{task}}',
+    ko: '지원 취소: {{task}}',
+  },
+  'notify.APP_WITHDRAWN.body': {
+    zh: '赫使已取消任务「{{task}}」的报名，名额已释放。是否重新开放招募由你决定。',
+    en: 'An ambassador has withdrawn their application for "{{task}}". The slot has been released; reopening recruitment is your call.',
+    ja: 'アンバサダーが「{{task}}」への応募をキャンセルしました。枠は解放済みです。募集を再開するかはあなたの判断です。',
+    ko: '앰배서더가 "{{task}}" 지원을 취소했습니다. 자리가 반환되었으며, 모집을 다시 열지는 귀하의 결정입니다.',
+  },
+
   'notify.REVIEW_REMINDER.title': {
     zh: '审核提醒：{{task}}',
     en: 'Review reminder: {{task}}',

@@ -15,6 +15,80 @@ function genPromoCode(): string {
 
 export const applicationRouter = Router();
 
+/** POST /api/applications/:id/withdraw — 赫使取消报名（2026-08-05）
+ *  PENDING 直接取消；APPROVED 仅当无任何交付痕迹（未提交内容、无转化数据）可取消，
+ *  PERFORMANCE 同时把推广码释放回池。取消后任务不自动重开，由商家决定。 */
+applicationRouter.post('/:id/withdraw', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  try {
+    const app = await findOne<any>(
+      'SELECT ta.id, ta.status, ta.task_id, ta.herald_id FROM task_applications ta WHERE ta.id = ?',
+      [req.params.id]
+    );
+    if (!app) return res.status(404).json({ error: '报名不存在', code: 'NOT_FOUND' });
+    if (app.herald_id !== req.user!.userId) {
+      return res.status(403).json({ error: '只能取消自己的报名', code: 'FORBIDDEN' });
+    }
+    if (['WITHDRAWN', 'REJECTED', 'EXPIRED'].includes(String(app.status))) {
+      return res.status(400).json({ error: '该报名已结束，无法取消', code: 'ALREADY_CLOSED' });
+    }
+
+    if (app.status === 'APPROVED') {
+      const sub = await findOne<any>(
+        'SELECT id FROM task_submissions WHERE task_id = ? AND herald_id = ? LIMIT 1',
+        [app.task_id, app.herald_id]
+      );
+      if (sub) {
+        return res.status(403).json({ error: '已开始交付，无法取消报名，请联系平台', code: 'WITHDRAW_NOT_ALLOWED' });
+      }
+      const at = await findOne<any>(
+        `SELECT id FROM ambassador_tasks
+         WHERE task_id = ? AND herald_id = ? AND (registered_count > 0 OR used_count > 0 OR paid_conversions > 0)
+         LIMIT 1`,
+        [app.task_id, app.herald_id]
+      );
+      if (at) {
+        return res.status(403).json({ error: '已有转化数据，无法取消报名，请联系平台', code: 'WITHDRAW_NOT_ALLOWED' });
+      }
+    }
+
+    await update('task_applications',
+      { status: 'WITHDRAWN', review_note: '赫使主动取消', updated_at: new Date().toISOString() },
+      'id = ?', [app.id]
+    );
+
+    // PERFORMANCE：释放推广码 + 标记 ambassador_tasks withdrawn
+    const taskMode = await findOne<any>('SELECT mode, title, creator_id FROM tasks WHERE id = ?', [app.task_id]);
+    if (taskMode?.mode === 'PERFORMANCE') {
+      await update('task_promo_codes',
+        { herald_id: null, assigned_at: null },
+        'task_id = ? AND herald_id = ?', [app.task_id, app.herald_id]
+      );
+      await update('ambassador_tasks',
+        { status: 'withdrawn' },
+        'task_id = ? AND herald_id = ? AND status = ?', [app.task_id, app.herald_id, 'active']
+      );
+    }
+
+    // 通知商家：赫使已取消报名
+    if (taskMode) {
+      await notify({
+        userId: taskMode.creator_id,
+        targetRole: 'BRAND',
+        type: 'APP_WITHDRAWN',
+        variables: { task: taskMode.title },
+        metadata: { taskId: app.task_id, applicationId: app.id, taskTitle: taskMode.title },
+        title: `报名取消：${taskMode.title}`,
+        body: `赫使已取消任务「${taskMode.title}」的报名。`,
+      }).catch((e) => console.error('[notify] APP_WITHDRAWN failed:', e));
+    }
+
+    res.json({ success: true, status: 'WITHDRAWN' });
+  } catch (err) {
+    console.error('App withdraw error:', err);
+    res.status(500).json({ error: '取消失败，请稍后重试' });
+  }
+});
+
 /** POST /api/applications/:taskId — 赫使报名任务 */
 applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
   try {

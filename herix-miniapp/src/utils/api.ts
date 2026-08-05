@@ -180,6 +180,7 @@ export const applications = {
   review: (id: string, status: ReviewDecision) =>
     request<any>('PATCH', `/applications/${id}/review`, { status }),
   my: () => request<any[]>('GET', '/applications/my', { lang: getLocale() }),
+  withdraw: (id: string) => request<any>('POST', `/applications/${id}/withdraw`),
 };
 
 // ── Submissions ──

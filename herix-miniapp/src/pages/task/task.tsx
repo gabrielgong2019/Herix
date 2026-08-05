@@ -247,6 +247,27 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     this.setState({ showReqModal: false });
   };
 
+  withdrawApplication = () => {
+    const { myApplication } = this.state;
+    if (!myApplication?.id) return;
+    Taro.showModal({
+      title: t('task.withdrawConfirmTitle'),
+      content: t('task.withdrawConfirmBody'),
+      confirmText: t('task.withdrawConfirmOk'),
+      cancelText: t('task.withdrawConfirmNo'),
+      success: async (res) => {
+        if (!res.confirm) return;
+        try {
+          await applications.withdraw(myApplication.id);
+          Taro.showToast({ title: t('task.withdrawSuccess'), icon: 'success' });
+          this.loadTask();
+        } catch (err: any) {
+          Taro.showToast({ title: err.message || t('common.saveFailed'), icon: 'none' });
+        }
+      },
+    });
+  };
+
   handleReqFieldChange = (platformId: string, value: PlatformAccountValue) => {
     this.setState(prev => ({ reqFormValues: { ...prev.reqFormValues, [platformId]: value } }));
   };
@@ -529,11 +550,16 @@ export default class TaskDetail extends Component<{ id: string }, State> {
   }
 
   renderActionBar() {
-    const { task, myApplication, mySubmission, role, ambassadorProfile, applying } = this.state;
+    const { task, myApplication, mySubmission, myAmbassadorTask, role, ambassadorProfile, applying } = this.state;
     if (!task) return null;
 
     const isHerald = this.isHerald();
     const loggedIn = !!getToken();
+    // 仅未开始交付时可取消：无提交内容，且 PERFORMANCE 无任何转化数据（后端同规则兜底）
+    const hasDelivery = !!mySubmission || !!(
+      myAmbassadorTask && (myAmbassadorTask.registered_count > 0 || myAmbassadorTask.used_count > 0 || myAmbassadorTask.paid_conversions > 0)
+    );
+    const canWithdraw = !!myApplication && ['PENDING', 'APPROVED'].includes(myApplication.status) && !hasDelivery;
 
     if (!loggedIn && task.status === 'OPEN') {
       return (
@@ -550,6 +576,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
         return (
           <View className='actions'>
             <View className='status-banner banner-pending'>{t('task.pendingReview')}</View>
+            {canWithdraw && <Button className='btn-outline' onClick={this.withdrawApplication}>{t('task.withdraw')}</Button>}
           </View>
         );
       }
@@ -574,6 +601,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           return (
             <View className='actions'>
               <View className='status-banner banner-success'>{t('task.joinedPromoting')}</View>
+              {canWithdraw && <Button className='btn-outline' onClick={this.withdrawApplication}>{t('task.withdraw')}</Button>}
             </View>
           );
         }
@@ -584,6 +612,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
               <Button className='btn-primary' onClick={() => this.goSubmit(requireDraft ? 'draft' : 'final')}>
                 {requireDraft ? t('task.submitDraft') : t('task.submitWork')}
               </Button>
+              {canWithdraw && <Button className='btn-outline' onClick={this.withdrawApplication}>{t('task.withdraw')}</Button>}
               <Text className='banner-hint'>{requireDraft ? t('task.draftFirstHint') : t('task.approvedHint')}</Text>
             </View>
           );

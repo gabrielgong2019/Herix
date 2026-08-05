@@ -56,6 +56,10 @@ export type DataMode = typeof DATA_MODES[number];
 export const APPLICATION_STATUSES = ['PENDING', 'APPROVED', 'REJECTED', 'WITHDRAWN', 'EXPIRED'] as const;
 export type ApplicationStatus = typeof APPLICATION_STATUSES[number];
 
+/** DB-CHECK: ambassador_tasks.status（WITHDRAWN=赫使主动取消报名，码回池） */
+export const AMBASSADOR_TASK_STATUSES = ['active', 'completed', 'suspended', 'withdrawn'] as const;
+export type AmbassadorTaskStatus = typeof AMBASSADOR_TASK_STATUSES[number];
+
 /** 两阶段交付组合态：stage × status，见 utils/submissionFlow.ts */
 export const SUBMISSION_STAGES = ['DRAFT', 'FINAL'] as const;
 export type SubmissionStage = typeof SUBMISSION_STAGES[number];

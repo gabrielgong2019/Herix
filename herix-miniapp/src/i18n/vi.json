@@ -724,5 +724,11 @@
   "pai.followersLabel": "Số người theo dõi (khoảng)",
   "pai.countHint": "Chỉ dùng để khớp nhiệm vụ — ước lượng là được",
   "pai.friendsPlaceholder": "50",
-  "pai.followersPlaceholder": "5000"
+  "pai.followersPlaceholder": "5000",
+  "task.withdraw": "Hủy đăng ký",
+  "task.withdrawConfirmTitle": "Hủy đăng ký này?",
+  "task.withdrawConfirmBody": "Hủy sẽ giải phóng chỗ. Nhiệm vụ đã bắt đầu giao nộp không thể hủy.",
+  "task.withdrawConfirmOk": "Xác nhận hủy",
+  "task.withdrawConfirmNo": "Giữ lại",
+  "task.withdrawSuccess": "Đã hủy đăng ký"
 }

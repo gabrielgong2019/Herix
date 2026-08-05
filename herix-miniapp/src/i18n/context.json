@@ -1089,5 +1089,11 @@
   "pai.followersLabel": "内容平台数量字段标签：粉丝数（大约）",
   "pai.countHint": "数量字段标签行右侧提示：仅用于任务匹配，可填大致范围",
   "pai.friendsPlaceholder": "好友数输入框占位示例（纯数字）",
-  "pai.followersPlaceholder": "粉丝数输入框占位示例（纯数字）"
+  "pai.followersPlaceholder": "粉丝数输入框占位示例（纯数字）",
+  "task.withdraw": "任务详情取消报名按钮（仅 PENDING/未开始交付的 APPROVED 展示）",
+  "task.withdrawConfirmTitle": "取消报名二次确认标题",
+  "task.withdrawConfirmBody": "取消报名二次确认正文：说明名额释放与不可取消边界",
+  "task.withdrawConfirmOk": "二次确认确定按钮",
+  "task.withdrawConfirmNo": "二次确认取消按钮（继续保留报名）",
+  "task.withdrawSuccess": "取消成功 Toast"
 }

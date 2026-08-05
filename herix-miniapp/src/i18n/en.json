@@ -1269,5 +1269,11 @@
   "pai.followersLabel": "Followers (approx.)",
   "pai.countHint": "Used only for task matching — an estimate is fine",
   "pai.friendsPlaceholder": "50",
-  "pai.followersPlaceholder": "5000"
+  "pai.followersPlaceholder": "5000",
+  "task.withdraw": "Withdraw application",
+  "task.withdrawConfirmTitle": "Withdraw this application?",
+  "task.withdrawConfirmBody": "The slot will be released. Tasks already in progress cannot be withdrawn.",
+  "task.withdrawConfirmOk": "Withdraw",
+  "task.withdrawConfirmNo": "Keep it",
+  "task.withdrawSuccess": "Application withdrawn"
 }

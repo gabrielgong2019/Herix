@@ -342,6 +342,10 @@ export async function initDatabase() {
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS registered_count INTEGER DEFAULT 0`,
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS used_count INTEGER DEFAULT 0`,
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS paid_conversions INTEGER DEFAULT 0`,
+    // 赫使主动取消报名（2026-08-05）：状态加 withdrawn，码回池
+    `ALTER TABLE ambassador_tasks DROP CONSTRAINT IF EXISTS ambassador_tasks_status_check`,
+    `ALTER TABLE ambassador_tasks ADD CONSTRAINT ambassador_tasks_status_check
+       CHECK(status IN ('active','completed','suspended','withdrawn'))`,
     `DROP TABLE IF EXISTS payouts`,
     // 移除多币种设计（2026-07-08）
     `ALTER TABLE users DROP COLUMN IF EXISTS linked_account_id`,

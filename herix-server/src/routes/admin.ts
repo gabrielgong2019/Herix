@@ -9,6 +9,7 @@ import { generateDepositPdf, detectJurisdiction } from '../utils/invoice-pdf';
 import { loadIssuerSettings } from '../utils/monthly-invoice';
 import pool from '../db';
 import { getSetting, setSetting, getEffectiveCommissionRate } from '../utils/settings';
+import { translateBrand } from '../utils/translate';
 import { activateOrRenew, ensureInvoice, addMonths } from '../utils/subscriptions';
 import { BILLING_CYCLES, CYCLE_MONTHS, type BillingCycle } from '../shared/contracts';
 import { imageUpload } from '../middleware/upload';
@@ -246,7 +247,7 @@ adminRouter.get('/brands/:userId', async (req: Request, res: Response) => {
 /** PATCH /api/admin/brands/:userId — 运营编辑品牌资料（销售代办档签约信息：账单邮箱等） */
 adminRouter.patch('/brands/:userId', async (req: Request, res: Response) => {
   const { companyName, industry, companyDesc, website, contactName, contactPhone, billingEmail } = req.body;
-  const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+  const existing = await findOne<any>('SELECT id, default_lang FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
   if (!existing) return res.status(404).json({ error: '品牌资料不存在' });
 
   const data: Record<string, any> = {};
@@ -259,6 +260,13 @@ adminRouter.patch('/brands/:userId', async (req: Request, res: Response) => {
   if (billingEmail !== undefined) data.billing_email = billingEmail || null;
 
   await update('brand_profiles', data, 'user_id = ?', [req.params.userId]);
+  // 品牌名称/简介被运营编辑 → 异步重翻（hash 兜底，不阻塞）
+  if (companyName !== undefined || companyDesc !== undefined) {
+    const after = await findOne<any>('SELECT company_name, company_desc, default_lang FROM brand_profiles WHERE user_id = ?', [req.params.userId]);
+    if (after?.company_name) {
+      translateBrand(String(req.params.userId), after.company_name, after.company_desc, after.default_lang || 'zh').catch(() => {});
+    }
+  }
   res.json({ success: true });
 });
 

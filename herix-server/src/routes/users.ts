@@ -4,6 +4,7 @@ import { requireAuth, signToken } from '../middleware/auth';
 import { UpdateBrandProfileSchema, UpdateHeraldProfileSchema } from '../types';
 import { ZodError } from 'zod';
 import { SUPPORTED_LOCALES } from '../constants/locales';
+import { translateBrand } from '../utils/translate';
 
 export const usersRouter = Router();
 
@@ -12,7 +13,7 @@ usersRouter.patch('/profile/brand', requireAuth, async (req: Request, res: Respo
   try {
     const data = UpdateBrandProfileSchema.parse(req.body);
 
-    const existing = await findOne<{ id: string }>('SELECT id FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    const existing = await findOne<any>('SELECT id, company_name, company_desc, default_lang FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
     const fields: Record<string, any> = {
       company_name:  data.companyName,
       company_desc:  data.companyDesc || null,
@@ -30,6 +31,15 @@ usersRouter.patch('/profile/brand', requireAuth, async (req: Request, res: Respo
     }
 
     const profile = await findOne('SELECT * FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
+    // 品牌简介/名称变更 → 异步重翻（hash 兜底，不阻塞保存）
+    if (data.companyName !== undefined || data.companyDesc !== undefined) {
+      translateBrand(
+        req.user!.userId,
+        String(data.companyName ?? existing?.company_name ?? ''),
+        data.companyDesc !== undefined ? (data.companyDesc || null) : (existing?.company_desc ?? null),
+        (data.defaultLang as string) || existing?.default_lang || 'zh'
+      ).catch(() => {});
+    }
     res.json(profile);
   } catch (err) {
     if (err instanceof ZodError) {
@@ -168,6 +178,8 @@ usersRouter.post('/brand/onboard', requireAuth, async (req: Request, res: Respon
   } else {
     await update('brand_profiles', data, 'user_id = ?', [req.user!.userId]);
   }
+  // 入驻完成 → 异步翻译品牌简介/名称（不阻塞响应）
+  translateBrand(req.user!.userId, String(companyName), companyDesc || null, String(data.default_lang || 'zh')).catch(() => {});
 
   // 无论注册时走哪条路径（赫使端/邮箱直注册），onboard 完成后必须确保 users.roles 含 BRAND。
   // 此前仅依赖 add-role 端点添加角色，但向导流程跳过了 add-role，导致入驻后仍无 BRAND 角色。

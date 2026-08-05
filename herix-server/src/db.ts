@@ -971,6 +971,19 @@ export async function initDatabase() {
        translated_at TIMESTAMPTZ DEFAULT NOW(),
        PRIMARY KEY (task_id, locale)
      )`,
+    // 品牌维度翻译（2026-08-05）：品牌简介/名称按品牌维护，不再重复挂在任务翻译上。
+    // 事件触发（入驻/资料更新）+ retry job 自愈，brand_profiles 存翻译状态/hash
+    `CREATE TABLE IF NOT EXISTS brand_profile_translations (
+       brand_id TEXT NOT NULL REFERENCES brand_profiles(user_id) ON DELETE CASCADE,
+       locale TEXT NOT NULL,
+       company_name TEXT,
+       company_desc TEXT,
+       translated_at TIMESTAMPTZ DEFAULT NOW(),
+       PRIMARY KEY (brand_id, locale)
+     )`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS translation_status TEXT DEFAULT NULL`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS translation_attempts INTEGER NOT NULL DEFAULT 0`,
+    `ALTER TABLE brand_profiles ADD COLUMN IF NOT EXISTS translation_source_hash TEXT DEFAULT NULL`,
 
     // ── 架构修复批次（2026-07-31）────────────────────────────────────────────
 
@@ -1031,7 +1044,20 @@ export async function initDatabase() {
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS referral_script TEXT`,
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS conversion_criteria_json TEXT`,
     `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS service_name TEXT`,
-    `ALTER TABLE task_translations ADD COLUMN IF NOT EXISTS brand_desc TEXT`,
+    // 一次性迁移：把临时挂在 task_translations.brand_desc 的品牌简介迁到品牌表后删列
+    `DO $$ BEGIN
+       IF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_name = 'task_translations' AND column_name = 'brand_desc') THEN
+         INSERT INTO brand_profile_translations (brand_id, locale, company_name, company_desc, translated_at)
+         SELECT bp.user_id, tt.locale, NULL, tt.brand_desc, NOW()
+         FROM task_translations tt
+         JOIN tasks t ON t.id = tt.task_id
+         JOIN brand_profiles bp ON bp.user_id = t.creator_id
+         WHERE tt.brand_desc IS NOT NULL
+         ON CONFLICT (brand_id, locale) DO NOTHING;
+         ALTER TABLE task_translations DROP COLUMN brand_desc;
+       END IF;
+     END $$`,
 
     // ── 商家发票模块（2026-08-04）────────────────────────────────────────────
     // merchant_invoices: 两类发票——前受金請求書(DEPOSIT) + 月次適格請求書(MONTHLY)

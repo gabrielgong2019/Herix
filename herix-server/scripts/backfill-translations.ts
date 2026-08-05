@@ -22,7 +22,6 @@ interface TaskRow {
   target_communities: string[];
   mode: string;
   service_name: string | null;
-  brand_desc: string | null;
 }
 
 function expectedLocales(task: TaskRow): string[] {
@@ -36,7 +35,6 @@ function expectedLocales(task: TaskRow): string[] {
 function requiredFields(task: TaskRow, trs: { invitee_benefit: string | null; referral_script: string | null; conversion_criteria: unknown } | null): string[] {
   const fields = ['title', 'description'];
   if (task.service_name) fields.push('service_name');
-  if (task.brand_desc) fields.push('brand_desc');
   if (task.mode === 'PERFORMANCE' && trs) {
     if (trs.invitee_benefit) fields.push('invitee_benefit');
     if (trs.referral_script) fields.push('referral_script');
@@ -47,10 +45,8 @@ function requiredFields(task: TaskRow, trs: { invitee_benefit: string | null; re
 
 async function main() {
   const tasks = await pool.query<TaskRow>(
-    `SELECT t.id, t.title, t.description, t.source_lang, t.target_communities, t.mode, t.service_name,
-            bp.company_desc as brand_desc
-     FROM tasks t
-     LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
+    `SELECT id, title, description, source_lang, target_communities, mode, service_name
+     FROM tasks
      WHERE status IN ('PENDING_REVIEW','OPEN','IN_PROGRESS','COMPLETED')`
   );
 
@@ -66,8 +62,8 @@ async function main() {
     const trs = trsRes.rows[0] ?? null;
     const fields = requiredFields(task, trs);
 
-    const rows = await pool.query<{ locale: string; title: string | null; description: string | null; invitee_benefit: string | null; referral_script: string | null; conversion_criteria_json: string | null; service_name: string | null; brand_desc: string | null }>(
-      `SELECT locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, brand_desc
+    const rows = await pool.query<{ locale: string; title: string | null; description: string | null; invitee_benefit: string | null; referral_script: string | null; conversion_criteria_json: string | null; service_name: string | null }>(
+      `SELECT locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name
        FROM task_translations WHERE task_id = $1 AND locale = ANY($2)`,
       [task.id, locales]
     );
@@ -79,7 +75,7 @@ async function main() {
     });
     if (!incomplete) { skipped++; continue; }
 
-    const extras: any = { serviceName: task.service_name, brandDesc: task.brand_desc };
+    const extras: any = { serviceName: task.service_name };
     if (task.mode === 'PERFORMANCE' && trs) {
       extras.inviteeBenefit = trs.invitee_benefit;
       extras.referralScript = trs.referral_script;

@@ -9,7 +9,6 @@ export interface TranslateExtras {
   referralScript?: string | null;
   conversionCriteria?: any;
   serviceName?: string | null;
-  brandDesc?: string | null;
 }
 
 function contentHash(title: string, description: string, extras?: TranslateExtras): string {
@@ -17,7 +16,6 @@ function contentHash(title: string, description: string, extras?: TranslateExtra
     extras.inviteeBenefit || '',
     extras.referralScript || '',
     extras.serviceName || '',
-    extras.brandDesc || '',
     typeof extras.conversionCriteria === 'string'
       ? extras.conversionCriteria
       : JSON.stringify(extras.conversionCriteria ?? ''),
@@ -108,11 +106,10 @@ export async function translateTask(
       `UPDATE tasks SET translation_attempts = translation_attempts + 1 WHERE id = $1`, [taskId]
     );
 
-    const hasExtras = extras && (extras.inviteeBenefit || extras.referralScript || extras.conversionCriteria || extras.serviceName || extras.brandDesc);
+    const hasExtras = extras && (extras.inviteeBenefit || extras.referralScript || extras.conversionCriteria || extras.serviceName);
     const extrasLines = hasExtras ? [
       extras!.inviteeBenefit ? `invitee_benefit: ${extras!.inviteeBenefit}` : '',
       extras!.serviceName ? `service_name: ${extras!.serviceName}` : '',
-      extras!.brandDesc ? `brand_desc: ${extras!.brandDesc}` : '',
       extras!.referralScript ? `referral_script: ${extras!.referralScript}` : '',
       extras!.conversionCriteria ? `conversion_criteria (JSON，翻译所有 label/string 值，保留 JSON 结构): ${typeof extras!.conversionCriteria === 'string' ? extras!.conversionCriteria : JSON.stringify(extras!.conversionCriteria)}` : '',
     ].filter(Boolean).join('\n') : '';
@@ -121,7 +118,6 @@ export async function translateTask(
     if (hasExtras) {
       if (extras!.inviteeBenefit) responseFields.push('invitee_benefit');
       if (extras!.serviceName) responseFields.push('service_name');
-      if (extras!.brandDesc) responseFields.push('brand_desc');
       if (extras!.referralScript) responseFields.push('referral_script');
       if (extras!.conversionCriteria) responseFields.push('conversion_criteria');
     }
@@ -170,13 +166,11 @@ export async function translateTask(
       referral_script?: string;
       conversion_criteria?: any;
       service_name?: string;
-      brand_desc?: string;
     }>;
     // 完整性校验（2026-08-05）：每个目标 locale 的必翻字段必须齐全，缺字段不落库、
     // 整单标 failed 交给 retry 重试——防止"部分翻译"被当成 done 永久固化。
     const requiredFields: string[] = ['title', 'description'];
     if (extras?.serviceName) requiredFields.push('service_name');
-    if (extras?.brandDesc) requiredFields.push('brand_desc');
     if (extras?.inviteeBenefit) requiredFields.push('invitee_benefit');
     if (extras?.referralScript) requiredFields.push('referral_script');
     if (extras?.conversionCriteria) requiredFields.push('conversion_criteria');
@@ -196,8 +190,8 @@ export async function translateTask(
         : null;
       await pool.query(
         `INSERT INTO task_translations
-           (task_id, locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, brand_desc, translated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+           (task_id, locale, title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name, translated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (task_id, locale) DO UPDATE
            SET title = EXCLUDED.title,
                description = EXCLUDED.description,
@@ -205,10 +199,9 @@ export async function translateTask(
                referral_script = EXCLUDED.referral_script,
                conversion_criteria_json = EXCLUDED.conversion_criteria_json,
                service_name = EXCLUDED.service_name,
-               brand_desc = EXCLUDED.brand_desc,
                translated_at = EXCLUDED.translated_at`,
         [taskId, locale, t.title, t.description ?? null,
-         t.invitee_benefit ?? null, t.referral_script ?? null, ccJson, t.service_name ?? null, t.brand_desc ?? null, now]
+         t.invitee_benefit ?? null, t.referral_script ?? null, ccJson, t.service_name ?? null, now]
       );
     }
 
@@ -221,6 +214,118 @@ export async function translateTask(
     console.error('[translate] failed for task', taskId, err);
     await pool.query(
       `UPDATE tasks SET translation_status = 'failed' WHERE id = $1`, [taskId]
+    ).catch(() => {});
+  }
+}
+
+function brandHash(companyName: string, companyDesc: string | null): string {
+  const normalized = (companyName + '\n' + (companyDesc || ''))
+    .replace(/[^\p{L}\p{N}]/gu, '')
+    .toLowerCase();
+  return crypto.createHash('sha256').update(normalized).digest('hex').slice(0, 16);
+}
+
+/** 品牌简介/名称翻译（2026-08-05 品牌维度）：一次调用翻全量默认语言，
+ *  事件触发（入驻/资料更新）fire-and-forget，失败由 translation-retry job 自愈。 */
+export async function translateBrand(
+  brandId: string,
+  companyName: string,
+  companyDesc: string | null,
+  sourceLang = 'zh'
+): Promise<void> {
+  const locales = DEFAULT_TARGET_LOCALES.filter(l => l !== sourceLang);
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    console.warn('[translate-brand] DEEPSEEK_API_KEY not set, skipping');
+    return;
+  }
+  try {
+    const hash = brandHash(companyName, companyDesc);
+    const bpRow = await pool.query<{ translation_source_hash: string | null; translation_attempts: number }>(
+      `SELECT translation_source_hash, translation_attempts FROM brand_profiles WHERE user_id = $1`, [brandId]
+    );
+    if (bpRow.rows[0]?.translation_source_hash === hash) {
+      await pool.query(`UPDATE brand_profiles SET translation_status = 'done' WHERE user_id = $1`, [brandId]);
+      return;
+    }
+    const attempts = bpRow.rows[0]?.translation_attempts ?? 0;
+    if (attempts >= TASK_LIFETIME_CAP) {
+      console.warn(`[translate-brand] brand ${brandId} hit lifetime cap (${attempts})`);
+      return;
+    }
+    await pool.query(
+      `UPDATE brand_profiles SET translation_attempts = translation_attempts + 1 WHERE user_id = $1`, [brandId]
+    );
+
+    const fields = ['company_name'];
+    if (companyDesc) fields.push('company_desc');
+    const sampleFields = fields.map(f => `"${f}": "..."`).join(', ');
+    const userPrompt =
+      `请将以下品牌信息翻译为：${locales.join('、')}。\n` +
+      `仅返回合法 JSON，格式：{"ja":{"company_name":"...","company_desc":"..."},"en":{...}}（只包含需要翻译的语言和字段）\n\n` +
+      `company_name: ${companyName}\n` +
+      (companyDesc ? `company_desc: ${companyDesc}` : '');
+
+    const resp = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: 'deepseek-v4-flash',
+        temperature: 0,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: SYSTEM_CONTEXT },
+          { role: 'user', content: userPrompt },
+        ],
+      }),
+    });
+    if (!resp.ok) {
+      console.error('[translate-brand] DeepSeek error', resp.status, await resp.text());
+      await pool.query(`UPDATE brand_profiles SET translation_status = 'failed' WHERE user_id = $1`, [brandId]).catch(() => {});
+      return;
+    }
+    const data = await resp.json() as any;
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      await pool.query(`UPDATE brand_profiles SET translation_status = 'failed' WHERE user_id = $1`, [brandId]).catch(() => {});
+      return;
+    }
+    const translations = parseLlmJson(content) as Record<string, {
+      company_name?: string;
+      company_desc?: string;
+    }>;
+    const required = ['company_name'];
+    if (companyDesc) required.push('company_desc');
+    for (const locale of locales) {
+      const t = translations[locale];
+      if (!t) throw new Error(`[translate-brand] missing locale ${locale}`);
+      const missing = required.filter(f => (t as any)[f] === undefined || (t as any)[f] === null || (t as any)[f] === '');
+      if (missing.length) throw new Error(`[translate-brand] ${locale} 缺字段: ${missing.join(', ')}`);
+    }
+
+    const now = new Date().toISOString();
+    for (const locale of locales) {
+      const t = translations[locale];
+      if (!t?.company_name) continue;
+      await pool.query(
+        `INSERT INTO brand_profile_translations (brand_id, locale, company_name, company_desc, translated_at)
+         VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (brand_id, locale) DO UPDATE
+           SET company_name = EXCLUDED.company_name,
+               company_desc = EXCLUDED.company_desc,
+               translated_at = EXCLUDED.translated_at`,
+        [brandId, locale, t.company_name, t.company_desc ?? null, now]
+      );
+    }
+    await pool.query(
+      `UPDATE brand_profiles SET translation_status = 'done', translation_source_hash = $2 WHERE user_id = $1`,
+      [brandId, hash]
+    );
+    console.log(`[translate-brand] brand ${brandId} → ${locales.join('/')} [desc=${companyDesc ? 'yes' : 'no'}]`);
+  } catch (err) {
+    console.error('[translate-brand] failed for brand', brandId, err);
+    await pool.query(
+      `UPDATE brand_profiles SET translation_status = 'failed' WHERE user_id = $1`, [brandId]
     ).catch(() => {});
   }
 }

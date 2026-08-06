@@ -332,15 +332,16 @@
     "sg": "新加坡"
   },
   "community": {
-    "cn-in-jp": "在日华人",
-    "vn-in-jp": "在日越南人",
-    "kr-in-jp": "在日韩国人",
-    "ph-in-jp": "在日菲律宾人",
-    "cn-in-au": "澳洲华人",
-    "cn-in-us": "美国华人",
-    "cn-in-ca": "加拿大华人",
-    "cn-in-uk": "英国华人",
-    "cn-in-sg": "新加坡华人"
+    "cn-in-jp": "在日华裔",
+    "vn-in-jp": "在日越南裔",
+    "kr-in-jp": "在日韩裔",
+    "ph-in-jp": "在日菲律宾裔",
+    "cn-in-au": "在澳华裔",
+    "cn-in-us": "在美华裔",
+    "cn-in-ca": "在加华裔",
+    "cn-in-uk": "在英华裔",
+    "cn-in-sg": "在新华裔",
+    "jp-in-jp": "本地日本人"
   },
   "category": {
     "experience": "体验",

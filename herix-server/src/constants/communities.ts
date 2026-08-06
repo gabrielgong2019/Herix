@@ -8,6 +8,7 @@ export const COMMUNITIES = [
   { id: 'vn-in-jp', labelKey: 'community.vn-in-jp', region: 'JP', locale: 'vi' },
   { id: 'kr-in-jp', labelKey: 'community.kr-in-jp', region: 'JP', locale: 'ko' },
   { id: 'ph-in-jp', labelKey: 'community.ph-in-jp', region: 'JP', locale: 'en' },
+  { id: 'jp-in-jp', labelKey: 'community.jp-in-jp', region: 'JP', locale: 'ja' },
   { id: 'cn-in-au', labelKey: 'community.cn-in-au', region: 'AU', locale: 'zh' },
   { id: 'cn-in-us', labelKey: 'community.cn-in-us', region: 'US', locale: 'zh' },
   { id: 'cn-in-ca', labelKey: 'community.cn-in-ca', region: 'CA', locale: 'zh' },

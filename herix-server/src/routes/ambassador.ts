@@ -171,7 +171,12 @@ ambassadorRouter.post('/onboard', requireAuth, async (req: Request, res: Respons
     profileData.bank_account = bankDetails ? JSON.stringify({ type: bankAccountType, ...bankDetails }) : null;
 
     if (residence === 'japan') {
-      if (visaType) {
+      if (visaType === 'japanese') {
+        // 日本国籍：无在留资格，声明直接豁免（2026-08-06）
+        profileData.visa_type = 'japanese';
+        profileData.kyc_status = 'pending';
+        profileData.declaration_status = 'exempt';
+      } else if (visaType) {
         profileData.visa_type = visaType;
         profileData.kyc_status = 'pending';
         profileData.declaration_status = 'submitted';

@@ -689,7 +689,7 @@ export default class Profile extends Component<{}, State> {
                 </Text>
               </View>
               {this.renderRow(t('profile.kyc'), u.kyc_status === 'approved' ? t('profile.kycApproved') : u.kyc_status === 'pending' ? t('profile.kycPending') : t('profile.kycNone'))}
-              {u.residence === 'japan' && this.renderRow(t('profile.declaration'), u.declaration_status === 'submitted' || u.declaration_status === 'approved' ? t('profile.declSubmitted') : t('profile.kycNone'))}
+              {u.residence === 'japan' && this.renderRow(t('profile.declaration'), u.visa_type === 'japanese' ? t('profile.declExempt') : (u.declaration_status === 'submitted' || u.declaration_status === 'approved' ? t('profile.declSubmitted') : t('profile.kycNone')))}
               {this.renderRow(t('profile.payoutMethod'), bank ? bank.type || t('profile.isSet') : t('profile.notSet'))}
               <View className='info-row'>
                 <Text className='info-label'>{t('profile.currency')}</Text>

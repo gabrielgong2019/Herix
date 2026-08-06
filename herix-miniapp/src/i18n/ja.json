@@ -1285,5 +1285,9 @@
   "task.communityAll": "すべて",
   "index.onboardHintTitle": "プロフィール登録でタスク精度アップ",
   "index.onboardHintSub": "コミュニティを選ぶと、関連するタスクだけが表示されます",
-  "index.onboardGo": "登録へ"
+  "index.onboardGo": "登録へ",
+  "ob.visa5": "日本国籍",
+  "ob.visaJpExempt": "日本国籍の方は在留資格の申告は不要です。このまま進めます。",
+  "profile.declExempt": "日本国籍のため申告不要",
+  "community.jp-in-jp": "日本人"
 }

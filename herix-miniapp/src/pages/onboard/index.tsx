@@ -25,6 +25,7 @@ function wechatHint(val: string): { text: string; color: string; showPrefix: boo
 // v 是落库值不翻译；labelKey 渲染时 t() 取值
 // v 是入库的稳定 id（2026-07-18 从 CJK 文本迁移，存量归一见 db.ts 迁移），显示走词条
 const VISAS = [
+  { v: 'japanese', labelKey: 'ob.visa5' },
   { v: 'permanent', labelKey: 'ob.visa1' },
   { v: 'work', labelKey: 'ob.visa2' },
   { v: 'student', labelKey: 'ob.visa3' },
@@ -190,6 +191,11 @@ export default class Onboard extends Component<{}, State> {
   };
 
   nextJapan = () => {
+    // 日本国籍无需在留声明，直接提交
+    if (this.state.data.visaType === 'japanese') {
+      this.submit();
+      return;
+    }
     if (!this.state.data.agreed) {
       Taro.showToast({ title: t('ob.agreeFirst'), icon: 'none' });
       return;
@@ -462,7 +468,15 @@ export default class Onboard extends Component<{}, State> {
                 <Text className='choice-name sm'>{t(v.labelKey)}</Text>
               </View>
             ))}
-            {d.visaType && (
+            {d.visaType === 'japanese' && (
+              <View>
+                <View className='declaration'>{t('ob.visaJpExempt')}</View>
+                <View className={`btn-primary ${submitting ? 'disabled' : ''}`} onClick={submitting ? undefined : this.nextJapan}>
+                  {submitting ? t('withdraw.submitting') : t('ob.next')}
+                </View>
+              </View>
+            )}
+            {d.visaType && d.visaType !== 'japanese' && (
               <View>
                 <View className='declaration'>{t('ob.declaration')}</View>
                 <View className='agree-row' onClick={() => this.set('agreed', !d.agreed)}>

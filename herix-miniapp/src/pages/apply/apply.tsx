@@ -139,7 +139,9 @@ export default class Apply extends Component<{}, State> {
         try {
           uploaded.push(await uploadSubmissionImage(p));
         } catch (e: any) {
-          Taro.showToast({ title: e?.message || t('apply.uploadFailed'), icon: 'none' });
+          // 微信 fail 的错误信息在 errMsg（如 url not in domain list），message 恒空，
+          // 之前只显示通用文案，域名未配置时无从排查（2026-08-06）
+          Taro.showToast({ title: e?.errMsg || e?.message || t('apply.uploadFailed'), icon: 'none' });
         }
       }
       this.setState(prev => ({ ...prev, screenshots: [...prev.screenshots, ...uploaded], uploading: false }));

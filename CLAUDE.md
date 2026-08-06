@@ -183,6 +183,9 @@ Auth.init({ onLogin: function(d){ afterAuth(d); }, onRegister: function(d){ afte
   短期止血项 = uploads 目录 crontab 定时备份；正式方案 = 迁阿里云 OSS（内网免流量费）+ CDN。
   迁移成本低：存图已收口在 `saveBrandAsset`/`saveTaskCover`（utils/uploads.ts），换 OSS SDK 只改这一处，
   存量文件 rsync 一次搬完。流程层（multipart+sharp压缩+DB只存URL）已是最佳实践不用动。
+  升级附加项（2026-08-06 定）：OSS 迁移时顺手把图片 URL 从 `?v=<hash>` 升级为**文件名哈希**
+  （`cover-<hash>.webp`）+ `/uploads` 配 `Cache-Control: immutable, max-age=1y` + 旧版本清理策略，
+  规避 CDN「Ignore Query String」导致缓存失效失效的边界。当前 `?v=` 方案先维持。
 
 ---
 

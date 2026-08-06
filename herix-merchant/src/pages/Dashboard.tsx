@@ -35,9 +35,9 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const { data: tasksData } = useQuery({
+  const { data: statsData } = useQuery({
     queryKey: ['tasks', 'dashboard', user?.id],
-    queryFn: () => tasksApi.list({ page: 1, creator: user?.id }).then((r) => r.data),
+    queryFn: () => tasksApi.myStats().then((r) => r.data),
     enabled: !!user?.id,
   })
   const { data: walletData } = useQuery({
@@ -45,9 +45,8 @@ export default function Dashboard() {
     queryFn: () => walletApi.brandBalance().then((r) => r.data),
   })
 
-  const tasks = tasksData?.tasks || []
-  const openCount = tasks.filter((t) => t.status.toUpperCase() === 'OPEN').length
-  const totalApplicants = tasks.reduce((s, t) => s + (t.applicant_count || 0), 0)
+  const summary = statsData?.summary
+  const tasks = statsData?.tasks || []
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -56,9 +55,9 @@ export default function Dashboard() {
       <div className="p-7 flex-1">
         {/* Stats */}
         <div className="grid grid-cols-4 gap-4 mb-6">
-          <StatCard label={t('dashboard.statTasks')} value={openCount} color="var(--primary)" />
-          <StatCard label={t('dashboard.statApplicants')} value={totalApplicants} />
-          <StatCard label={t('dashboard.statSubmissions')} value="—" />
+          <StatCard label={t('dashboard.statTasks')} value={summary?.openTasks ?? 0} color="var(--primary)" />
+          <StatCard label={t('dashboard.statApplicants')} value={summary?.totalApplicants ?? 0} />
+          <StatCard label={t('dashboard.statSubmissions')} value={summary?.pendingSubmissions ?? 0} />
           <StatCard label={t('dashboard.statCredits')} value={walletData ? `¥${walletData.available.toLocaleString()}` : '—'} />
         </div>
 
@@ -91,7 +90,7 @@ export default function Dashboard() {
                 >
                   <td className="px-5 py-3 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{task.title}</td>
                   <td className="px-5 py-3" style={{ borderBottom: '1px solid var(--border)' }}><StatusTag status={task.status} /></td>
-                  <td className="px-5 py-3 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{task.applicant_count || 0}</td>
+                  <td className="px-5 py-3 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{task.app_total || 0}</td>
                   <td className="px-5 py-3 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{formatDate(task.created_at)}</td>
                 </tr>
               ))}

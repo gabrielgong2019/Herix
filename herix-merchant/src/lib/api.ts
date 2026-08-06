@@ -51,9 +51,23 @@ export const authApi = {
 }
 
 // ── Tasks ─────────────────────────────────────────────────────────
+export interface MyTaskStats {
+  totalTasks: number
+  openTasks: number
+  draftTasks: number
+  totalApplicants: number
+  pendingApplicants: number
+  pendingSubmissions: number
+  totalCompleted: number
+  totalSpend: number
+  pendingSpend: number
+  qualifiedReferrals: number
+}
+
 export const tasksApi = {
   list: (params?: { status?: string; page?: number; creator?: string }) =>
     http.get<{ tasks: Task[]; total: number }>('/tasks', { params }),
+  myStats: () => http.get<{ summary: MyTaskStats; tasks: Task[] }>('/tasks/my/stats'),
   get: (id: string) => http.get<Task>(`/tasks/${id}`),
   create: (data: TaskFormData) => http.post<Task>('/tasks', data),
   update: (id: string, data: Partial<TaskFormData>) => http.put<Task>(`/tasks/${id}`, data),
@@ -286,6 +300,7 @@ export interface Task {
   created_at: string
   published_at?: string
   applicant_count?: number
+  app_total?: number
   approved_count?: number
   upload_token?: string
   fast_payout?: boolean

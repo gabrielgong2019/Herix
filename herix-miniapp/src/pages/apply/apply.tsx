@@ -177,7 +177,10 @@ export default class Apply extends Component<{}, State> {
       setTimeout(() => Taro.navigateBack(), 1500);
       // 成功后刻意不复位 submitting——返回前的1.5s窗口内按钮保持禁用,防双击双提交
     } catch (err: any) {
-      Taro.showToast({ title: err.message || t('apply.failed'), icon: 'none' });
+      // 服务端 zod 校验失败时 details 带具体字段错误（如"请提供有效的内容链接"），
+      // 只显示 err.message 永远是笼统的"参数错误"，无法定位（2026-08-06）
+      const detailMsg = err?.data?.details?.[0]?.message;
+      Taro.showToast({ title: detailMsg || err.message || t('apply.failed'), icon: 'none' });
       this.setState({ submitting: false });
     }
   };

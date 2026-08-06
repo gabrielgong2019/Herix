@@ -12,7 +12,8 @@ import { t, tf } from '../../utils/i18n';
 // "我的待办"住在底部「任务」tab（herald-dashboard），首页不再内嵌待办切换。
 
 const isWeapp = process.env.TARO_ENV === 'weapp';
-const ONBOARD_HINT_DISMISSED = 'herix_onboard_hint_dismissed';
+const ONBOARD_HINT_DISMISSED_AT = 'herix_onboard_hint_dismissed_at';
+const ONBOARD_HINT_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 关闭后 7 天冷却，避免一生一次后引导失效
 
 interface NavMetrics {
   top: number;        // 状态栏高度，自定义栏顶部内边距
@@ -86,15 +87,16 @@ export default class Index extends Component<{}, State> {
       const cid = profile?.community ?? '';
       const comm = commList.find(c => c.id === cid);
       if (cid && comm) this.setState({ communityId: cid, communityName: t(comm.labelKey) });
-      // 已登录但未完成入驻：弹一次引导（手动关闭后永久记住，不再打扰）
-      if (profile && !profile.is_onboarded && !Taro.getStorageSync(ONBOARD_HINT_DISMISSED)) {
+      // 已登录但未完成入驻：展示引导（关闭后 7 天冷却，避免永久失效）
+      const dismissedAt = Number(Taro.getStorageSync(ONBOARD_HINT_DISMISSED_AT)) || 0;
+      if (profile && !profile.is_onboarded && Date.now() - dismissedAt > ONBOARD_HINT_COOLDOWN_MS) {
         this.setState({ showOnboardHint: true });
       }
     } catch { /* 未登录/社群信息拿不到不阻断列表 */ }
   };
 
   dismissOnboardHint = () => {
-    Taro.setStorageSync(ONBOARD_HINT_DISMISSED, '1');
+    Taro.setStorageSync(ONBOARD_HINT_DISMISSED_AT, String(Date.now()));
     this.setState({ showOnboardHint: false });
   };
 

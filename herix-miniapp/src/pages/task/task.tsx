@@ -63,6 +63,8 @@ interface State {
   /** 明细模式：我的邀请进度（脱敏行） */
   referralRecords: any[];
   applying: boolean;
+  /** 身份/报名状态是否已加载完；未加载前不渲染操作按钮，避免状态闪烁（2026-08-06） */
+  identityLoaded: boolean;
   // 方案提交 sheet
   proposalSheetOpen: boolean;
   proposalText: string;
@@ -93,6 +95,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     referralRecords: [],
     ambassadorProfile: null,
     applying: false,
+    identityLoaded: false,
     proposalSheetOpen: false,
     proposalText: '',
     proposalLinks: [],
@@ -133,58 +136,56 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
       // 角色/身份信息以后端 /auth/me 为准，不信任本地缓存（缓存可能缺失或过期，
       // 曾导致报名成功后本页判断不到"已报名"，一直显示可以继续报名）
-      // auth.me 与 taskApi.detail 并行发出，消除一个串行往返，报名按钮因此提前出现
-      const authPromise = getToken() ? auth.me().catch(() => null) : Promise.resolve(null);
-
-      const task = await taskApi.detail(id);
+      // 并行拉取所有互不依赖的数据；HERALD 数据接口对非 HERALD 会 403，失败静默忽略
+      const token = getToken();
+      const [task, userData, myApps, mySubs, profile] = await Promise.all([
+        taskApi.detail(id),
+        token ? auth.me().catch(() => null) : Promise.resolve(null),
+        token ? applications.my().catch(() => []) : Promise.resolve([]),
+        token ? subApi.my().catch(() => []) : Promise.resolve([]),
+        token ? getAmbassadorProfile({ force: opts?.forceProfile }).catch(() => null) : Promise.resolve(null),
+      ]);
       this.setState({ task, loading: false });
 
-      try {
-        const userData = await authPromise;
-        if (userData) {
-          this.setState({ role: userData.role, userId: userData.id });
+      if (userData) {
+        this.setState({ role: userData.role, userId: userData.id });
 
-          if (userData.role === 'HERALD') {
-            const [myApps, mySubs, profile] = await Promise.all([
-              applications.my(),
-              subApi.my(),
-              getAmbassadorProfile({ force: opts?.forceProfile }),
-            ]);
+        if (userData.role === 'HERALD') {
+          const myApp = myApps.find((a: any) => a.task_id === id);
+          const mySub = mySubs.find((s: any) => s.task_id === id);
+          let revs: any[] = [];
+          if (mySub) { try { revs = await subApi.revisions(mySub.id); } catch { /* 时间线非关键，失败静默 */ } }
+          this.setState({
+            myApplication: myApp || null,
+            mySubmission: mySub || null,
+            revisions: revs,
+            ambassadorProfile: profile,
+          });
 
-            const myApp = myApps.find((a: any) => a.task_id === id);
-            const mySub = mySubs.find((s: any) => s.task_id === id);
-            let revs: any[] = [];
-            if (mySub) { try { revs = await subApi.revisions(mySub.id); } catch { /* 时间线非关键，失败静默 */ } }
-            this.setState({
-              myApplication: myApp || null,
-              mySubmission: mySub || null,
-              revisions: revs,
-              ambassadorProfile: profile,
-            });
-
-            // 成果报酬类：审核通过后自动发码，查一下是否已有码
-            if (task.mode === 'PERFORMANCE') {
-              try {
-                const myCodes = await referrals.myCodes();
-                const myTaskCodes = (myCodes || []).filter((c: any) => c.task_id === id);
-                if (myTaskCodes.length > 0) {
-                  this.setState({ myAmbassadorTask: myTaskCodes[0] });
-                  // 明细模式任务：拉取邀请进度列表
-                  if ((task as any).data_mode === 'DETAIL') {
-                    try {
-                      const recs = await referrals.myRecords(id);
-                      this.setState({ referralRecords: recs || [] });
-                    } catch {}
-                  }
+          // 成果报酬类：审核通过后自动发码，查一下是否已有码
+          if (task.mode === 'PERFORMANCE') {
+            try {
+              const myCodes = await referrals.myCodes();
+              const myTaskCodes = (myCodes || []).filter((c: any) => c.task_id === id);
+              if (myTaskCodes.length > 0) {
+                this.setState({ myAmbassadorTask: myTaskCodes[0] });
+                // 明细模式任务：拉取邀请进度列表
+                if ((task as any).data_mode === 'DETAIL') {
+                  try {
+                    const recs = await referrals.myRecords(id);
+                    this.setState({ referralRecords: recs || [] });
+                  } catch {}
                 }
-              } catch {}
-            }
+              }
+            } catch {}
           }
         }
-      } catch {}
+      }
+      // 身份/报名状态齐了才渲染操作按钮，避免"立即报名→已加入"闪烁
+      this.setState({ identityLoaded: true });
     } catch (err: any) {
       Taro.showToast({ title: err.message || t('task.loadFailed'), icon: 'none' });
-      this.setState({ loading: false });
+      this.setState({ loading: false, identityLoaded: true });
     }
   };
 
@@ -550,8 +551,16 @@ export default class TaskDetail extends Component<{ id: string }, State> {
   }
 
   renderActionBar() {
-    const { task, myApplication, mySubmission, myAmbassadorTask, role, ambassadorProfile, applying } = this.state;
+    const { task, myApplication, mySubmission, myAmbassadorTask, role, ambassadorProfile, applying, identityLoaded } = this.state;
     if (!task) return null;
+    // 身份/报名状态未就绪时不渲染按钮，避免"立即报名→已加入"闪烁（2026-08-06）
+    if (!identityLoaded) {
+      return (
+        <View className='actions'>
+          <View className='status-banner banner-pending'>{t('common.loading')}</View>
+        </View>
+      );
+    }
 
     const isHerald = this.isHerald();
     const loggedIn = !!getToken();

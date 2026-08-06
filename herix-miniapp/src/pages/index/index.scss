@@ -6,6 +6,7 @@
   min-height: 100vh;
   background: var(--bg);
   padding-bottom: 100px;
+  overflow-x: hidden; /* 单列布局下禁止页面级横向滚动（2026-08-06） */
 }
 
 .header {

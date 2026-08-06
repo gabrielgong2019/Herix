@@ -7,6 +7,7 @@
   margin-bottom: 20px;
   padding: 24px 28px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow-x: hidden; /* 防止内部固定宽元素（缩略图/标签）把页面撑出横向滚动 */
 }
 
 @include bp.desktop {
@@ -137,6 +138,7 @@
 // 对比稿方案1的可取点：图占约1/3卡宽（原160px小图存在感太弱）；比例保持16:9与上传规格一致
 .thumb {
   width: 216px;
+  max-width: 50%; /* 窄屏真机自动收窄，不再撑破卡片（2026-08-06） */
   aspect-ratio: 16 / 9;
   border-radius: 16px;
   flex-shrink: 0;
@@ -260,5 +262,4 @@
   font-weight: 600;
   margin-left: 4px;
 }
-
 

@@ -120,12 +120,13 @@ export function extractBrief(text: string, mode: 'STANDARD' | 'PERFORMANCE'): Ex
       hits.push({ field: 'maxRevisions', labelKey: 'taskForm.fieldMaxRevisions', display: `≤${revs[1]}`, patch: { maxRevisions: Number(revs[1]) } })
     }
 
-    // 内容形式：提到视频+图片→图文视频都要；只提视频→视频；只提图片→图文
+    // 内容形式：图/视频“或”关系→either；图+视频都提→both；单提→对应类型
     const hasVideo = /视频/.test(text)
     const hasPhoto = /图片|图文|照片/.test(text)
     if (hasVideo || hasPhoto) {
-      const ct = hasVideo && hasPhoto ? 'both' : hasVideo ? 'video' : 'photo'
-      const labelMap = { photo: 'taskForm.ctPhoto', video: 'taskForm.ctVideo', both: 'taskForm.ctBoth' } as const
+      const isEither = /图片.{0,8}或.{0,8}视频|视频.{0,8}或.{0,8}图片/.test(text)
+      const ct = isEither ? 'either' : hasVideo && hasPhoto ? 'both' : hasVideo ? 'video' : 'photo'
+      const labelMap = { photo: 'taskForm.ctPhoto', video: 'taskForm.ctVideo', either: 'taskForm.ctEither', both: 'taskForm.ctBoth' } as const
       hits.push({ field: 'contentType', labelKey: labelMap[ct], display: '', patch: { contentType: ct } })
     }
   }

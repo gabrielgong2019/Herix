@@ -744,5 +744,7 @@
   "ob.visa5": "Quốc tịch Nhật Bản",
   "ob.visaJpExempt": "Người mang quốc tịch Nhật Bản không cần khai báo tư cách lưu trú, có thể tiếp tục ngay.",
   "profile.declExempt": "Quốc tịch Nhật Bản, không cần khai báo",
-  "community.jp-in-jp": "Người Nhật tại Nhật"
+  "community.jp-in-jp": "Người Nhật tại Nhật",
+  "task.contentTypeEither": "Hình ảnh hoặc video",
+  "apply.eitherNeedContent": "Vui lòng tải ảnh lên hoặc cung cấp liên kết nội dung"
 }

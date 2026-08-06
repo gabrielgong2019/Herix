@@ -32,6 +32,7 @@ interface State {
   isResubmit: boolean;
   rejectNote: string;
   minImages: number;
+  contentType: string;
   draftApprovedFlip: boolean; // 草稿已过，这次提交是自动转入的终稿（区别于任务本来就不要求草稿）
 }
 
@@ -47,6 +48,7 @@ export default class Apply extends Component<{}, State> {
     isResubmit: false,
     rejectNote: '',
     minImages: 0,
+    contentType: '',
     draftApprovedFlip: false,
   };
 
@@ -88,6 +90,7 @@ export default class Apply extends Component<{}, State> {
         draftApprovedFlip,
         hints: hints.length ? hints : [DEFAULT_HINT_KEY],
         minImages: ctx.minImages,
+        contentType: ctx.contentType || '',
       });
 
       // 重提：预填上次内容 + 显示被拒原因
@@ -162,7 +165,7 @@ export default class Apply extends Component<{}, State> {
   };
 
   handleSubmit = async () => {
-    const { mode, links, screenshots, description, minImages } = this.state;
+    const { mode, links, screenshots, description, minImages, contentType } = this.state;
     const contentUrls = links.map(this.normalizeLink).filter(Boolean);
     // 客户端前置校验（服务端同款闸机兜底）
     for (let i = 0; i < links.length; i++) {
@@ -182,7 +185,16 @@ export default class Apply extends Component<{}, State> {
       Taro.showToast({ title: t('apply.fillDraft'), icon: 'none' });
       return;
     }
-    if (minImages > 0 && screenshots.length < minImages) {
+    const isEither = contentType === 'either';
+    if (isEither && minImages > 0 && screenshots.length > 0 && screenshots.length < minImages) {
+      Taro.showToast({ title: t('apply.needMinImages', { n: minImages }), icon: 'none' });
+      return;
+    }
+    if (isEither && minImages > 0 && screenshots.length === 0 && contentUrls.length === 0) {
+      Taro.showToast({ title: t('apply.eitherNeedContent'), icon: 'none' });
+      return;
+    }
+    if (!isEither && minImages > 0 && screenshots.length < minImages) {
       Taro.showToast({ title: t('apply.needMinImages', { n: minImages }), icon: 'none' });
       return;
     }

@@ -39,8 +39,8 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     const urls = data.contentUrls?.length ? data.contentUrls : (data.contentUrl ? [data.contentUrl] : []);
 
     // 任务内容规格（两阶段配置 + 提交闸机参数）
-    const spec = await findOne<{ min_images: number | null; require_draft_review: number }>(
-      'SELECT min_images, require_draft_review FROM task_content_specs WHERE task_id = ?',
+    const spec = await findOne<{ content_type: string | null; min_images: number | null; require_draft_review: number }>(
+      'SELECT content_type, min_images, require_draft_review FROM task_content_specs WHERE task_id = ?',
       [req.params.taskId]
     );
     const requireDraft = !!(spec?.require_draft_review);
@@ -64,10 +64,12 @@ submissionsRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     }
 
     // 提交闸机（2026-07-25）：图片张数机器校验，两阶段都适用（草稿即体现成品图数量）。
-    // 视频时长无法校验（内容是外链，拿不到元数据），仅作要求展示
+    // 视频时长无法校验（内容是外链，拿不到元数据），仅作要求展示。
+    // 'either'（图片或视频任一）：有截图则按图片数校验；无截图视为视频交付，跳过图片数校验
     if (spec?.min_images) {
       const got = data.screenshotUrls?.length || 0;
-      if (got < spec.min_images) {
+      const isEither = spec.content_type === 'either';
+      if ((!isEither || got > 0) && got < spec.min_images) {
         return res.status(400).json({
           error: `该任务要求至少 ${spec.min_images} 张图片/截图（当前 ${got} 张）`,
           code: 'MIN_IMAGES_NOT_MET',
@@ -290,8 +292,8 @@ submissionsRouter.get('/task/:taskId/my', requireAuth, requireRole('HERALD'), as
   const heraldId = req.user!.userId;
 
   const [spec, submission, task] = await Promise.all([
-    findOne<{ min_images: number; require_draft_review: boolean; max_revisions: number }>(
-      'SELECT min_images, require_draft_review, max_revisions FROM task_content_specs WHERE task_id = ?',
+    findOne<{ content_type: string | null; min_images: number; require_draft_review: boolean; max_revisions: number }>(
+      'SELECT content_type, min_images, require_draft_review, max_revisions FROM task_content_specs WHERE task_id = ?',
       [taskId]
     ),
     findOne<any>(
@@ -325,6 +327,7 @@ submissionsRouter.get('/task/:taskId/my', requireAuth, requireRole('HERALD'), as
     submission:    submission ?? null,
     nextAction,
     requireDraft,
+    contentType:   spec?.content_type ?? null,
     minImages:     spec?.min_images ?? 0,
     platformHints,
   });

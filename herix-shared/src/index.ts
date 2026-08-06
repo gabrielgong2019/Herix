@@ -21,10 +21,11 @@ export const DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
 export type Difficulty = typeof DIFFICULTIES[number];
 
 /** 'referral' 是邀请码任务的占位 content_type（merchant 手写类型曾漏掉它——漂移实例） */
-export const CONTENT_TYPES = ['photo', 'video', 'both', 'referral'] as const;
+export const CONTENT_TYPES = ['photo', 'video', 'either', 'both', 'referral'] as const;
 export type ContentType = typeof CONTENT_TYPES[number];
-/** 内容创作任务的可选形式（表单 UI 用，不含 referral 占位值） */
-export const STANDARD_CONTENT_TYPES = ['photo', 'video', 'both'] as const;
+/** 内容创作任务的可选形式（表单 UI 用，不含 referral 占位值）。
+ *  'either' = 图片或视频任一即可（2026-08-07） */
+export const STANDARD_CONTENT_TYPES = ['photo', 'video', 'either', 'both'] as const;
 export type StandardContentType = typeof STANDARD_CONTENT_TYPES[number];
 
 // PENDING_REVIEW（2026-07-26）：未KYB商家发布后的平台审核态（DRAFT→PENDING_REVIEW→OPEN，被拒退回DRAFT）。

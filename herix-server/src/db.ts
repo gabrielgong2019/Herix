@@ -854,7 +854,7 @@ export async function initDatabase() {
     // 保留 tasks 表原有列（向后兼容 + 双写），spec 表查询时 COALESCE 优先。
     `CREATE TABLE IF NOT EXISTS task_content_specs (
       task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
-      content_type TEXT NOT NULL DEFAULT 'photo' CHECK(content_type IN ('photo','video','both')),
+      content_type TEXT NOT NULL DEFAULT 'photo' CHECK(content_type IN ('photo','video','either','both')),
       min_images INTEGER,
       min_video_seconds INTEGER,
       max_revisions INTEGER NOT NULL DEFAULT 2,
@@ -1110,6 +1110,10 @@ export async function initDatabase() {
        ('bank_account_name', '', '口座名義カナ')
      ON CONFLICT(key) DO NOTHING`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false`,
+    // 内容形式加 'either'（图片或视频任一即可，2026-08-07）：幂等重建 CHECK
+    `ALTER TABLE task_content_specs DROP CONSTRAINT IF EXISTS task_content_specs_content_type_check`,
+    `ALTER TABLE task_content_specs ADD CONSTRAINT task_content_specs_content_type_check
+       CHECK (content_type IN ('photo','video','either','both'))`,
 
     // ── 流量排序（2026-08-06）────────────────────────────────────────────────
     // task_events: 前端埋点事件原始表（exposure/click），append-only

@@ -321,7 +321,9 @@
     "dataModeNote": "데이터는 Excel 업로드 또는 API로 제출할 수 있습니다. API 연동이 필요한 경우 마케팅 컨설턴트에게 문의하세요.",
     "perfStep5Title": "예산 및 게시",
     "perfStep5Hint": "전환당 보상을 설정하고 커버 이미지를 업로드합니다",
-    "translateHint": "다른 언어 커뮤니티를 선택하면 작업 내용이 자동 번역됩니다"
+    "translateHint": "다른 언어 커뮤니티를 선택하면 작업 내용이 자동 번역됩니다",
+    "ctEither": "이미지 또는 동영상",
+    "ctEitherOpenHint": "이미지/동영상 요건이 설정되지 않아 어느 형식이든 제출 가능합니다"
   },
   "site": {
     "jp": "일본",

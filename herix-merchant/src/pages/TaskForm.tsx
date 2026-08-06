@@ -1647,6 +1647,7 @@ export default function TaskForm() {
                   {[
                     { val: 'photo', label: t('taskForm.ctPhoto') },
                     { val: 'video', label: t('taskForm.ctVideo') },
+                    { val: 'either', label: t('taskForm.ctEither') },
                     { val: 'both', label: t('taskForm.ctBoth') },
                   ].map(({ val, label }) => (
                     <Chip
@@ -1657,9 +1658,14 @@ export default function TaskForm() {
                     />
                   ))}
                 </div>
+                {form.contentType === 'either' && !form.minImages && !form.minVideoSeconds && (
+                  <div className="text-sm mt-2" style={{ color: '#b45309' }}>
+                    {t('taskForm.ctEitherOpenHint')}
+                  </div>
+                )}
               </Field>
 
-              {(form.contentType === 'photo' || form.contentType === 'both') && (
+              {(form.contentType === 'photo' || form.contentType === 'both' || form.contentType === 'either') && (
                 <Field label={t('taskForm.fieldMinImages')}>
                   <Input
                     type="number" min={1}
@@ -1670,7 +1676,7 @@ export default function TaskForm() {
                   />
                 </Field>
               )}
-              {(form.contentType === 'video' || form.contentType === 'both') && (
+              {(form.contentType === 'video' || form.contentType === 'both' || form.contentType === 'either') && (
                 <Field label={t('taskForm.fieldMinVideoSecs')}>
                   <Input
                     type="number" min={1}

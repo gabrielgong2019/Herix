@@ -1289,5 +1289,7 @@
   "ob.visa5": "日本国籍",
   "ob.visaJpExempt": "日本国籍の方は在留資格の申告は不要です。このまま進めます。",
   "profile.declExempt": "日本国籍のため申告不要",
-  "community.jp-in-jp": "日本人"
+  "community.jp-in-jp": "日本人",
+  "task.contentTypeEither": "画像または動画",
+  "apply.eitherNeedContent": "画像をアップロードするか、コンテンツリンクを入力してください"
 }

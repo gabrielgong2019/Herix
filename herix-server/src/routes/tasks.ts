@@ -10,7 +10,7 @@ import { notify } from '../utils/notify';
 import { isWechatConfigured, generateUrlLink, getUnlimitedQRCode } from '../utils/wechat';
 import { hashUserKey, maskUserKey } from '../utils/privacy';
 import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate, getPublishLimitInfo } from '../utils/settings';
-import { SOCIAL_PLATFORM_IDS } from '../shared/contracts';
+import { SOCIAL_PLATFORM_IDS, STANDARD_CONTENT_TYPES } from '../shared/contracts';
 import { translateTask } from '../utils/translate';
 import { fetchTaskApplications } from '../utils/applicationQueries';
 import { serializeTask, serializeApplication } from '../utils/serialize';
@@ -1247,7 +1247,7 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   if (task.mode === 'STANDARD') {
     const sets: string[] = []; const vals: any[] = [];
     const push = (col: string, v: any) => { vals.push(v); sets.push(`${col} = $${vals.length}`); };
-    if (req.body.contentType) push('content_type', req.body.contentType);
+    if (req.body.contentType && STANDARD_CONTENT_TYPES.includes(req.body.contentType)) push('content_type', req.body.contentType);
     if (req.body.minImages !== undefined) push('min_images', req.body.minImages || null);
     if (req.body.minVideoSeconds !== undefined) push('min_video_seconds', req.body.minVideoSeconds || null);
     if (req.body.maxRevisions !== undefined) push('max_revisions', req.body.maxRevisions ?? 2);

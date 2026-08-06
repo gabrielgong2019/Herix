@@ -321,7 +321,9 @@
     "dataModeNote": "数据回传支持 Excel 上传或 API；如需 API 对接，请联系营销顾问。",
     "perfStep5Title": "预算与发布",
     "perfStep5Hint": "设定每次转化报酬，上传封面图",
-    "translateHint": "选择其他语言社群后，我们将自动翻译任务内容"
+    "translateHint": "选择其他语言社群后，我们将自动翻译任务内容",
+    "ctEither": "图片或视频均可",
+    "ctEitherOpenHint": "未设置图片/视频具体要求，赫使可提交任一形式"
   },
   "site": {
     "jp": "日本",

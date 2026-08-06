@@ -1289,5 +1289,7 @@
   "ob.visa5": "Japanese nationality",
   "ob.visaJpExempt": "Japanese nationals don’t need a residence declaration. You can proceed directly.",
   "profile.declExempt": "Japanese national, no declaration needed",
-  "community.jp-in-jp": "Japanese (local)"
+  "community.jp-in-jp": "Japanese (local)",
+  "task.contentTypeEither": "Image or video",
+  "apply.eitherNeedContent": "Please upload images or provide a content link"
 }

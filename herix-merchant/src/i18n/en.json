@@ -321,7 +321,9 @@
     "dataModeNote": "Data can be submitted via Excel upload or API. Contact your marketing consultant for API integration.",
     "perfStep5Title": "Budget & Publish",
     "perfStep5Hint": "Set payout per conversion and upload a cover image",
-    "translateHint": "Selecting communities in other languages will trigger automatic translation of task content"
+    "translateHint": "Selecting communities in other languages will trigger automatic translation of task content",
+    "ctEither": "Image or video",
+    "ctEitherOpenHint": "No specific image/video requirements set; either format is acceptable"
   },
   "site": {
     "jp": "Japan",

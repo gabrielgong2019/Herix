@@ -1289,5 +1289,7 @@
   "ob.visa5": "日本国籍",
   "ob.visaJpExempt": "日本国籍无需提交在留资格声明，可直接开始接单。",
   "profile.declExempt": "日本国籍，无需声明",
-  "community.jp-in-jp": "本地日本人"
+  "community.jp-in-jp": "本地日本人",
+  "task.contentTypeEither": "图片或视频均可",
+  "apply.eitherNeedContent": "请上传图片或提供内容链接"
 }

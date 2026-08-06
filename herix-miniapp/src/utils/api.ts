@@ -260,6 +260,7 @@ export interface TaskSubmissionContext {
   submission: any | null;
   nextAction: 'SUBMIT_DRAFT' | 'SUBMIT_FINAL' | 'WAITING_REVIEW' | 'DONE';
   requireDraft: boolean;
+  contentType: string;
   minImages: number;
   platformHints: string[];
 }

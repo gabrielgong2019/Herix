@@ -342,7 +342,7 @@ export interface TaskFormData {
   status: 'draft' | 'open'  // 仅前端流程标记：发布走 PATCH /publish，服务端不读此字段
   visibility: TaskVisibility
   difficulty: Difficulty
-  contentType: 'photo' | 'video' | 'both'
+  contentType: 'photo' | 'video' | 'either' | 'both'
   payoutPerHerald: number
   maxHeralds: number
   targetCommunities: string[]

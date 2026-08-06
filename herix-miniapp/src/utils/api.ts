@@ -8,10 +8,48 @@ declare const wx: any;
 // ── 云托管配置（小程序端专用，需要在微信云托管控制台创建服务后填入）──
 const CLOUD_ENV_ID = 'prod-herix-d5gh5h4nv767053ae'; // 云开发环境ID
 const CLOUD_SERVICE_NAME = 'herix-proxy'; // 云托管服务名称，需与部署时一致
+const DIAG_KEY = 'herix_diag_queue';
+const DIAG_MAX = 20;
 
 // H5 端用相对路径，自动打"当前页面所在的服务器"——本地测试（localhost:4005）
 // 打本地后端，以后部署到哪个域名就自动打那个域名自己，不用写死成线上地址
 const H5_BASE_URL = '/api';
+
+// ── 诊断队列（2026-08-06）：请求失败先写本地，成功后补报服务器，
+//    抓"冷启动首请求客户端超时、服务器无日志"这类问题。fire-and-forget，不阻塞业务。 ──
+function queueDiag(entry: Record<string, unknown>) {
+  try {
+    const raw = Taro.getStorageSync(DIAG_KEY) || '[]';
+    let arr: any[] = [];
+    try { arr = JSON.parse(raw); } catch {}
+    arr.push({ ...entry, ts: new Date().toISOString() });
+    if (arr.length > DIAG_MAX) arr = arr.slice(-DIAG_MAX);
+    Taro.setStorageSync(DIAG_KEY, JSON.stringify(arr));
+  } catch {}
+}
+
+function flushDiag() {
+  try {
+    const raw = Taro.getStorageSync(DIAG_KEY) || '[]';
+    let arr: any[] = [];
+    try { arr = JSON.parse(raw); } catch {}
+    if (!arr.length) return;
+    const body = { events: arr };
+    const send = () => {
+      if (isWeapp) {
+        return wx.cloud.callContainer({
+          config: { env: CLOUD_ENV_ID },
+          path: '/api/diag/miniapp',
+          method: 'POST',
+          header: { 'Content-Type': 'application/json' },
+          data: body,
+        });
+      }
+      return Taro.request({ url: `${H5_BASE_URL}/diag/miniapp`, method: 'POST', header: { 'Content-Type': 'application/json' }, data: body, dataType: 'json' });
+    };
+    send().then(() => Taro.setStorageSync(DIAG_KEY, '[]')).catch(() => { /* 下次成功再补报 */ });
+  } catch {}
+}
 
 /** 服务端相对资源路径（/uploads/...）→ 可渲染 URL：H5 同源直用，weapp 拼生产域名 */
 export function assetUrl(p?: string | null): string {
@@ -72,6 +110,7 @@ async function request<T = any>(
   data?: any,
   auth = true,
 ): Promise<T> {
+  const startedAt = Date.now();
   const header: Record<string, string> = {
     'Content-Type': 'application/json',
   };
@@ -107,6 +146,7 @@ async function request<T = any>(
         throw new ApiError(apiErrorMessage(res.data), res.data);
       }
 
+      flushDiag();
       return res.data as T;
     }
 
@@ -123,8 +163,18 @@ async function request<T = any>(
       throw new ApiError(apiErrorMessage(res.data), res.data);
     }
 
+    flushDiag();
     return res.data as T;
   } catch (err: any) {
+    queueDiag({
+      path, method,
+      err: err?.errMsg || err?.message || String(err),
+      status: err?.statusCode ?? null,
+      elapsed: Date.now() - startedAt,
+      env: isWeapp ? 'weapp' : 'h5',
+      hasToken: !!getToken(),
+      locale: getLocale(),
+    });
     if (err.errMsg?.includes('timeout') || err.errMsg?.includes('fail')) {
       Taro.showToast({ title: t('error.NETWORK'), icon: 'none' });
     }

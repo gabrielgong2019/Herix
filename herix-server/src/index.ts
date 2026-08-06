@@ -65,13 +65,33 @@ app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json());
-// 轻量请求日志（2026-08-06 排查小程序首屏加载）：记录 method/path/状态/耗时
+// 轻量请求日志（2026-08-06 排查小程序首屏加载）：记录 method/path/状态/耗时/返回大小
+// DEBUG_REQ=1 时追加时间戳与客户端 IP，便于对会话（默认关）
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    console.log(`[req] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms len=${res.getHeader('content-length') || 0}`);
+    const extra = process.env.DEBUG_REQ === '1'
+      ? ` ts=${new Date().toISOString()} ip=${req.headers['x-forwarded-for'] || req.socket.remoteAddress || ''}`
+      : '';
+    console.log(`[req] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms len=${res.getHeader('content-length') || 0}${extra}`);
   });
   next();
+});
+
+// 客户端诊断上报（2026-08-06）：小程序首屏失败/超时时主动上报，抓"请求没到服务器"的场景
+app.post('/api/diag/miniapp', (req, res) => {
+  const body = req.body || {};
+  const events = Array.isArray(body.events) ? body.events : [body];
+  const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '';
+  for (const e of events) {
+    console.log('[diag]', JSON.stringify({
+      path: e.path || '', method: e.method || '', err: String(e.err || '').slice(0, 200),
+      status: e.status ?? null, elapsed: e.elapsed ?? null, env: e.env || '',
+      hasToken: e.hasToken ?? null, locale: e.locale || '', ts: e.ts || new Date().toISOString(),
+      ip,
+    }));
+  }
+  res.json({ ok: true });
 });
 
 app.get('/api/health', (_req, res) => {

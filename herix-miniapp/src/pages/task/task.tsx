@@ -4,7 +4,7 @@ import Taro from '@tarojs/taro';
 import { tasks as taskApi, applications, submissions as subApi, referrals, ambassador, arbitrations, auth, ApiError, getToken, assetUrl } from '../../utils/api';
 import { getAmbassadorProfile, invalidateProfileCache } from '../../utils/profileCache';
 import { fmtLocal } from '../../utils/format';
-import { checkRequirements, RequirementFailure } from '../../utils/requirements';
+import { checkRequirements, RequirementFailure, PlatformRequirement } from '../../utils/requirements';
 import { platformById } from '../../utils/platforms';
 import RequirementsChecklist from '../../components/RequirementsChecklist';
 import PlatformAccountInput, { PlatformAccountValue } from '../../components/PlatformAccountInput';
@@ -20,7 +20,7 @@ interface TaskDetailData {
   conversion_criteria?: { register: { label: string }; convert: string[] };
   invitee_benefit?: string | null;
   referral_script?: string | null;
-  platform_requirements?: string | null;
+  platform_requirements?: PlatformRequirement[] | null;
   budget: number;
   commission: number;
   payout_per_herald?: number; // 当前真实生效字段（到手报酬）；commission 是重构前废弃字段，仅老数据兜底

@@ -132,6 +132,39 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   });
 });
 
+/** POST /api/tasks/preview — 任务成本预算（商家端发布前展示）。
+ *  与发布接口共用同一公式：costPerHerald = round(payout * (1 + 服务费率))，
+ *  税费仅作预算估算展示（platform_settings.consumption_tax_rate 注释明确服务端不扣税）。
+ *  此前前端用 Math.ceil(总额*rate) 自算，与服务端 Math.round 单人成本口径不一致（差几日元） */
+tasksRouter.post('/preview', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
+  const { mode, payout, maxHeralds, codeCount, avgConversions } = req.body || {};
+  const m: 'STANDARD' | 'PERFORMANCE' = mode === 'PERFORMANCE' ? 'PERFORMANCE' : 'STANDARD';
+  const p = Math.max(0, Number(payout) || 0);
+  const { rate } = await getEffectiveCommissionRate(req.user!.userId);
+  const taxRate = Number(await getSetting('consumption_tax_rate')) || 0.10;
+  const defaultAvg = Number(await getSetting('referral_avg_conversions_per_code')) || 1;
+
+  const costPerHerald = Math.round(p * (1 + rate));
+  const feePerHerald = Math.round((costPerHerald - p) * 100) / 100;
+
+  const count = Math.max(0, Number(m === 'PERFORMANCE' ? codeCount : maxHeralds) || 0);
+  const avg = Number.isFinite(Number(avgConversions)) && Number(avgConversions) > 0
+    ? Number(avgConversions)
+    : defaultAvg;
+  const estConversions = m === 'PERFORMANCE' ? Math.round(count * avg * 100) / 100 : undefined;
+  const unitCount = m === 'PERFORMANCE' ? (estConversions || 0) : count;
+  const subtotal = Math.round(costPerHerald * unitCount * 100) / 100;
+  const taxEstimate = Math.ceil(subtotal * taxRate);
+  const totalEstimate = Math.round((subtotal + taxEstimate) * 100) / 100;
+
+  res.json({
+    mode: m, payout: p, rate,
+    costPerHerald, feePerHerald,
+    count, estConversions,
+    subtotal, taxRate, taxEstimate, totalEstimate,
+  });
+});
+
 /** GET /api/tasks/my/stats — 我的任务数据（已登录即可，creator 过滤保证只看自己的） */
 tasksRouter.get('/my/stats', requireAuth, async (req: Request, res: Response) => {
   const uid = req.user!.userId;

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { tasksApi, metaApi, walletApi, settingsApi, type TaskFormData, type Task, type BrandBalance } from '@/lib/api'
+import { tasksApi, metaApi, walletApi, settingsApi, type TaskFormData, type Task, type BrandBalance, type TaskBudgetPreview } from '@/lib/api'
 import { extractBrief, type ExtractHit } from '@/lib/extract'
 import {
   DIFFICULTIES, TASK_MODES, TASK_VISIBILITIES, CODE_MODES, DATA_MODES, STANDARD_CONTENT_TYPES,
@@ -193,18 +193,16 @@ function RadioCard({
 // ── Cost preview panel ────────────────────────────────────────────
 
 // ── 标准任务：确定性成本，发布时锁定金额 ────────────────────────────
-function StandardCostPreview({ payout, maxHeralds, balance, feeRate, taxRate, t }: {
-  payout: number; maxHeralds: number
+function StandardCostPreview({ preview, balance, t }: {
+  preview?: TaskBudgetPreview
   balance?: BrandBalance
-  feeRate: number; taxRate: number
   t: (k: string, params?: Record<string, unknown>) => string
 }) {
-  if (!payout || !maxHeralds) return null
-  const base = payout * maxHeralds
-  const fee = Math.ceil(base * feeRate)
-  const subtotal = base + fee
-  const tax = Math.ceil(subtotal * taxRate)
-  const total = subtotal + tax
+  if (!preview || preview.mode !== 'STANDARD' || preview.subtotal <= 0) return null
+  const { payout, count, feePerHerald, subtotal, taxEstimate, totalEstimate } = preview
+  const base = payout * count
+  const fee = Math.round(feePerHerald * count * 100) / 100
+  const total = totalEstimate
 
   const credit = balance?.credit
   const trialGrant = credit?.trialEligible ? Math.min(credit.trialDefault, total) : 0
@@ -216,7 +214,7 @@ function StandardCostPreview({ payout, maxHeralds, balance, feeRate, taxRate, t 
       <div className="text-xs font-semibold mb-3" style={{ color: 'var(--primary)' }}>{t('taskForm.costPreview')}</div>
       <div className="space-y-1.5">
         {[
-          { label: `${t('taskForm.costBase')} (${maxHeralds} ${t('taskForm.costPerHerald')})`, value: `¥${base.toLocaleString()}` },
+          { label: `${t('taskForm.costBase')} (${count} ${t('taskForm.costPerHerald')})`, value: `¥${base.toLocaleString()}` },
           { label: t('taskForm.costFee'), value: `¥${fee.toLocaleString()}` },
         ].map(({ label, value }) => (
           <div key={label} className="flex justify-between text-xs" style={{ color: 'var(--text)' }}>
@@ -230,7 +228,7 @@ function StandardCostPreview({ payout, maxHeralds, balance, feeRate, taxRate, t 
         </div>
         <div className="flex justify-between text-xs" style={{ color: 'var(--text)' }}>
           <span style={{ color: 'var(--muted)' }}>{t('taskForm.costTax')}</span>
-          <span>¥{tax.toLocaleString()}</span>
+          <span>¥{taxEstimate.toLocaleString()}</span>
         </div>
         <div className="flex justify-between text-sm font-bold pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
           <span>{t('taskForm.costTotalIncl')}</span>
@@ -258,25 +256,21 @@ function StandardCostPreview({ payout, maxHeralds, balance, feeRate, taxRate, t 
 }
 
 // ── 邀请码任务：概率估算，按转化实时结算 ────────────────────────────
-function PerformanceBudgetEstimate({ payout, codeCount, avgConversions, feeRate, taxRate, t }: {
-  payout: number; codeCount: number
-  avgConversions: number; feeRate: number; taxRate: number
+function PerformanceBudgetEstimate({ preview, t }: {
+  preview?: TaskBudgetPreview
   t: (k: string, params?: Record<string, unknown>) => string
 }) {
-  if (!payout || !codeCount) return null
-  const estConversions = codeCount * avgConversions
+  if (!preview || preview.mode !== 'PERFORMANCE' || preview.subtotal <= 0) return null
+  const { payout, count, estConversions = 0, feePerHerald, subtotal, taxEstimate, totalEstimate } = preview
   const estPayout = payout * estConversions
-  const estFee = Math.ceil(estPayout * feeRate)
-  const estSubtotal = estPayout + estFee
-  const estTax = Math.ceil(estSubtotal * taxRate)
-  const estTotal = estSubtotal + estTax
+  const estFee = Math.round(feePerHerald * estConversions * 100) / 100
 
   return (
     <div className="rounded-xl p-4 mb-6" style={{ background: 'var(--primary-light)', border: '1px solid #f7c4bb' }}>
       <div className="text-xs font-semibold mb-3" style={{ color: 'var(--primary)' }}>{t('taskForm.perfEstTitle')}</div>
       <div className="space-y-1.5">
         {[
-          { label: t('taskForm.perfEstCodesRow', { codes: codeCount, convs: estConversions }), value: `${estConversions} ${t('taskForm.perfEstConvUnit')}` },
+          { label: t('taskForm.perfEstCodesRow', { codes: count, convs: estConversions }), value: `${estConversions} ${t('taskForm.perfEstConvUnit')}` },
           { label: t('taskForm.perfEstPayoutRow'), value: `¥${estPayout.toLocaleString()}` },
           { label: t('taskForm.costFee'), value: `¥${estFee.toLocaleString()}` },
         ].map(({ label, value }) => (
@@ -287,15 +281,15 @@ function PerformanceBudgetEstimate({ payout, codeCount, avgConversions, feeRate,
         ))}
         <div className="flex justify-between text-xs pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
           <span style={{ color: 'var(--muted)' }}>{t('taskForm.perfEstTotal')}</span>
-          <span>¥{estSubtotal.toLocaleString()}</span>
+          <span>¥{subtotal.toLocaleString()}</span>
         </div>
         <div className="flex justify-between text-xs" style={{ color: 'var(--text)' }}>
           <span style={{ color: 'var(--muted)' }}>{t('taskForm.costTax')}</span>
-          <span>¥{estTax.toLocaleString()}</span>
+          <span>¥{taxEstimate.toLocaleString()}</span>
         </div>
         <div className="flex justify-between text-sm font-bold pt-1.5 border-t" style={{ borderColor: '#f7c4bb', color: 'var(--text)' }}>
           <span>{t('taskForm.costTotalIncl')}</span>
-          <span style={{ color: 'var(--primary)' }}>¥{estTotal.toLocaleString()}</span>
+          <span style={{ color: 'var(--primary)' }}>¥{totalEstimate.toLocaleString()}</span>
         </div>
         <div className="text-xs pt-1" style={{ color: 'var(--muted)' }}>{t('taskForm.perfEstNote')}</div>
       </div>
@@ -458,6 +452,16 @@ export default function TaskForm() {
     queryKey: ['budgetConfig'],
     queryFn: () => settingsApi.budgetConfig().then((r) => r.data),
     staleTime: 5 * 60 * 1000,
+  })
+  // 成本预览由服务端 /tasks/preview 计算（与发布结算同公式），前端不再自算费率/税费
+  const { data: budgetPreview } = useQuery({
+    queryKey: ['budgetPreview', form.mode, form.payoutPerHerald, effectiveMaxHeralds],
+    queryFn: () => tasksApi.preview({
+      mode: form.mode,
+      payout: Number(form.payoutPerHerald) || 0,
+      ...(form.mode === 'PERFORMANCE' ? { codeCount: effectiveMaxHeralds } : { maxHeralds: effectiveMaxHeralds }),
+    }).then((r) => r.data),
+    enabled: Number(form.payoutPerHerald) > 0 && effectiveMaxHeralds > 0,
   })
 
   // 两类型统一 1-5 段：简报 → 找谁 → 类型专属 → 时间线 → 报酬与质量
@@ -1229,14 +1233,7 @@ export default function TaskForm() {
               <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
                 <SectionHeader num={5} title={t('taskForm.perfStep5Title')} hint={t('taskForm.perfStep5Hint')} />
 
-                <PerformanceBudgetEstimate
-                  payout={Number(form.payoutPerHerald) || 0}
-                  codeCount={effectiveMaxHeralds}
-                  avgConversions={budgetConfig?.avgConversionsPerCode ?? 5}
-                  feeRate={budgetConfig?.platformFeeRate ?? 0.2}
-                  taxRate={budgetConfig?.consumptionTaxRate ?? 0.1}
-                  t={t}
-                />
+                <PerformanceBudgetEstimate preview={budgetPreview} t={t} />
 
                 <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>
                   <Input type="number" min={0} value={form.payoutPerHerald}
@@ -1712,14 +1709,7 @@ export default function TaskForm() {
           <div className="rounded-2xl p-6 mb-4" style={{ background: '#fff' }}>
             <SectionHeader num={sn.payout} title={t('taskForm.sec4Title')} hint={t('taskForm.sec4Hint')} />
 
-            <StandardCostPreview
-              payout={Number(form.payoutPerHerald) || 0}
-              maxHeralds={effectiveMaxHeralds}
-              balance={brandBalance}
-              feeRate={budgetConfig?.platformFeeRate ?? 0.2}
-              taxRate={budgetConfig?.consumptionTaxRate ?? 0.1}
-              t={t}
-            />
+            <StandardCostPreview preview={budgetPreview} balance={brandBalance} t={t} />
 
             <div className={`grid gap-4 ${isCustomCodes ? 'grid-cols-1' : 'grid-cols-2'}`}>
               <Field label={t('taskForm.fieldPayout')} required hint={t('taskForm.fieldPayoutUnit')}>

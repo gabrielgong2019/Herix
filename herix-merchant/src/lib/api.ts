@@ -51,6 +51,20 @@ export const authApi = {
 }
 
 // ── Tasks ─────────────────────────────────────────────────────────
+export interface TaskBudgetPreview {
+  mode: 'STANDARD' | 'PERFORMANCE'
+  payout: number
+  rate: number
+  costPerHerald: number
+  feePerHerald: number
+  count: number
+  estConversions?: number
+  subtotal: number
+  taxRate: number
+  taxEstimate: number
+  totalEstimate: number
+}
+
 export interface MyTaskStats {
   totalTasks: number
   openTasks: number
@@ -68,6 +82,8 @@ export const tasksApi = {
   list: (params?: { status?: string; page?: number; creator?: string }) =>
     http.get<{ tasks: Task[]; total: number }>('/tasks', { params }),
   myStats: () => http.get<{ summary: MyTaskStats; tasks: Task[] }>('/tasks/my/stats'),
+  preview: (data: { mode: 'STANDARD' | 'PERFORMANCE'; payout: number; maxHeralds?: number; codeCount?: number; avgConversions?: number }) =>
+    http.post<TaskBudgetPreview>('/tasks/preview', data),
   get: (id: string) => http.get<Task>(`/tasks/${id}`),
   create: (data: TaskFormData) => http.post<Task>('/tasks', data),
   update: (id: string, data: Partial<TaskFormData>) => http.put<Task>(`/tasks/${id}`, data),

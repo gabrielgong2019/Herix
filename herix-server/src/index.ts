@@ -69,7 +69,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
-    console.log(`[req] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+    console.log(`[req] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms len=${res.getHeader('content-length') || 0}`);
   });
   next();
 });

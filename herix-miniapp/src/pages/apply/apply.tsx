@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Input, Textarea, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { submissions, uploadSubmissionImage } from '../../utils/api';
+import { submissions, uploadSubmissionImage, assetUrl } from '../../utils/api';
 import './apply.scss';
 import { t } from '../../utils/i18n';
 import BackBar from '../../components/BackBar';
@@ -223,7 +223,8 @@ export default class Apply extends Component<{}, State> {
         <View className='shots-grid'>
           {screenshots.map((url, i) => (
             <View key={url} className='shot-item'>
-              <Image className='shot-img' src={url} mode='aspectFill' />
+              {/* 上传接口返回相对路径，weapp 必须拼生产域名，否则 Image 当包内资源找不到 */}
+              <Image className='shot-img' src={assetUrl(url)} mode='aspectFill' />
               <Text className='shot-remove' onClick={() => this.removeImage(i)}>✕</Text>
             </View>
           ))}

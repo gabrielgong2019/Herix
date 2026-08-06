@@ -148,16 +148,20 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   const decayDays = Number(decayDaysS) || 30;
   const minEvents = Number(minEventsS) || 5;
   // score 公式：boost * (ctr*wCtr + app*wApp + comp*wComp + fresh*wFresh)
-  // 低样本（exposure < minEvents）的 ctr/app 项不参与赛马，权重转移到 freshness
+  // 低样本（exposure < minEvents）的 ctr/app 项不参与赛马，权重转移到 freshness，
+  // 保证总分值域一致（低样本任务不至于系统性偏低）
+  const lowSampleW = wFresh + wCtr + wApp;
   const scoreExpr = `(
     CASE WHEN t.created_at::timestamptz > NOW() - INTERVAL '${boostHours} hours' THEN ${boostWeight} ELSE 1.0 END
     * (
-      CASE WHEN COALESCE(ts2.exposure_count,0) >= ${minEvents} THEN
-        ${wCtr} * COALESCE(ts2.click_count::numeric / NULLIF(ts2.exposure_count,0), 0)
-        + ${wApp} * COALESCE(ts2.application_count::numeric / NULLIF(ts2.exposure_count,0), 0)
-      ELSE 0.0 END
-      + ${wComp} * COALESCE(ts2.completion_count::numeric / NULLIF(ts2.application_count,0), 0)
-      + ${wFresh} * (1.0 - LEAST(1.0, EXTRACT(EPOCH FROM (NOW() - t.created_at::timestamptz)) / (${decayDays} * 86400.0)))
+      ${wComp} * COALESCE(ts2.completion_count::numeric / NULLIF(ts2.application_count,0), 0)
+      + CASE WHEN COALESCE(ts2.exposure_count,0) >= ${minEvents} THEN
+          ${wCtr} * COALESCE(ts2.click_count::numeric / NULLIF(ts2.exposure_count,0), 0)
+          + ${wApp} * COALESCE(ts2.application_count::numeric / NULLIF(ts2.exposure_count,0), 0)
+          + ${wFresh} * (1.0 - LEAST(1.0, EXTRACT(EPOCH FROM (NOW() - t.created_at::timestamptz)) / (${decayDays} * 86400.0)))
+        ELSE
+          ${lowSampleW} * (1.0 - LEAST(1.0, EXTRACT(EPOCH FROM (NOW() - t.created_at::timestamptz)) / (${decayDays} * 86400.0)))
+        END
     )
   )`;
   const tasks = await findMany<any>(
@@ -1125,7 +1129,8 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
 
     // source_lang：前端显式传 > 商家 profile 默认语言 > 兜底 zh
     const bp = await findOne<{ default_lang: string }>('SELECT default_lang FROM brand_profiles WHERE user_id = ?', [req.user!.userId]);
-    const sourceLang = data.sourceLang !== 'zh' ? data.sourceLang : (bp?.default_lang ?? 'zh');
+    const sourceLang = data.sourceLang || bp?.default_lang || 'zh';
+    const siteId = VALID_SITES.has(data.siteId) ? data.siteId : 'jp';
 
     // 类型专属字段只住 spec 表（2026-07-25 用户决策：未上线不做双写，直接终态）
     const taskId = await insert('tasks', {
@@ -1147,8 +1152,8 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       visibility:        data.visibility || 'PUBLIC',
       target_communities: (data.targetCommunities && data.targetCommunities.length > 0)
         ? data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c))
-        : getDefaultCommunitiesForLang(sourceLang),
-      site_id:           VALID_SITES.has(data.siteId) ? data.siteId : 'jp',
+        : getDefaultCommunitiesForLang(sourceLang, siteId),
+      site_id:           siteId,
       service_name:      data.serviceName || null,
       status:            'DRAFT',
       // cost_per_herald 和 commission_rate 在发布时计算快照

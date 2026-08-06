@@ -41,11 +41,15 @@ export function getLocalesForCommunities(communityIds: string[]): string[] {
 }
 
 /** 根据语言获取默认目标社群。品牌发布任务时，若未显式选择 target_communities，
- *  则按品牌语言自动匹配对应社群；无匹配时 fallback 到英语社群（ph-in-jp）。
+ *  则按品牌语言自动匹配对应社群；无匹配时 fallback 到该站点的英文社群；
+ *  站点内仍无匹配则退回该站点全部社群，保证任务不会被站点过滤隐形。
  *  避免中文商家任务默认推送给所有语言群体造成干扰。 */
-export function getDefaultCommunitiesForLang(locale: string): string[] {
-  const ids = COMMUNITIES.filter(c => c.locale === locale).map(c => c.id);
-  if (ids.length > 0) return ids;
-  // 不支持的小语种 fallback 到英文社群
-  return COMMUNITIES.filter(c => c.locale === 'en').map(c => c.id);
+export function getDefaultCommunitiesForLang(locale: string, siteId?: string): string[] {
+  const scoped = siteId ? COMMUNITIES.filter(c => c.region.toLowerCase() === siteId.toLowerCase()) : COMMUNITIES;
+  const byLang = scoped.filter(c => c.locale === locale).map(c => c.id);
+  if (byLang.length > 0) return byLang;
+  const enIds = scoped.filter(c => c.locale === 'en').map(c => c.id);
+  if (enIds.length > 0) return enIds;
+  // 该站点没有匹配语言的社群：退回站点全部社群，确保任务可见
+  return scoped.map(c => c.id);
 }

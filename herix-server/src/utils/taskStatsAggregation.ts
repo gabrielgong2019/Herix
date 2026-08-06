@@ -36,6 +36,7 @@ export async function runTaskStatsAggregationOnce(): Promise<void> {
       LEFT JOIN (
         SELECT task_id, COUNT(*)::int AS app_cnt
         FROM task_applications
+        WHERE status = 'APPROVED'
         GROUP BY task_id
       ) a ON a.task_id = t.id
       LEFT JOIN (

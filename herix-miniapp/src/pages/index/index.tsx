@@ -2,7 +2,7 @@ import { Component } from 'react';
 import Taro from '@tarojs/taro';
 import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import logoWide from '../../assets/herix-logo-wide.png';
-import { tasks as taskApi, categories as categoriesApi, communities as communitiesApi, ambassador } from '../../utils/api';
+import { tasks as taskApi, categories as categoriesApi, communities as communitiesApi, ambassador, getToken } from '../../utils/api';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
 import { refreshUnreadBadge } from '../../utils/badge';
@@ -72,6 +72,12 @@ export default class Index extends Component<{}, State> {
   };
 
   searchTimer: ReturnType<typeof setTimeout> | null = null;
+  exposureTimer: ReturnType<typeof setTimeout> | null = null;
+
+  componentWillUnmount() {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    if (this.exposureTimer) clearTimeout(this.exposureTimer);
+  }
 
   componentDidMount() {
     this.loadCommunity();
@@ -125,11 +131,27 @@ export default class Index extends Component<{}, State> {
         categoriesApi.list().catch(() => []),
       ]);
       this.setState({ taskList: taskRes.tasks || [], categories: categoryRes || [] });
+      this.reportExposure(taskRes.tasks || []);
     } catch (err: any) {
       console.error('Load error:', err);
       this.setState({ loadError: true });
     }
     this.setState({ loading: false });
+  };
+
+  // 曝光/点击埋点（服务端按 用户×任务×小时 去重；未登录不上报）
+  reportExposure = (list: TaskCardTask[]) => {
+    if (!list.length || !getToken()) return;
+    const events = list.slice(0, 20).map(task => ({ taskId: task.id, eventType: 'exposure' as const }));
+    if (this.exposureTimer) clearTimeout(this.exposureTimer);
+    this.exposureTimer = setTimeout(() => {
+      taskApi.trackEvents(events).catch(() => { /* 埋点失败不打扰 */ });
+    }, 600);
+  };
+
+  reportClick = (taskId: string) => {
+    if (!getToken()) return;
+    taskApi.trackEvents([{ taskId, eventType: 'click' }]).catch(() => { /* 埋点失败不打扰 */ });
   };
 
   toggleCommunityFilter = (target: boolean) => {
@@ -258,7 +280,7 @@ export default class Index extends Component<{}, State> {
           <ScrollView className='list' scrollY>
             <View className='grid'>
               {taskList.length > 0 ? (
-                taskList.map(task => <TaskCard key={task.id} task={task} categories={categories} />)
+                taskList.map(task => <TaskCard key={task.id} task={task} categories={categories} onClickTask={this.reportClick} />)
               ) : (
                 <View className='empty'>
                   <Text className='empty-text'>{t('index.empty')}</Text>

@@ -500,10 +500,14 @@ export default function TaskForm() {
     if (isEdit || copyId || communities.length === 0) return
     if (form.targetCommunities.length > 0) return
     const lang = form.sourceLang || brandProfile?.default_lang || 'zh'
+    // 按当前站点社群列表匹配语言；无匹配语言时回退该站点英文社群，再退全站点社群，
+    // 避免与站点不一致导致任务隐形（服务端同规则兜底）
     const ids = communities.filter(c => c.locale === lang).map(c => c.id)
+    const enIds = communities.filter(c => c.locale === 'en').map(c => c.id)
+    const fallback = enIds.length > 0 ? enIds : communities.map(c => c.id)
     setForm((prev) => ({
       ...prev,
-      targetCommunities: ids.length > 0 ? ids : communities.filter(c => c.locale === 'en').map(c => c.id),
+      targetCommunities: ids.length > 0 ? ids : fallback,
     }))
   }, [communities, form.sourceLang, isEdit, copyId, brandProfile])
 

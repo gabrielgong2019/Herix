@@ -221,6 +221,8 @@ export const tasks = {
   publish: (id: string) => request<any>('PATCH', `/tasks/${id}/publish`),
   escrow: (id: string) => request<any>('PATCH', `/tasks/${id}/escrow`),
   complete: (id: string) => request<any>('PATCH', `/tasks/${id}/complete`),
+  trackEvents: (events: { taskId: string; eventType: 'exposure' | 'click' }[]) =>
+    request<{ inserted: number }>('POST', '/tasks/events', { events }),
 };
 
 // ── Applications ──

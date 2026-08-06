@@ -83,7 +83,11 @@ ambassadorRouter.patch('/profile', requireAuth, async (req: Request, res: Respon
   }
   if (residenceCountry) data.residence_country = residenceCountry;
   if (kycStatus) data.kyc_status = kycStatus;
-  if (visaType) data.visa_type = visaType;
+  if (visaType) {
+    data.visa_type = visaType;
+    // 日本国籍免在留声明（与入驻流程一致）
+    if (visaType === 'japanese') data.declaration_status = 'exempt';
+  }
   if (bankAccount) data.bank_account = JSON.stringify(bankAccount);
   if (socialPlatforms !== undefined) {
     // platformId 必须在注册表内，挡掉非法/拼错的平台进档案（否则永远匹配不上任务要求）

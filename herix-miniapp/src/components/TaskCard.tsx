@@ -40,6 +40,8 @@ export interface TaskCardTask {
 interface Props {
   task: TaskCardTask;
   categories: CategoryItem[];
+  /** 点击任务卡时回调（埋点用），不阻塞默认跳转 */
+  onClickTask?: (taskId: string) => void;
 }
 
 /**
@@ -47,7 +49,7 @@ interface Props {
  * 吸收对比稿方案1的可取点：右图放大到约1/3卡宽·4:3饱满比例、标题下描述摘要行、
  * 底部"品牌+评分"与口径化报酬同行收尾。无图任务纯文字排布，价格恒在右下不悬空。
  */
-export default function TaskCard({ task, categories }: Props) {
+export default function TaskCard({ task, categories, onClickTask }: Props) {
   const img = task.cover_image || task.brand_promo_image_url || '';
   const rating = parseFloat(String(task.avg_rating)) || 0;
   const filledStars = Math.round(rating);
@@ -62,6 +64,7 @@ export default function TaskCard({ task, categories }: Props) {
   const brandName = task.brand_company_name || task.creator_name || '';
 
   function goTask() {
+    onClickTask?.(task.id);
     Taro.navigateTo({ url: `/pages/task/task?id=${task.id}` });
   }
 

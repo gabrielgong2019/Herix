@@ -625,13 +625,20 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
 
   await update('withdrawal_requests', { status: 'processing' }, 'id = ?', [req.params.id]);
 
+  // 实际打款金额：跨境用申请时锁价的目标币金额，日本本地用扣费后净额。
+  // 此前传 wr.amount（申请金额）会把手续费也付给用户，接真实支付渠道后每笔多付。
+  const fee       = Number(wr.fee) || 0;
+  const netAmount = Number(wr.net_amount) ?? (wr.amount - fee);
+  const payoutAmount   = wr.target_amount != null ? Number(wr.target_amount) : netAmount;
+  const payoutCurrency = wr.target_currency || wr.currency;
+
   let payoutRef = 'MANUAL';
   try {
     const result = await payoutProvider.send({
       withdrawalId: wr.id,
       heraldId: wr.herald_id,
-      amount: wr.amount,
-      currency: wr.currency,
+      amount: payoutAmount,
+      currency: payoutCurrency,
       method: wr.method,
       accountDetails: JSON.parse(wr.account_details || '{}'),
     });
@@ -654,9 +661,6 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
     processed_by: req.user!.userId,
     processed_at: new Date().toISOString(),
   }, 'id = ?', [req.params.id]);
-
-  const fee       = Number(wr.fee) || 0;
-  const netAmount = Number(wr.net_amount) ?? (wr.amount - fee);
 
   await debitWithdrawal({
     userId:         wr.herald_id,
@@ -684,10 +688,10 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
   if (u?.email) await sendMail(
     u.email,
     '【HERIX】提现已打款',
-    `${u.nickname}，您申请的 ${wr.currency} ${wr.amount} 提现已完成打款（手续费 ¥${fee}，实际到账 ¥${netAmount}），参考号：${payoutRef}，请查收。`
+    `${u.nickname}，您申请的 ${wr.currency} ${wr.amount} 提现已完成打款（手续费 ¥${fee}，实际到账 ${payoutCurrency} ${payoutAmount}），参考号：${payoutRef}，请查收。`
   );
 
-  res.json({ success: true, payoutReference: payoutRef, netAmount, fee, provider: payoutProvider.name });
+  res.json({ success: true, payoutReference: payoutRef, netAmount, payoutAmount, payoutCurrency, fee, provider: payoutProvider.name });
 });
 
 // ── 定价管理 ──────────────────────────────────────────────────────────────────

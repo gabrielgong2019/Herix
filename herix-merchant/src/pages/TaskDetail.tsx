@@ -94,11 +94,6 @@ function ContentSection({ task, onEdit }: { task: Task; onEdit: () => void }) {
   )
 }
 
-function maskName(name: string): string {
-  if (!name || name.length <= 1) return name
-  return name[0] + '**'
-}
-
 // ── Publish banner ────────────────────────────────────────────────
 function PublishBanner({ taskId }: { taskId: string }) {
   const { t } = useTranslation()
@@ -650,7 +645,7 @@ export default function TaskDetail() {
                         }}>
                           {!app.avatar_url && ((app.display_name || app.nickname || '?')[0]).toUpperCase()}
                         </div>
-                        {maskName(app.display_name || app.nickname || app.herald?.name || app.user_id || '')}
+                        {app.display_name || app.nickname || app.herald?.name || app.user_id || ''}
                       </div>
                     </td>
                     <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
@@ -697,7 +692,7 @@ export default function TaskDetail() {
                   const links = parseLinks(sub)
                   return (
                   <tr key={sub.id}>
-                    <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{maskName(sub.nickname || sub.herald?.name || sub.user_id || '')}</td>
+                    <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{sub.nickname || sub.herald?.name || sub.user_id || ''}</td>
                     <td className="px-5 py-3.5 text-sm" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>{formatDate(sub.submitted_at || sub.created_at || '')}</td>
                     <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
                       {sub.stage === 'DRAFT' && (

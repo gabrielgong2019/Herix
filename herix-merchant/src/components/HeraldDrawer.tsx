@@ -62,7 +62,6 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
   const platforms = parsePlatforms(app.social_platforms)
   const tiers = parseTiers(app.tier_snapshot)
   const name = app.display_name || app.nickname || app.user_id || ''
-  const maskedName = name.length > 1 ? name[0] + '**' : name
   const completedTasks = Number(app.completed_tasks || 0)
   const goodRate = app.good_rate != null ? Math.round(Number(app.good_rate) * 100) : null
   const isPending = app.status.toLowerCase() === 'pending' // 服务端大写 PENDING，归一后比较
@@ -116,7 +115,7 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
               {!app.avatar_url && (name[0] || '?').toUpperCase()}
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: 16 }}>{maskedName}</div>
+              <div style={{ fontWeight: 600, fontSize: 16 }}>{name}</div>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
                 {t('herald.joinedAt', { date: formatDate(app.created_at) })}
               </div>

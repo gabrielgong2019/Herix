@@ -154,10 +154,26 @@ export default class Apply extends Component<{}, State> {
     this.setState(prev => ({ ...prev, screenshots: prev.screenshots.filter((_, idx) => idx !== i) }));
   };
 
+  /** 用户常只填 www.xxx.com，服务端要求完整 http(s)://，无协议时自动补 https */
+  normalizeLink = (raw: string): string => {
+    const s = raw.trim();
+    if (!s || /^https?:\/\//i.test(s)) return s;
+    return `https://${s}`;
+  };
+
   handleSubmit = async () => {
     const { mode, links, screenshots, description, minImages } = this.state;
-    const contentUrls = links.map(l => l.trim()).filter(Boolean);
+    const contentUrls = links.map(this.normalizeLink).filter(Boolean);
     // 客户端前置校验（服务端同款闸机兜底）
+    for (let i = 0; i < links.length; i++) {
+      const raw = links[i].trim();
+      if (!raw) continue;
+      const normalized = this.normalizeLink(raw);
+      try { new URL(normalized); } catch {
+        Taro.showToast({ title: t('apply.linkInvalid', { n: i + 1 }), icon: 'none' });
+        return;
+      }
+    }
     if (mode === 'final' && contentUrls.length === 0) {
       Taro.showToast({ title: t('apply.fillLink'), icon: 'none' });
       return;

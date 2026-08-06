@@ -75,6 +75,7 @@
   "addMethod.step2Sub": "Khu vực nhận tiền: {region}",
   "addMethod.step2Title": "Chọn phương thức nhận tiền",
   "apply.addLink": "Thêm liên kết",
+  "apply.linkInvalid": "Liên kết thứ {n} không hợp lệ. Vui lòng nhập URL đầy đủ bắt đầu bằng https://",
   "apply.contentDesc": "Mô tả nội dung",
   "apply.contentLink": "Liên kết nội dung *",
   "apply.contentLinks": "Liên kết nội dung (có thể thêm nhiều nền tảng)",

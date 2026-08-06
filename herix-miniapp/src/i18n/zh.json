@@ -1181,6 +1181,7 @@
   "apply.previewLink": "预览链接（选填，未公开视频可放网盘/预览地址）",
   "apply.contentLinks": "内容链接（可添加多个平台）",
   "apply.addLink": "添加链接",
+  "apply.linkInvalid": "第 {n} 个链接格式无效，请以 https:// 开头",
   "apply.screenshots": "图片 / 截图",
   "apply.needMinImages": "该任务要求至少 {n} 张",
   "apply.uploading": "上传中…",

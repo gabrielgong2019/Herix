@@ -1181,6 +1181,7 @@
   "apply.previewLink": "Preview link (optional)",
   "apply.contentLinks": "Content links (multiple platforms allowed)",
   "apply.addLink": "Add link",
+  "apply.linkInvalid": "Link #{n} is invalid. Please use a full URL starting with https://",
   "apply.screenshots": "Images / screenshots",
   "apply.needMinImages": "This task requires at least {n}",
   "apply.uploading": "Uploading…",

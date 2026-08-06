@@ -1181,6 +1181,7 @@
   "apply.previewLink": "プレビューリンク（任意）",
   "apply.contentLinks": "コンテンツリンク（複数追加可）",
   "apply.addLink": "リンクを追加",
+  "apply.linkInvalid": "{n} 番目のリンクの形式が無効です。https:// で始まる完全な URL を入力してください",
   "apply.screenshots": "画像・スクリーンショット",
   "apply.needMinImages": "このタスクは最低 {n} 枚必要です",
   "apply.uploading": "アップロード中…",

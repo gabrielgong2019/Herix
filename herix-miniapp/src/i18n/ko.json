@@ -614,5 +614,6 @@
   "wallet.txnType.WITHDRAWAL_FREEZE": "출금 신청 (동결)",
   "wallet.txnType.WITHDRAWAL_DEBIT": "출금 완료",
   "wallet.txnType.WITHDRAWAL_UNFREEZE": "출금 취소 (동결 해제)",
-  "wallet.txnType.ADJUSTMENT": "수동 조정"
+  "wallet.txnType.ADJUSTMENT": "수동 조정",
+  "apply.linkInvalid": "{n}번째 링크 형식이 올바르지 않습니다. https://로 시작하는 전체 URL을 입력하세요"
 }

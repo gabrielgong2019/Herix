@@ -65,6 +65,14 @@ app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.json());
+// 轻量请求日志（2026-08-06 排查小程序首屏加载）：记录 method/path/状态/耗时
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    console.log(`[req] ${req.method} ${req.originalUrl} ${res.statusCode} ${Date.now() - start}ms`);
+  });
+  next();
+});
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

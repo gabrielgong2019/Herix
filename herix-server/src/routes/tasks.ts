@@ -150,14 +150,14 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   // score 公式：boost * (ctr*wCtr + app*wApp + comp*wComp + fresh*wFresh)
   // 低样本（exposure < minEvents）的 ctr/app 项不参与赛马，权重转移到 freshness
   const scoreExpr = `(
-    CASE WHEN t.created_at > NOW() - INTERVAL '${boostHours} hours' THEN ${boostWeight} ELSE 1.0 END
+    CASE WHEN t.created_at::timestamptz > NOW() - INTERVAL '${boostHours} hours' THEN ${boostWeight} ELSE 1.0 END
     * (
       CASE WHEN COALESCE(ts2.exposure_count,0) >= ${minEvents} THEN
         ${wCtr} * COALESCE(ts2.click_count::numeric / NULLIF(ts2.exposure_count,0), 0)
         + ${wApp} * COALESCE(ts2.application_count::numeric / NULLIF(ts2.exposure_count,0), 0)
       ELSE 0.0 END
       + ${wComp} * COALESCE(ts2.completion_count::numeric / NULLIF(ts2.application_count,0), 0)
-      + ${wFresh} * (1.0 - LEAST(1.0, EXTRACT(EPOCH FROM (NOW() - t.created_at)) / (${decayDays} * 86400.0)))
+      + ${wFresh} * (1.0 - LEAST(1.0, EXTRACT(EPOCH FROM (NOW() - t.created_at::timestamptz)) / (${decayDays} * 86400.0)))
     )
   )`;
   const tasks = await findMany<any>(

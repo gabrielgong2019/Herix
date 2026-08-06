@@ -1275,5 +1275,7 @@
   "task.withdrawConfirmBody": "取消后名额将释放；已开始交付的任务无法取消。",
   "task.withdrawConfirmOk": "确认取消",
   "task.withdrawConfirmNo": "再想想",
-  "task.withdrawSuccess": "已取消报名"
+  "task.withdrawSuccess": "已取消报名",
+  "index.loadFailed": "加载失败，请检查网络",
+  "index.retry": "点击重试"
 }

@@ -47,6 +47,7 @@ interface State {
   communityId: string;
   communityName: string;
   allCommunities: boolean;
+  loadError: boolean;
 }
 
 export default class Index extends Component<{}, State> {
@@ -62,6 +63,7 @@ export default class Index extends Component<{}, State> {
     communityId: '',
     communityName: '',
     allCommunities: false,
+    loadError: false,
   };
 
   componentDidMount() {
@@ -89,7 +91,7 @@ export default class Index extends Component<{}, State> {
   }
 
   loadData = async (allCommunities?: boolean) => {
-    this.setState({ loading: true });
+    this.setState({ loading: true, loadError: false });
     try {
       const [taskRes, categoryRes] = await Promise.all([
         taskApi.list({ allCommunities: allCommunities ?? this.state.allCommunities }),
@@ -98,6 +100,7 @@ export default class Index extends Component<{}, State> {
       this.setState({ taskList: taskRes.tasks || [], categories: categoryRes || [] });
     } catch (err: any) {
       console.error('Load error:', err);
+      this.setState({ loadError: true });
     }
     this.setState({ loading: false });
   };
@@ -109,7 +112,7 @@ export default class Index extends Component<{}, State> {
   };
 
   render() {
-    const { taskList, categories, activeCategory, searchText, loading, navMetrics, communityId, communityName, allCommunities } = this.state;
+    const { taskList, categories, activeCategory, searchText, loading, loadError, navMetrics, communityId, communityName, allCommunities } = this.state;
     const keyword = searchText.trim().toLowerCase();
     const visibleTasks = taskList.filter(task => {
       if (activeCategory && task.category !== activeCategory) return false;
@@ -194,6 +197,11 @@ export default class Index extends Component<{}, State> {
 
         {loading ? (
           <View className='loading'><Text>{t('common.loading')}</Text></View>
+        ) : loadError ? (
+          <View className='empty'>
+            <Text className='empty-text'>{t('index.loadFailed')}</Text>
+            <Text className='empty-retry' onClick={() => this.loadData()}>{t('index.retry')}</Text>
+          </View>
         ) : (
           <ScrollView className='list' scrollY>
             <View className='grid'>

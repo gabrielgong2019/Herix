@@ -1275,5 +1275,7 @@
   "task.withdrawConfirmBody": "The slot will be released. Tasks already in progress cannot be withdrawn.",
   "task.withdrawConfirmOk": "Withdraw",
   "task.withdrawConfirmNo": "Keep it",
-  "task.withdrawSuccess": "Application withdrawn"
+  "task.withdrawSuccess": "Application withdrawn",
+  "index.loadFailed": "Failed to load. Check your connection",
+  "index.retry": "Tap to retry"
 }

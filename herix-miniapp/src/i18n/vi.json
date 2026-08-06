@@ -730,5 +730,7 @@
   "task.withdrawConfirmBody": "Hủy sẽ giải phóng chỗ. Nhiệm vụ đã bắt đầu giao nộp không thể hủy.",
   "task.withdrawConfirmOk": "Xác nhận hủy",
   "task.withdrawConfirmNo": "Giữ lại",
-  "task.withdrawSuccess": "Đã hủy đăng ký"
+  "task.withdrawSuccess": "Đã hủy đăng ký",
+  "index.loadFailed": "Tải không thành công. Kiểm tra kết nối",
+  "index.retry": "Chạm để thử lại"
 }

@@ -1275,5 +1275,7 @@
   "task.withdrawConfirmBody": "キャンセルすると枠が解放されます。すでに納品を始めたタスクはキャンセルできません。",
   "task.withdrawConfirmOk": "キャンセルする",
   "task.withdrawConfirmNo": "やめておく",
-  "task.withdrawSuccess": "応募をキャンセルしました"
+  "task.withdrawSuccess": "応募をキャンセルしました",
+  "index.loadFailed": "読み込みに失敗しました。ネットワークを確認してください",
+  "index.retry": "タップして再試行"
 }

@@ -1095,5 +1095,7 @@
   "task.withdrawConfirmBody": "取消报名二次确认正文：说明名额释放与不可取消边界",
   "task.withdrawConfirmOk": "二次确认确定按钮",
   "task.withdrawConfirmNo": "二次确认取消按钮（继续保留报名）",
-  "task.withdrawSuccess": "取消成功 Toast"
+  "task.withdrawSuccess": "取消成功 Toast",
+  "index.loadFailed": "首页任务列表加载失败提示（区别于真正的无任务）",
+  "index.retry": "加载失败后的重试按钮"
 }

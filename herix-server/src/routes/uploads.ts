@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { imageUpload } from '../middleware/upload';
-import { processLogo, processPromo, processCover } from '../utils/image';
+import { processLogo, processPromo, processCover, processInside } from '../utils/image';
 import { saveBrandAsset, saveTaskCover, saveTaskServiceLogo, saveSubmissionImage } from '../utils/uploads';
 import { update, insert } from '../utils/db';
 
@@ -41,7 +41,7 @@ uploadsRouter.post('/brand/promo', requireAuth, requireRole('BRAND'), imageUploa
 uploadsRouter.post('/brand/kyb-doc', requireAuth, requireRole('BRAND'), imageUpload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: '未提供文件' });
   try {
-    const processed = await processPromo(req.file.buffer); // 文档照片沿用宣传图压缩参数（长边保留较大，文字可读）
+    const processed = await processInside(req.file.buffer); // 证件等比缩放不裁切，边缘文字保留可读
     const url = saveBrandAsset(req.user!.userId, 'kyb', processed);
     res.json({ success: true, url });
   } catch (err) {
@@ -55,7 +55,7 @@ uploadsRouter.post('/brand/kyb-doc', requireAuth, requireRole('BRAND'), imageUpl
 uploadsRouter.post('/submission-image', requireAuth, requireRole('HERALD'), imageUpload.single('file'), async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: '未提供文件' });
   try {
-    const processed = await processPromo(req.file.buffer); // 沿用宣传图参数：长边保留较大，成品文字可读
+    const processed = await processInside(req.file.buffer); // 截图等比缩放不裁切，竖屏内容完整保留
     const url = saveSubmissionImage(req.user!.userId, processed);
     res.json({ success: true, url });
   } catch (err) {

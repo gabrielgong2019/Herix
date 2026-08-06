@@ -15,6 +15,15 @@ export async function processLogo(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
+/** 等比缩放不裁切（提交截图/KYB 证件用）：最长边不超过 maxDimension，保留原比例。
+ *  16:9 cover 会把竖屏手机截图裁成横版、证件边缘裁掉，这里只缩不放 */
+export async function processInside(buffer: Buffer, maxDimension = 1200, quality = 85): Promise<Buffer> {
+  return sharp(buffer)
+    .resize(maxDimension, maxDimension, { fit: 'inside', withoutEnlargement: true })
+    .webp({ quality })
+    .toBuffer();
+}
+
 /** 品牌宣传图：统一适配为16:9横版，非该比例图片自动 center-crop */
 export async function processPromo(buffer: Buffer): Promise<Buffer> {
   return sharp(buffer)

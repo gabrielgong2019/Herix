@@ -154,7 +154,7 @@
     "fieldSourceLang": "原文言語",
     "fieldSourceLangHint": "公開後は変更できません",
     "fieldCommunity": "対象コミュニティ",
-    "fieldCommunityHint": "未選択の場合、すべてのアンバサダーが対象（全言語に翻訳）",
+    "fieldCommunityHint": "言語に基づいて対象コミュニティを自動設定しています（手動で変更可）",
     "fieldPlatform": "プラットフォーム要件",
     "fieldDifficulty": "難易度",
     "fieldContentType": "コンテンツ形式",
@@ -320,7 +320,8 @@
     "perfStep4Sec2": "データ提出モード",
     "dataModeNote": "データは Excel アップロードまたは API で提出できます。API 連携が必要な場合はマーケティングコンサルタントにお問い合わせください。",
     "perfStep5Title": "予算・公開",
-    "perfStep5Hint": "コンバージョンごとの報酬を設定し、カバー画像をアップロードします"
+    "perfStep5Hint": "コンバージョンごとの報酬を設定し、カバー画像をアップロードします",
+    "translateHint": "他言語のコミュニティを選択すると、タスク内容が自動翻訳されます"
   },
   "site": {
     "jp": "日本",

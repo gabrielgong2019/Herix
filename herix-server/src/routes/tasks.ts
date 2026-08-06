@@ -14,7 +14,7 @@ import { SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { translateTask } from '../utils/translate';
 import { fetchTaskApplications } from '../utils/applicationQueries';
 import { serializeTask, serializeApplication } from '../utils/serialize';
-import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
+import { VALID_COMMUNITIES, communityToSite, getDefaultCommunitiesForLang } from '../constants/communities';
 import { VALID_SITES } from '../constants/sites';
 import pool from '../db';
 
@@ -40,6 +40,33 @@ function badPlatformReq(reqs: any): string | null {
   const bad = reqs.find((r: any) => r?.platformId && !SOCIAL_PLATFORM_IDS.includes(r.platformId));
   return bad ? bad.platformId : null;
 }
+
+
+/** POST /api/tasks/events — 前端埋点上报（曝光/点击），批量去重写入 */
+tasksRouter.post('/events', optionalAuth, async (req: Request, res: Response) => {
+  const uid = req.user?.userId;
+  if (!uid) return res.json({ inserted: 0 });
+
+  const { events } = req.body || {};
+  if (!Array.isArray(events) || events.length === 0) return res.json({ inserted: 0 });
+
+  let inserted = 0;
+  for (const ev of events) {
+    const { taskId, eventType } = ev || {};
+    if (!taskId || !['exposure', 'click'].includes(eventType)) continue;
+    try {
+      const r = await pool.query(
+        `INSERT INTO task_events (id, task_id, user_id, event_type, hour_bucket)
+         VALUES (md5(random()::text || clock_timestamp()::text), $1, $2, $3, TO_CHAR(NOW(), 'YYYY-MM-DD"T"HH24'))
+         ON CONFLICT (task_id, user_id, event_type, hour_bucket) DO NOTHING
+         RETURNING id`,
+        [taskId, uid, eventType]
+      );
+      if (r.rows.length > 0) inserted++;
+    } catch { /* 跳过单条失败，不阻塞整批 */ }
+  }
+  res.json({ inserted });
+});
 
 
 /** GET /api/tasks — 获取任务列表（已登录用户可见自己所有状态，未登录只见 OPEN） */
@@ -100,8 +127,42 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   const total = totalRow?.cnt || 0;
 
   const useLang = typeof lang === 'string' && lang !== 'zh' ? lang : null;
+
+  // 排名权重（从 platform_settings 读取，运营可调不须发版）
+  const [boostHoursS, boostWeightS, ctrWS, appWS, compWS, freshWS, decayDaysS, minEventsS] = await Promise.all([
+    getSetting('ranking_new_task_boost_hours'),
+    getSetting('ranking_new_task_boost_weight'),
+    getSetting('ranking_ctr_weight'),
+    getSetting('ranking_application_rate_weight'),
+    getSetting('ranking_completion_rate_weight'),
+    getSetting('ranking_freshness_weight'),
+    getSetting('ranking_freshness_decay_days'),
+    getSetting('ranking_min_events_for_rate'),
+  ]);
+  const boostHours = Number(boostHoursS) || 24;
+  const boostWeight = Number(boostWeightS) || 2.0;
+  const wCtr  = Number(ctrWS) || 0.3;
+  const wApp  = Number(appWS) || 0.4;
+  const wComp = Number(compWS) || 0.2;
+  const wFresh = Number(freshWS) || 0.1;
+  const decayDays = Number(decayDaysS) || 30;
+  const minEvents = Number(minEventsS) || 5;
+  // score 公式：boost * (ctr*wCtr + app*wApp + comp*wComp + fresh*wFresh)
+  // 低样本（exposure < minEvents）的 ctr/app 项不参与赛马，权重转移到 freshness
+  const scoreExpr = `(
+    CASE WHEN t.created_at > NOW() - INTERVAL '${boostHours} hours' THEN ${boostWeight} ELSE 1.0 END
+    * (
+      CASE WHEN COALESCE(ts2.exposure_count,0) >= ${minEvents} THEN
+        ${wCtr} * COALESCE(ts2.click_count::numeric / NULLIF(ts2.exposure_count,0), 0)
+        + ${wApp} * COALESCE(ts2.application_count::numeric / NULLIF(ts2.exposure_count,0), 0)
+      ELSE 0.0 END
+      + ${wComp} * COALESCE(ts2.completion_count::numeric / NULLIF(ts2.application_count,0), 0)
+      + ${wFresh} * (1.0 - LEAST(1.0, EXTRACT(EPOCH FROM (NOW() - t.created_at)) / (${decayDays} * 86400.0)))
+    )
+  )`;
   const tasks = await findMany<any>(
     `SELECT t.*,
+            ${scoreExpr} as score,
             ${useLang ? 'COALESCE(tt.title, t.title) as title, COALESCE(tt.description, t.description) as description,' : ''}
             u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
@@ -117,8 +178,9 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
      LEFT JOIN (SELECT task_id, COUNT(*)::int AS application_count FROM task_applications GROUP BY task_id) ac ON ac.task_id = t.id
      LEFT JOIN (SELECT task_id, ROUND(AVG(score),1) AS avg_rating, COUNT(*)::int AS rating_count FROM task_ratings GROUP BY task_id) rs ON rs.task_id = t.id
      LEFT JOIN task_referral_specs trs ON trs.task_id = t.id
+     LEFT JOIN task_stats ts2 ON ts2.task_id = t.id
      WHERE ${where}
-     ORDER BY t.created_at DESC
+     ORDER BY score DESC, t.created_at DESC
      LIMIT ? OFFSET ?`,
     [...(useLang ? [useLang] : []), ...params, Number(limit), skip]
   );
@@ -947,7 +1009,8 @@ tasksRouter.get('/:id/applications', requireAuth, async (req: Request, res: Resp
 tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const lang = typeof req.query.lang === 'string' ? req.query.lang : null;
   const task = await findOne<any>(
-    `SELECT t.*, u.nickname as creator_name,
+    `SELECT t.*,
+            u.nickname as creator_name,
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url,
             bp.company_name as brand_company_name, bp.company_desc as brand_company_desc,
             (SELECT COUNT(*)::int FROM task_applications ta WHERE ta.task_id = t.id AND ta.status = 'APPROVED') as approved_count,
@@ -1082,7 +1145,9 @@ tasksRouter.post('/', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Re
       req_mode:          data.reqMode,
       req_min_count:     data.reqMode === 'ANY_N' ? (data.reqMinCount || 1) : null,
       visibility:        data.visibility || 'PUBLIC',
-      target_communities: data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c)),
+      target_communities: (data.targetCommunities && data.targetCommunities.length > 0)
+        ? data.targetCommunities.filter(c => VALID_COMMUNITIES.has(c))
+        : getDefaultCommunitiesForLang(sourceLang),
       site_id:           VALID_SITES.has(data.siteId) ? data.siteId : 'jp',
       service_name:      data.serviceName || null,
       status:            'DRAFT',

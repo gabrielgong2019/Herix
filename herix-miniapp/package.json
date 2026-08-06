@@ -1,6 +1,6 @@
 {
   "name": "herix-miniapp",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "private": true,
   "scripts": {
     "prebuild": "cd ../herix-shared && npm run build",

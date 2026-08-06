@@ -733,5 +733,7 @@
   "task.withdrawConfirmNo": "Giữ lại",
   "task.withdrawSuccess": "Đã hủy đăng ký",
   "index.loadFailed": "Tải không thành công. Kiểm tra kết nối",
-  "index.retry": "Chạm để thử lại"
+  "index.retry": "Chạm để thử lại",
+  "profile.community": "Cộng đồng",
+  "onboard.communityRequired": "Vui lòng chọn cộng đồng của bạn"
 }

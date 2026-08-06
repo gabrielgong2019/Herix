@@ -151,14 +151,19 @@ ambassadorRouter.post('/declaration', requireAuth, async (req: Request, res: Res
 ambassadorRouter.post('/onboard', requireAuth, async (req: Request, res: Response) => {
   const { residence, residenceCountry, visaType, hasWorkPermit, bankAccountType, bankDetails, socialPlatforms, community } = req.body;
 
+  // 社群必选（2026-08-06）：任务列表按 herald_profiles.community 过滤，缺失会导致任务匹配失效
+  if (!community || !VALID_COMMUNITIES.has(community)) {
+    return res.status(400).json({ error: '请选择所属社群', code: 'COMMUNITY_REQUIRED' });
+  }
+
   // 居住地选填：有就保存，没有也能完成入驻
   const profileData: Record<string, any> = {
     is_onboarded: 1,
+    community,
     social_platforms: socialPlatforms ? JSON.stringify(socialPlatforms) : null,
     tier_snapshot: socialPlatforms ? JSON.stringify(buildTierSnapshot(socialPlatforms)) : null,
     social_platforms_updated_at: socialPlatforms ? new Date().toISOString() : null,
   };
-  if (community && VALID_COMMUNITIES.has(community)) profileData.community = community;
 
   if (residence && ['japan', 'overseas'].includes(residence)) {
     profileData.residence = residence;

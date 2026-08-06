@@ -495,6 +495,18 @@ export default function TaskForm() {
     }
   }, [brandProfile, isEdit, copyId])
 
+  // 新建任务：按源语言预填默认目标社群（商家可手动增减）
+  useEffect(() => {
+    if (isEdit || copyId || communities.length === 0) return
+    if (form.targetCommunities.length > 0) return
+    const lang = form.sourceLang || brandProfile?.default_lang || 'zh'
+    const ids = communities.filter(c => c.locale === lang).map(c => c.id)
+    setForm((prev) => ({
+      ...prev,
+      targetCommunities: ids.length > 0 ? ids : communities.filter(c => c.locale === 'en').map(c => c.id),
+    }))
+  }, [communities, form.sourceLang, isEdit, copyId, brandProfile])
+
   // 复制任务：按白名单预填（排除日期与推广码——那些是每期不同的）
   const { data: copySource } = useQuery({
     queryKey: ['task', copyId],
@@ -1101,6 +1113,9 @@ export default function TaskForm() {
                         selected={form.targetCommunities.includes(c.id)} onClick={() => toggleList('targetCommunities', c.id)} />
                     ))}
                   </div>
+                  {form.targetCommunities.filter(id => communities.find(c => c.id === id)?.locale !== form.sourceLang).length > 0 && (
+                    <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>{t('taskForm.translateHint')}</p>
+                  )}
                 </Field>
 
                 <Field label={t('taskForm.fieldPlatform')} hint={t('taskForm.fieldPlatformHint')}>
@@ -1521,6 +1536,9 @@ export default function TaskForm() {
                   />
                 ))}
               </div>
+              {form.targetCommunities.filter(id => communities.find(c => c.id === id)?.locale !== form.sourceLang).length > 0 && (
+                <p className="text-xs mt-2" style={{ color: 'var(--muted)' }}>{t('taskForm.translateHint')}</p>
+              )}
             </Field>
 
             {isStandard && <Field label={t('taskForm.fieldPlatform')} hint={t('taskForm.fieldPlatformHint')}>

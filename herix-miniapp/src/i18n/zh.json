@@ -1278,5 +1278,7 @@
   "task.withdrawConfirmNo": "再想想",
   "task.withdrawSuccess": "已取消报名",
   "index.loadFailed": "加载失败，请检查网络",
-  "index.retry": "点击重试"
+  "index.retry": "点击重试",
+  "profile.community": "所属社群",
+  "onboard.communityRequired": "请选择你的所属社群"
 }

@@ -154,7 +154,7 @@
     "fieldSourceLang": "Source Language",
     "fieldSourceLangHint": "Cannot be changed after publishing",
     "fieldCommunity": "Target Community",
-    "fieldCommunityHint": "Leave empty to target all heralds (translates to all supported languages)",
+    "fieldCommunityHint": "Target communities are preset based on your language (you can adjust)",
     "fieldPlatform": "Platform Requirements",
     "fieldDifficulty": "Difficulty",
     "fieldContentType": "Content Format",
@@ -320,7 +320,8 @@
     "perfStep4Sec2": "Data Submission Mode",
     "dataModeNote": "Data can be submitted via Excel upload or API. Contact your marketing consultant for API integration.",
     "perfStep5Title": "Budget & Publish",
-    "perfStep5Hint": "Set payout per conversion and upload a cover image"
+    "perfStep5Hint": "Set payout per conversion and upload a cover image",
+    "translateHint": "Selecting communities in other languages will trigger automatic translation of task content"
   },
   "site": {
     "jp": "Japan",

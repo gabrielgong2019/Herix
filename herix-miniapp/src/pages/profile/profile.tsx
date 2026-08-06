@@ -8,6 +8,7 @@ import {
   ambassador,
   users,
   specialtyTags,
+  communities as communitiesApi,
   setToken,
   getToken,
   clearToken,
@@ -77,6 +78,11 @@ interface State {
   tagSheetOpen: boolean;
   tagSaving: boolean;
   tagError: string;
+  /** 社群列表与编辑弹层 */
+  communityList: { id: string; labelKey: string }[];
+  communitySheetOpen: boolean;
+  communitySaving: boolean;
+  communityPending: string | null;
 }
 
 export default class Profile extends Component<{}, State> {
@@ -107,6 +113,10 @@ export default class Profile extends Component<{}, State> {
     tagSheetOpen: false,
     tagSaving: false,
     tagError: '',
+    communityList: [],
+    communitySheetOpen: false,
+    communitySaving: false,
+    communityPending: null,
   };
 
   componentDidShow() {
@@ -134,7 +144,7 @@ export default class Profile extends Component<{}, State> {
       const user = await authApi.me();
       this.setState({ user, isLogin: true });
       Taro.setStorageSync('herix_user', user);
-      if (user.role === 'HERALD') { this.loadBalance(); this.loadTags(); }
+      if (user.role === 'HERALD') { this.loadBalance(); this.loadTags(); this.loadCommunities(); }
     } catch {
       clearToken();
       this.setState({ isLogin: false });
@@ -149,6 +159,29 @@ export default class Profile extends Component<{}, State> {
       ]);
       this.setState({ allTags: all || [], myTagIds: (mine || []).map((tg: any) => tg.id) });
     } catch { /* 非关键，失败忽略 */ }
+  };
+
+  loadCommunities = async () => {
+    try {
+      const list = await communitiesApi.list();
+      this.setState({ communityList: list || [] });
+    } catch { /* 非关键，失败忽略 */ }
+  };
+
+  saveCommunity = async () => {
+    const { communityPending, communityList } = this.state;
+    if (!communityPending) return;
+    this.setState({ communitySaving: true });
+    try {
+      await ambassador.updateProfile({ community: communityPending });
+      const fresh = { ...this.state.user, community: communityPending };
+      this.setState({ user: fresh, communitySheetOpen: false, communitySaving: false, communityPending: null });
+      Taro.setStorageSync('herix_user', fresh);
+      Taro.showToast({ title: t('common.save'), icon: 'success' });
+    } catch (err: any) {
+      this.setState({ communitySaving: false });
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
   };
 
   saveTags = async () => {
@@ -646,6 +679,15 @@ export default class Profile extends Component<{}, State> {
           {isHerald && (
             <>
               {this.renderRow(t('profile.residence'), u.residence === 'japan' ? t('profile.resJapan') : u.residence === 'china' ? t('profile.resChina') : u.residence === 'overseas' ? t('profile.resOverseas') : t('profile.notSet'))}
+              <View className='info-row'>
+                <Text className='info-label'>{t('profile.community')}</Text>
+                <Text className='info-val link' onClick={() => {
+                  if (this.state.communityList.length === 0) this.loadCommunities();
+                  this.setState({ communitySheetOpen: true, communityPending: u.community || null });
+                }}>
+                  {u.community ? t(`community.${u.community}`) : t('profile.notSet')} ›
+                </Text>
+              </View>
               {this.renderRow(t('profile.kyc'), u.kyc_status === 'approved' ? t('profile.kycApproved') : u.kyc_status === 'pending' ? t('profile.kycPending') : t('profile.kycNone'))}
               {u.residence === 'japan' && this.renderRow(t('profile.declaration'), u.declaration_status === 'submitted' || u.declaration_status === 'approved' ? t('profile.declSubmitted') : t('profile.kycNone'))}
               {this.renderRow(t('profile.payoutMethod'), bank ? bank.type || t('profile.isSet') : t('profile.notSet'))}
@@ -778,6 +820,36 @@ export default class Profile extends Component<{}, State> {
                 onClick={this.state.tagSaving ? undefined : this.saveTags}
               >
                 {this.state.tagSaving ? t('common.saving') : t('specialty.save')}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* 社群选择器 overlay */}
+        {isHerald && this.state.communitySheetOpen && (
+          <View className='ps-overlay' onClick={() => this.setState({ communitySheetOpen: false, communityPending: null })}>
+            <View className='ps-sheet tag-sheet' onClick={e => e.stopPropagation()}>
+              <Text className='ps-title'>{t('profile.community')}</Text>
+              <Text className='ps-hint'>{t('onboard.communityHint')}</Text>
+              <View className='tag-picker-grid'>
+                {this.state.communityList.map(cm => {
+                  const selected = this.state.communityPending === cm.id;
+                  return (
+                    <View
+                      key={cm.id}
+                      className={`tag-pick-item ${selected ? 'selected' : ''}`}
+                      onClick={() => this.setState({ communityPending: cm.id })}
+                    >
+                      {t(cm.labelKey)}
+                    </View>
+                  );
+                })}
+              </View>
+              <View
+                className={`btn-primary${this.state.communitySaving ? ' disabled' : ''}`}
+                onClick={this.state.communitySaving ? undefined : this.saveCommunity}
+              >
+                {this.state.communitySaving ? t('common.saving') : t('common.save')}
               </View>
             </View>
           </View>

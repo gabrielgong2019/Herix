@@ -388,7 +388,7 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
             bp.logo_url as brand_logo_url, bp.promo_image_url as brand_promo_image_url, bp.billing_email as brand_billing_email,
             bp.default_lang,
             hp.display_name, hp.country, hp.diaspora_group, hp.social_platforms, hp.specialties,
-            hp.is_onboarded, hp.residence, hp.residence_country, hp.kyc_status,
+            hp.is_onboarded, hp.residence, hp.residence_country, hp.community, hp.kyc_status,
             hp.declaration_status, hp.visa_type, hp.bank_account,
             hp.tier_snapshot, hp.social_platforms_updated_at
      FROM users u

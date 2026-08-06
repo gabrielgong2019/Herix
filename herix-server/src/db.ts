@@ -1110,6 +1110,47 @@ export async function initDatabase() {
        ('bank_account_name', '', '口座名義カナ')
      ON CONFLICT(key) DO NOTHING`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false`,
+
+    // ── 流量排序（2026-08-06）────────────────────────────────────────────────
+    // task_events: 前端埋点事件原始表（exposure/click），append-only
+    // 写入节流/防抖由前端负责；服务端按 (task_id, user_id, event_type, hour_bucket) 去重
+    `CREATE TABLE IF NOT EXISTS task_events (
+       id TEXT PRIMARY KEY,
+       task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+       event_type TEXT NOT NULL CHECK(event_type IN ('exposure','click')),
+       hour_bucket TEXT NOT NULL,
+       created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')),
+       UNIQUE(task_id, user_id, event_type, hour_bucket)
+     )`,
+    `CREATE INDEX IF NOT EXISTS idx_task_events_agg ON task_events(task_id, event_type)`,
+    `CREATE INDEX IF NOT EXISTS idx_task_events_hour ON task_events(hour_bucket)`,
+
+    // task_stats: 预聚合计数器，聚合 job 定期从 task_events + 业务表刷新。
+    // 每条任务一行，写入方仅聚合 job；查询侧 LEFT JOIN 取数当场算分。
+    `CREATE TABLE IF NOT EXISTS task_stats (
+       task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+       exposure_count INTEGER NOT NULL DEFAULT 0,
+       click_count INTEGER NOT NULL DEFAULT 0,
+       application_count INTEGER NOT NULL DEFAULT 0,
+       completion_count INTEGER NOT NULL DEFAULT 0,
+       updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD"T"HH24:MI:SS"Z"'))
+     )`,
+
+    // 排名权重配置（全部收口 platform_settings，运营可调不须发版）
+    `INSERT INTO platform_settings (key, value, note) VALUES
+       ('ranking_new_task_boost_hours', '24', '新任务保底曝光窗口时长（小时），窗口内权重不衰减'),
+       ('ranking_new_task_boost_weight', '2.0', '新任务保底曝光基础权重乘数（>1.0=加权，1.0=无加成）'),
+       ('ranking_ctr_weight', '0.3', '点击率在总分中的权重（0~1，三层权重之和应为 1.0）'),
+       ('ranking_application_rate_weight', '0.4', '报名率在总分中的权重（0~1）'),
+       ('ranking_completion_rate_weight', '0.2', '完成率在总分中的权重（0~1）'),
+       ('ranking_freshness_weight', '0.1', '新鲜度在总分中的权重（0~1），越高则新任务越占优'),
+       ('ranking_freshness_decay_days', '30', '新鲜度衰减到 0 的天数（线性衰减）'),
+       ('ranking_min_events_for_rate', '5', '计算点击率/报名率的最小事件数（贝叶斯平滑去偏，低样本不参与赛马）')
+     ON CONFLICT(key) DO NOTHING`,
+    // 数据修复（2026-08-06）：历史赫使未选社群的默认归属中国社群（cn-in-jp）。
+    // 幂等：仅补齐 NULL/空值，不覆盖已有选择。
+    `UPDATE herald_profiles SET community = 'cn-in-jp' WHERE community IS NULL OR community = ''`,
   ];
   for (const m of migrations) {
     await pool.query(m);

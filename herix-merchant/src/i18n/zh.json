@@ -154,7 +154,7 @@
     "fieldSourceLang": "任务原文语言",
     "fieldSourceLangHint": "发布后不可修改",
     "fieldCommunity": "目标社群",
-    "fieldCommunityHint": "不选则面向所有赫使，翻译覆盖所有支持语言",
+    "fieldCommunityHint": "已按您的语言预设目标社群，可手动增减",
     "fieldPlatform": "平台要求",
     "fieldDifficulty": "任务难度",
     "fieldContentType": "内容形式",
@@ -320,7 +320,8 @@
     "perfStep4Sec2": "数据回传模式",
     "dataModeNote": "数据回传支持 Excel 上传或 API；如需 API 对接，请联系营销顾问。",
     "perfStep5Title": "预算与发布",
-    "perfStep5Hint": "设定每次转化报酬，上传封面图"
+    "perfStep5Hint": "设定每次转化报酬，上传封面图",
+    "translateHint": "选择其他语言社群后，我们将自动翻译任务内容"
   },
   "site": {
     "jp": "日本",

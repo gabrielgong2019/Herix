@@ -182,7 +182,11 @@ export default class Onboard extends Component<{}, State> {
   };
 
   nextCommunity = () => {
-    this.setState({ step: 4 }); // community 可跳过
+    if (!this.state.data.community) {
+      Taro.showToast({ title: t('onboard.communityRequired'), icon: 'none' });
+      return;
+    }
+    this.setState({ step: 4 });
   };
 
   nextJapan = () => {
@@ -427,7 +431,7 @@ export default class Onboard extends Component<{}, State> {
               <Text className='choice-sub'>{t('ob.resOverseasSub')}</Text>
             </View>
             {d.residence && <View className='btn-primary' onClick={this.nextResidence}>{t('ob.next')}</View>}
-            <Text className='skip' onClick={this.submit}>{t('ob.skip')}</Text>
+            <Text className='skip' onClick={() => this.setState({ step: 3 })}>{t('ob.skip')}</Text>
             <Text className='skip-note'>{t('ob.mustComplete')}</Text>
           </View>
         )}
@@ -444,8 +448,8 @@ export default class Onboard extends Component<{}, State> {
                 <Text className='choice-name sm'>{t(c.labelKey)}</Text>
               </View>
             ))}
-            <View className='btn-primary' onClick={this.nextCommunity}>
-              {d.community ? t('ob.next') : t('onboard.communitySkip')}
+            <View className={`btn-primary${d.community ? '' : ' disabled'}`} onClick={d.community ? this.nextCommunity : undefined}>
+              {t('ob.next')}
             </View>
           </View>
         )}

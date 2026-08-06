@@ -564,6 +564,7 @@ export interface Community {
   id: string
   labelKey: string
   region: string
+  locale: string
 }
 
 export interface Site {

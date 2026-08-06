@@ -298,6 +298,7 @@ export const ambassador = {
     visaType?: string;
     bankAccount?: any;
     socialPlatforms?: any[];
+    community?: string;
   }) => request<any>('PATCH', '/ambassador/profile', data),
   onboard: (data: {
     residence?: string;
@@ -308,6 +309,7 @@ export const ambassador = {
     bankAccountType?: string;
     bankDetails?: any;
     socialPlatforms?: any[];
+    community?: string;
   }) => request<{ success: boolean; profile: any }>('POST', '/ambassador/onboard', data),
 };
 

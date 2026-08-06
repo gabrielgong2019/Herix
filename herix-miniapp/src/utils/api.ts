@@ -214,7 +214,7 @@ export const auth = {
 
 // ── Tasks ──
 export const tasks = {
-  list: (params?: { status?: string; mode?: string; page?: number; allCommunities?: boolean }) =>
+  list: (params?: { status?: string; mode?: string; page?: number; search?: string; category?: string; allCommunities?: boolean }) =>
     request<{ tasks: any[]; pagination: any }>('GET', '/tasks', { ...params, lang: getLocale() }, false),
   detail: (id: string) => request<any>('GET', `/tasks/${id}`, { lang: getLocale() }, false),
   create: (data: any) => request<any>('POST', '/tasks', data),

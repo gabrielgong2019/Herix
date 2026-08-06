@@ -43,7 +43,7 @@ function badPlatformReq(reqs: any): string | null {
 
 /** GET /api/tasks — 获取任务列表（已登录用户可见自己所有状态，未登录只见 OPEN） */
 tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
-  const { status, mode, creator, page = '1', limit = '20', lang } = req.query;
+  const { status, mode, creator, search, category, page = '1', limit = '20', lang } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
   let where = '1=1';
@@ -52,6 +52,14 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   if (status) { where += ' AND t.status = ?'; params.push(status); }
   if (mode) { where += ' AND t.mode = ?'; params.push(mode); }
   if (creator) { where += ' AND t.creator_id = ?'; params.push(creator); }
+  if (category) { where += ' AND t.category = ?'; params.push(String(category)); }
+  // 搜索下推服务端（此前前端只过滤第一页，第二页以后的任务搜不到）
+  const kw = typeof search === 'string' ? search.trim() : '';
+  if (kw) {
+    const like = `%${kw}%`;
+    where += ' AND (t.title ILIKE ? OR t.description ILIKE ? OR u.nickname ILIKE ? OR bp.company_name ILIKE ?)';
+    params.push(like, like, like, like);
+  }
   // 非创建者只看已发布（OPEN）任务；INVITE 任务不出现在公开列表
   const uid = req.user?.userId;
   if (!uid) {

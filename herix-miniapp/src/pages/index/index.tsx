@@ -66,6 +66,8 @@ export default class Index extends Component<{}, State> {
     loadError: false,
   };
 
+  searchTimer: ReturnType<typeof setTimeout> | null = null;
+
   componentDidMount() {
     this.loadCommunity();
     this.loadData();
@@ -90,11 +92,15 @@ export default class Index extends Component<{}, State> {
     refreshUnreadBadge(); // 消息 tab 未读气泡随 tab 切换刷新
   }
 
-  loadData = async (allCommunities?: boolean) => {
+  loadData = async (opts?: { allCommunities?: boolean; search?: string; category?: string }) => {
     this.setState({ loading: true, loadError: false });
     try {
       const [taskRes, categoryRes] = await Promise.all([
-        taskApi.list({ allCommunities: allCommunities ?? this.state.allCommunities }),
+        taskApi.list({
+          allCommunities: opts?.allCommunities ?? this.state.allCommunities,
+          search: opts?.search ?? this.state.searchText.trim(),
+          category: opts?.category ?? this.state.activeCategory,
+        }),
         categoriesApi.list().catch(() => []),
       ]);
       this.setState({ taskList: taskRes.tasks || [], categories: categoryRes || [] });
@@ -108,20 +114,29 @@ export default class Index extends Component<{}, State> {
   toggleCommunityFilter = () => {
     const next = !this.state.allCommunities;
     this.setState({ allCommunities: next });
-    this.loadData(next);
+    this.loadData({ allCommunities: next });
+  };
+
+  onSearchInput = (e: any) => {
+    this.setState({ searchText: e.detail.value });
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = setTimeout(() => this.loadData({ search: e.detail.value.trim() }), 300);
+  };
+
+  onClearSearch = () => {
+    if (this.searchTimer) clearTimeout(this.searchTimer);
+    this.searchTimer = null;
+    this.setState({ searchText: '' });
+    this.loadData({ search: '' });
+  };
+
+  onCategoryClick = (id: string) => {
+    this.setState({ activeCategory: id });
+    this.loadData({ category: id });
   };
 
   render() {
     const { taskList, categories, activeCategory, searchText, loading, loadError, navMetrics, communityId, communityName, allCommunities } = this.state;
-    const keyword = searchText.trim().toLowerCase();
-    const visibleTasks = taskList.filter(task => {
-      if (activeCategory && task.category !== activeCategory) return false;
-      if (keyword) {
-        const brand = (task.brand_company_name || task.creator_name || '').toLowerCase();
-        if (!task.title?.toLowerCase().includes(keyword) && !task.description?.toLowerCase().includes(keyword) && !brand.includes(keyword)) return false;
-      }
-      return true;
-    });
     // 对齐 herix.html：分类胶囊只显示当前任务列表中实际有任务的分类（从全量列表算，别用过滤后的）
     const visibleCategories = categories.filter(c => taskList.some(t => t.category === c.id));
 
@@ -156,10 +171,10 @@ export default class Index extends Component<{}, State> {
             value={searchText}
             placeholder={t('index.searchPh')}
             placeholderStyle='color:#aaa'
-            onInput={e => this.setState({ searchText: e.detail.value })}
+            onInput={this.onSearchInput}
           />
           {!!searchText && (
-            <Text className='search-clear' onClick={() => this.setState({ searchText: '' })}>✕</Text>
+            <Text className='search-clear' onClick={this.onClearSearch}>✕</Text>
           )}
         </View>
 
@@ -180,7 +195,7 @@ export default class Index extends Component<{}, State> {
         <ScrollView className='filters' scrollX enhanced showScrollbar={false}>
           <Text
             className={`filter ${activeCategory === '' ? 'active' : ''}`}
-            onClick={() => this.setState({ activeCategory: '' })}
+            onClick={() => this.onCategoryClick('')}
           >
             {t('common.all')}
           </Text>
@@ -188,7 +203,7 @@ export default class Index extends Component<{}, State> {
             <Text
               key={c.id}
               className={`filter ${activeCategory === c.id ? 'active' : ''}`}
-              onClick={() => this.setState({ activeCategory: c.id })}
+              onClick={() => this.onCategoryClick(c.id)}
             >
               {tf(`category.${c.id}`, c.label)}
             </Text>
@@ -205,8 +220,8 @@ export default class Index extends Component<{}, State> {
         ) : (
           <ScrollView className='list' scrollY>
             <View className='grid'>
-              {visibleTasks.length > 0 ? (
-                visibleTasks.map(task => <TaskCard key={task.id} task={task} categories={categories} />)
+              {taskList.length > 0 ? (
+                taskList.map(task => <TaskCard key={task.id} task={task} categories={categories} />)
               ) : (
                 <View className='empty'>
                   <Text className='empty-text'>{t('index.empty')}</Text>

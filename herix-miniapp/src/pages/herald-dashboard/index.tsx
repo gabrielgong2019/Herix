@@ -1,7 +1,7 @@
 import { Component } from 'react';
 import { View, Text, Textarea } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { wallet as walletApi, applications, submissions, referrals, getToken } from '../../utils/api';
+import { wallet as walletApi, applications, referrals, getToken } from '../../utils/api';
 import './index.scss';
 import { t } from '../../utils/i18n';
 import { fmt } from '../../utils/format';
@@ -26,8 +26,8 @@ interface State {
   loading: boolean;
   loggedIn: boolean;
   balance: any;
-  myApps: any[];
-  mySubs: any[];
+  actions: any[];
+  actionHistory: any[];
   myCodes: any[];
   filter: string;
   shareModal: { code: string; taskId: string; intro: string; benefit: string } | null;
@@ -39,8 +39,8 @@ export default class HeraldDashboard extends Component<{}, State> {
     loading: true,
     loggedIn: true,
     balance: {},
-    myApps: [],
-    mySubs: [],
+    actions: [],
+    actionHistory: [],
     myCodes: [],
     filter: 'all',
     shareModal: null,
@@ -66,16 +66,15 @@ export default class HeraldDashboard extends Component<{}, State> {
     const now = new Date();
     const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const to = now.toISOString();
-    const [bal, apps, subs, codes] = await Promise.all([
+    const [bal, actionRes, codes] = await Promise.all([
       walletApi.balance({ from, to }).catch(() => ({})),
-      applications.my().catch(() => []),
-      submissions.my().catch(() => []),
+      applications.actions().catch(() => ({ actions: [], history: [] })),
       referrals.myCodes().catch(() => []),
     ]);
     this.setState({
       balance: bal || {},
-      myApps: apps || [],
-      mySubs: subs || [],
+      actions: actionRes.actions || [],
+      actionHistory: actionRes.history || [],
       myCodes: codes || [],
       loading: false,
     });
@@ -185,7 +184,7 @@ export default class HeraldDashboard extends Component<{}, State> {
   }
 
   render() {
-    const { loading, loggedIn, balance: bal, myApps, mySubs, myCodes, filter, shareModal, shareSaving } = this.state;
+    const { loading, loggedIn, balance: bal, actions, actionHistory, myCodes, filter, shareModal, shareSaving } = this.state;
 
     if (!loggedIn) {
       return (
@@ -213,33 +212,19 @@ export default class HeraldDashboard extends Component<{}, State> {
     );
     const balApprox = balCurrencies.length > 1;
 
-    // ── 待办任务计算（对齐 herix；2026-07-27 改按 task_submissions 单据的 stage+status 分组）──
-    // task_submissions 每个(task,herald)只有一行，跨草稿/终稿复用同一行——sub.stage 就是当前所处阶段，
-    // 不能只看 status==='APPROVED'：草稿通过后 stage 仍是 DRAFT，此时"已过"但还没交终稿，仍需行动
-    const approvedStdApps = myApps.filter(a => a.status === 'APPROVED' && a.mode === 'STANDARD');
-    const subOf = (tid: string) => mySubs.find(s => s.task_id === tid);
-    const rejectedSubForTask = (tid: string) => { const s = subOf(tid); return s && s.status === 'REJECTED' ? s : undefined; };
-    const pendingSubForTask = (tid: string) => { const s = subOf(tid); return s && s.status === 'PENDING_REVIEW' ? s : undefined; };
-    const draftApprovedSubForTask = (tid: string) => { const s = subOf(tid); return s && s.stage === 'DRAFT' && s.status === 'APPROVED' ? s : undefined; };
-    const doneSubForTask = (tid: string) => { const s = subOf(tid); return s && s.stage === 'FINAL' && s.status === 'APPROVED' ? s : undefined; };
-    const actionableA = approvedStdApps.filter(a => !doneSubForTask(a.task_id) && !pendingSubForTask(a.task_id));
-    const rejectedA = actionableA.filter(a => !!rejectedSubForTask(a.task_id));
-    const draftApprovedA = actionableA.filter(a => !rejectedSubForTask(a.task_id) && !!draftApprovedSubForTask(a.task_id));
-    const freshA = actionableA.filter(a => !rejectedSubForTask(a.task_id) && !draftApprovedSubForTask(a.task_id));
-    const pendingReviewA = approvedStdApps.filter(a => !!pendingSubForTask(a.task_id));
-    const actionableB = myApps.filter(
-      a => a.status === 'APPROVED' && a.mode === 'PERFORMANCE' && myCodes.some(c => c.task_id === a.task_id),
-    );
+    // ── 待办/历史状态由服务端 /applications/actions 权威计算（2026-08-06），前端只分组渲染 ──
+    const rejectedA = actions.filter(a => a.kind === 'RESUBMIT');
+    const draftApprovedA = actions.filter(a => a.kind === 'DRAFT_APPROVED');
+    const freshA = actions.filter(a => a.kind === 'FRESH');
+    const pendingReviewA = actions.filter(a => a.kind === 'CONTENT_REVIEW');
+    const actionableB = actions.filter(a => a.kind === 'PROMOTING');
     const hasAction = rejectedA.length > 0 || freshA.length > 0 || draftApprovedA.length > 0;
     const hasInProgress = pendingReviewA.length > 0 || actionableB.length > 0;
 
-    // ── 报名历史过滤 ──
-    let filteredApps = myApps;
-    if (filter === 'pending') filteredApps = myApps.filter(a => a.status === 'PENDING');
-    if (filter === 'done')
-      filteredApps = myApps.filter(
-        a => a.status === 'APPROVED' && mySubs.some(s => s.task_id === a.task_id && s.stage === 'FINAL' && s.status === 'APPROVED'),
-      );
+    // ── 报名历史过滤（display_status 服务端算好）──
+    let filteredApps = actionHistory;
+    if (filter === 'pending') filteredApps = actionHistory.filter(a => a.status === 'PENDING');
+    if (filter === 'done') filteredApps = actionHistory.filter(a => a.display_status === 'DONE');
 
     const statusChip = (ra: any): [string, string] => {
       const stMap: Record<string, [string, string]> = {
@@ -247,15 +232,13 @@ export default class HeraldDashboard extends Component<{}, State> {
         APPROVED: [t('task.stApproved'), '#16a34a'],
         REJECTED: [t('hd.stRejected'), '#dc2626'],
         WITHDRAWN: [t('hd.stWithdrawn'), '#6b7280'],
+        EXPIRED: [t('task.slotReleased'), '#6b7280'],
+        DONE: [t('hd.done'), '#6366f1'],
+        NEED_FINAL: [t('hd.stNeedFinal'), '#0369a1'],
+        CONTENT_REVIEW: [t('hd.stContentReview'), '#0369a1'],
+        RESUBMIT: [t('hd.stResubmit'), '#dc2626'],
       };
-      if (ra.status === 'APPROVED' && ra.mode === 'STANDARD') {
-        const raSub = mySubs.find(s => s.task_id === ra.task_id);
-        if (raSub && raSub.stage === 'FINAL' && raSub.status === 'APPROVED') stMap.APPROVED = [t('hd.done'), '#6366f1'];
-        else if (raSub && raSub.stage === 'DRAFT' && raSub.status === 'APPROVED') stMap.APPROVED = [t('hd.stNeedFinal'), '#0369a1'];
-        else if (raSub && raSub.status === 'PENDING_REVIEW') stMap.APPROVED = [t('hd.stContentReview'), '#0369a1'];
-        else if (raSub && raSub.status === 'REJECTED') stMap.APPROVED = [t('hd.stResubmit'), '#dc2626'];
-      }
-      return stMap[ra.status] || ['', '#666'];
+      return stMap[ra.display_status] || ['', '#666'];
     };
 
     return (
@@ -285,9 +268,8 @@ export default class HeraldDashboard extends Component<{}, State> {
               <View>
                 {hasInProgress && <Text className='sub-label'>{t('hd.actionNeeded')}</Text>}
                 {rejectedA.map(ra => {
-                  const rsub = rejectedSubForTask(ra.task_id);
-                  const isDraftStage = rsub?.stage === 'DRAFT';
-                  const rMode: 'draft' | 'final' = isDraftStage ? 'draft' : 'final';
+                  const isDraftStage = ra.submit_mode === 'draft';
+                  const rMode: 'draft' | 'final' = ra.submit_mode || 'final';
                   return this.renderTaskCard(`rej-${ra.task_id}`, {
                     title: ra.task_title,
                     accent: '#dc2626',
@@ -295,7 +277,7 @@ export default class HeraldDashboard extends Component<{}, State> {
                     metaColor: '#dc2626',
                     note: [
                       ra.require_draft_review ? t('hd.stepLabel', { step: isDraftStage ? 1 : 3 }) : '',
-                      rsub && rsub.review_note ? t('task.reason', { note: rsub.review_note }) : '',
+                      ra.review_note ? t('task.reason', { note: ra.review_note }) : '',
                     ].filter(Boolean).join(' · '),
                     right: { type: 'button', text: t('task.resubmit'), color: '#fff', bg: '#dc2626', onClick: () => this.openSubmit(ra.task_id, rMode) },
                   });
@@ -334,8 +316,7 @@ export default class HeraldDashboard extends Component<{}, State> {
               <View>
                 {hasAction && <Text className='sub-label gap'>{t('hd.inProgress')}</Text>}
                 {pendingReviewA.map(pra => {
-                  const psub = pendingSubForTask(pra.task_id);
-                  const isDraftStage = psub?.stage === 'DRAFT';
+                  const isDraftStage = pra.sub_stage === 'DRAFT';
                   return this.renderTaskCard(`pend-${pra.task_id}`, {
                     title: pra.task_title,
                     accent: '#0369a1',
@@ -350,7 +331,7 @@ export default class HeraldDashboard extends Component<{}, State> {
                   });
                 })}
                 {actionableB.map(ab => {
-                  const code = myCodes.find(c => c.task_id === ab.task_id);
+                  const code = ab.code;
                   const payout = Number(code?.payout_per_herald || ab.payout_per_herald || 0);
                   const allZero = code && !Number(code.earned_amount) && !Number(code.registered_count) && !Number(code.used_count);
                   const body = code ? (
@@ -432,7 +413,6 @@ export default class HeraldDashboard extends Component<{}, State> {
           ) : (
             filteredApps.map(ra => {
               const [label, color] = statusChip(ra);
-              const raSubD = mySubs.find(s => s.task_id === ra.task_id);
               return (
                 <View key={ra.id || ra.task_id} className='hist-card'>
                   <View className='hist-top'>
@@ -447,11 +427,9 @@ export default class HeraldDashboard extends Component<{}, State> {
                   {ra.status === 'REJECTED' && ra.review_note && (
                     <View className='reject-note'>{t('hd.applyRejectReason', { note: ra.review_note })}</View>
                   )}
-                  {ra.status === 'APPROVED' &&
-                    ra.mode === 'STANDARD' &&
-                    raSubD &&
-                    raSubD.status === 'REJECTED' &&
-                    raSubD.review_note && <View className='reject-note'>{t('hd.contentRejectReason', { note: raSubD.review_note })}</View>}
+                  {ra.display_status === 'RESUBMIT' && ra.sub_review_note && (
+                    <View className='reject-note'>{t('hd.contentRejectReason', { note: ra.sub_review_note })}</View>
+                  )}
                 </View>
               );
             })

@@ -230,6 +230,7 @@ export const applications = {
   review: (id: string, status: ReviewDecision) =>
     request<any>('PATCH', `/applications/${id}/review`, { status }),
   my: () => request<any[]>('GET', '/applications/my', { lang: getLocale() }),
+  actions: () => request<{ actions: any[]; history: any[] }>('GET', '/applications/actions', { lang: getLocale() }),
   withdraw: (id: string) => request<any>('POST', `/applications/${id}/withdraw`),
 };
 

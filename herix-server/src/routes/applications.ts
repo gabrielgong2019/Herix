@@ -7,6 +7,7 @@ import { notify } from '../utils/notify';
 import { getBrandCreditInfo } from '../utils/settings';
 import { fetchPendingApplications } from '../utils/applicationQueries';
 import { serializeApplication } from '../utils/serialize';
+import { fetchMyCodes } from '../utils/ambassadorCodes';
 import { getTaskTranslations } from '../utils/taskLocalize';
 import crypto from 'crypto';
 
@@ -321,6 +322,81 @@ applicationRouter.patch('/:id/review', requireAuth, requireRole('BRAND', 'ADMIN'
  *  报名审核入口原来只在任务详情申请人Tab，用户两次找不到——审核队列页现在汇总报名+内容两类待办） */
 applicationRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: Request, res: Response) => {
   res.json((await fetchPendingApplications(req.user!.userId)).map(serializeApplication));
+});
+
+/** GET /api/applications/actions — 赫使仪表盘权威待办+历史状态（2026-08-06）。
+ *  此前前端拿 my-apps/my-subs 自推"待提交/待处理/已完成"，口径曾多次漂移（已通过任务看不到待办）。
+ *  状态机唯一实现放服务端：FRESH/RESUBMIT/DRAFT_APPROVED 是行动项，CONTENT_REVIEW/PROMOTING 是进行中，
+ *  历史卡 display_status 也由服务端算好，前端只渲染。 */
+applicationRouter.get('/actions', requireAuth, requireRole('HERALD'), async (req: Request, res: Response) => {
+  const uid = req.user!.userId;
+  const lang = String(req.query.lang || '');
+  const apps = await findMany<any>(
+    `SELECT ta.*, t.title as task_title, t.mode, t.payout_per_herald, t.commission,
+            COALESCE(tcs.require_draft_review, false) AS require_draft_review
+     FROM task_applications ta
+     JOIN tasks t ON t.id = ta.task_id
+     LEFT JOIN task_content_specs tcs ON tcs.task_id = t.id
+     WHERE ta.herald_id = ?
+     ORDER BY ta.created_at DESC`, [uid]
+  );
+  const subs = await findMany<any>(
+    `SELECT task_id, stage, status, review_note FROM task_submissions WHERE herald_id = ?`, [uid]
+  );
+  const codes = await fetchMyCodes(uid, lang);
+
+  if (lang && lang !== 'zh') {
+    const tr = await getTaskTranslations(apps.map((a: any) => a.task_id), lang);
+    for (const a of apps) {
+      const t = tr.get(a.task_id);
+      if (t?.title) a.task_title = t.title;
+    }
+  }
+
+  const actions: any[] = [];
+  const history = apps.map((app: any) => {
+    const sub = subs.find((s: any) => s.task_id === app.task_id);
+    const code = codes.find((c: any) => c.task_id === app.task_id);
+    let displayStatus = app.status as string;
+    let submitMode: 'draft' | 'final' | null = null;
+    let reviewNote: string | null = null;
+    let subStage: string | null = null;
+
+    if (app.status === 'APPROVED') {
+      if (app.mode === 'PERFORMANCE') {
+        if (code) actions.push({ kind: 'PROMOTING', task_id: app.task_id, task_title: app.task_title, payout_per_herald: app.payout_per_herald, code });
+      } else if (!sub) {
+        // 历史卡仍显示"已通过"，待办区才出现 FRESH 行动卡
+        displayStatus = 'APPROVED';
+        submitMode = app.require_draft_review ? 'draft' : 'final';
+        actions.push({ kind: 'FRESH', task_id: app.task_id, task_title: app.task_title, payout_per_herald: app.payout_per_herald, require_draft_review: !!app.require_draft_review, submit_mode: submitMode });
+      } else if (sub.status === 'REJECTED') {
+        displayStatus = 'RESUBMIT';
+        submitMode = sub.stage === 'DRAFT' ? 'draft' : 'final';
+        reviewNote = sub.review_note || null;
+        actions.push({ kind: 'RESUBMIT', task_id: app.task_id, task_title: app.task_title, require_draft_review: !!app.require_draft_review, submit_mode: submitMode, review_note: reviewNote });
+      } else if (sub.stage === 'DRAFT' && sub.status === 'APPROVED') {
+        displayStatus = 'NEED_FINAL';
+        actions.push({ kind: 'DRAFT_APPROVED', task_id: app.task_id, task_title: app.task_title, payout_per_herald: app.payout_per_herald, require_draft_review: !!app.require_draft_review });
+      } else if (sub.status === 'PENDING_REVIEW') {
+        displayStatus = 'CONTENT_REVIEW';
+        subStage = sub.stage || null;
+        actions.push({ kind: 'CONTENT_REVIEW', task_id: app.task_id, task_title: app.task_title, require_draft_review: !!app.require_draft_review, sub_stage: subStage });
+      } else if (sub.stage === 'FINAL' && sub.status === 'APPROVED') {
+        displayStatus = 'DONE';
+      }
+    }
+
+    return {
+      id: app.id, task_id: app.task_id, task_title: app.task_title,
+      status: app.status, display_status: displayStatus, mode: app.mode,
+      payout_per_herald: app.payout_per_herald, commission: app.commission,
+      require_draft_review: !!app.require_draft_review,
+      review_note: app.review_note || null,
+    };
+  });
+
+  res.json({ actions, history });
 });
 
 /** GET /api/applications/my — 我的报名 (赫使侧) */

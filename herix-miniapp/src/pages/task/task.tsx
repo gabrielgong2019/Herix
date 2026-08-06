@@ -50,6 +50,8 @@ interface TaskDetailData {
   submit_deadline?: string | null;
 }
 
+const ACTION_BAR_FALLBACK = 220; // px，兜底覆盖 ~80% 状态（SCSS 同值）
+
 interface State {
   task: TaskDetailData | null;
   loading: boolean;
@@ -77,6 +79,8 @@ interface State {
   reqFormValues: Record<string, PlatformAccountValue>;
   reqSubmitting: boolean;
   // 仲裁申请（改稿额度用尽后）
+  /** 底部操作栏实测高度（px），用于动态 padding-bottom；未测量前走 SCSS fallback */
+  actionBarHeight?: number;
   arbInput: boolean;
   arbReason: string;
   arbSubmitting: boolean;
@@ -105,6 +109,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     reqCanRetry: false,
     reqFormValues: {},
     reqSubmitting: false,
+    actionBarHeight: undefined,
     arbInput: false,
     arbReason: '',
     arbSubmitting: false,
@@ -112,12 +117,37 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
   componentDidMount() {
     this.loadTask();
+    this.measureActionBarHeight();
   }
 
   componentDidShow() {
     // 用户从 profile 页更新粉丝数后返回时，强制 bust 缓存重新拉取资质数据，按钮状态自动刷新
     this.loadTask({ forceProfile: true });
   }
+
+  componentDidUpdate(_prevProps: any, prevState: State) {
+    // 仅在可能影响操作栏高度的状态变化后重新测量
+    const keys: (keyof State)[] = [
+      'myApplication', 'mySubmission', 'myAmbassadorTask',
+      'role', 'identityLoaded', 'arbInput',
+    ];
+    if (keys.some(k => prevState[k] !== this.state[k])) {
+      setTimeout(() => this.measureActionBarHeight(), 50);
+    }
+  }
+
+  measureActionBarHeight = () => {
+    const query = Taro.createSelectorQuery();
+    query.select('.actions').boundingClientRect();
+    query.exec((res: any) => {
+      if (res && res[0] && res[0].height > 0) {
+        const h = Math.ceil(res[0].height as number);
+        if (h !== this.state.actionBarHeight) {
+          this.setState({ actionBarHeight: h });
+        }
+      }
+    });
+  };
 
   onShareAppMessage(): Taro.ShareAppMessageReturn {
     const { task } = this.state;
@@ -737,7 +767,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     const fillPct = Math.min(100, Math.round((approvedCount / slotsTotal) * 100));
 
     return (
-      <View className='task-detail'>
+      <View className='task-detail' style={{ paddingBottom: `${this.state.actionBarHeight ?? ACTION_BAR_FALLBACK}px` }}>
         <BackBar />
 
         {/* 任务封面图（2026-07-26 补：商家上传的 cover_image 此前只在商家端展示，赫使侧从未渲染） */}

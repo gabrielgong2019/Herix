@@ -1280,5 +1280,7 @@
   "index.loadFailed": "読み込みに失敗しました。ネットワークを確認してください",
   "index.retry": "タップして再試行",
   "profile.community": "所属コミュニティ",
-  "onboard.communityRequired": "所属コミュニティを選択してください"
+  "onboard.communityRequired": "所属コミュニティを選択してください",
+  "task.communityMine": "マイコミュニティ",
+  "task.communityAll": "すべて"
 }

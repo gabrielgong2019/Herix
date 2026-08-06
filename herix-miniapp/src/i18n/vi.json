@@ -735,5 +735,7 @@
   "index.loadFailed": "Tải không thành công. Kiểm tra kết nối",
   "index.retry": "Chạm để thử lại",
   "profile.community": "Cộng đồng",
-  "onboard.communityRequired": "Vui lòng chọn cộng đồng của bạn"
+  "onboard.communityRequired": "Vui lòng chọn cộng đồng của bạn",
+  "task.communityMine": "Cộng đồng của tôi",
+  "task.communityAll": "Tất cả"
 }

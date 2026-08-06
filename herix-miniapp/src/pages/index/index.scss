@@ -187,24 +187,22 @@
 }
 
 
-.community-banner {
+.community-toggle {
   display: flex;
+  justify-content: flex-end;
   align-items: center;
-  justify-content: space-between;
-  margin: 0 32px 16px;
-  padding: 16px 24px;
-  background: var(--accent-light, rgba(26,127,100,0.08));
-  border-radius: 20px;
-  gap: 12px;
+  gap: 8px;
+  padding: 0 40px 12px;
+  background: var(--bg);
 }
-.community-banner-text {
+.ct-seg {
+  padding: 8px 20px;
+  border-radius: 28px;
   font-size: 22px;
   color: var(--text-secondary);
-  flex: 1;
+  background: #e5e5ea;
 }
-.community-banner-toggle {
-  font-size: 22px;
-  color: var(--primary);
-  font-weight: 600;
-  flex-shrink: 0;
+.ct-seg.active {
+  background: #111;
+  color: #fff;
 }

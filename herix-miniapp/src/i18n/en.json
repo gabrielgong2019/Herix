@@ -1280,5 +1280,7 @@
   "index.loadFailed": "Failed to load. Check your connection",
   "index.retry": "Tap to retry",
   "profile.community": "Community",
-  "onboard.communityRequired": "Please select your community"
+  "onboard.communityRequired": "Please select your community",
+  "task.communityMine": "My community",
+  "task.communityAll": "All"
 }

@@ -111,10 +111,10 @@ export default class Index extends Component<{}, State> {
     this.setState({ loading: false });
   };
 
-  toggleCommunityFilter = () => {
-    const next = !this.state.allCommunities;
-    this.setState({ allCommunities: next });
-    this.loadData({ allCommunities: next });
+  toggleCommunityFilter = (target: boolean) => {
+    if (target === this.state.allCommunities) return;
+    this.setState({ allCommunities: target });
+    this.loadData({ allCommunities: target });
   };
 
   onSearchInput = (e: any) => {
@@ -178,16 +178,20 @@ export default class Index extends Component<{}, State> {
           )}
         </View>
 
-        {/* 社群过滤 banner（仅在有社群设置时展示） */}
+        {/* 社群范围切换（常驻但轻量，右对齐小分段） */}
         {!!communityId && (
-          <View className='community-banner' onClick={this.toggleCommunityFilter}>
-            <Text className='community-banner-text'>
-              {allCommunities
-                ? t('task.communityFilterOff')
-                : t('task.communityFilter', { name: communityName })}
+          <View className='community-toggle'>
+            <Text
+              className={`ct-seg ${!allCommunities ? 'active' : ''}`}
+              onClick={() => this.toggleCommunityFilter(false)}
+            >
+              {t('task.communityMine')}
             </Text>
-            <Text className='community-banner-toggle'>
-              {allCommunities ? t('task.communityFilterOn') : t('task.communityFilterOff')}
+            <Text
+              className={`ct-seg ${allCommunities ? 'active' : ''}`}
+              onClick={() => this.toggleCommunityFilter(true)}
+            >
+              {t('task.communityAll')}
             </Text>
           </View>
         )}

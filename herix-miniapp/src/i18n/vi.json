@@ -737,5 +737,8 @@
   "profile.community": "Cộng đồng",
   "onboard.communityRequired": "Vui lòng chọn cộng đồng của bạn",
   "task.communityMine": "Cộng đồng của tôi",
-  "task.communityAll": "Tất cả"
+  "task.communityAll": "Tất cả",
+  "index.onboardHintTitle": "Hoàn tất hồ sơ để gợi ý chính xác hơn",
+  "index.onboardHintSub": "Chọn cộng đồng của bạn để chỉ hiển thị nhiệm vụ phù hợp",
+  "index.onboardGo": "Bắt đầu"
 }

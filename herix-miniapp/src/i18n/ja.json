@@ -1282,5 +1282,8 @@
   "profile.community": "所属コミュニティ",
   "onboard.communityRequired": "所属コミュニティを選択してください",
   "task.communityMine": "マイコミュニティ",
-  "task.communityAll": "すべて"
+  "task.communityAll": "すべて",
+  "index.onboardHintTitle": "プロフィール登録でタスク精度アップ",
+  "index.onboardHintSub": "コミュニティを選ぶと、関連するタスクだけが表示されます",
+  "index.onboardGo": "登録へ"
 }

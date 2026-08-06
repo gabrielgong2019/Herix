@@ -1282,5 +1282,8 @@
   "profile.community": "所属社群",
   "onboard.communityRequired": "请选择你的所属社群",
   "task.communityMine": "我的社群",
-  "task.communityAll": "全部"
+  "task.communityAll": "全部",
+  "index.onboardHintTitle": "完成入驻，任务匹配更精准",
+  "index.onboardHintSub": "选择你的社群后，首页只展示与你相关的任务",
+  "index.onboardGo": "去入驻"
 }

@@ -1282,5 +1282,8 @@
   "profile.community": "Community",
   "onboard.communityRequired": "Please select your community",
   "task.communityMine": "My community",
-  "task.communityAll": "All"
+  "task.communityAll": "All",
+  "index.onboardHintTitle": "Complete onboarding for better matches",
+  "index.onboardHintSub": "Pick your community and the feed shows only relevant tasks",
+  "index.onboardGo": "Start"
 }

@@ -104,6 +104,48 @@
   padding: 4px 8px;
 }
 
+.onboard-hint {
+  display: flex;
+  align-items: center;
+  margin: 0 32px 16px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #f1f5f3, #e8efec);
+  border: 1px solid rgba(26, 127, 100, 0.18);
+  border-radius: 18px;
+  gap: 12px;
+}
+.oh-body {
+  flex: 1;
+  min-width: 0;
+}
+.oh-title {
+  display: block;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.oh-sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 21px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.oh-go {
+  flex-shrink: 0;
+  padding: 10px 22px;
+  border-radius: 28px;
+  background: #111;
+  color: #fff;
+  font-size: 22px;
+}
+.oh-close {
+  flex-shrink: 0;
+  padding: 6px 8px;
+  font-size: 26px;
+  color: var(--text-muted);
+}
+
 .filters {
   white-space: nowrap;
   padding: 4px 40px 24px;

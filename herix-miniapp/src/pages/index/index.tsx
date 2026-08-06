@@ -12,6 +12,7 @@ import { t, tf } from '../../utils/i18n';
 // "我的待办"住在底部「任务」tab（herald-dashboard），首页不再内嵌待办切换。
 
 const isWeapp = process.env.TARO_ENV === 'weapp';
+const ONBOARD_HINT_DISMISSED = 'herix_onboard_hint_dismissed';
 
 interface NavMetrics {
   top: number;        // 状态栏高度，自定义栏顶部内边距
@@ -48,6 +49,8 @@ interface State {
   communityName: string;
   allCommunities: boolean;
   loadError: boolean;
+  /** 未入驻引导卡（已登录 + 未完成入驻 + 未手动关闭时展示） */
+  showOnboardHint: boolean;
 }
 
 export default class Index extends Component<{}, State> {
@@ -64,6 +67,7 @@ export default class Index extends Component<{}, State> {
     communityName: '',
     allCommunities: false,
     loadError: false,
+    showOnboardHint: false,
   };
 
   searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -82,7 +86,20 @@ export default class Index extends Component<{}, State> {
       const cid = profile?.community ?? '';
       const comm = commList.find(c => c.id === cid);
       if (cid && comm) this.setState({ communityId: cid, communityName: t(comm.labelKey) });
-    } catch { /* 社群信息拿不到不阻断列表 */ }
+      // 已登录但未完成入驻：弹一次引导（手动关闭后永久记住，不再打扰）
+      if (profile && !profile.is_onboarded && !Taro.getStorageSync(ONBOARD_HINT_DISMISSED)) {
+        this.setState({ showOnboardHint: true });
+      }
+    } catch { /* 未登录/社群信息拿不到不阻断列表 */ }
+  };
+
+  dismissOnboardHint = () => {
+    Taro.setStorageSync(ONBOARD_HINT_DISMISSED, '1');
+    this.setState({ showOnboardHint: false });
+  };
+
+  goOnboard = () => {
+    Taro.navigateTo({ url: '/pages/onboard/index' });
   };
 
   // 语言可能在其他 tab(profile)被切换——回到本页时按当前语言重渲染。
@@ -90,6 +107,8 @@ export default class Index extends Component<{}, State> {
   componentDidShow() {
     this.forceUpdate();
     refreshUnreadBadge(); // 消息 tab 未读气泡随 tab 切换刷新
+    // 入驻完成后回到首页时撤下引导（未入驻时顺带刷新社群过滤状态）
+    if (this.state.showOnboardHint) this.loadCommunity();
   }
 
   loadData = async (opts?: { allCommunities?: boolean; search?: string; category?: string }) => {
@@ -136,7 +155,7 @@ export default class Index extends Component<{}, State> {
   };
 
   render() {
-    const { taskList, categories, activeCategory, searchText, loading, loadError, navMetrics, communityId, communityName, allCommunities } = this.state;
+    const { taskList, categories, activeCategory, searchText, loading, loadError, navMetrics, communityId, communityName, allCommunities, showOnboardHint } = this.state;
     // 对齐 herix.html：分类胶囊只显示当前任务列表中实际有任务的分类（从全量列表算，别用过滤后的）
     const visibleCategories = categories.filter(c => taskList.some(t => t.category === c.id));
 
@@ -177,6 +196,18 @@ export default class Index extends Component<{}, State> {
             <Text className='search-clear' onClick={this.onClearSearch}>✕</Text>
           )}
         </View>
+
+        {/* 未入驻引导卡（可关闭，关闭后不再出现） */}
+        {showOnboardHint && (
+          <View className='onboard-hint'>
+            <View className='oh-body' onClick={this.goOnboard}>
+              <Text className='oh-title'>{t('index.onboardHintTitle')}</Text>
+              <Text className='oh-sub'>{t('index.onboardHintSub')}</Text>
+            </View>
+            <Text className='oh-go' onClick={this.goOnboard}>{t('index.onboardGo')}</Text>
+            <Text className='oh-close' onClick={this.dismissOnboardHint}>✕</Text>
+          </View>
+        )}
 
         {/* 社群范围切换（常驻但轻量，右对齐小分段） */}
         {!!communityId && (

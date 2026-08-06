@@ -243,10 +243,9 @@ export default function DataUpload() {
     enabled: !!user?.id,
   })
 
-  const perfTasks = (tasksData?.tasks || []).filter((task) => {
-    const s = task.status.toUpperCase()
-    return task.mode === 'PERFORMANCE' && (s === 'OPEN' || s === 'COMPLETED')
-  })
+  const perfTasks = (tasksData?.tasks || []).filter((task) =>
+    task.mode === 'PERFORMANCE' && (task.status === 'OPEN' || task.status === 'COMPLETED')
+  )
   const selectedTask = perfTasks.find((task) => task.id === selectedTaskId)
   const dataMode: 'AGGREGATE' | 'DETAIL' = selectedTask?.data_mode === 'DETAIL' ? 'DETAIL' : 'AGGREGATE'
 

@@ -471,8 +471,8 @@ export default function TaskDetail() {
 
   if (!task) return null
 
-  const isDraft = task.status.toUpperCase() === 'DRAFT'
-  const isOpen = task.status.toUpperCase() === 'OPEN'
+  const isDraft = task.status === 'DRAFT'
+  const isOpen = task.status === 'OPEN'
   const isPerformance = task.mode === 'PERFORMANCE'
   const parties = task.brand_parties || []
 
@@ -652,16 +652,16 @@ export default function TaskDetail() {
                       {formatDate(app.created_at)}
                     </td>
                     <td className="px-5 py-3.5" style={{ borderBottom: '1px solid var(--border)' }}>
-                      {/* 服务端 status 大写(PENDING/APPROVED/REJECTED)，归一后再比较/取词条（同 submissions 徽章踩过的坑） */}
+                      {/* 服务端契约固定大写（APPLICATION_STATUSES），直接比较；i18n key 仍按小写约定取词条 */}
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{
-                        background: app.status.toLowerCase() === 'approved' ? '#dcfce7' : app.status.toLowerCase() === 'rejected' ? '#fee2e2' : '#fef3c7',
-                        color: app.status.toLowerCase() === 'approved' ? '#16a34a' : app.status.toLowerCase() === 'rejected' ? '#dc2626' : '#d97706',
+                        background: app.status === 'APPROVED' ? '#dcfce7' : app.status === 'REJECTED' ? '#fee2e2' : '#fef3c7',
+                        color: app.status === 'APPROVED' ? '#16a34a' : app.status === 'REJECTED' ? '#dc2626' : '#d97706',
                       }}>
                         {t(`status.${app.status.toLowerCase()}`)}
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-xs" style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)' }}>
-                      {app.status.toLowerCase() === 'pending' && (
+                      {app.status === 'PENDING' && (
                         <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                           <Check size={12} style={{ color: '#16a34a' }} /> / <X size={12} style={{ color: '#dc2626' }} />
                         </span>
@@ -687,8 +687,7 @@ export default function TaskDetail() {
                   <tr><td colSpan={4} className="px-5 py-8 text-center text-sm" style={{ color: 'var(--muted)' }}>{t('tasks.emptySubmissions')}</td></tr>
                 )}
                 {submissions.map((sub) => {
-                  // 服务端 status 是大写(PENDING_REVIEW/APPROVED/REJECTED)——此前小写比较恒 false，徽章永远黄色
-                  const st = (sub.status || '').toUpperCase()
+                  const st = sub.status
                   const links = parseLinks(sub)
                   return (
                   <tr key={sub.id}>

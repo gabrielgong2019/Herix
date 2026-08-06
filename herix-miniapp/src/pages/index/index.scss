@@ -90,6 +90,8 @@
 
 .search-input {
   flex: 1;
+  min-height: 44px;
+  line-height: normal;
   font-size: 26px;
   color: var(--text);
   background: transparent;

@@ -617,9 +617,11 @@
 
 .proposal-link-input {
   flex: 1;
+  height: 72px;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 16px;
+  padding: 0 16px;
+  line-height: normal;
   font-size: 24px;
   outline: none;
 }

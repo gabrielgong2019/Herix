@@ -165,6 +165,8 @@
 }
 .amount-input {
   flex: 1;
+  min-height: 56px;
+  line-height: normal;
   font-size: 48px;
   font-weight: 700;
   color: var(--text-primary);

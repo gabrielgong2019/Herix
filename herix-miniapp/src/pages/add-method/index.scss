@@ -110,7 +110,7 @@
   width: 100%;
   box-sizing: border-box;
   height: 88px;
-  line-height: 88px;
+  line-height: normal; /* 88px 行高顶格漂移，改 normal */
   padding: 0 28px;
   background: var(--card-bg);
   border: 1px solid var(--border);

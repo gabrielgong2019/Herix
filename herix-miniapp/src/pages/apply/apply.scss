@@ -58,14 +58,18 @@
   width: 100%;
   background: var(--card-bg);
   border-radius: var(--radius);
-  padding: 24px;
   font-size: 28px;
   box-sizing: border-box;
   border: 1px solid var(--border);
 }
-
+.input {
+  height: 88px;
+  padding: 0 24px;
+  line-height: normal; /* 88px 行高会顶格漂移，用 normal 由原生控件垂直居中 */
+}
 .textarea {
   height: 240px;
+  padding: 24px;
   line-height: 1.6;
 }
 

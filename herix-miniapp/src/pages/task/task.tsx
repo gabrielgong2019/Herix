@@ -559,7 +559,8 @@ export default class TaskDetail extends Component<{ id: string }, State> {
     const hasDelivery = !!mySubmission || !!(
       myAmbassadorTask && (myAmbassadorTask.registered_count > 0 || myAmbassadorTask.used_count > 0 || myAmbassadorTask.paid_conversions > 0)
     );
-    const canWithdraw = !!myApplication && ['PENDING', 'APPROVED'].includes(myApplication.status) && !hasDelivery;
+    // 推广码任务报名后不可取消（2026-08-06 产品定稿）；STANDARD 名额占用类保留取消
+    const canWithdraw = !!myApplication && task.mode !== 'PERFORMANCE' && ['PENDING', 'APPROVED'].includes(myApplication.status) && !hasDelivery;
 
     if (!loggedIn && task.status === 'OPEN') {
       return (

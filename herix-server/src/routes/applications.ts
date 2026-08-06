@@ -28,6 +28,11 @@ applicationRouter.post('/:id/withdraw', requireAuth, requireRole('HERALD'), asyn
     if (app.herald_id !== req.user!.userId) {
       return res.status(403).json({ error: '只能取消自己的报名', code: 'FORBIDDEN' });
     }
+    const taskMode = await findOne<any>('SELECT mode, title, creator_id FROM tasks WHERE id = ?', [app.task_id]);
+    // 推广码任务报名后不可取消（2026-08-06 产品定稿）：码随人走，无名额占用概念
+    if (taskMode?.mode === 'PERFORMANCE') {
+      return res.status(403).json({ error: '推广码任务报名后不可取消', code: 'WITHDRAW_NOT_ALLOWED' });
+    }
     if (['WITHDRAWN', 'REJECTED', 'EXPIRED'].includes(String(app.status))) {
       return res.status(400).json({ error: '该报名已结束，无法取消', code: 'ALREADY_CLOSED' });
     }
@@ -55,19 +60,6 @@ applicationRouter.post('/:id/withdraw', requireAuth, requireRole('HERALD'), asyn
       { status: 'WITHDRAWN', review_note: '赫使主动取消', updated_at: new Date().toISOString() },
       'id = ?', [app.id]
     );
-
-    // PERFORMANCE：释放推广码 + 标记 ambassador_tasks withdrawn
-    const taskMode = await findOne<any>('SELECT mode, title, creator_id FROM tasks WHERE id = ?', [app.task_id]);
-    if (taskMode?.mode === 'PERFORMANCE') {
-      await update('task_promo_codes',
-        { herald_id: null, assigned_at: null },
-        'task_id = ? AND herald_id = ?', [app.task_id, app.herald_id]
-      );
-      await update('ambassador_tasks',
-        { status: 'withdrawn' },
-        'task_id = ? AND herald_id = ? AND status = ?', [app.task_id, app.herald_id, 'active']
-      );
-    }
 
     // 通知商家：赫使已取消报名
     if (taskMode) {

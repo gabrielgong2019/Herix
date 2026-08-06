@@ -148,7 +148,7 @@ export interface Notification {
   title: string
   body: string
   is_read: number
-  metadata: string | null
+  metadata: Record<string, any> | null
   created_at: string
 }
 export const notificationsApi = {

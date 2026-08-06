@@ -14,13 +14,6 @@ interface Props {
   taskTitle?: string
 }
 
-interface SocialPlatform {
-  platformId: string
-  followers?: number | null
-  url?: string | null
-  accountId?: string | null
-}
-
 function isValidUrl(u?: string | null): u is string {
   return !!u && /^https?:\/\//i.test(u)
 }
@@ -219,9 +212,9 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
                   {app.proposal_text}
                 </p>
               )}
-              {app.proposal_links && parseProposalLinks(app.proposal_links).length > 0 && (
+              {proposalLinks.length > 0 && (
                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {parseProposalLinks(app.proposal_links).map((link, i) => (
+                  {proposalLinks.map((link, i) => (
                     <a key={i} href={link} target="_blank" rel="noopener noreferrer"
                       style={{ fontSize: 13, color: 'var(--primary)', wordBreak: 'break-all' }}>
                       {link}

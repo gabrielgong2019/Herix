@@ -5,6 +5,7 @@ import { UpdateBrandProfileSchema, UpdateHeraldProfileSchema } from '../types';
 import { ZodError } from 'zod';
 import { SUPPORTED_LOCALES } from '../constants/locales';
 import { translateBrand } from '../utils/translate';
+import { serializeHeraldProfile } from '../utils/serialize';
 
 export const usersRouter = Router();
 
@@ -205,7 +206,7 @@ usersRouter.get('/heralds', async (_req: Request, res: Response) => {
      JOIN herald_profiles hp ON hp.user_id = u.id
      WHERE u.role = 'HERALD' AND u.is_verified = 1`
   );
-  res.json(heralds);
+  res.json(heralds.map(serializeHeraldProfile));
 });
 
 /** GET /api/users/:id — 用户公开信息 */
@@ -221,7 +222,7 @@ usersRouter.get('/:id', async (req: Request, res: Response) => {
   );
 
   if (!user) return res.status(404).json({ error: '用户不存在' });
-  res.json(user);
+  res.json(serializeHeraldProfile(user));
 });
 
 /** GET /api/users/me/transactions — 我的交易记录 */

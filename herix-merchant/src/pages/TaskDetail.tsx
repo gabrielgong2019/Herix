@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { parseLinks, tasksApi, walletApi, type Application, type Task } from '@/lib/api'
+import { tasksApi, walletApi, type Application, type Task } from '@/lib/api'
 import { LadderRows } from '@/components/CapacityLadder'
 import { Topbar } from '@/components/layout/Topbar'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
@@ -21,19 +21,9 @@ const PLATFORM_NAMES: Record<string, string> = {
 function ContentSection({ task, onEdit }: { task: Task; onEdit: () => void }) {
   const { t } = useTranslation()
 
-  let platforms: Array<{ platformId: string; minFollowers?: number }> = []
-  try {
-    platforms = typeof task.platform_requirements === 'string'
-      ? JSON.parse(task.platform_requirements)
-      : task.platform_requirements || []
-  } catch { platforms = [] }
-  // target_communities 服务端可能给 JSON 字符串或数组，两种都兼容
-  let communities: string[] = []
-  try {
-    communities = Array.isArray(task.target_communities)
-      ? task.target_communities
-      : JSON.parse((task.target_communities as unknown as string) || '[]')
-  } catch { communities = [] }
+  // API 出口已结构化：platform_requirements/target_communities 直接是数组
+  const platforms = task.platform_requirements || []
+  const communities = task.target_communities || []
   // referral 是邀请码任务的占位 content_type（契约接入后编译器抓出前端从未处理它）
   const ctLabel = ({ photo: t('taskForm.ctPhoto'), video: t('taskForm.ctVideo'), both: t('taskForm.ctBoth') } as Record<string, string>)[task.content_type] || task.content_type
   const isStandard = task.mode === 'STANDARD'
@@ -688,7 +678,7 @@ export default function TaskDetail() {
                 )}
                 {submissions.map((sub) => {
                   const st = sub.status
-                  const links = parseLinks(sub)
+                  const links = sub.content_urls || []
                   return (
                   <tr key={sub.id}>
                     <td className="px-5 py-3.5 text-sm font-medium" style={{ borderBottom: '1px solid var(--border)' }}>{sub.nickname || sub.herald?.name || sub.user_id || ''}</td>

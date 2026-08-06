@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth';
 import { calcTier } from '../types';
 import { isContactPlatform, socialPlatformMeta, SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { VALID_COMMUNITIES } from '../constants/communities';
+import { serializeHeraldProfile } from '../utils/serialize';
 
 /** 根据 social_platforms JSON 计算各平台段位快照 */
 // 联系类平台(微信/LINE等)的数字是"好友数"而非公开粉丝，不代表 KOL 影响力，不参与段位计算。
@@ -23,7 +24,7 @@ export const ambassadorRouter = Router();
 /** GET /api/ambassador/status — 检查大使身份状态 */
 ambassadorRouter.get('/profile', requireAuth, async (req: Request, res: Response) => {
   const profile = await findOne<any>('SELECT * FROM herald_profiles WHERE user_id = ?', [req.user!.userId]);
-  res.json(profile || null);
+  res.json(serializeHeraldProfile(profile) || null);
 });
 
 ambassadorRouter.get('/status', requireAuth, async (req: Request, res: Response) => {

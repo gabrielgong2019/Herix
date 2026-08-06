@@ -55,12 +55,8 @@ function timeAgo(iso: string): string {
 }
 
 function metaTaskId(n: any): string | null {
-  try {
-    const meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata || '{}') : n.metadata || {};
-    return meta.taskId || null;
-  } catch {
-    return null;
-  }
+  const meta = n.metadata || {};
+  return meta.taskId || null;
 }
 
 interface State {
@@ -128,8 +124,7 @@ export default class Messages extends Component<{}, State> {
     const taskId = metaTaskId(n);
     // 通知三语：metadata 带 taskTitle 且词典有该 type 的词条 → 前端按语言渲染；
     // 否则(老数据/未知类型)兜底展示落库时的中文 title/body
-    let meta: any = {};
-    try { meta = typeof n.metadata === 'string' ? JSON.parse(n.metadata || '{}') : n.metadata || {}; } catch { meta = {}; }
+    const meta: any = n.metadata || {};
     const titleKey = `notif.${n.type}.title`;
     const canTranslate = !!meta.taskTitle && t(titleKey) !== titleKey;
     // 词条占位符按 type 不同：taskTitle 通用；code/n/amount/reg/used 是转化类通知的参数

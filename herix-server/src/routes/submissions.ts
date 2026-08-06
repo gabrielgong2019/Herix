@@ -7,6 +7,7 @@ import { notify } from '../utils/notify';
 import pool from '../db';
 import { decideSubmit, canReject, computeNextAction } from '../utils/submissionFlow';
 import { auditRevision, countRejects, approveDraftSubmission, settleFinalSubmission } from '../utils/reviewActions';
+import { serializeSubmission } from '../utils/serialize';
 
 export const submissionsRouter = Router();
 
@@ -341,7 +342,7 @@ submissionsRouter.get('/task/:taskId', requireAuth, async (req: Request, res: Re
      WHERE ts.task_id = ?
      ORDER BY ts.submitted_at DESC`, [req.params.taskId]
   );
-  res.json(subs);
+  res.json(subs.map(serializeSubmission));
 });
 
 /** GET /api/submissions/pending — 商家的全部待审提交（跨任务，审核中心用）。
@@ -365,7 +366,7 @@ submissionsRouter.get('/pending', requireAuth, requireRole('BRAND', 'ADMIN'), as
      WHERE t.creator_id = ? AND ts.status = 'PENDING_REVIEW'
      ORDER BY ts.submitted_at ASC`, [req.user!.userId]
   );
-  res.json(rows);
+  res.json(rows.map(serializeSubmission));
 });
 
 /** GET /api/submissions/:id/revisions — 交付审计链（仲裁证据/草稿定稿对照）。
@@ -385,7 +386,7 @@ submissionsRouter.get('/:id/revisions', requireAuth, async (req: Request, res: R
      FROM submission_revisions WHERE task_id = ? AND herald_id = ? ORDER BY created_at ASC`,
     [sub.task_id, sub.herald_id]
   );
-  res.json(rows);
+  res.json(rows.map(serializeSubmission));
 });
 
 /** GET /api/submissions/my — 我的提交 (赫使侧)。
@@ -406,5 +407,5 @@ submissionsRouter.get('/my', requireAuth, requireRole('HERALD'), async (req: Req
      WHERE ts.herald_id = ?
      ORDER BY ts.submitted_at DESC`, [req.user!.userId]
   );
-  res.json(subs);
+  res.json(subs.map(serializeSubmission));
 });

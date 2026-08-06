@@ -93,10 +93,8 @@ export default class Apply extends Component<{}, State> {
       // 重提：预填上次内容 + 显示被拒原因
       const prev = ctx.submission?.status === 'REJECTED' ? ctx.submission : null;
       if (prev) {
-        let links: string[] = [];
-        try { links = prev.content_urls ? JSON.parse(prev.content_urls) : []; } catch { links = []; }
-        let shots: string[] = [];
-        try { shots = prev.screenshot_urls ? JSON.parse(prev.screenshot_urls) : []; } catch { shots = []; }
+        const links: string[] = prev.content_urls || [];
+        const shots: string[] = prev.screenshot_urls || [];
         this.setState({
           isResubmit: true,
           links: links.length ? links : [''],

@@ -9,19 +9,14 @@ import { t } from '../utils/i18n';
  */
 
 interface Props {
-  task: { platform_requirements?: string | null; req_mode?: string | null; req_min_count?: number | null };
-  ambassadorProfile: { social_platforms?: string | null } | null;
+  task: { platform_requirements?: PlatformRequirement[] | null; req_mode?: string | null; req_min_count?: number | null };
+  ambassadorProfile: { social_platforms?: SocialPlatformEntry[] | null } | null;
 }
 
 export default function RequirementsChecklist({ task, ambassadorProfile }: Props) {
   if (!task.platform_requirements) return null;
 
-  let reqs: PlatformRequirement[] = [];
-  try {
-    reqs = JSON.parse(task.platform_requirements);
-  } catch {
-    return null;
-  }
+  const reqs = task.platform_requirements || [];
   if (!reqs.length) return null;
 
   const check = checkRequirements(task, ambassadorProfile);
@@ -30,12 +25,7 @@ export default function RequirementsChecklist({ task, ambassadorProfile }: Props
   const requiredItems = anyN ? reqs : reqs.filter(r => r.required);
   const optionalItems = anyN ? [] : reqs.filter(r => !r.required);
 
-  let ownedPlatforms: SocialPlatformEntry[] = [];
-  try {
-    ownedPlatforms = ambassadorProfile?.social_platforms ? JSON.parse(ambassadorProfile.social_platforms) : [];
-  } catch {
-    // ignore
-  }
+  const ownedPlatforms = ambassadorProfile?.social_platforms || [];
   const missingOptionalCount = optionalItems.filter(
     o => !ownedPlatforms.find(p => p.platformId === o.platformId),
   ).length;

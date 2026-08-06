@@ -120,7 +120,7 @@ export default class Withdraw extends Component<{}, State> {
       // ⚠️ herix.html 新版调 POST /wallet/withdraw（method_id+amount），但后端尚未实现
       //（见 api.ts 注释：Phase 3 补后端后再加）。这里接后端已存在的 withdraw-request：
       // 参数从选中方式映射，提现走「申请」流程。Phase 3 后端补齐后切到新接口。
-      const detail = typeof sel.account_details === 'string' ? JSON.parse(sel.account_details) : sel.account_details;
+      const detail = sel.account_details || {};
       await walletApi.withdrawRequest({
         amount: amt,
         method: sel.type,
@@ -236,7 +236,7 @@ export default class Withdraw extends Component<{}, State> {
         <ScrollView scrollX className='method-scroll'>
           <View className='method-track'>
             {methods.map(m => {
-              const d = (typeof m.account_details === 'string' ? JSON.parse(m.account_details) : m.account_details) || {};
+              const d = m.account_details || {};
               let sub = d.wechat_id || d.account || d.account_number || d.email || '';
               if (sub.length > 14) sub = sub.slice(0, 14) + '…';
               const active = m.id === (sel && sel.id);

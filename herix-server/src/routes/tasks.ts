@@ -13,6 +13,7 @@ import { getBrandCreditInfo, getSetting, getEffectiveCommissionRate, getPublishL
 import { SOCIAL_PLATFORM_IDS } from '../shared/contracts';
 import { translateTask } from '../utils/translate';
 import { fetchTaskApplications } from '../utils/applicationQueries';
+import { serializeTask, serializeApplication } from '../utils/serialize';
 import { VALID_COMMUNITIES, communityToSite } from '../constants/communities';
 import { VALID_SITES } from '../constants/sites';
 import pool from '../db';
@@ -123,7 +124,7 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   );
 
   res.json({
-    tasks,
+    tasks: tasks.map(serializeTask),
     pagination: {
       page: Number(page), limit: Number(limit), total,
       totalPages: Math.ceil(total / Number(limit)),
@@ -906,7 +907,7 @@ tasksRouter.get('/:id/applications', requireAuth, async (req: Request, res: Resp
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') {
     return res.status(403).json({ error: '无权限' });
   }
-  res.json(await fetchTaskApplications(String(req.params.id)));
+  res.json((await fetchTaskApplications(String(req.params.id))).map(serializeApplication));
 });
 
 /** PATCH /api/tasks/:id/publish — 发布任务 */
@@ -1006,16 +1007,19 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
   const submissionCount = subRow?.cnt || 0;
 
   // 非 owner：只下发已通过的报名，名字截断为前3位+***，不暴露完整身份和拒绝状态
-  const publicApplications = isOwner ? applications : applications
-    .filter((a: any) => a.status === 'APPROVED')
-    .map((a: any) => ({
-      id: a.id,
-      nickname: (a.nickname || '').slice(0, 3) + '***',
-      avatar_url: a.avatar_url,
-      status: 'APPROVED',
-    }));
+  // API 出口统一结构化 JSON 字段（serializeTask/Application），前端不再各自 parse
+  const publicApplications = isOwner
+    ? applications.map(serializeApplication)
+    : applications
+        .filter((a: any) => a.status === 'APPROVED')
+        .map((a: any) => ({
+          id: a.id,
+          nickname: (a.nickname || '').slice(0, 3) + '***',
+          avatar_url: a.avatar_url,
+          status: 'APPROVED',
+        }));
 
-  res.json({ ...task, applications: publicApplications, _count: { applications: applications.length, submissions: submissionCount } });
+  res.json({ ...serializeTask(task), applications: publicApplications, _count: { applications: applications.length, submissions: submissionCount } });
 });
 
 /** POST /api/tasks — 创建任务 (品牌商家) */

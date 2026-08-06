@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 import { getEffectiveCommissionRate } from '../utils/settings';
 import { sendMail } from '../utils/mailer';
 import crypto from 'crypto';
+import { serializeHeraldProfile } from '../utils/serialize';
 
 export const authRouter = Router();
 
@@ -399,6 +400,7 @@ authRouter.get('/me', requireAuth, async (req: Request, res: Response) => {
   if (!user) return res.status(404).json({ error: '用户不存在' });
 
   user.roles = parseRoles(user.roles, user.role);
+  serializeHeraldProfile(user);
 
   // 赫使评级摘要（实时计算）
   if (user.roles?.includes('HERALD')) {

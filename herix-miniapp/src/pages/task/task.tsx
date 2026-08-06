@@ -324,10 +324,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
     this.setState({ reqSubmitting: true });
     try {
-      let existing: any[] = [];
-      try {
-        existing = ambassadorProfile?.social_platforms ? JSON.parse(ambassadorProfile.social_platforms) : [];
-      } catch {}
+      const existing: any[] = ambassadorProfile?.social_platforms || [];
       const toAdd = missingIds.map(pid => reqFormValues[pid]);
       const merged = existing.filter((s: any) => !missingIds.includes(s.platformId)).concat(toAdd);
 
@@ -547,8 +544,7 @@ export default class TaskDetail extends Component<{ id: string }, State> {
           const isSubmit = r.kind === 'SUBMIT';
           if (isSubmit) round += 1;
           const stage = r.stage === 'DRAFT' ? t('task.tlDraft') : t('task.tlFinal');
-          let shots: string[] = [];
-          try { shots = r.screenshot_urls ? JSON.parse(r.screenshot_urls) : []; } catch { /* ignore */ }
+          const shots: string[] = r.screenshot_urls || [];
           const head = isSubmit
             ? t('task.tlSubmit', { stage, round })
             : r.action === 'APPROVED' ? t('task.tlApprove', { stage })

@@ -4,6 +4,7 @@ import { findOne, findMany, insert, update, remove, genId } from '../utils/db';
 import { requireAuth } from '../middleware/auth';
 import { getBalance, freezeWithdrawal, ENTRY_DIRECTION, WalletType } from '../utils/wallet';
 import { calcWithdrawalFee, getSetting, getBrandCreditInfo, getPublishLimitInfo } from '../utils/settings';
+import { serializeWithdrawalMethod } from '../utils/serialize';
 
 export const walletRouter = Router();
 
@@ -110,11 +111,7 @@ walletRouter.get('/methods', async (req: Request, res: Response) => {
     'SELECT * FROM withdrawal_methods WHERE user_id = ? ORDER BY is_default DESC, created_at DESC',
     [userId]
   );
-  const parsed = methods.map((m: any) => ({
-    ...m,
-    account_details: typeof m.account_details === 'string'
-      ? JSON.parse(m.account_details) : m.account_details,
-  }));
+  const parsed = methods.map((m: any) => serializeWithdrawalMethod(m));
   res.json(parsed);
 });
 

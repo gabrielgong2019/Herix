@@ -44,10 +44,6 @@ const PARAMLESS = new Set([
   'SUBSCRIPTION_PAST_DUE', 'SUBSCRIPTION_EXPIRED',
 ])
 
-function parseMeta(n: Notification): Record<string, any> {
-  try { return n.metadata ? JSON.parse(n.metadata) : {} } catch { return {} }
-}
-
 export function NotificationBell() {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -74,7 +70,7 @@ export function NotificationBell() {
   // 与小程序消息页同一策略：词典有该 type 模板且参数齐 → 按当前语言渲染；
   // 否则(老数据/未知类型)兜底展示落库时的中文 title/body
   const renderText = (n: Notification) => {
-    const meta = parseMeta(n)
+    const meta = n.metadata || {}
     const titleKey = `notif.${n.type}.title`
     const canTranslate = i18n.exists(titleKey) && (PARAMLESS.has(n.type) || !!meta.taskTitle)
     if (!canTranslate) return { title: n.title, body: n.body, meta }
@@ -86,7 +82,7 @@ export function NotificationBell() {
 
   const onClick = (n: Notification) => {
     if (!n.is_read) readMut.mutate(n.id)
-    const target = targetOf(n, parseMeta(n))
+    const target = targetOf(n, n.metadata || {})
     if (target) { setOpen(false); navigate(target) }
   }
 

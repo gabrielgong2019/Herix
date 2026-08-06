@@ -31,13 +31,13 @@ export interface RequirementsCheckResult {
 }
 
 interface TaskLike {
-  platform_requirements?: string | null;
+  platform_requirements?: PlatformRequirement[] | null;
   req_mode?: string | null;
   req_min_count?: number | null;
 }
 
 interface AmbassadorProfileLike {
-  social_platforms?: string | null;
+  social_platforms?: SocialPlatformEntry[] | null;
 }
 
 export function checkRequirements(
@@ -47,12 +47,7 @@ export function checkRequirements(
   const OK: RequirementsCheckResult = { status: 'ok', failures: [], mode: 'ALL', needCount: 0, satisfiedCount: 0 };
   if (!task || !task.platform_requirements) return OK;
 
-  let reqs: PlatformRequirement[] = [];
-  try {
-    reqs = JSON.parse(task.platform_requirements);
-  } catch {
-    return OK;
-  }
+  const reqs = task.platform_requirements || [];
 
   // 模式语义与服务端 applications.ts 保持一致，改动须两边同步：
   //   ALL(默认)：required=true 的项全部必须满足，required=false 仅展示
@@ -61,13 +56,7 @@ export function checkRequirements(
   const candidates = mode === 'ANY_N' ? reqs : reqs.filter(r => r.required);
   if (!candidates.length) return OK;
 
-  let platforms: SocialPlatformEntry[] = [];
-  try {
-    const ap = ambassadorProfile || {};
-    platforms = ap.social_platforms ? JSON.parse(ap.social_platforms) : [];
-  } catch {
-    // ignore malformed data, treat as no platforms
-  }
+  const platforms = (ambassadorProfile || {}).social_platforms || [];
 
   const failures: RequirementFailure[] = [];
   for (const req of candidates) {

@@ -360,9 +360,7 @@ const DEFAULT_STATE: FormState = {
 
 function parseTaskPlatformRequirements(raw: Task['platform_requirements']): FormState['platformRequirements'] {
   if (!raw) return []
-  let arr: Array<{ platformId: string; minFollowers?: number | null; required?: boolean }> = []
-  try { arr = typeof raw === 'string' ? JSON.parse(raw) : raw } catch { return [] }
-  return arr.filter((r) => r.platformId).map((r) => ({
+  return raw.filter((r) => r.platformId).map((r) => ({
     platformId: r.platformId,
     minFollowers: r.minFollowers != null ? r.minFollowers : '',
     required: r.required !== false,

@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth';
 import { findMany, update, insert, genId } from '../utils/db';
 import pool from '../db';
 import { getTaskTranslations } from '../utils/taskLocalize';
+import { serializeNotification } from '../utils/serialize';
 
 export const notificationsRouter = Router();
 notificationsRouter.use(requireAuth);
@@ -82,7 +83,7 @@ notificationsRouter.get('/', async (req: Request, res: Response) => {
       }
     }
   }
-  res.json({ unread, notifications: rows.rows });
+  res.json({ unread, notifications: rows.rows.map(serializeNotification) });
 });
 
 /** PATCH /api/notifications/:id/read — 标为已读 */

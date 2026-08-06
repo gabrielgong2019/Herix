@@ -51,15 +51,8 @@ function periodRange(period: string) {
   return { from: from.toISOString(), to: to.toISOString() };
 }
 
-function safeParse(s: string) {
-  try {
-    return JSON.parse(s);
-  } catch {
-    return {};
-  }
-}
 function parseDetail(m: any) {
-  return (typeof m.account_details === 'string' ? safeParse(m.account_details) : m.account_details) || {};
+  return m.account_details || {};
 }
 function methodSub(m: any): string {
   const d = parseDetail(m);

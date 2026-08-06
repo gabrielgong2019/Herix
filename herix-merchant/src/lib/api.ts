@@ -281,7 +281,7 @@ export interface Task {
   commission_rate?: number
   max_heralds: number
   target_communities: string[]
-  platform_requirements?: string | Array<{ platformId: string; minFollowers?: number | null; required?: boolean }> | null
+  platform_requirements?: Array<{ platformId: string; minFollowers?: number | null; required?: boolean }> | null
   req_mode?: 'ALL' | 'ANY_N'
   req_min_count?: number | null
   cover_image?: string
@@ -363,15 +363,15 @@ export interface Application {
   display_name?: string
   avatar_url?: string
   herald?: { name: string; avatar?: string }
-  tier_snapshot?: string
-  social_platforms?: string
+  tier_snapshot?: Record<string, string>
+  social_platforms?: Array<{ platformId: string; followers?: number | null; url?: string | null; accountId?: string | null }> | null
   community?: string
   bio?: string
   completed_tasks?: number
   good_rate?: number
   specialty_tags?: string[] | null
   proposal_text?: string | null
-  proposal_links?: string | null
+  proposal_links?: string[] | null
   message?: string | null
   task_title?: string  // 仅 /applications/pending 返回（审核队列上下文）
 }
@@ -383,10 +383,9 @@ export interface Submission {
   user_id?: string
   stage?: SubmissionStage
   status: string // 服务端大写: PENDING_REVIEW | APPROVED | REJECTED
-  content_url?: string
-  content_urls?: string | null // JSON 数组字符串，parseLinks() 解析
+  content_urls?: string[]
   description?: string
-  screenshot_urls?: string | null
+  screenshot_urls?: string[]
   review_note?: string
   submitted_at?: string
   created_at?: string
@@ -405,17 +404,11 @@ export interface SubmissionRevision {
   stage: SubmissionStage
   kind: 'SUBMIT' | 'REVIEW'
   action: string
-  content_urls?: string | null
+  content_urls?: string[]
   description?: string | null
-  screenshot_urls?: string | null
+  screenshot_urls?: string[]
   note?: string | null
   created_at: string
-}
-
-/** content_urls(JSON) → 数组，回落单链接旧字段 */
-export function parseLinks(sub: { content_urls?: string | null; content_url?: string | null }): string[] {
-  if (sub.content_urls) { try { const a = JSON.parse(sub.content_urls); if (Array.isArray(a)) return a } catch { /* fall through */ } }
-  return sub.content_url ? [sub.content_url] : []
 }
 
 export interface CodePool {

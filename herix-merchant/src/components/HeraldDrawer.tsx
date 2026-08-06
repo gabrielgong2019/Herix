@@ -21,16 +21,6 @@ interface SocialPlatform {
   accountId?: string | null
 }
 
-function parsePlatforms(raw?: string): SocialPlatform[] {
-  if (!raw) return []
-  try { return JSON.parse(raw) } catch { return [] }
-}
-
-function parseTiers(raw?: string): Record<string, string> {
-  if (!raw) return {}
-  try { return JSON.parse(raw) } catch { return {} }
-}
-
 function isValidUrl(u?: string | null): u is string {
   return !!u && /^https?:\/\//i.test(u)
 }
@@ -49,18 +39,14 @@ const TIER_COLORS: Record<string, { bg: string; color: string }> = {
   Mega:  { bg: '#fef2f2', color: '#dc2626' },
 }
 
-function parseProposalLinks(raw: string | null | undefined): string[] {
-  if (!raw) return []
-  try { return JSON.parse(raw) } catch { return [] }
-}
-
 export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rejecting, taskTitle }: Props) {
   const { t } = useTranslation()
 
   if (!app) return null
 
-  const platforms = parsePlatforms(app.social_platforms)
-  const tiers = parseTiers(app.tier_snapshot)
+  const platforms = app.social_platforms || []
+  const tiers = app.tier_snapshot || {}
+  const proposalLinks = app.proposal_links || []
   const name = app.display_name || app.nickname || app.user_id || ''
   const completedTasks = Number(app.completed_tasks || 0)
   const goodRate = app.good_rate != null ? Math.round(Number(app.good_rate) * 100) : null
@@ -226,7 +212,7 @@ export function HeraldDrawer({ app, onClose, onApprove, onReject, approving, rej
             </Section>
           )}
 
-          {(app.proposal_text || (app.proposal_links && parseProposalLinks(app.proposal_links).length > 0)) && (
+          {(app.proposal_text || proposalLinks.length > 0) && (
             <Section label={t('herald.proposal')}>
               {app.proposal_text && (
                 <p style={{ fontSize: 14, color: 'var(--text)', lineHeight: 1.6, margin: 0 }}>

@@ -2,17 +2,12 @@ import { Fragment, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { reviewsApi, tasksApi, parseLinks, type Submission, type Application } from '@/lib/api'
+import { reviewsApi, tasksApi, type Submission, type Application } from '@/lib/api'
 import { HeraldDrawer } from '@/components/HeraldDrawer'
 import { useNavigate } from 'react-router-dom'
 import { Topbar } from '@/components/layout/Topbar'
 import { Check, X, FileText, Scale } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-
-function jarr(raw?: string | null): string[] {
-  if (!raw) return []
-  try { const a = JSON.parse(raw); return Array.isArray(a) ? a : [] } catch { return [] }
-}
 
 /** 评审往来时间线：/revisions 完整审计链（商家赫使同源），每轮 提交/通过/退回 + 意见 + 真图 */
 function ReviewTimeline({ subId }: { subId: string }) {
@@ -32,8 +27,8 @@ function ReviewTimeline({ subId }: { subId: string }) {
           const isSubmit = r.kind === 'SUBMIT'
           if (isSubmit) round++
           const stage = r.stage === 'DRAFT' ? t('reviews.stageDraft') : t('reviews.stageFinal')
-          const shots = jarr(r.screenshot_urls)
-          const links = jarr(r.content_urls)
+          const shots = r.screenshot_urls || []
+          const links = r.content_urls || []
           const head = isSubmit
             ? t('reviews.tlSubmit', { stage, round })
             : r.action === 'APPROVED' ? t('reviews.tlApprove', { stage })
@@ -75,9 +70,7 @@ function ReviewTimeline({ subId }: { subId: string }) {
 
 /** 行内平台摘要：前2个平台名+粉丝数，多的折叠为 +n */
 function platformSummary(app: Application, t: TFunction): string {
-  let ps: Array<{ platformId: string; followers?: number | null }> = []
-  try { ps = app.social_platforms ? JSON.parse(app.social_platforms) : [] } catch { /* ignore */ }
-  ps = ps.filter((p) => p.platformId)
+  const ps = (app.social_platforms || []).filter((p) => p.platformId)
   if (!ps.length) return '—'
   const fmt = (n: number) => n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, '') + '万' : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K' : String(n)
   const parts = ps.slice(0, 2).map((p) => `${t(`platform.${p.platformId}`, { defaultValue: p.platformId })}${p.followers != null ? ' ' + fmt(Number(p.followers)) : ''}`)
@@ -240,7 +233,7 @@ export default function Reviews() {
                 <tr><td colSpan={6} className="px-5 py-10 text-center text-sm" style={{ color: 'var(--muted)' }}>{t('reviews.empty')}</td></tr>
               )}
               {subs.map((sub) => {
-                const links = parseLinks(sub)
+                const links = sub.content_urls || []
                 const isDraft = sub.stage === 'DRAFT'
                 const limit = isDraft ? (sub.max_revisions ?? 2) : (sub.require_draft_review ? 2 : (sub.max_revisions ?? 2))
                 const used = sub.stage_rejects ?? 0

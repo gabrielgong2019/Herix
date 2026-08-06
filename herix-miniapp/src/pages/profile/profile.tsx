@@ -23,15 +23,6 @@ import PlatformAccountInput from '../../components/PlatformAccountInput';
 
 const AVATAR_COLORS = ['#D43B27', '#34c759', '#f5a623', '#ff3b30', '#5856d6', '#ff9500'];
 
-function parseJSON(s: any, fallback: any) {
-  if (!s) return fallback;
-  if (typeof s !== 'string') return s;
-  try {
-    return JSON.parse(s);
-  } catch {
-    return fallback;
-  }
-}
 // 评级（等价 herix profileHTML）
 function computeRating(rt: any): { level: string; color: string; next: string } {
   const ctasks = rt.completedTasks || 0;
@@ -462,7 +453,7 @@ export default class Profile extends Component<{}, State> {
 
   /** 用弹层内容替换/追加对应平台后，整个数组发回后端 */
   buildPlatforms = (sheet: NonNullable<State['socialSheet']> | null, removeId?: string): any[] | null => {
-    const socials = parseJSON(this.state.user?.social_platforms, []);
+    const socials = this.state.user?.social_platforms || [];
     const rest = socials.filter((s: any) => s.platformId !== (removeId || sheet?.platformId));
     if (!sheet) return rest;
     // 共享构造+校验（账号非空/微信规范化/数量必填），三入口同一份逻辑
@@ -574,9 +565,9 @@ export default class Profile extends Component<{}, State> {
     const initial = (u.nickname || '?')[0].toUpperCase();
     const color = AVATAR_COLORS[(u.nickname || '').charCodeAt(0) % AVATAR_COLORS.length] || AVATAR_COLORS[0];
     const bal = this.state.balance || {};
-    const socials = parseJSON(u.social_platforms, []);
-    const tierSnap = parseJSON(u.tier_snapshot, {});
-    const bank = parseJSON(u.bank_account, null);
+    const socials = u.social_platforms || [];
+    const tierSnap = u.tier_snapshot || {};
+    const bank = u.bank_account || null;
     const roles: string[] = u.roles || [u.role];
     const { editingName, newNick } = this.state;
 

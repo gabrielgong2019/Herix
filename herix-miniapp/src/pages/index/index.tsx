@@ -73,6 +73,8 @@ export default class Index extends Component<{}, State> {
 
   searchTimer: ReturnType<typeof setTimeout> | null = null;
   exposureTimer: ReturnType<typeof setTimeout> | null = null;
+  /** 上次首页请求时的登录态；tab 切回时登录态变化才重拉列表（否则残留匿名旧数据） */
+  lastToken: string | null = null;
 
   componentWillUnmount() {
     if (this.searchTimer) clearTimeout(this.searchTimer);
@@ -115,8 +117,17 @@ export default class Index extends Component<{}, State> {
   componentDidShow() {
     this.forceUpdate();
     refreshUnreadBadge(); // 消息 tab 未读气泡随 tab 切换刷新
-    // 入驻完成后回到首页时撤下引导（未入驻时顺带刷新社群过滤状态）
-    if (this.state.showOnboardHint) this.loadCommunity();
+    // 登录态变化（登录/登出/切换账号）→ 重拉任务列表与社群过滤，
+    // 否则保留登录前加载的匿名全量列表，看起来像"过滤失效"
+    const token = getToken();
+    if (token !== this.lastToken) {
+      this.lastToken = token;
+      this.loadCommunity();
+      this.loadData();
+    } else if (this.state.showOnboardHint) {
+      // 入驻完成后回到首页时撤下引导（顺带刷新社群过滤状态）
+      this.loadCommunity();
+    }
   }
 
   loadData = async (opts?: { allCommunities?: boolean; search?: string; category?: string }) => {

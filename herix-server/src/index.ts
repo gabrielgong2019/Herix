@@ -132,6 +132,7 @@ app.use('/t', shortLinksRouter);
 const INVITE_I18N: Record<string, Record<string, string>> = {
   zh: {
     topLabel: '大使邀请',
+    step3: '获得专属优惠',
     codeLabel: '使用邀请码享受专属优惠',
     copyBtn: '复制',
     codeHint: '注册完成后请确保正确使用邀请码，如有问题请咨询邀请你的大使',
@@ -145,6 +146,7 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
   },
   ja: {
     topLabel: 'アンバサダー招待',
+    step3: '特典を受け取る',
     codeLabel: '紹介コードで特典をゲット',
     copyBtn: 'コピー',
     codeHint: '登録後、紹介コードを必ず使用してください。ご不明な点はご紹介いただいたアンバサダーへご連絡ください。',
@@ -158,6 +160,7 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
   },
   en: {
     topLabel: 'Ambassador Invitation',
+    step3: 'Get your reward',
     codeLabel: 'Get your exclusive reward with referral code',
     copyBtn: 'Copy',
     codeHint: 'After registration, make sure to use the referral code correctly. Contact your Ambassador if you have questions.',
@@ -247,48 +250,50 @@ app.get('/invite/:code', async (req, res) => {
 <title>${esc(title)} — Herix 邀请</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;font-size:14px}
-.page{max-width:390px;margin:0 auto;padding:16px 16px 130px}
+body{background:#f5f5f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;font-size:14px;line-height:1.5}
+.page{max-width:390px;margin:0 auto;padding:16px 16px 132px}
 /* 顶栏 */
-.topbar{display:flex;align-items:center;gap:6px;margin-bottom:16px;padding:0 2px}
+.topbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;padding:0 4px}
 .herix-logo{width:24px;height:24px;border-radius:6px;object-fit:cover;flex-shrink:0}
-.herix-name{font-size:14px;font-weight:600;color:#1C1C1E}
-.topbar-sep{color:#C7C7CC;font-size:12px;margin:0 2px}
-.invite-label{font-size:13px;color:#8E8E93}
+.herix-name{font-size:14px;font-weight:600;color:#111}
+.topbar-sep{color:#c7c7cc;font-size:12px}
+.invite-label{font-size:12px;color:#8a8a8e}
 /* 卡片 */
-.card{background:#FFFFFF;border-radius:16px;overflow:hidden;margin-bottom:10px}
+.card{background:#fff;border-radius:16px;overflow:hidden;margin-bottom:12px;border:1px solid rgba(0,0,0,0.04)}
 /* 品牌区 */
-.brand-section{padding:18px 18px 16px}
-.brand-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.service-logo{width:44px;height:44px;border-radius:12px;object-fit:contain;background:#F2F2F7;flex-shrink:0}
-.brand-name{font-size:15px;font-weight:600;color:#1C1C1E;line-height:1.3}
-.oneliner{font-size:13px;color:#8E8E93;margin-top:2px;line-height:1.45}
-.benefit-hero{font-size:32px;font-weight:700;color:#1C1C1E;line-height:1.2;letter-spacing:-.5px;word-break:break-all}
+.brand-section{padding:20px 20px 18px}
+.brand-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.service-logo{width:48px;height:48px;border-radius:12px;object-fit:contain;background:#f5f5f7;flex-shrink:0}
+.brand-name{font-size:16px;font-weight:700;color:#111;line-height:1.3}
+.oneliner{font-size:13px;color:#8a8a8e;margin-top:3px;line-height:1.5}
+.benefit-hero{font-size:26px;font-weight:700;color:#111;line-height:1.4;letter-spacing:-.3px;overflow-wrap:break-word}
 /* 邀请码区 */
-.code-section{padding:18px}
-.code-label{font-size:12px;font-weight:500;color:#d43b27;margin-bottom:10px;letter-spacing:.03em}
+.code-section{padding:18px 20px 20px}
+.code-label{font-size:12px;font-weight:600;color:#d43b27;margin-bottom:12px;letter-spacing:.02em}
 .code-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.scode{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:24px;font-weight:700;color:#1C1C1E;letter-spacing:2px}
+.scode{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:22px;font-weight:700;color:#111;letter-spacing:1.5px}
 .scopy{flex-shrink:0;background:#d43b27;color:#fff;border:none;border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
-.code-hint{font-size:12px;color:#8E8E93;margin-top:10px;line-height:1.5}
+.scopy:active{background:#b33120}
+.code-hint{font-size:12px;color:#8a8a8e;margin-top:10px;line-height:1.6}
 /* 步骤区 */
-.steps-section{padding:18px}
-.steps-label{font-size:12px;font-weight:500;color:#8E8E93;margin-bottom:14px;letter-spacing:.02em}
+.steps-section{padding:18px 20px 20px}
+.steps-label{font-size:12px;font-weight:600;color:#444;margin-bottom:16px}
 .steps{display:flex;align-items:flex-start}
-.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;padding:0 4px}
-.step+.step::before{content:'';position:absolute;top:13px;left:calc(-50% + 13px);right:calc(50% + 13px);height:1px;background:#E5E5EA}
-.step-num{width:26px;height:26px;border-radius:50%;background:#FFE8E5;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#d43b27;position:relative;z-index:1;flex-shrink:0}
-.step-main{font-size:11px;font-weight:500;color:#1C1C1E;text-align:center;line-height:1.5}
-.step-hint{font-size:10px;color:#8E8E93;text-align:center;line-height:1.4;margin-top:2px}
+.step{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;position:relative;padding:0 6px;min-width:0}
+.step+.step::before{content:'';position:absolute;top:13px;left:calc(-50% + 14px);right:calc(50% + 14px);height:1px;background:#e5e5ea}
+.step-num{width:27px;height:27px;border-radius:50%;background:#ffece9;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#d43b27;position:relative;z-index:1;flex-shrink:0}
+.step-main{font-size:12px;font-weight:500;color:#111;text-align:center;line-height:1.5;word-break:break-word}
 /* 分割线 */
-.divider{height:1px;background:#F2F2F7;margin:0 18px}
+.divider{height:1px;background:#f2f2f7;margin:0 20px}
 /* 条件小字 */
-.conditions-section{padding:14px 18px;font-size:11px;color:#8E8E93;line-height:1.7}
+.conditions-section{padding:14px 20px 18px;font-size:12px;color:#8a8a8e;line-height:1.8}
+.conditions-title{font-weight:600;color:#444;margin-bottom:6px}
 /* CTA */
-.ctawrap{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 34px;background:linear-gradient(to top,#F2F2F7 70%,transparent)}
-.ctainner{max-width:390px;margin:0 auto;display:flex;flex-direction:column;gap:8px}
+.ctawrap{position:fixed;bottom:0;left:0;right:0;padding:12px 16px 34px;background:linear-gradient(to top,#f5f5f7 72%,transparent)}
+.ctainner{max-width:390px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
 .ctabtn{width:100%;padding:15px;background:#d43b27;color:#fff;border:none;border-radius:14px;font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.02em}
-.ctabtn-sec{width:100%;padding:13px;background:#fff;color:#1C1C1E;border:none;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}
+.ctabtn:active{background:#b33120}
+.ctabtn-sec{width:100%;padding:13px;background:#fff;color:#111;border:1px solid #e5e5ea;border-radius:14px;font-size:15px;font-weight:500;cursor:pointer;font-family:inherit}
 .toast{position:fixed;bottom:150px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:500;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:100}
 .toast.show{opacity:1}
 </style></head><body>
@@ -340,12 +345,12 @@ body{background:#F2F2F7;color:#1C1C1E;font-family:-apple-system,BlinkMacSystemFo
         ${inviteeBenefit ? `
         <div class="step">
           <div class="step-num">3</div>
-          <div class="step-main">${esc(inviteeBenefit)}</div>
+          <div class="step-main">${i.step3}</div>
         </div>` : ''}
       </div>
     </div>
 
-    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section"><div style="font-weight:600;color:#636366;margin-bottom:6px">${i.conditionsLabel}</div>${criteriaLines.map(l => `<div>· ${esc(l)}</div>`).join('')}</div>` : ''}
+    ${criteriaLines.length ? `<div class="divider"></div><div class="conditions-section"><div class="conditions-title">${i.conditionsLabel}</div>${criteriaLines.map(l => `<div>· ${esc(l)}</div>`).join('')}</div>` : ''}
   </div>
 
 </div>

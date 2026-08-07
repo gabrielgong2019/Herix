@@ -1052,8 +1052,9 @@ tasksRouter.get('/:id', optionalAuth, async (req: Request, res: Response) => {
 
   if (!task) return res.status(404).json({ error: '任务不存在' });
 
-  // 语言覆盖：有翻译时用翻译字段覆盖原文
-  if (lang && lang !== 'zh') {
+  // 语言覆盖：有翻译时用翻译字段覆盖原文（含 zh：日文源任务也可能有中文翻译，
+  // 之前跳过 zh 导致 zh 请求永远拿到源语言标题/简介）
+  if (lang) {
     const tr = await findOne<any>(
       'SELECT title, description, invitee_benefit, referral_script, conversion_criteria_json, service_name FROM task_translations WHERE task_id = ? AND locale = ?',
       [req.params.id, lang]

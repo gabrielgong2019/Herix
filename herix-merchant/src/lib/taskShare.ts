@@ -4,6 +4,7 @@ export interface TaskShareConfig {
   taskId: string
   mode: string
   title: string
+  description: string
   typeLabel: string
   typeBadgeColor: string
   payoutLabel: string
@@ -24,6 +25,7 @@ export function buildTaskShareConfig(
     taskId: task.id,
     mode: task.mode,
     title: task.title,
+    description: task.description || '',
     coverImage: task.cover_image ?? undefined,
     brandLogo: task.brand_logo_url ?? undefined,
   }

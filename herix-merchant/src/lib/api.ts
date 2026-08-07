@@ -84,7 +84,7 @@ export const tasksApi = {
   myStats: () => http.get<{ summary: MyTaskStats; tasks: Task[] }>('/tasks/my/stats'),
   preview: (data: { mode: 'STANDARD' | 'PERFORMANCE'; payout: number; maxHeralds?: number; codeCount?: number; avgConversions?: number }) =>
     http.post<TaskBudgetPreview>('/tasks/preview', data),
-  get: (id: string) => http.get<Task>(`/tasks/${id}`),
+  get: (id: string, lang?: string) => http.get<Task>(`/tasks/${id}`, lang ? { params: { lang } } : undefined),
   create: (data: TaskFormData) => http.post<Task>('/tasks', data),
   update: (id: string, data: Partial<TaskFormData>) => http.put<Task>(`/tasks/${id}`, data),
   updateMeta: (id: string, data: Partial<TaskFormData>) => http.patch<Task>(`/tasks/${id}/meta`, data),

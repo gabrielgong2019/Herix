@@ -118,13 +118,27 @@ async function generatePosterBlob(
 
   // ── Task title ───────────────────────────────────────────────────
   ctx.fillStyle = '#111827'
-  ctx.font = `bold 50px ${FONT}`
+  ctx.font = `bold 44px ${FONT}`
   ctx.textBaseline = 'alphabetic'
   const titleLines = wrapText(ctx, config.title, W - 88).slice(0, 2)
-  titleLines.forEach((line, i) => ctx.fillText(line, 44, 190 + i * 66))
+  titleLines.forEach((line, i) => ctx.fillText(line, 44, 172 + i * 58))
+
+  // ── Task description（有内容才画，最多 3 行）───────────────────────
+  const hasDesc = config.description.trim().length > 0
+  const titleEnd = 172 + titleLines.length * 58
+  let divY: number
+  if (hasDesc) {
+    const descStartY = titleEnd + 22
+    ctx.fillStyle = '#4b5563'
+    ctx.font = `28px ${FONT}`
+    const descLines = wrapText(ctx, config.description.trim(), W - 88).slice(0, 3)
+    descLines.forEach((line, i) => ctx.fillText(line, 44, descStartY + i * 38))
+    divY = descStartY + descLines.length * 38 + 12
+  } else {
+    divY = titleLines.length > 1 ? 300 : 250
+  }
 
   // ── Divider ──────────────────────────────────────────────────────
-  const divY = titleLines.length > 1 ? 300 : 250
   ctx.strokeStyle = '#f3f4f6'
   ctx.lineWidth = 2
   ctx.beginPath()
@@ -135,15 +149,15 @@ async function generatePosterBlob(
   // ── Payout ───────────────────────────────────────────────────────
   ctx.textBaseline = 'alphabetic'
   ctx.fillStyle = '#6b7280'
-  ctx.font = `24px ${FONT}`
-  ctx.fillText(config.payoutLabel, 44, divY + 48)
+  ctx.font = `22px ${FONT}`
+  ctx.fillText(config.payoutLabel, 44, divY + 38)
 
   ctx.fillStyle = '#ff4c2b'
-  ctx.font = `bold 68px ${FONT}`
-  ctx.fillText(config.payoutDisplay, 44, divY + 130)
+  ctx.font = `bold 60px ${FONT}`
+  ctx.fillText(config.payoutDisplay, 44, divY + 100)
 
   // ── QR section ───────────────────────────────────────────────────
-  const qrSecY = 520
+  const qrSecY = 590
   ctx.fillStyle = '#f9fafb'
   ctx.fillRect(0, qrSecY, W, H - 60 - qrSecY)
 
@@ -221,6 +235,7 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
   const [posterLang, setPosterLang] = useState<PosterLang>(defaultLang)
   const [posterUrl, setPosterUrl] = useState<string | null>(null)
   const [generating, setGenerating] = useState(true)
+  const [localizedTask, setLocalizedTask] = useState<Task | null>(null)
   const [shortUrl, setShortUrl] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
 
@@ -236,15 +251,22 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
   }, [task.id])
 
   useEffect(() => {
-    // 生成海报：用目标语言的 t 函数渲染标签
+    // 生成海报：按所选语言拉任务翻译，标签用目标语言的 t 函数渲染
     const posterT = i18n.getFixedT(posterLang)
-    const posterConfig = buildTaskShareConfig(task, posterT)
     const token = localStorage.getItem('herix-merchant-token') ?? ''
 
     setGenerating(true)
     setPosterUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null })
 
     async function build() {
+      let localized: Task | null = null
+      try {
+        const resp = await tasksApi.get(task.id, posterLang)
+        localized = resp.data
+      } catch { /* 取不到翻译就回退源语言 */ }
+      setLocalizedTask(localized)
+      const posterConfig = buildTaskShareConfig(localized ?? task, posterT)
+
       let qrSrc = h5QrUrl
       try {
         const resp = await fetch(weappQrUrl, {
@@ -285,7 +307,7 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
   function copyShareText() {
     if (!shortUrl) return
     const posterT = i18n.getFixedT(posterLang)
-    const text = posterT('share.shareText', { title: task.title, url: shortUrl })
+    const text = posterT('share.shareText', { title: localizedTask?.title || task.title, url: shortUrl })
     navigator.clipboard.writeText(text).then(() => {
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)

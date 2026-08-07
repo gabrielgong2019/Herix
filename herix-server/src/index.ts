@@ -143,6 +143,10 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
     conditionsLabel: '参与条件',
     registerBtn: '立即注册',
     copyPrimBtn: '复制邀请码',
+    copyShareBtn: '复制分享文案',
+    shareCopied: '分享文案已复制 ✓',
+    shareText: '{brand} 新用户福利：{benefit}。邀请码 {code}：{url}',
+    shareNoBenefit: '注册即领新用户福利',
     copied: '邀请码已复制 ✓',
   },
   ja: {
@@ -158,6 +162,10 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
     conditionsLabel: '参加条件',
     registerBtn: '今すぐ登録',
     copyPrimBtn: '紹介コードをコピー',
+    copyShareBtn: 'シェア文をコピー',
+    shareCopied: 'シェア文をコピーしました ✓',
+    shareText: '{brand} の新規特典：{benefit}。紹介コード {code}：{url}',
+    shareNoBenefit: '新規登録で特典をゲット',
     copied: '紹介コードをコピーしました ✓',
   },
   en: {
@@ -173,6 +181,10 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
     conditionsLabel: 'Eligibility',
     registerBtn: 'Register now',
     copyPrimBtn: 'Copy referral code',
+    copyShareBtn: 'Copy share text',
+    shareCopied: 'Share text copied ✓',
+    shareText: '{brand} welcome offer: {benefit}. Referral code {code}: {url}',
+    shareNoBenefit: 'Get a welcome reward on signup',
     copied: 'Referral code copied ✓',
   },
 };
@@ -217,7 +229,9 @@ app.get('/invite/:code', async (req, res) => {
 
   const base = process.env.BASE_URL || 'https://herix.huaxuex.com';
   const h5TaskUrl = `${base}/app/index.html#/pages/landing/index?task=${row.task_id}`;
+  const sharePageUrl = `${base}/invite/${code}`;
   const esc = (s: string | null | undefined) => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const jsEsc = (s: string) => s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
   // 转化条件：优先用翻译版，fallback 原文；register label + convert 列表
   let criteriaLines: string[] = [];
@@ -243,6 +257,12 @@ app.get('/invite/:code', async (req, res) => {
   const logoUrl = row.service_logo_url || row.brand_logo_url;
   // 品牌/服务显示名：任务填写的 service_name > 商家公司名
   const displayBrandName = row.service_name_tr || row.service_name || row.brand_name;
+  // 分享文案：按目标语言模板 + 品牌/福利/邀请码/链接拼装（面向被邀请用户，不是招募赫使）
+  const shareText = i.shareText
+    .replace('{brand}', displayBrandName || title)
+    .replace('{benefit}', inviteeBenefit || i.shareNoBenefit)
+    .replace('{code}', code)
+    .replace('{url}', sharePageUrl);
   // 一句话：赫使自定义文案 > 任务标题（不用 description 避免内部细节泄漏）
   const oneliner = row.share_intro || title;
 
@@ -361,8 +381,10 @@ body{background:#f5f5f7;color:#111;font-family:-apple-system,BlinkMacSystemFont,
 <div class="ctawrap"><div class="ctainner">
   ${row.register_url
     ? `<button class="ctabtn" onclick="openApp()">${i.registerBtn}</button>
+       <button class="ctabtn-sec" onclick="copyShare()">${i.copyShareBtn}</button>
        <button class="ctabtn-sec" onclick="copyCode()">${i.copyPrimBtn}</button>`
-    : `<button class="ctabtn" onclick="copyCode()">${i.copyPrimBtn}</button>`}
+    : `<button class="ctabtn" onclick="copyShare()">${i.copyShareBtn}</button>
+       <button class="ctabtn-sec" onclick="copyCode()">${i.copyPrimBtn}</button>`}
 </div></div>
 
 <div class="toast" id="toast">${i.copied}</div>
@@ -376,6 +398,11 @@ function copyCode(){
 }
 function isWechat(){
   return /MicroMessenger/i.test(navigator.userAgent||'');
+}
+function copyShare(){
+  var txt='${jsEsc(shareText)}';
+  navigator.clipboard&&navigator.clipboard.writeText(txt);
+  showToast('${i.shareCopied}');
 }
 function openApp(){
   var url='${esc(row.register_url || '')}';

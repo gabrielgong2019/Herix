@@ -823,11 +823,28 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
 async function handleDetailUpload(
   res: Response,
   task: any,
-  records: Array<{ code?: string; user?: string; converted?: any }>,
+  records: Array<{ code?: string; user?: string; uniqueId?: string; converted?: any }>,
   money: { payoutPerConv: number; costPerConv: number; feePerConv: number; isTokenAuth: boolean; stripMoney?: boolean },
 ) {
   const now = () => new Date().toISOString();
   const isTruthy = (v: any) => ['1', 'true', '是', 'yes', 'y'].includes(String(v ?? '').trim().toLowerCase());
+
+  // 邮箱/ID 已脱敏（含 *）但没给唯一ID：脱敏串无法可靠去重，整单拒绝并指明行号
+  const maskedRows = records
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => {
+      const rawUser = String(r.user || '').trim();
+      const rawUniqueId = String(r.uniqueId || '').trim();
+      return /[*·…]/.test(rawUser) && !rawUniqueId;
+    });
+  if (maskedRows.length > 0) {
+    const first = maskedRows.slice(0, 5).map(m => m.i + 2).join(', ');
+    return res.status(400).json({
+      error: `检测到 ${maskedRows.length} 行邮箱/ID 已脱敏但未提供唯一ID（前几行：${first}），请补充「唯一ID」后重新上传`,
+      code: 'MASKED_USER_REQUIRES_ID',
+      rows: maskedRows.map(m => m.i + 2),
+    });
+  }
 
   let processed = 0, skipped = 0;
   const skippedCodes: string[] = [];
@@ -859,8 +876,11 @@ async function handleDetailUpload(
       continue;
     }
 
-    const userHash = hashUserKey(rawUser);
-    const userMasked = maskUserKey(rawUser);
+    const rawUniqueId = String(row.uniqueId || '').trim();
+    // 去重键：唯一ID 优先（脱敏邮箱不可靠），没有时回退邮箱/ID
+    const dedupKey = rawUniqueId || rawUser;
+    const userHash = hashUserKey(dedupKey);
+    const userMasked = maskUserKey(rawUser || rawUniqueId);
     const converted = isTruthy(row.converted);
     // 幂等键：同码内同用户唯一。同一用户在其他码下的记录不影响本行（分别计费）
     const existing = await findOne<any>(

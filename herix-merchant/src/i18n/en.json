@@ -612,7 +612,9 @@
     "codeBelongsTo": "Code belongs to campaign 《{{title}}》. Select that campaign and re-upload.",
     "blockedTitle": "💰 Some codes unsettled due to insufficient balance. Top up and re-upload:",
     "multiCodeTitle": "{{n}} users used multiple referral codes—each billed separately",
-    "multiCodeHint": "To avoid duplicate payouts, restrict each user to one referral code in your system."
+    "multiCodeHint": "To avoid duplicate payouts, restrict each user to one referral code in your system.",
+    "hdrUniqueId": "Unique ID",
+    "detailNoteMasked": "<b>If emails are already masked (e.g. a**@gmail.com), you must also provide a \"Unique ID\"</b> — masked strings can’t be reliably deduplicated and may cause merged or double-counted conversions"
   },
   "taskDetail": {
     "publishBtn": "Publish Task",

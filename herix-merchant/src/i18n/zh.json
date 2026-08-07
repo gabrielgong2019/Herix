@@ -607,7 +607,9 @@
     "codeBelongsTo": "该码属于任务《{{title}}》，请在上方选择该任务后重新上传",
     "blockedTitle": "💰 部分推广码因余额不足未结算，请充值后重新上传：",
     "multiCodeTitle": "{{n}} 位用户使用了多个推广码——已按各码分别计费",
-    "multiCodeHint": "如不希望同一用户产生多份报酬，请在你的系统侧限制一人只能使用一个推广码。"
+    "multiCodeHint": "如不希望同一用户产生多份报酬，请在你的系统侧限制一人只能使用一个推广码。",
+    "hdrUniqueId": "唯一ID",
+    "detailNoteMasked": "<b>邮箱若已脱敏（如 a**@gmail.com）必须同时提供「唯一ID」</b>——脱敏串无法可靠去重，缺失会导致合并或重复计费"
   },
   "taskDetail": {
     "publishBtn": "发布任务",

@@ -33,6 +33,7 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
 
   if (dataMode === 'DETAIL') {
     const userIdx = findHeaderIdx(headers, ['邮箱', '用户', 'メール', 'ユーザー', 'email', 'user'])
+    const uniqueIdx = findHeaderIdx(headers, ['唯一id', '唯一id', '用户id', 'ユーザーid', 'unique id', 'uniqueid', 'user id'])
     const convIdx = findHeaderIdx(headers, ['交易', '转化', '取引', '成約', 'コンバージョン', 'convert', 'txn'])
     if (userIdx === -1) return { ok: false, errorKey: 'csv.errNoUserCol' }
     for (let i = 1; i < lines.length; i++) {
@@ -40,8 +41,9 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
       const code = (cols[codeIdx] || '').trim()
       const user = (cols[userIdx] || '').trim()
       if (!code || !user) continue
+      const uniqueId = uniqueIdx >= 0 ? (cols[uniqueIdx] || '').trim() : ''
       const convRaw = convIdx >= 0 ? (cols[convIdx] || '').trim() : '0'
-      records.push({ code, user, converted: convRaw === '1' || /^true$/i.test(convRaw) })
+      records.push({ code, user, uniqueId: uniqueId || undefined, converted: convRaw === '1' || /^true$/i.test(convRaw) })
     }
   } else {
     const regIdx = findHeaderIdx(headers, ['注册数', '登録数', 'registered', 'registrations', 'signups'])
@@ -63,10 +65,10 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
 
 // ── Template download ──────────────────────────────────────────────
 
-function downloadTemplate(dataMode: 'AGGREGATE' | 'DETAIL', hdrUser: string, hdrConverted: string, hdrReg: string, hdrUsed: string) {
+function downloadTemplate(dataMode: 'AGGREGATE' | 'DETAIL', hdrUser: string, hdrUniqueId: string, hdrConverted: string, hdrReg: string, hdrUsed: string) {
   const csv =
     dataMode === 'DETAIL'
-      ? `code,${hdrUser},${hdrConverted}\nHERIX-EXAMPLE1,alice@gmail.com,1\nHERIX-EXAMPLE1,bob@yahoo.co.jp,0`
+      ? `code,${hdrUser},${hdrUniqueId},${hdrConverted}\nHERIX-EXAMPLE1,alice@gmail.com,U1001,1\nHERIX-EXAMPLE1,bob@yahoo.co.jp,U1002,0`
       : `code,${hdrReg},${hdrUsed}\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0`
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a')
@@ -82,16 +84,17 @@ function ModeBlock({ task }: { task: Task }) {
   const isDetail = task.data_mode === 'DETAIL'
 
   const hdrUser = t('csv.hdrUser')
+  const hdrUniqueId = t('csv.hdrUniqueId')
   const hdrConverted = t('csv.hdrConverted')
   const hdrReg = t('csv.hdrRegistered')
   const hdrUsed = t('csv.hdrUsed')
 
   const sample = isDetail
-    ? `code,${hdrUser},${hdrConverted}\nHERIX-A3K9Z2,alice@gmail.com,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,0`
+    ? `code,${hdrUser},${hdrUniqueId},${hdrConverted}\nHERIX-A3K9Z2,alice@gmail.com,U1001,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,U1002,0`
     : `code,${hdrReg},${hdrUsed}\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3`
 
   const noteKeys = isDetail
-    ? ['csv.detailNote1', 'csv.detailNote2', 'csv.detailNote3', 'csv.detailNote4', 'csv.detailNote5']
+    ? ['csv.detailNote1', 'csv.detailNoteMasked', 'csv.detailNote2', 'csv.detailNote3', 'csv.detailNote4', 'csv.detailNote5']
     : ['csv.aggregateNote1', 'csv.aggregateNote2', 'csv.aggregateNote3', 'csv.aggregateNote4', 'csv.aggregateNote5']
 
   const privacyKeys = ['csv.privacy1', 'csv.privacy2', 'csv.privacy3', 'csv.privacy4']
@@ -110,7 +113,7 @@ function ModeBlock({ task }: { task: Task }) {
         </div>
         <button
           type="button"
-          onClick={() => downloadTemplate(isDetail ? 'DETAIL' : 'AGGREGATE', hdrUser, hdrConverted, hdrReg, hdrUsed)}
+          onClick={() => downloadTemplate(isDetail ? 'DETAIL' : 'AGGREGATE', hdrUser, hdrUniqueId, hdrConverted, hdrReg, hdrUsed)}
           className="text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors hover:bg-gray-50"
           style={{ border: '1px solid var(--border)', color: '#374151' }}
         >

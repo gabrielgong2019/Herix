@@ -133,6 +133,7 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
   zh: {
     topLabel: '大使邀请',
     step3: '获得专属优惠',
+    wechatOpenHint: '请在右上角「在浏览器打开」后继续注册，邀请码已复制备用',
     codeLabel: '使用邀请码享受专属优惠',
     copyBtn: '复制',
     codeHint: '注册完成后请确保正确使用邀请码，如有问题请咨询邀请你的大使',
@@ -147,6 +148,7 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
   ja: {
     topLabel: 'アンバサダー招待',
     step3: '特典を受け取る',
+    wechatOpenHint: '右上の「ブラウザで開く」から続けてください。紹介コードはコピー済みです',
     codeLabel: '紹介コードで特典をゲット',
     copyBtn: 'コピー',
     codeHint: '登録後、紹介コードを必ず使用してください。ご不明な点はご紹介いただいたアンバサダーへご連絡ください。',
@@ -161,6 +163,7 @@ const INVITE_I18N: Record<string, Record<string, string>> = {
   en: {
     topLabel: 'Ambassador Invitation',
     step3: 'Get your reward',
+    wechatOpenHint: 'Tap “Open in Browser” in the top-right corner to continue. Your referral code is copied.',
     codeLabel: 'Get your exclusive reward with referral code',
     copyBtn: 'Copy',
     codeHint: 'After registration, make sure to use the referral code correctly. Contact your Ambassador if you have questions.',
@@ -371,9 +374,19 @@ function copyCode(){
   showToast('${i.copied}');
   setTimeout(function(){b.textContent='${i.copyBtn}';b.style.background='';},2200);
 }
+function isWechat(){
+  return /MicroMessenger/i.test(navigator.userAgent||'');
+}
 function openApp(){
   var url='${esc(row.register_url || '')}';
-  if(url)window.open(url,'_blank');
+  if(!url){copyCode();return;}
+  if(isWechat()){
+    // 微信内置浏览器会拦截 window.open/App Store 跳转，引导右上角浏览器打开
+    showToast('${i.wechatOpenHint}');
+    copyCode();
+    return;
+  }
+  window.open(url,'_blank');
   copyCode();
 }
 function showToast(m){

@@ -218,8 +218,8 @@ export const auth = {
 // ── Tasks ──
 export const tasks = {
   list: (params?: { status?: string; mode?: string; page?: number; search?: string; category?: string; allCommunities?: boolean }) =>
-    request<{ tasks: any[]; pagination: any }>('GET', '/tasks', { ...params, lang: getLocale() }, false),
-  detail: (id: string) => request<any>('GET', `/tasks/${id}`, { lang: getLocale() }, false),
+    request<{ tasks: any[]; pagination: any }>('GET', '/tasks', { ...params, lang: getLocale() }),
+  detail: (id: string) => request<any>('GET', `/tasks/${id}`, { lang: getLocale() }),
   create: (data: any) => request<any>('POST', '/tasks', data),
   publish: (id: string) => request<any>('PATCH', `/tasks/${id}/publish`),
   escrow: (id: string) => request<any>('PATCH', `/tasks/${id}/escrow`),

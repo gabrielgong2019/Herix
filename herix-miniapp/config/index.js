@@ -32,6 +32,11 @@ export default {
     staticDirectory: 'static',
     template: 'src/index.html',
     // 内容哈希文件名：发布即换 URL，绕开浏览器/Cloudflare 对未哈希 app.js 的缓存（2026-08-05）
+    // CSS 同样带内容 hash：499.css 这类未哈希 chunk 会被浏览器 immutable 缓存永久吃掉新样式
+    miniCssExtractPluginOption: {
+      filename: 'css/[name].[contenthash:8].css',
+      chunkFilename: 'css/[name].[contenthash:8].css',
+    },
     webpackChain(chain) {
       chain.output.filename('js/[name].[contenthash:8].js');
       chain.output.chunkFilename('js/[name].[contenthash:8].js');

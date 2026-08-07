@@ -962,12 +962,12 @@
   "merchant.industry.baby": "母婴",
   "merchant.industry.ecommerce": "电商",
   "merchant.industry.other": "其他",
-  "merchant.csv.hdrUser": "用户邮箱或ID",
+  "merchant.csv.hdrUser": "用户名或邮箱（方便识别）",
   "merchant.csv.hdrConverted": "是否完成交易",
   "merchant.csv.hdrRegistered": "注册数",
   "merchant.csv.hdrUsed": "使用数",
   "merchant.csv.errNoCodeCol": "表头需要包含 \"code\" 列",
-  "merchant.csv.errNoUserCol": "该任务为<b>明细模式</b>，表头需要包含用户列（如「用户邮箱或ID」）——请下载对应模板",
+  "merchant.csv.errNoUserCol": "该任务为<b>明细模式</b>，表头需要「唯一ID」列或「用户名或邮箱」列——请下载对应模板",
   "merchant.csv.errNoAggCols": "该任务为<b>汇总模式</b>，表头需要「注册数」「使用数」列——请下载对应模板",
   "merchant.login.email": "邮箱",
   "merchant.topbar.closeTask": "关闭任务",
@@ -1293,5 +1293,6 @@
   "task.contentTypeEither": "图片或视频均可",
   "apply.eitherNeedContent": "请上传图片或提供内容链接",
   "hd.copyShareText": "复制分享文案",
-  "hd.shareTextCopied": "分享文案已复制"
+  "hd.shareTextCopied": "分享文案已复制",
+  "merchant.csv.hdrUniqueId": "唯一ID"
 }

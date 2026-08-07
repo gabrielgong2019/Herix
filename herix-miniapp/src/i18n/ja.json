@@ -962,12 +962,12 @@
   "merchant.industry.baby": "ベビー・マタニティ",
   "merchant.industry.ecommerce": "Eコマース",
   "merchant.industry.other": "その他",
-  "merchant.csv.hdrUser": "ユーザーのメールまたはID",
+  "merchant.csv.hdrUser": "ユーザー名またはメール（識別用）",
   "merchant.csv.hdrConverted": "取引完了",
   "merchant.csv.hdrRegistered": "登録数",
   "merchant.csv.hdrUsed": "利用数",
   "merchant.csv.errNoCodeCol": "ヘッダーに「code」列が必要です",
-  "merchant.csv.errNoUserCol": "この案件は<b>明細モード</b>です。ヘッダーにユーザー列（例：「ユーザーのメールまたはID」）が必要です。対応するテンプレートをダウンロードしてください",
+  "merchant.csv.errNoUserCol": "この案件は<b>明細モード</b>です。ヘッダーに「一意のID」列または「ユーザー名/メール」列が必要です。対応するテンプレートをダウンロードしてください",
   "merchant.csv.errNoAggCols": "この案件は<b>集計モード</b>です。ヘッダーに「登録数」「利用数」列が必要です。対応するテンプレートをダウンロードしてください",
   "merchant.login.email": "メールアドレス",
   "merchant.topbar.closeTask": "案件を終了",
@@ -1293,5 +1293,6 @@
   "task.contentTypeEither": "画像または動画",
   "apply.eitherNeedContent": "画像をアップロードするか、コンテンツリンクを入力してください",
   "hd.copyShareText": "シェア文をコピー",
-  "hd.shareTextCopied": "シェア文をコピーしました"
+  "hd.shareTextCopied": "シェア文をコピーしました",
+  "merchant.csv.hdrUniqueId": "一意のID"
 }

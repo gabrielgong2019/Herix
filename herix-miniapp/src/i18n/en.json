@@ -962,12 +962,12 @@
   "merchant.industry.baby": "Baby & Maternity",
   "merchant.industry.ecommerce": "E-commerce",
   "merchant.industry.other": "Other",
-  "merchant.csv.hdrUser": "user email or ID",
+  "merchant.csv.hdrUser": "Username or Email (for reference)",
   "merchant.csv.hdrConverted": "converted",
   "merchant.csv.hdrRegistered": "registered",
   "merchant.csv.hdrUsed": "used",
   "merchant.csv.errNoCodeCol": "The header must include a \"code\" column",
-  "merchant.csv.errNoUserCol": "This task uses <b>detail mode</b> — the header needs a user column (e.g. \"user email or ID\"). Please download the matching template",
+  "merchant.csv.errNoUserCol": "This task uses <b>detail mode</b> — the header needs a \"Unique ID\" or \"Username/Email\" column. Please download the matching template",
   "merchant.csv.errNoAggCols": "This task uses <b>aggregate mode</b> — the header needs \"registered\" and \"used\" columns. Please download the matching template",
   "merchant.login.email": "Email",
   "merchant.topbar.closeTask": "Close Task",
@@ -1293,5 +1293,6 @@
   "task.contentTypeEither": "Image or video",
   "apply.eitherNeedContent": "Please upload images or provide a content link",
   "hd.copyShareText": "Copy share text",
-  "hd.shareTextCopied": "Share text copied"
+  "hd.shareTextCopied": "Share text copied",
+  "merchant.csv.hdrUniqueId": "Unique ID"
 }

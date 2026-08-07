@@ -580,11 +580,11 @@
     "uploading": "Uploading…",
     "notesTitle": "📋 Notes",
     "privacyTitle": "🔒 Data Processing Commitment",
-    "hdrUser": "User Email or ID",
+    "hdrUser": "Username or Email (for reference)",
     "hdrConverted": "Converted (1/0)",
     "hdrRegistered": "Registrations",
     "hdrUsed": "Conversions",
-    "detailNote1": "<b>Use the user's email or account ID from your platform</b>—data is irreversibly processed upon receipt, never stored in plain text (see Data Processing Commitment below). Always use the same identifier for the same user.",
+    "detailNote1": "<b>\"Unique ID\" is the dedup key</b>—always use the same unique ID for the same user. The username/email column is only for reference, shown masked, and is not used for deduplication",
     "detailNote2": "<b>Incremental or full uploads both work</b>—deduplication is by code+user, so re-uploads or overlaps never result in double billing.",
     "detailNote3": "<b>Ensure each user can only use one referral code</b> in your system—if a user converts via multiple codes they will each be billed separately (every ambassador deserves credit). Such duplicate costs are borne by the merchant.",
     "detailNote4": "The 'Converted' column accepts 1/0. Changing 1 to 0 <b>does not reverse</b> settled payouts.",
@@ -600,7 +600,7 @@
     "privacy4": "After a campaign ends you may contact support to delete all detail records (settlement receipts are retained per financial requirements).",
     "errMinRows": "Data must have at least 2 rows (header + data)",
     "errNoCodeCol": "Header must contain a \"code\" column",
-    "errNoUserCol": "This campaign is in Detail Mode. Header must include a user column (e.g. User Email or ID)—download the template.",
+    "errNoUserCol": "This campaign is in Detail Mode. Header must include a \"Unique ID\" or \"Username/Email\" column—download the template.",
     "errNoAggCols": "This campaign is in Aggregate Mode. Header must include 'Registrations' and 'Conversions' columns—download the template.",
     "errNoValidRows": "No valid data rows found. Check the CSV format.",
     "errNoProcessed": "No records were processed. Check the data format.",
@@ -614,7 +614,9 @@
     "multiCodeTitle": "{{n}} users used multiple referral codes—each billed separately",
     "multiCodeHint": "To avoid duplicate payouts, restrict each user to one referral code in your system.",
     "hdrUniqueId": "Unique ID",
-    "detailNoteMasked": "<b>If emails are already masked (e.g. a**@gmail.com), you must also provide a \"Unique ID\"</b> — masked strings can’t be reliably deduplicated and may cause merged or double-counted conversions"
+    "detailNoteMasked": "<b>If emails/usernames are already masked (e.g. a**@gmail.com), a \"Unique ID\" is required</b>—masked strings can’t be reliably deduplicated and may cause merged or double-counted conversions",
+    "errMaskedRequiresId": "{n} rows have masked email/username without a \"Unique ID\" (rows: {rows}). Please add them and re-upload.",
+    "errMixedKeyMode": "Some rows have a \"Unique ID\" and some don’t. The dedup key must be consistent across the file—please align and re-upload."
   },
   "taskDetail": {
     "publishBtn": "Publish Task",

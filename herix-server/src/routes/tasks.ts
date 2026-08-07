@@ -663,7 +663,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     return res.status(400).json({ error: '该任务为汇总模式，请按「code,注册数,使用数」模板上传', code: 'MODE_MISMATCH', dataMode });
   }
   if (dataMode === 'DETAIL' && !isDetailShaped) {
-    return res.status(400).json({ error: '该任务为明细模式，请按「code,用户邮箱或ID,是否完成交易」模板上传', code: 'MODE_MISMATCH', dataMode });
+    return res.status(400).json({ error: '该任务为明细模式，请按「code,唯一ID,用户名或邮箱,是否完成交易」模板上传', code: 'MODE_MISMATCH', dataMode });
   }
   if (dataMode === 'DETAIL') {
     return handleDetailUpload(res, task, records as any[], { payoutPerConv, costPerConv, feePerConv, isTokenAuth: !!isTokenAuth, stripMoney: isBrandParty });
@@ -829,6 +829,22 @@ async function handleDetailUpload(
   const now = () => new Date().toISOString();
   const isTruthy = (v: any) => ['1', 'true', '是', 'yes', 'y'].includes(String(v ?? '').trim().toLowerCase());
 
+  // 去重键必须整单一致：部分行带唯一ID、部分不带会算出两套键，同一用户可能重复计费
+  const hasUniqueIdRows = records.some((r) => String(r.uniqueId || '').trim());
+  if (hasUniqueIdRows) {
+    const missingIdRows = records
+      .map((r, i) => ({ i, has: !!String(r.uniqueId || '').trim() }))
+      .filter(x => !x.has)
+      .map(x => x.i + 2);
+    if (missingIdRows.length > 0) {
+      return res.status(400).json({
+        error: `检测到部分行提供了唯一ID、部分没有（缺失行：${missingIdRows.slice(0, 5).join(', ')}），为避免去重键不一致，请统一补齐「唯一ID」后重新上传`,
+        code: 'INCONSISTENT_KEY_MODE',
+        rows: missingIdRows,
+      });
+    }
+  }
+
   // 邮箱/ID 已脱敏（含 *）但没给唯一ID：脱敏串无法可靠去重，整单拒绝并指明行号
   const maskedRows = records
     .map((r, i) => ({ r, i }))
@@ -857,7 +873,8 @@ async function handleDetailUpload(
   for (const row of records) {
     const code = String(row.code || '').trim().toUpperCase();
     const rawUser = String(row.user || '').trim();
-    if (!code || !rawUser) { skipped++; continue; }
+    const rawUniqueId = String(row.uniqueId || '').trim();
+    if (!code || (!rawUser && !rawUniqueId)) { skipped++; continue; }
 
     let at = atByCode.get(code);
     if (at === undefined) {
@@ -876,7 +893,6 @@ async function handleDetailUpload(
       continue;
     }
 
-    const rawUniqueId = String(row.uniqueId || '').trim();
     // 去重键：唯一ID 优先（脱敏邮箱不可靠），没有时回退邮箱/ID
     const dedupKey = rawUniqueId || rawUser;
     const userHash = hashUserKey(dedupKey);

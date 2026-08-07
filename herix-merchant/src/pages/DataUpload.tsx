@@ -33,15 +33,15 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
 
   if (dataMode === 'DETAIL') {
     const userIdx = findHeaderIdx(headers, ['邮箱', '用户', 'メール', 'ユーザー', 'email', 'user'])
-    const uniqueIdx = findHeaderIdx(headers, ['唯一id', '唯一id', '用户id', 'ユーザーid', 'unique id', 'uniqueid', 'user id'])
+    const uniqueIdx = findHeaderIdx(headers, ['唯一id', '用户id', 'ユーザーid', 'unique id', 'uniqueid', 'user id'])
     const convIdx = findHeaderIdx(headers, ['交易', '转化', '取引', '成約', 'コンバージョン', 'convert', 'txn'])
-    if (userIdx === -1) return { ok: false, errorKey: 'csv.errNoUserCol' }
+    if (userIdx === -1 && uniqueIdx === -1) return { ok: false, errorKey: 'csv.errNoUserCol' }
     for (let i = 1; i < lines.length; i++) {
       const cols = lines[i].split(',')
       const code = (cols[codeIdx] || '').trim()
-      const user = (cols[userIdx] || '').trim()
-      if (!code || !user) continue
+      const user = userIdx >= 0 ? (cols[userIdx] || '').trim() : ''
       const uniqueId = uniqueIdx >= 0 ? (cols[uniqueIdx] || '').trim() : ''
+      if (!code || (!user && !uniqueId)) continue
       const convRaw = convIdx >= 0 ? (cols[convIdx] || '').trim() : '0'
       records.push({ code, user, uniqueId: uniqueId || undefined, converted: convRaw === '1' || /^true$/i.test(convRaw) })
     }
@@ -68,7 +68,7 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
 function downloadTemplate(dataMode: 'AGGREGATE' | 'DETAIL', hdrUser: string, hdrUniqueId: string, hdrConverted: string, hdrReg: string, hdrUsed: string) {
   const csv =
     dataMode === 'DETAIL'
-      ? `code,${hdrUser},${hdrUniqueId},${hdrConverted}\nHERIX-EXAMPLE1,alice@gmail.com,U1001,1\nHERIX-EXAMPLE1,bob@yahoo.co.jp,U1002,0`
+      ? `code,${hdrUniqueId},${hdrUser},${hdrConverted}\nHERIX-EXAMPLE1,U1001,alice@gmail.com,1\nHERIX-EXAMPLE2,U1002,a**@gmail.com,0`
       : `code,${hdrReg},${hdrUsed}\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0`
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a')
@@ -90,7 +90,7 @@ function ModeBlock({ task }: { task: Task }) {
   const hdrUsed = t('csv.hdrUsed')
 
   const sample = isDetail
-    ? `code,${hdrUser},${hdrUniqueId},${hdrConverted}\nHERIX-A3K9Z2,alice@gmail.com,U1001,1\nHERIX-A3K9Z2,bob@yahoo.co.jp,U1002,0`
+    ? `code,${hdrUniqueId},${hdrUser},${hdrConverted}\nHERIX-A3K9Z2,U1001,alice@gmail.com,1\nHERIX-A3K9Z2,U1002,a**@gmail.com,0`
     : `code,${hdrReg},${hdrUsed}\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3`
 
   const noteKeys = isDetail
@@ -366,7 +366,14 @@ export default function DataUpload() {
                 className="rounded-xl px-4 py-3 text-sm"
                 style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}
               >
-                {(mutation.error as any)?.response?.data?.error || (mutation.error as Error)?.message || t('csv.uploadError')}
+                {(() => {
+              const data = (mutation.error as any)?.response?.data
+              if (data?.code === 'MASKED_USER_REQUIRES_ID')
+                return t('csv.errMaskedRequiresId', { n: (data.rows || []).length, rows: (data.rows || []).slice(0, 5).join(', ') })
+              if (data?.code === 'INCONSISTENT_KEY_MODE')
+                return t('csv.errMixedKeyMode')
+              return data?.error || (mutation.error as Error)?.message || t('csv.uploadError')
+            })()}
               </div>
             )}
 

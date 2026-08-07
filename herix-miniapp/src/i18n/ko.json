@@ -121,13 +121,13 @@
   "merchant.csv.errNoAggCols": "이 캠페인은 <b>집계 모드</b>입니다. 헤더에 「가입 수」「사용 수」 열이 필요합니다 — 해당 템플릿을 다운로드해 주세요",
   "merchant.csv.errNoCodeCol": "헤더에 \"code\" 열이 포함되어야 합니다",
   "merchant.csv.errNoData": "데이터를 붙여넣거나 CSV 파일을 선택해 주세요",
-  "merchant.csv.errNoUserCol": "이 캠페인은 <b>상세 모드</b>입니다. 헤더에 사용자 열(예: 「사용자 이메일 또는 ID」)이 필요합니다 — 해당 템플릿을 다운로드해 주세요",
+  "merchant.csv.errNoUserCol": "이 캠페인은 <b>상세 모드</b>입니다. 헤더에 「고유 ID」 열 또는 「사용자 이름/이메일」 열이 필요합니다 — 해당 템플릿을 다운로드해 주세요",
   "merchant.csv.errNoValidRows": "유효한 데이터 행이 없습니다",
   "merchant.csv.errNoneProcessed": "처리된 기록이 없습니다. 데이터 형식을 확인해 주세요",
   "merchant.csv.hdrConverted": "거래 완료 여부",
   "merchant.csv.hdrRegistered": "가입 수",
   "merchant.csv.hdrUsed": "사용 수",
-  "merchant.csv.hdrUser": "사용자 이메일 또는 ID",
+  "merchant.csv.hdrUser": "사용자 이름 또는 이메일(식별용)",
   "merchant.csv.multiCodeHint": "동일 사용자에게 중복 보수가 발생하지 않도록 하려면, 귀사 시스템에서 1인당 하나의 추천 코드만 사용하도록 제한해 주세요.",
   "merchant.csv.noTasks": "진행 중인 성과 보상 캠페인이 없습니다",
   "merchant.csv.noTasksHint": "A형 캠페인을 만들면 여기에서 전환 데이터를 업로드할 수 있습니다",
@@ -615,5 +615,6 @@
   "wallet.txnType.WITHDRAWAL_DEBIT": "출금 완료",
   "wallet.txnType.WITHDRAWAL_UNFREEZE": "출금 취소 (동결 해제)",
   "wallet.txnType.ADJUSTMENT": "수동 조정",
-  "apply.linkInvalid": "{n}번째 링크 형식이 올바르지 않습니다. https://로 시작하는 전체 URL을 입력하세요"
+  "apply.linkInvalid": "{n}번째 링크 형식이 올바르지 않습니다. https://로 시작하는 전체 URL을 입력하세요",
+  "merchant.csv.hdrUniqueId": "고유 ID"
 }

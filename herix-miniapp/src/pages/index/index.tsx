@@ -215,18 +215,36 @@ export default class Index extends Component<{}, State> {
           </View>
         )}
 
-        {/* 搜索栏 */}
-        <View className='search-bar'>
-          <Text className='search-icon'>🔍</Text>
-          <Input
-            className='search-input'
-            value={searchText}
-            placeholder={t('index.searchPh')}
-            placeholderStyle='color:#aaa'
-            onInput={this.onSearchInput}
-          />
-          {!!searchText && (
-            <Text className='search-clear' onClick={this.onClearSearch}>✕</Text>
+        {/* 搜索栏 + 社群范围切换（同排，右侧不挤占搜索） */}
+        <View className='search-row'>
+          <View className='search-bar'>
+            <Text className='search-icon'>🔍</Text>
+            <Input
+              className='search-input'
+              value={searchText}
+              placeholder={t('index.searchPh')}
+              placeholderStyle='color:#aaa'
+              onInput={this.onSearchInput}
+            />
+            {!!searchText && (
+              <Text className='search-clear' onClick={this.onClearSearch}>✕</Text>
+            )}
+          </View>
+          {!!communityId && (
+            <View className='community-toggle'>
+              <Text
+                className={`ct-seg ${!allCommunities ? 'active' : ''}`}
+                onClick={() => this.toggleCommunityFilter(false)}
+              >
+                {t('task.communityMine')}
+              </Text>
+              <Text
+                className={`ct-seg ${allCommunities ? 'active' : ''}`}
+                onClick={() => this.toggleCommunityFilter(true)}
+              >
+                {t('task.communityAll')}
+              </Text>
+            </View>
           )}
         </View>
 
@@ -239,24 +257,6 @@ export default class Index extends Component<{}, State> {
             </View>
             <Text className='oh-go' onClick={this.goOnboard}>{t('index.onboardGo')}</Text>
             <Text className='oh-close' onClick={this.dismissOnboardHint}>✕</Text>
-          </View>
-        )}
-
-        {/* 社群范围切换（常驻但轻量，右对齐小分段） */}
-        {!!communityId && (
-          <View className='community-toggle'>
-            <Text
-              className={`ct-seg ${!allCommunities ? 'active' : ''}`}
-              onClick={() => this.toggleCommunityFilter(false)}
-            >
-              {t('task.communityMine')}
-            </Text>
-            <Text
-              className={`ct-seg ${allCommunities ? 'active' : ''}`}
-              onClick={() => this.toggleCommunityFilter(true)}
-            >
-              {t('task.communityAll')}
-            </Text>
           </View>
         )}
 

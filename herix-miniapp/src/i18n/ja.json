@@ -425,7 +425,7 @@
   "hd.shareIntroLabel": "招待メッセージ（リンクを開いた友達に表示）",
   "hd.shareIntroHint": "自分の言葉で書くと、より伝わりやすくなります",
   "hd.shareBenefitLabel": "友達特典",
-  "hd.shareCodeLabel": "紹介コード",
+  "hd.shareCodeLabel": "紹介コード：",
   "hd.shareLocked": "変更不可",
   "hd.shareLinkLabel": "招待リンク",
   "hd.copyLink": "招待リンクをコピー",
@@ -1291,5 +1291,7 @@
   "profile.declExempt": "日本国籍のため申告不要",
   "community.jp-in-jp": "日本人",
   "task.contentTypeEither": "画像または動画",
-  "apply.eitherNeedContent": "画像をアップロードするか、コンテンツリンクを入力してください"
+  "apply.eitherNeedContent": "画像をアップロードするか、コンテンツリンクを入力してください",
+  "hd.copyShareText": "シェア文をコピー",
+  "hd.shareTextCopied": "シェア文をコピーしました"
 }

@@ -216,7 +216,7 @@
   "hd.shareIntroLabel": "Lời mời (bạn bè thấy khi mở link)",
   "hd.shareIntroHint": "Viết theo cách của bạn — sẽ thuyết phục hơn",
   "hd.shareBenefitLabel": "Ưu đãi cho bạn bè",
-  "hd.shareCodeLabel": "Mã giới thiệu",
+  "hd.shareCodeLabel": "Mã giới thiệu: ",
   "hd.shareLocked": "Không thể thay đổi",
   "hd.shareLinkLabel": "Link mời",
   "hd.copyLink": "Sao chép link mời",
@@ -746,5 +746,7 @@
   "profile.declExempt": "Quốc tịch Nhật Bản, không cần khai báo",
   "community.jp-in-jp": "Người Nhật tại Nhật",
   "task.contentTypeEither": "Hình ảnh hoặc video",
-  "apply.eitherNeedContent": "Vui lòng tải ảnh lên hoặc cung cấp liên kết nội dung"
+  "apply.eitherNeedContent": "Vui lòng tải ảnh lên hoặc cung cấp liên kết nội dung",
+  "hd.copyShareText": "Sao chép lời mời",
+  "hd.shareTextCopied": "Đã sao chép lời mời"
 }

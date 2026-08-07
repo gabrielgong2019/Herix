@@ -425,7 +425,7 @@
   "hd.shareIntroLabel": "Your invite message (friends see this when they open the link)",
   "hd.shareIntroHint": "Write it in your own voice — it's more convincing that way",
   "hd.shareBenefitLabel": "Friend benefit",
-  "hd.shareCodeLabel": "Referral code",
+  "hd.shareCodeLabel": "Referral code: ",
   "hd.shareLocked": "Cannot change",
   "hd.shareLinkLabel": "Invite link",
   "hd.copyLink": "Copy invite link",
@@ -1291,5 +1291,7 @@
   "profile.declExempt": "Japanese national, no declaration needed",
   "community.jp-in-jp": "Japanese (local)",
   "task.contentTypeEither": "Image or video",
-  "apply.eitherNeedContent": "Please upload images or provide a content link"
+  "apply.eitherNeedContent": "Please upload images or provide a content link",
+  "hd.copyShareText": "Copy share text",
+  "hd.shareTextCopied": "Share text copied"
 }

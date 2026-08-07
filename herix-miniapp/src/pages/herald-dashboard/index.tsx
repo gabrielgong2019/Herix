@@ -137,10 +137,20 @@ export default class HeraldDashboard extends Component<{}, State> {
   };
 
   copyShareLink = (code: string) => {
+    const { shareModal } = this.state;
     const url = `https://herix.huaxuex.com/invite/${code}`;
+    // 分享文案：自定义邀请语/福利/邀请码/链接拼装，复制给被邀请用户直接用
+    const intro = (shareModal?.intro || '').trim();
+    const benefit = (shareModal?.benefit || '').trim();
+    const lines = [
+      intro,
+      benefit,
+      `${t('hd.shareCodeLabel')}${code}`,
+      url,
+    ].filter(Boolean);
     Taro.setClipboardData({
-      data: url,
-      success: () => Taro.showToast({ title: t('hd.linkCopied'), icon: 'success' }),
+      data: lines.join('\n'),
+      success: () => Taro.showToast({ title: t('hd.shareTextCopied'), icon: 'success' }),
     });
   };
 
@@ -482,7 +492,7 @@ export default class HeraldDashboard extends Component<{}, State> {
                 className={`hd-share-btn-primary${shareSaving ? ' hd-share-btn-saving' : ''}`}
                 onClick={() => { if (!shareSaving) this.copyShareLink(shareModal.code); }}
               >
-                <Text>{shareSaving ? t('hd.shareSaving') : t('hd.copyLink')}</Text>
+                <Text>{shareSaving ? t('hd.shareSaving') : t('hd.copyShareText')}</Text>
               </View>
             </View>
           </View>

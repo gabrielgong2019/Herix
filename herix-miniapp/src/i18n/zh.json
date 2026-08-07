@@ -425,7 +425,7 @@
   "hd.shareIntroLabel": "邀请语（朋友打开链接时会看到）",
   "hd.shareIntroHint": "用你自己的方式介绍，更容易打动你的朋友",
   "hd.shareBenefitLabel": "好友优惠",
-  "hd.shareCodeLabel": "推广码",
+  "hd.shareCodeLabel": "邀请码：",
   "hd.shareLocked": "不可更改",
   "hd.shareLinkLabel": "邀请链接",
   "hd.copyLink": "复制邀请链接",
@@ -1291,5 +1291,7 @@
   "profile.declExempt": "日本国籍，无需声明",
   "community.jp-in-jp": "本地日本人",
   "task.contentTypeEither": "图片或视频均可",
-  "apply.eitherNeedContent": "请上传图片或提供内容链接"
+  "apply.eitherNeedContent": "请上传图片或提供内容链接",
+  "hd.copyShareText": "复制分享文案",
+  "hd.shareTextCopied": "分享文案已复制"
 }

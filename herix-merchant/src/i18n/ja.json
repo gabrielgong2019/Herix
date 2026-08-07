@@ -972,7 +972,7 @@
     "typePerf": "紹介コード",
     "payoutPerHerald": "1人あたり報酬",
     "payoutPerConv": "1転換あたり報酬",
-    "shareText": "「{{title}}」でアンバサダーを募集中です。ぜひご覧ください：{{url}}",
+    "shareText": "「{{brand}}」でアンバサダーを募集中です。ぜひご覧ください：{{url}}",
     "posterLangLabel": "海報言語",
     "linkLangHint": "文案の言語はポスター言語に合わせて切り替わります"
   },

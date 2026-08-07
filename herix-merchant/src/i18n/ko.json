@@ -972,7 +972,7 @@
     "typePerf": "초대 코드",
     "payoutPerHerald": "1인당 보수",
     "payoutPerConv": "전환당 보수",
-    "shareText": "「{{title}}」에서 앰배서더를 모집 중입니다. 확인해보세요：{{url}}",
+    "shareText": "「{{brand}}」에서 앰배서더를 모집 중입니다. 확인해보세요：{{url}}",
     "posterLangLabel": "포스터 언어",
     "linkLangHint": "문안 언어는 포스터 언어와 동일하게 적용"
   },

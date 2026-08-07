@@ -972,7 +972,7 @@
     "typePerf": "Referral Code",
     "payoutPerHerald": "Payout per ambassador",
     "payoutPerConv": "Payout per conversion",
-    "shareText": "\"{{title}}\" is recruiting ambassadors on Herix. Interested? {{url}}",
+    "shareText": "{{brand}} is recruiting ambassadors on Herix. Interested? {{url}}",
     "posterLangLabel": "Poster language",
     "linkLangHint": "Copy text language matches the poster language"
   },

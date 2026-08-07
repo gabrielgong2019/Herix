@@ -328,6 +328,7 @@ export interface Task {
   brand_logo_url?: string
   brand_promo_image_url?: string
   creator_name?: string
+  brand_company_name?: string
   register_url?: string
   app_download_url?: string
   service_logo_url?: string

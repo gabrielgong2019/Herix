@@ -307,7 +307,8 @@ export function TaskShareModal({ task, onClose }: { task: Task; onClose: () => v
   function copyShareText() {
     if (!shortUrl) return
     const posterT = i18n.getFixedT(posterLang)
-    const text = posterT('share.shareText', { title: localizedTask?.title || task.title, url: shortUrl })
+    const brand = localizedTask?.brand_company_name || task.brand_company_name || task.creator_name || localizedTask?.title || task.title
+    const text = posterT('share.shareText', { brand, url: shortUrl })
     navigator.clipboard.writeText(text).then(() => {
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)

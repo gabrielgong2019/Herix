@@ -967,7 +967,7 @@
     "typePerf": "邀请码激励",
     "payoutPerHerald": "每人报酬",
     "payoutPerConv": "每次转化报酬",
-    "shareText": "「{{title}}」正在招募赫使，感兴趣来看看：{{url}}",
+    "shareText": "「{{brand}}」正在招募赫使，感兴趣来看看：{{url}}",
     "posterLangLabel": "海报语言",
     "linkLangHint": "文案语言与海报语言一致"
   },

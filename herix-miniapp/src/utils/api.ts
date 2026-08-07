@@ -1,4 +1,5 @@
 import Taro from '@tarojs/taro';
+import { emitSessionChange } from './session'
 import type { ReviewDecision, UserRole } from '@herix/shared';
 import { t, getLocale } from './i18n'; // 循环引用安全：仅在函数体内使用
 
@@ -97,10 +98,12 @@ export function getToken(): string | null {
 
 export function setToken(token: string) {
   Taro.setStorageSync(TOKEN_KEY, token);
+  emitSessionChange();
 }
 
 export function clearToken() {
   Taro.removeStorageSync(TOKEN_KEY);
+  emitSessionChange();
 }
 
 // 通用请求

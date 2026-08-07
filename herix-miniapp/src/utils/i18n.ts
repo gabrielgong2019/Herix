@@ -7,6 +7,7 @@
  * - 切换语言: profile 页调 setLocale()，tabBar 文字随之运行时更新
  */
 import Taro from '@tarojs/taro';
+import { emitSessionChange } from './session';
 import { i18n as i18nApi } from './api';
 import zh from '../i18n/zh.json';
 import ja from '../i18n/ja.json';
@@ -117,4 +118,5 @@ export async function setLocale(locale: Locale) {
   applyTabBar(); // 先用打包词典即时生效
   await fetchRemoteDict(locale);
   applyTabBar(); // 远端词典到位后再刷一次
+  emitSessionChange(); // 语言变化也是跨 tab 全局状态，通知订阅页重拉（任务标题/简介按语言）
 }

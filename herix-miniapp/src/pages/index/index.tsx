@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { View, Text, Image, ScrollView, Input } from '@tarojs/components';
 import logoWide from '../../assets/herix-logo-wide.png';
 import { tasks as taskApi, categories as categoriesApi, communities as communitiesApi, ambassador, getToken } from '../../utils/api';
+import { onSessionChange } from '../../utils/session';
 import TaskCard, { CategoryItem, TaskCardTask } from '../../components/TaskCard';
 import './index.scss';
 import { refreshUnreadBadge } from '../../utils/badge';
@@ -73,17 +74,23 @@ export default class Index extends Component<{}, State> {
 
   searchTimer: ReturnType<typeof setTimeout> | null = null;
   exposureTimer: ReturnType<typeof setTimeout> | null = null;
-  /** 上次首页请求时的登录态；tab 切回时登录态变化才重拉列表（否则残留匿名旧数据） */
-  lastToken: string | null = null;
+  unsubscribeSession: (() => void) | null = null;
 
   componentWillUnmount() {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     if (this.exposureTimer) clearTimeout(this.exposureTimer);
+    if (this.unsubscribeSession) this.unsubscribeSession();
   }
 
   componentDidMount() {
     this.loadCommunity();
     this.loadData();
+    // 登录/登出/切换账号/切语言都是全局会话变化，订阅后自动重拉，
+    // 避免保留登录前加载的匿名全量列表（stale UI）
+    this.unsubscribeSession = onSessionChange(() => {
+      this.loadCommunity();
+      this.loadData();
+    });
   }
 
   loadCommunity = async () => {
@@ -117,17 +124,8 @@ export default class Index extends Component<{}, State> {
   componentDidShow() {
     this.forceUpdate();
     refreshUnreadBadge(); // 消息 tab 未读气泡随 tab 切换刷新
-    // 登录态变化（登录/登出/切换账号）→ 重拉任务列表与社群过滤，
-    // 否则保留登录前加载的匿名全量列表，看起来像"过滤失效"
-    const token = getToken();
-    if (token !== this.lastToken) {
-      this.lastToken = token;
-      this.loadCommunity();
-      this.loadData();
-    } else if (this.state.showOnboardHint) {
-      // 入驻完成后回到首页时撤下引导（顺带刷新社群过滤状态）
-      this.loadCommunity();
-    }
+    // 入驻完成后回到首页时撤下引导（顺带刷新社群过滤状态）
+    if (this.state.showOnboardHint) this.loadCommunity();
   }
 
   loadData = async (opts?: { allCommunities?: boolean; search?: string; category?: string }) => {

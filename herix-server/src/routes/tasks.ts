@@ -657,7 +657,8 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
   const feePerConv    = costPerConv - payoutPerConv;
 
   // 上传格式须与任务的数据回传模式一致（表头驱动：明细行带 user 字段）
-  const isDetailShaped = records.some((r: any) => r.user !== undefined);
+  // detail rows may carry only uniqueId (no email)
+  const isDetailShaped = records.some((r: any) => r.user !== undefined || r.uniqueId !== undefined);
   const dataMode = task.data_mode === 'DETAIL' ? 'DETAIL' : 'AGGREGATE';
   if (dataMode === 'AGGREGATE' && isDetailShaped) {
     return res.status(400).json({ error: '该任务为汇总模式，请按「code,注册数,使用数」模板上传', code: 'MODE_MISMATCH', dataMode });

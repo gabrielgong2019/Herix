@@ -635,7 +635,10 @@
     "previewZeroWarn": "⚠️ 0 converted records. Check the conversion column values (should be 1/0).",
     "previewHint": "Only new conversions trigger settlement. Re-uploading never double-charges.",
     "previewConfirm": "Confirm upload",
-    "hintPrefix": "Possible typo: "
+    "hintPrefix": "Possible typo: ",
+    "previewRegressTitle": "⚠️ {{n}} code(s) have a lower used count than the current value",
+    "previewRegressHint": "This usually means an old or incomplete file was uploaded by mistake. Proceeding will not claw back already-settled amounts, but the displayed conversion counts will drop. Please confirm this is intended.",
+    "previewNoGain": "ℹ️ This file matches the current values — no new conversions, so no new settlement will occur."
   },
   "taskDetail": {
     "publishBtn": "Publish Task",

@@ -630,7 +630,10 @@
     "previewZeroWarn": "⚠️ 已完成交易为 0 条，请确认「是否完成交易」列取值是否正确（应为 1/0）",
     "previewHint": "仅新增的转化会触发结算，重复上传不会重复计费。",
     "previewConfirm": "确认上传",
-    "hintPrefix": "疑似拼写错误："
+    "hintPrefix": "疑似拼写错误：",
+    "previewRegressTitle": "⚠️ {{n}} 个推广码的使用数低于系统现有数值",
+    "previewRegressHint": "通常是误传了旧文件或残缺文件。继续上传不会回收已结算的部分，但页面显示的转化数会变小。请确认这是你想要的结果。",
+    "previewNoGain": "ℹ️ 本次数据与系统现值一致，没有新增转化，上传后不会产生新的结算。"
   },
   "taskDetail": {
     "publishBtn": "发布任务",

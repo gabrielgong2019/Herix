@@ -635,7 +635,10 @@
     "previewZeroWarn": "⚠️ 거래 완료가 0건입니다. 「거래 완료」 열 값(1/0)을 확인해 주세요.",
     "previewHint": "신규 전환만 정산됩니다. 재업로드해도 이중 과금되지 않습니다.",
     "previewConfirm": "업로드 확정",
-    "hintPrefix": "오타 가능성: "
+    "hintPrefix": "오타 가능성: ",
+    "previewRegressTitle": "⚠️ {{n}}개 추천 코드의 사용 수가 현재 값보다 낮습니다",
+    "previewRegressHint": "이전 파일이나 불완전한 파일을 잘못 업로드했을 가능성이 큽니다. 계속해도 이미 정산된 금액은 회수되지 않지만 화면의 전환 수는 줄어듭니다. 의도한 결과인지 확인해 주세요.",
+    "previewNoGain": "ℹ️ 현재 값과 동일하여 신규 전환이 없으며 새로운 정산도 발생하지 않습니다."
   },
   "taskDetail": {
     "publishBtn": "태스크 게시",

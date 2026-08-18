@@ -433,6 +433,13 @@ export interface CodePool {
   assigned: number
   available: number
   samples: string[]
+  /** 逐码明细：上传预览用它跟本次数据比对，识别"低于上次上传值"的码 */
+  codes?: Array<{
+    unique_code: string
+    herald_name?: string | null
+    total_referrals: number
+    qualified_count: number
+  }>
 }
 
 export interface WeappLinkResult {

@@ -358,7 +358,15 @@ export default function DataUpload() {
   const [csvText, setCsvText] = useState('')
   const [parseError, setParseError] = useState<ParseError | null>(null)
   /** 解析通过后的待确认批次：结算真金白银，先给商家"最后一眼" */
-  const [preview, setPreview] = useState<{ records: CsvRecord[]; convertedCount: number; keyMode: 'ID' | 'EMAIL' } | null>(null)
+  const [preview, setPreview] = useState<{
+    records: CsvRecord[]
+    convertedCount: number
+    keyMode: 'ID' | 'EMAIL'
+    /** 本次使用数低于系统现值的码（误传旧文件/残缺文件的信号） */
+    regressed: Array<{ code: string; now: number; incoming: number }>
+    /** 汇总模式下无任何增量（传了也不会有新结算） */
+    noGain: boolean
+  } | null>(null)
   const [uploadResult, setUploadResult] = useState<any>(null)
   const { user } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -374,6 +382,13 @@ export default function DataUpload() {
   )
   const selectedTask = perfTasks.find((task) => task.id === selectedTaskId)
   const dataMode: 'AGGREGATE' | 'DETAIL' = selectedTask?.data_mode === 'DETAIL' ? 'DETAIL' : 'AGGREGATE'
+
+  // 各码当前的使用数：预览时跟本次上传比对，识别误传旧文件（数字倒退）的情况
+  const { data: codePool } = useQuery({
+    queryKey: ['codePool', selectedTaskId],
+    queryFn: () => tasksApi.getCodePool(selectedTaskId).then((r) => r.data),
+    enabled: !!selectedTaskId,
+  })
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -398,7 +413,26 @@ export default function DataUpload() {
 
     const result = parseCsv(csvText, dataMode)
     if (!result.ok) { setParseError(result.error); return }
-    setPreview({ records: result.records, convertedCount: result.convertedCount, keyMode: result.keyMode })
+
+    // 汇总模式是累计口径，结算走 delta=本次-已付。传了比现值低的数字不会报错、
+    // 也不会回收已结算部分，页面数字却会变小——误传旧文件时毫无提示，故在此拦一道。
+    const regressed: Array<{ code: string; now: number; incoming: number }> = []
+    let noGain = false
+    if (dataMode === 'AGGREGATE' && codePool?.codes?.length) {
+      const nowByCode = new Map(codePool.codes.map((c) => [c.unique_code.toUpperCase(), c.qualified_count || 0]))
+      let anyGain = false
+      for (const r of result.records) {
+        if (!('used_count' in r)) continue // 联合类型窄化：汇总分支才有累计计数
+        const now = nowByCode.get(String(r.code).trim().toUpperCase())
+        if (now === undefined) continue // 码不在本任务，服务端会单独提示
+        const incoming = r.used_count
+        if (incoming < now) regressed.push({ code: r.code, now, incoming })
+        else if (incoming > now) anyGain = true
+      }
+      noGain = !anyGain
+    }
+
+    setPreview({ records: result.records, convertedCount: result.convertedCount, keyMode: result.keyMode, regressed, noGain })
   }
 
   const resetInput = () => { setUploadResult(null); setParseError(null); setPreview(null) }
@@ -502,9 +536,27 @@ export default function DataUpload() {
                     {preview.convertedCount}
                   </span>
                 </div>
-                <div className="flex justify-between"><span>{t('csv.previewKeyMode')}</span><span className="font-mono">{t(preview.keyMode === 'ID' ? 'csv.keyModeId' : 'csv.keyModeEmail')}</span></div>
+                {dataMode === 'DETAIL' && (
+                  <div className="flex justify-between"><span>{t('csv.previewKeyMode')}</span><span className="font-mono">{t(preview.keyMode === 'ID' ? 'csv.keyModeId' : 'csv.keyModeEmail')}</span></div>
+                )}
                 {preview.convertedCount === 0 && (
                   <div className="pt-1" style={{ color: '#dc2626' }}>{t('csv.previewZeroWarn')}</div>
+                )}
+                {/* 汇总模式：数字倒退 = 大概率误传了旧文件/残缺文件 */}
+                {preview.regressed.length > 0 && (
+                  <div className="pt-1 rounded-lg px-3 py-2" style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e' }}>
+                    <div className="font-semibold">{t('csv.previewRegressTitle', { n: preview.regressed.length })}</div>
+                    <div className="mt-1 font-mono text-xs">
+                      {preview.regressed.slice(0, 5).map((r) => (
+                        <div key={r.code}>{r.code}：{r.now} → {r.incoming}</div>
+                      ))}
+                      {preview.regressed.length > 5 && <div>…</div>}
+                    </div>
+                    <div className="mt-1 text-xs">{t('csv.previewRegressHint')}</div>
+                  </div>
+                )}
+                {preview.regressed.length === 0 && preview.noGain && (
+                  <div className="pt-1" style={{ color: '#92400e' }}>{t('csv.previewNoGain')}</div>
                 )}
                 <div className="pt-1 text-xs" style={{ color: '#15803d' }}>{t('csv.previewHint')}</div>
                 <button

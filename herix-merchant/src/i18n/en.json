@@ -599,9 +599,9 @@
     "privacy3": "All displays (including internal admin views) show only masked forms (e.g. a**@gmail.com). The one-way hash <b>cannot be reversed</b>.",
     "privacy4": "After a campaign ends you may contact support to delete all detail records (settlement receipts are retained per financial requirements).",
     "errMinRows": "Data must have at least 2 rows (header + data)",
-    "errNoCodeCol": "Referral code column not found. Template expects: {{expected}}. Your headers: {{headers}}. Rename the matching column and re-upload.",
-    "errNoUserCol": "User identifier column not found. Template expects: {{expected}}. Your headers: {{headers}}. Rename the matching column and re-upload.",
-    "errNoAggCols": "Registered/used count columns not found. Template expects: {{expected}}. Your headers: {{headers}}.",
+    "errNoCodeCol": "Referral code column not found. Template expects: {{expected}}. Your headers: {{headers}}. Rename the matching column and re-upload. {{hint}}",
+    "errNoUserCol": "User identifier column not found. Template expects: {{expected}}. Your headers: {{headers}}. Rename the matching column and re-upload. {{hint}}",
+    "errNoAggCols": "Registered/used count columns not found. Template expects: {{expected}}. Your headers: {{headers}}. {{hint}}",
     "errNoValidRows": "No valid data rows found. Check the CSV format.",
     "errNoProcessed": "No records were processed. Check the data format.",
     "uploadError": "Upload failed. Please try again later.",
@@ -617,7 +617,7 @@
     "detailNoteMasked": "<b>If emails/usernames are already masked (e.g. a**@gmail.com), a \"Unique ID\" is required</b>—masked strings can’t be reliably deduplicated and may cause merged or double-counted conversions",
     "errMaskedRequiresId": "{n} rows have masked email/username without a \"Unique ID\" (rows: {rows}). Please add them and re-upload.",
     "errMixedKeyMode": "Some rows have a \"Unique ID\" and some don’t. The dedup key must be consistent across the file—please align and re-upload.",
-    "errNoConvCol": "Conversion column not found — without it every row counts as not converted and heralds never get paid, so the upload is blocked. Template expects: {{expected}}. Your headers: {{headers}}.",
+    "errNoConvCol": "Conversion column not found — without it every row counts as not converted and heralds never get paid, so the upload is blocked. Template expects: {{expected}}. Your headers: {{headers}}. {{hint}}",
     "errColCount": "Row {{row}} has {{got}} columns but the header has {{want}}. Wrap values containing commas in double quotes.",
     "errRowNoCode": "Row {{row}} is missing the referral code",
     "errRowNoUniqueId": "Row {{row}} is missing the user ID. When a user ID column is present it cannot be blank — a blank falls back to email as the dedup key and would double-charge the same user.",
@@ -634,7 +634,8 @@
     "previewKeyMode": "Dedup key",
     "previewZeroWarn": "⚠️ 0 converted records. Check the conversion column values (should be 1/0).",
     "previewHint": "Only new conversions trigger settlement. Re-uploading never double-charges.",
-    "previewConfirm": "Confirm upload"
+    "previewConfirm": "Confirm upload",
+    "hintPrefix": "Possible typo: "
   },
   "taskDetail": {
     "publishBtn": "Publish Task",

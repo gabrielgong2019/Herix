@@ -56,13 +56,36 @@ const ALIAS_CONV     = ['converted', 'conversion', 'usage status', 'is converted
 const ALIAS_REG      = ['registered', 'registered count', 'registrations', 'signups', '注册数', '登録数']
 const ALIAS_USED     = ['used', 'used count', 'usage', 'usage count', '使用数', '利用数']
 
-/** 模板要求的列名（取别名表前几个当"官方写法"展示） */
+/** 模板要求的列名（取别名表前几个当"官方写法"展示，下划线写法更贴近实际导出） */
 function expectedNames(aliases: string[]): string {
-  return aliases.slice(0, 3).join(' / ')
+  return aliases.slice(0, 3).map((a) => a.replace(/ /g, '_')).join(' / ')
 }
 /** 把用户实际表头按列序号列出来，便于对照第几列该改成什么 */
 function actualHeaders(rawHeaders: string[]): string {
   return rawHeaders.map((h, i) => `第${i + 1}列「${h || '(空)'}」`).join('，')
+}
+
+/** 编辑距离（用于"是不是想写 X"提示，拼错一两个字母是最常见的上传事故） */
+function editDistance(a: string, b: string): number {
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
+  for (let j = 0; j <= b.length; j++) dp[0][j] = j
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++)
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+  return dp[a.length][b.length]
+}
+
+/** 在用户表头里找与模板列名最接近的那个（距离 ≤2 才算数，避免瞎猜） */
+function suggestColumn(headers: string[], rawHeaders: string[], aliases: string[]): string {
+  let best = { idx: -1, dist: Infinity, alias: '' }
+  headers.forEach((h, i) => {
+    for (const a of aliases) {
+      const d = editDistance(h, normHeader(a))
+      if (d < best.dist) best = { idx: i, dist: d, alias: a.replace(/ /g, '_') }
+    }
+  })
+  if (best.idx < 0 || best.dist > 2) return ''
+  return `第${best.idx + 1}列「${rawHeaders[best.idx]}」→ 应为「${best.alias}」`
 }
 
 export type ParseError = { errorKey: string; params?: Record<string, unknown> }
@@ -84,7 +107,7 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
 
   const codeIdx = findHeaderIdx(headers, ALIAS_CODE)
   if (codeIdx === -1)
-    return { ok: false, error: { errorKey: 'csv.errNoCodeCol', params: { expected: expectedNames(ALIAS_CODE), headers: shown } } }
+    return { ok: false, error: { errorKey: 'csv.errNoCodeCol', params: { expected: expectedNames(ALIAS_CODE), headers: shown, hint: suggestColumn(headers, rawHeaders, ALIAS_CODE) } } }
 
   const records: CsvRecord[] = []
   let convertedCount = 0
@@ -97,10 +120,10 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
     const convIdx = findHeaderIdx(headers, ALIAS_CONV)
 
     if (uniqueIdx === -1 && userIdx === -1)
-      return { ok: false, error: { errorKey: 'csv.errNoUserCol', params: { expected: `${expectedNames(ALIAS_UNIQUEID)}（优先）/ ${expectedNames(ALIAS_USER)}`, headers: shown } } }
+      return { ok: false, error: { errorKey: 'csv.errNoUserCol', params: { expected: `${expectedNames(ALIAS_UNIQUEID)}（优先）/ ${expectedNames(ALIAS_USER)}`, headers: shown, hint: suggestColumn(headers, rawHeaders, ALIAS_UNIQUEID.concat(ALIAS_USER)) } } }
     // 转化列缺失曾被静默当 0 → 整批漏结算。现在硬报错。
     if (convIdx === -1)
-      return { ok: false, error: { errorKey: 'csv.errNoConvCol', params: { expected: expectedNames(ALIAS_CONV), headers: shown } } }
+      return { ok: false, error: { errorKey: 'csv.errNoConvCol', params: { expected: expectedNames(ALIAS_CONV), headers: shown, hint: suggestColumn(headers, rawHeaders, ALIAS_CONV) } } }
 
     // 去重键模式：有 UserID 列就全批用 ID，否则全批用邮箱/姓名。
     // 服务端会把该模式锁在任务上，跨批切换直接拒绝（同一人换键=重复计费）
@@ -140,7 +163,7 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
   const regIdx = findHeaderIdx(headers, ALIAS_REG)
   const usedIdx = findHeaderIdx(headers, ALIAS_USED)
   if (regIdx === -1 || usedIdx === -1)
-    return { ok: false, error: { errorKey: 'csv.errNoAggCols', params: { expected: `${expectedNames(ALIAS_REG)} + ${expectedNames(ALIAS_USED)}`, headers: shown } } }
+    return { ok: false, error: { errorKey: 'csv.errNoAggCols', params: { expected: `${expectedNames(ALIAS_REG)} + ${expectedNames(ALIAS_USED)}`, headers: shown, hint: suggestColumn(headers, rawHeaders, ALIAS_REG.concat(ALIAS_USED)) } } }
 
   for (let i = 1; i < lines.length; i++) {
     const rowNo = i + 1
@@ -456,7 +479,12 @@ export default function DataUpload() {
                 className="rounded-xl px-4 py-3 text-sm"
                 style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}
               >
-                {t(parseError.errorKey, parseError.params as any) as string}
+                {(() => {
+                  const p = { ...(parseError.params || {}) } as Record<string, unknown>
+                  // hint 为空时不要留下悬空的"疑似拼写错误："前缀
+                  if (p.hint) p.hint = `${t('csv.hintPrefix')}${p.hint}`
+                  return t(parseError.errorKey, p as any) as string
+                })()}
               </div>
             )}
 

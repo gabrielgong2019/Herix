@@ -594,9 +594,9 @@
     "privacy3": "所有展示（含平台内部后台）仅保留脱敏形式（如 a**@gmail.com），单向哈希<b>不可还原</b>出原文",
     "privacy4": "任务结束后可联系运营清除全部明细记录（结算凭证按财务要求另行保留）",
     "errMinRows": "数据至少需要2行（表头+数据）",
-    "errNoCodeCol": "未找到「推广码」列。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。",
-    "errNoUserCol": "未找到「用户标识」列。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。",
-    "errNoAggCols": "未找到「注册数」「使用数」列。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。",
+    "errNoCodeCol": "未找到「推广码」列。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。 {{hint}}",
+    "errNoUserCol": "未找到「用户标识」列。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。 {{hint}}",
+    "errNoAggCols": "未找到「注册数」「使用数」列。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。 {{hint}}",
     "errNoValidRows": "没有有效的数据行，请检查 CSV 格式",
     "errNoProcessed": "没有任何记录被处理，请检查数据格式",
     "uploadError": "上传失败，请稍后重试",
@@ -612,7 +612,7 @@
     "detailNoteMasked": "<b>邮箱/用户名若已脱敏（如 a**@gmail.com），必须提供「唯一ID」</b>——脱敏串无法可靠去重；缺失会导致合并或重复计费",
     "errMaskedRequiresId": "检测到 {n} 行邮箱/用户名已脱敏但未提供「唯一ID」（行号：{rows}），请补充后重新上传",
     "errMixedKeyMode": "部分行提供了「唯一ID」、部分没有。去重键必须整单一致，请统一补齐后重新上传",
-    "errNoConvCol": "未找到「是否完成交易」列——该列缺失会导致全部记录判为未转化、赫使拿不到结算，因此不允许上传。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。",
+    "errNoConvCol": "未找到「是否完成交易」列——该列缺失会导致全部记录判为未转化、赫使拿不到结算，因此不允许上传。模板要求列名为：{{expected}}。你的表头依次是：{{headers}}。请把对应列改成模板列名后重新上传。 {{hint}}",
     "errColCount": "第 {{row}} 行有 {{got}} 列，与表头 {{want}} 列不符。若字段内含逗号，请用英文双引号包裹。",
     "errRowNoCode": "第 {{row}} 行缺少推广码",
     "errRowNoUniqueId": "第 {{row}} 行缺少用户ID。本文件含用户ID列时不允许留空——留空会改用邮箱做去重键，导致同一用户被重复计费。",
@@ -629,7 +629,8 @@
     "previewKeyMode": "去重依据",
     "previewZeroWarn": "⚠️ 已完成交易为 0 条，请确认「是否完成交易」列取值是否正确（应为 1/0）",
     "previewHint": "仅新增的转化会触发结算，重复上传不会重复计费。",
-    "previewConfirm": "确认上传"
+    "previewConfirm": "确认上传",
+    "hintPrefix": "疑似拼写错误："
   },
   "taskDetail": {
     "publishBtn": "发布任务",

@@ -846,6 +846,24 @@ async function handleDetailUpload(
     }
   }
 
+  // 跨批锁定：单批一致还不够——首批用邮箱、次批用 UserID，同一用户会算出两个
+  // user_hash，唯一索引 (task_id, code, user_hash) 挡不住，直接重复计费。
+  // 故首批把键模式锁在任务上，之后每批比对，不一致整单拒绝（2026-08）
+  const keyMode: 'ID' | 'EMAIL' = hasUniqueIdRows ? 'ID' : 'EMAIL';
+  const spec = await findOne<{ dedup_key_mode: string | null }>(
+    'SELECT dedup_key_mode FROM task_referral_specs WHERE task_id = ?', [task.id]
+  );
+  const lockedMode = spec?.dedup_key_mode || null;
+  if (lockedMode && lockedMode !== keyMode) {
+    const label = (m: string) => (m === 'ID' ? '用户ID' : '邮箱/姓名');
+    return res.status(400).json({
+      error: `本任务首次上传时已锁定去重键为「${label(lockedMode)}」，本次为「${label(keyMode)}」。切换去重键会让同一用户被重复计费，请沿用原口径重新导出后上传。`,
+      code: 'KEY_MODE_LOCKED',
+      lockedMode,
+      gotMode: keyMode,
+    });
+  }
+
   // 邮箱/ID 已脱敏（含 *）但没给唯一ID：脱敏串无法可靠去重，整单拒绝并指明行号
   const maskedRows = records
     .map((r, i) => ({ r, i }))
@@ -928,6 +946,11 @@ async function handleDetailUpload(
       }
       processed++;
     }
+  }
+
+  // 首批落库成功后锁定键模式（此后该任务只接受同口径上传）
+  if (!lockedMode && processed > 0) {
+    await pool.query('UPDATE task_referral_specs SET dedup_key_mode = $1 WHERE task_id = $2', [keyMode, task.id]);
   }
 
   // pass 2：按码结算（行级 settled_txn_id 保证每行只打一次款）+ 投影刷新 + 通知

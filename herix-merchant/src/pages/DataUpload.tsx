@@ -6,61 +6,159 @@ import { Topbar } from '@/components/layout/Topbar'
 import { useAuth } from '@/contexts/AuthContext'
 
 // ── CSV parsing ────────────────────────────────────────────────────
+//
+// 涉及结算，解析一律"宁可报错、不可猜"（2026-08 事故：Remitly 表头 usage_status
+// 匹配不上转化列同义词，旧代码静默当 0 → 108 行明细全判未转化、赫使漏结算）。
+// 因此：① 精确列名匹配（旧的 includes 子串匹配会让 'user' 命中 user_id，
+// 把 UserID 当邮箱、uniqueId 反而空着）；② 必需列缺失直接报错，不再有默认值；
+// ③ 逐行校验列数（裸 split(',') 遇到引号内逗号会整行错位，静默算错钱）。
 
-function findHeaderIdx(headers: string[], synonyms: string[]): number {
-  for (let hi = 0; hi < headers.length; hi++) {
-    for (const syn of synonyms) {
-      if (headers[hi].includes(syn)) return hi
-    }
+/** 列名归一：小写、去空白、下划线/连字符统一成空格（user_id ≡ user id ≡ User-ID） */
+function normHeader(h: string): string {
+  return h.trim().toLowerCase().replace(/^﻿/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ')
+}
+
+/** 精确匹配（归一后全等）。按别名优先级依次找，命中即返回 —— 与列顺序无关 */
+function findHeaderIdx(headers: string[], aliases: string[]): number {
+  for (const alias of aliases) {
+    const want = normHeader(alias)
+    const hit = headers.indexOf(want)
+    if (hit >= 0) return hit
   }
   return -1
 }
 
+/** RFC4180 单行解析：支持 "包含,逗号" 与 "" 转义 */
+function splitCsvLine(line: string): string[] {
+  const out: string[] = []
+  let cur = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++ } else inQuotes = false
+      } else cur += ch
+    } else if (ch === '"') inQuotes = true
+    else if (ch === ',') { out.push(cur); cur = '' }
+    else cur += ch
+  }
+  out.push(cur)
+  return out.map((c) => c.trim())
+}
+
+// 模板列名 + 白名单别名（精确匹配，非子串）。新增合作方的导出列名时在此登记，
+// 不要退回模糊匹配 —— 模糊匹配正是 2026-08 漏结算事故的技术根因。
+const ALIAS_CODE     = ['code', 'promo code', 'promo', '推广码', '紹介コード', 'referral code', 'referral']
+const ALIAS_UNIQUEID = ['user id', 'userid', 'unique id', 'uniqueid', 'customer id', '唯一id', '用户id', 'ユーザーid']
+const ALIAS_USER     = ['user email masked', 'user email', 'email', 'user', 'name', '邮箱', '用户', 'メール', 'ユーザー']
+const ALIAS_CONV     = ['converted', 'conversion', 'usage status', 'is converted', 'txn', '是否完成交易', '转化', '交易', '取引', '成約', 'コンバージョン']
+const ALIAS_REG      = ['registered', 'registered count', 'registrations', 'signups', '注册数', '登録数']
+const ALIAS_USED     = ['used', 'used count', 'usage', 'usage count', '使用数', '利用数']
+
+/** 模板要求的列名（取别名表前几个当"官方写法"展示） */
+function expectedNames(aliases: string[]): string {
+  return aliases.slice(0, 3).join(' / ')
+}
+/** 把用户实际表头按列序号列出来，便于对照第几列该改成什么 */
+function actualHeaders(rawHeaders: string[]): string {
+  return rawHeaders.map((h, i) => `第${i + 1}列「${h || '(空)'}」`).join('，')
+}
+
+export type ParseError = { errorKey: string; params?: Record<string, unknown> }
 type ParseResult =
-  | { ok: true; records: CsvRecord[] }
-  | { ok: false; errorKey: string }
+  | { ok: true; records: CsvRecord[]; convertedCount: number; keyMode: 'ID' | 'EMAIL' }
+  | { ok: false; error: ParseError }
+
+const TRUTHY = ['1', 'true', 'yes', 'y', '是']
+const FALSY = ['0', 'false', 'no', 'n', '否', '']
 
 function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
-  const lines = text.trim().split('\n').map((l) => l.trim()).filter(Boolean)
-  if (lines.length < 2) return { ok: false, errorKey: 'csv.errMinRows' }
+  const lines = text.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+  if (lines.length < 2) return { ok: false, error: { errorKey: 'csv.errMinRows' } }
 
-  const headers = lines[0].split(',').map((h) => h.trim().toLowerCase())
-  let codeIdx = headers.indexOf('code')
-  if (codeIdx === -1) codeIdx = findHeaderIdx(headers, ['推广码', '紹介コード', 'referral'])
-  if (codeIdx === -1) return { ok: false, errorKey: 'csv.errNoCodeCol' }
+  const rawHeaders = splitCsvLine(lines[0])
+  const headers = rawHeaders.map(normHeader)
+  const colCount = headers.length
+  const shown = actualHeaders(rawHeaders)
+
+  const codeIdx = findHeaderIdx(headers, ALIAS_CODE)
+  if (codeIdx === -1)
+    return { ok: false, error: { errorKey: 'csv.errNoCodeCol', params: { expected: expectedNames(ALIAS_CODE), headers: shown } } }
 
   const records: CsvRecord[] = []
+  let convertedCount = 0
 
   if (dataMode === 'DETAIL') {
-    const userIdx = findHeaderIdx(headers, ['邮箱', '用户', 'メール', 'ユーザー', 'email', 'user'])
-    const uniqueIdx = findHeaderIdx(headers, ['唯一id', '用户id', 'ユーザーid', 'unique id', 'uniqueid', 'user id'])
-    const convIdx = findHeaderIdx(headers, ['交易', '转化', '取引', '成約', 'コンバージョン', 'convert', 'txn'])
-    if (userIdx === -1 && uniqueIdx === -1) return { ok: false, errorKey: 'csv.errNoUserCol' }
+    const uniqueIdx = findHeaderIdx(headers, ALIAS_UNIQUEID)
+    // 邮箱列不能跟 UserID 列撞（表头同时有 user_id 和 user 时，别让同一列兼两职）
+    let userIdx = findHeaderIdx(headers, ALIAS_USER)
+    if (userIdx === uniqueIdx) userIdx = -1
+    const convIdx = findHeaderIdx(headers, ALIAS_CONV)
+
+    if (uniqueIdx === -1 && userIdx === -1)
+      return { ok: false, error: { errorKey: 'csv.errNoUserCol', params: { expected: `${expectedNames(ALIAS_UNIQUEID)}（优先）/ ${expectedNames(ALIAS_USER)}`, headers: shown } } }
+    // 转化列缺失曾被静默当 0 → 整批漏结算。现在硬报错。
+    if (convIdx === -1)
+      return { ok: false, error: { errorKey: 'csv.errNoConvCol', params: { expected: expectedNames(ALIAS_CONV), headers: shown } } }
+
+    // 去重键模式：有 UserID 列就全批用 ID，否则全批用邮箱/姓名。
+    // 服务端会把该模式锁在任务上，跨批切换直接拒绝（同一人换键=重复计费）
+    const keyMode: 'ID' | 'EMAIL' = uniqueIdx >= 0 ? 'ID' : 'EMAIL'
+
     for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',')
-      const code = (cols[codeIdx] || '').trim()
-      const user = userIdx >= 0 ? (cols[userIdx] || '').trim() : ''
-      const uniqueId = uniqueIdx >= 0 ? (cols[uniqueIdx] || '').trim() : ''
-      if (!code || (!user && !uniqueId)) continue
-      const convRaw = convIdx >= 0 ? (cols[convIdx] || '').trim() : '0'
-      records.push({ code, user, uniqueId: uniqueId || undefined, converted: convRaw === '1' || /^true$/i.test(convRaw) })
+      const rowNo = i + 1
+      const cols = splitCsvLine(lines[i])
+      if (cols.length !== colCount)
+        return { ok: false, error: { errorKey: 'csv.errColCount', params: { row: rowNo, want: colCount, got: cols.length } } }
+
+      const code = cols[codeIdx] || ''
+      const uniqueId = uniqueIdx >= 0 ? cols[uniqueIdx] || '' : ''
+      const user = userIdx >= 0 ? cols[userIdx] || '' : ''
+      if (!code && !uniqueId && !user) continue // 整行空，跳过
+
+      if (!code) return { ok: false, error: { errorKey: 'csv.errRowNoCode', params: { row: rowNo } } }
+      // 锁定 ID 模式后，该列不允许留空：留空会回退成邮箱键，同一人产生两条记录
+      if (keyMode === 'ID' && !uniqueId)
+        return { ok: false, error: { errorKey: 'csv.errRowNoUniqueId', params: { row: rowNo } } }
+      if (keyMode === 'EMAIL' && !user)
+        return { ok: false, error: { errorKey: 'csv.errRowNoUser', params: { row: rowNo } } }
+
+      const convRaw = (cols[convIdx] || '').toLowerCase()
+      if (!TRUTHY.includes(convRaw) && !FALSY.includes(convRaw))
+        return { ok: false, error: { errorKey: 'csv.errConvValue', params: { row: rowNo, value: cols[convIdx] || '' } } }
+      const converted = TRUTHY.includes(convRaw)
+      if (converted) convertedCount++
+
+      records.push({ code, user, uniqueId: uniqueId || undefined, converted })
     }
-  } else {
-    const regIdx = findHeaderIdx(headers, ['注册数', '登録数', 'registered', 'registrations', 'signups'])
-    const usedIdx = findHeaderIdx(headers, ['使用数', '利用数', 'used', 'usage'])
-    if (regIdx === -1 && usedIdx === -1) return { ok: false, errorKey: 'csv.errNoAggCols' }
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',')
-      const code = (cols[codeIdx] || '').trim()
-      if (!code) continue
-      const reg = parseInt(cols[regIdx] || '0', 10)
-      const used = parseInt(cols[usedIdx] || '0', 10)
-      records.push({ code, registered_count: isNaN(reg) ? 0 : reg, used_count: isNaN(used) ? 0 : used })
-    }
+
+    if (!records.length) return { ok: false, error: { errorKey: 'csv.errNoValidRows' } }
+    return { ok: true, records, convertedCount, keyMode }
   }
 
-  if (!records.length) return { ok: false, errorKey: 'csv.errNoValidRows' }
-  return { ok: true, records }
+  const regIdx = findHeaderIdx(headers, ALIAS_REG)
+  const usedIdx = findHeaderIdx(headers, ALIAS_USED)
+  if (regIdx === -1 || usedIdx === -1)
+    return { ok: false, error: { errorKey: 'csv.errNoAggCols', params: { expected: `${expectedNames(ALIAS_REG)} + ${expectedNames(ALIAS_USED)}`, headers: shown } } }
+
+  for (let i = 1; i < lines.length; i++) {
+    const rowNo = i + 1
+    const cols = splitCsvLine(lines[i])
+    if (cols.length !== colCount)
+      return { ok: false, error: { errorKey: 'csv.errColCount', params: { row: rowNo, want: colCount, got: cols.length } } }
+    const code = cols[codeIdx] || ''
+    if (!code) continue
+    const reg = Number(cols[regIdx])
+    const used = Number(cols[usedIdx])
+    if (!Number.isInteger(reg) || reg < 0 || !Number.isInteger(used) || used < 0)
+      return { ok: false, error: { errorKey: 'csv.errCountValue', params: { row: rowNo } } }
+    records.push({ code, registered_count: reg, used_count: used })
+    convertedCount += used
+  }
+
+  if (!records.length) return { ok: false, error: { errorKey: 'csv.errNoValidRows' } }
+  return { ok: true, records, convertedCount, keyMode: 'EMAIL' }
 }
 
 // ── Template download ──────────────────────────────────────────────
@@ -235,7 +333,9 @@ export default function DataUpload() {
   const { t } = useTranslation()
   const [selectedTaskId, setSelectedTaskId] = useState('')
   const [csvText, setCsvText] = useState('')
-  const [parseErrorKey, setParseErrorKey] = useState('')
+  const [parseError, setParseError] = useState<ParseError | null>(null)
+  /** 解析通过后的待确认批次：结算真金白银，先给商家"最后一眼" */
+  const [preview, setPreview] = useState<{ records: CsvRecord[]; convertedCount: number; keyMode: 'ID' | 'EMAIL' } | null>(null)
   const [uploadResult, setUploadResult] = useState<any>(null)
   const { user } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -263,18 +363,22 @@ export default function DataUpload() {
   const mutation = useMutation({
     mutationFn: ({ records }: { records: CsvRecord[] }) =>
       tasksApi.uploadCsv(selectedTaskId, records).then((r) => r.data),
-    onSuccess: (data) => setUploadResult(data),
+    onSuccess: (data) => { setUploadResult(data); setPreview(null) },
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  /** 第一步：只解析，不提交 —— 解析结果进预览区等商家确认 */
+  const handleParse = (e: React.FormEvent) => {
     e.preventDefault()
     setUploadResult(null)
-    setParseErrorKey('')
+    setParseError(null)
+    setPreview(null)
 
     const result = parseCsv(csvText, dataMode)
-    if (!result.ok) { setParseErrorKey(result.errorKey); return }
-    mutation.mutate({ records: result.records })
+    if (!result.ok) { setParseError(result.error); return }
+    setPreview({ records: result.records, convertedCount: result.convertedCount, keyMode: result.keyMode })
   }
+
+  const resetInput = () => { setUploadResult(null); setParseError(null); setPreview(null) }
 
   if (tasksData && perfTasks.length === 0) {
     return (
@@ -296,7 +400,7 @@ export default function DataUpload() {
       <Topbar title={t('nav.csv')} />
       <div className="p-7 flex-1">
         <div className="max-w-2xl mx-auto">
-          <form onSubmit={handleSubmit} className="rounded-2xl p-6 space-y-5" style={{ background: '#fff' }}>
+          <form onSubmit={handleParse} className="rounded-2xl p-6 space-y-5" style={{ background: '#fff' }}>
             {/* Task selector */}
             <div>
               <label className="block text-sm font-medium mb-1.5" style={{ color: '#374151' }}>
@@ -304,11 +408,7 @@ export default function DataUpload() {
               </label>
               <select
                 value={selectedTaskId}
-                onChange={(e) => {
-                  setSelectedTaskId(e.target.value)
-                  setUploadResult(null)
-                  setParseErrorKey('')
-                }}
+                onChange={(e) => { setSelectedTaskId(e.target.value); resetInput() }}
                 className="w-full rounded-xl px-3 py-2.5 text-sm outline-none"
                 style={{ border: '1px solid var(--border)', background: '#fff', color: 'var(--text)' }}
               >
@@ -342,7 +442,7 @@ export default function DataUpload() {
               </div>
               <textarea
                 value={csvText}
-                onChange={(e) => { setCsvText(e.target.value); setUploadResult(null); setParseErrorKey('') }}
+                onChange={(e) => { setCsvText(e.target.value); resetInput() }}
                 rows={8}
                 placeholder={t('csv.pastePlaceholder')}
                 className="w-full rounded-xl px-3 py-2.5 text-sm resize-y outline-none"
@@ -351,12 +451,43 @@ export default function DataUpload() {
             </div>
 
             {/* Parse error */}
-            {parseErrorKey && (
+            {parseError && (
               <div
                 className="rounded-xl px-4 py-3 text-sm"
                 style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}
               >
-                {t(parseErrorKey)}
+                {t(parseError.errorKey, parseError.params as any) as string}
+              </div>
+            )}
+
+            {/* 预览确认：解析结果核对无误后才真正提交（结算不可逆） */}
+            {preview && (
+              <div
+                className="rounded-xl px-4 py-3 text-sm space-y-2"
+                style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }}
+              >
+                <div className="font-semibold">{t('csv.previewTitle')}</div>
+                <div className="flex justify-between"><span>{t('csv.previewRows')}</span><span className="font-mono font-semibold">{preview.records.length}</span></div>
+                <div className="flex justify-between">
+                  <span>{t('csv.previewConverted')}</span>
+                  <span className="font-mono font-semibold" style={preview.convertedCount === 0 ? { color: '#dc2626' } : undefined}>
+                    {preview.convertedCount}
+                  </span>
+                </div>
+                <div className="flex justify-between"><span>{t('csv.previewKeyMode')}</span><span className="font-mono">{t(preview.keyMode === 'ID' ? 'csv.keyModeId' : 'csv.keyModeEmail')}</span></div>
+                {preview.convertedCount === 0 && (
+                  <div className="pt-1" style={{ color: '#dc2626' }}>{t('csv.previewZeroWarn')}</div>
+                )}
+                <div className="pt-1 text-xs" style={{ color: '#15803d' }}>{t('csv.previewHint')}</div>
+                <button
+                  type="button"
+                  onClick={() => mutation.mutate({ records: preview.records })}
+                  disabled={mutation.isPending}
+                  className="w-full mt-1 py-2 rounded-lg text-sm font-semibold text-white transition-opacity disabled:opacity-40"
+                  style={{ background: '#16a34a' }}
+                >
+                  {mutation.isPending ? t('csv.uploading') : t('csv.previewConfirm')}
+                </button>
               </div>
             )}
 
@@ -372,6 +503,11 @@ export default function DataUpload() {
                 return t('csv.errMaskedRequiresId', { n: (data.rows || []).length, rows: (data.rows || []).slice(0, 5).join(', ') })
               if (data?.code === 'INCONSISTENT_KEY_MODE')
                 return t('csv.errMixedKeyMode')
+              if (data?.code === 'KEY_MODE_LOCKED')
+                return t('csv.errKeyModeLocked', {
+                  locked: t(data.lockedMode === 'ID' ? 'csv.keyModeId' : 'csv.keyModeEmail'),
+                  got: t(data.gotMode === 'ID' ? 'csv.keyModeId' : 'csv.keyModeEmail'),
+                })
               return data?.error || (mutation.error as Error)?.message || t('csv.uploadError')
             })()}
               </div>
@@ -380,14 +516,14 @@ export default function DataUpload() {
             {/* Upload result */}
             {uploadResult && <ResultPanel result={uploadResult} />}
 
-            {/* Submit */}
+            {/* 第一步：解析校验（真正提交在预览区确认后） */}
             <button
               type="submit"
               disabled={!selectedTaskId || !csvText.trim() || mutation.isPending}
               className="w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity disabled:opacity-40"
               style={{ background: 'var(--primary)' }}
             >
-              {mutation.isPending ? t('csv.uploading') : t('csv.upload')}
+              {t('csv.parseAndPreview')}
             </button>
           </form>
         </div>

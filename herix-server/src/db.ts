@@ -869,8 +869,13 @@ export async function initDatabase() {
       -- JSONB 而非 TEXT：任务附属配置只整体读写、无跨任务查询需求，但用原生 JSON 类型（不留旧 TEXT-blob 包袱）
       conversion_criteria JSONB NOT NULL DEFAULT '{"register":{"label":"新用户"},"convert":[]}',
       invitee_benefit TEXT,
-      referral_script TEXT
+      referral_script TEXT,
+      -- DETAIL 去重键模式，首批上传时锁定（ID=UserID列 / EMAIL=邮箱或姓名）。
+      -- 跨批切换会让同一用户算出两个 user_hash → 唯一索引挡不住 → 重复计费，
+      -- 故锁定后不一致整单拒绝（2026-08）
+      dedup_key_mode TEXT CHECK(dedup_key_mode IN ('ID','EMAIL'))
     )`,
+    `ALTER TABLE task_referral_specs ADD COLUMN IF NOT EXISTS dedup_key_mode TEXT`,
     // 存量数据迁移（幂等）：主表旧列 → spec 表。用 DO 块守卫列存在性——
     // 下面紧接着 DROP 旧列，二次启动时旧列已不在，裸 INSERT..SELECT 会直接报错
     `DO $$ BEGIN

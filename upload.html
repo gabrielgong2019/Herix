@@ -212,7 +212,7 @@ function renderUploadPage() {
   html += '<div class="card">'
     + '<div class="sec-title">📤 上传转化数据</div>'
     + '<div style="font-size:12px;color:#6b7280;margin-bottom:10px">CSV 格式：<code style="background:#f3f4f6;padding:1px 6px;border-radius:4px">' + (isDetail ? '推广码, 用户邮箱或ID, 是否完成交易' : '推广码, 注册数, 使用数') + '</code>（第一行为表头，忽略）</div>'
-    + '<textarea id="csv-input" placeholder="' + (isDetail ? 'code,用户邮箱或ID,是否完成交易&#10;HERIX-A3K9Z2,alice@gmail.com,1&#10;HERIX-A3K9Z2,bob@yahoo.co.jp,0' : 'code,registered_count,used_count&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3') + '"></textarea>'
+    + '<textarea id="csv-input" oninput="cancelUpload()" placeholder="' + (isDetail ? 'code,用户邮箱或ID,是否完成交易&#10;HERIX-A3K9Z2,alice@gmail.com,1&#10;HERIX-A3K9Z2,bob@yahoo.co.jp,0' : 'code,registered_count,used_count&#10;HERIX-A3K9Z2,10,5&#10;HERIX-DEF456,8,3') + '"></textarea>'
     + '<div class="file-row">'
     + '<label class="file-label" for="csv-file">📁 选择文件</label>'
     + '<input type="file" id="csv-file" accept=".csv,.txt" style="display:none" onchange="loadFile(event)">'
@@ -240,7 +240,7 @@ function loadFile(e) {
   if (!file) return;
   document.getElementById('file-name').textContent = file.name;
   var reader = new FileReader();
-  reader.onload = function(ev) { document.getElementById('csv-input').value = ev.target.result; };
+  reader.onload = function(ev) { document.getElementById('csv-input').value = ev.target.result; cancelUpload(); };
   reader.readAsText(file, 'UTF-8');
 }
 
@@ -264,28 +264,123 @@ function downloadTemplate() {
   a.click();
 }
 
+// 表头驱动解析（与商家端 DataUpload.tsx 同口径）。
+// 旧版按固定列位读 cols[0..2]，对方导出多一列就整体错位——Remitly 的表结构里
+// cols[2] 是 user_email_masked，被当成"是否转化"，全批判未转化（2026-08 事故）。
+// 涉及结算，一律"宁可报错、不可猜"：列名精确匹配、缺列报错、逐行校验列数。
+function normHeader(h) {
+  return String(h||'').trim().toLowerCase().replace(/^﻿/, '').replace(/[_-]+/g,' ').replace(/\s+/g,' ');
+}
+function findHeaderIdx(headers, aliases) {
+  for (var a = 0; a < aliases.length; a++) {
+    var hit = headers.indexOf(normHeader(aliases[a]));
+    if (hit >= 0) return hit;
+  }
+  return -1;
+}
+/** RFC4180 单行解析：支持 "含,逗号" 与 "" 转义 */
+function splitCsvLine(line) {
+  var out = [], cur = '', inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (inQ) {
+      if (ch === '"') { if (line[i+1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === ',') { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out.map(function(c){ return c.trim(); });
+}
+var ALIAS_CODE     = ['code','promo code','promo','推广码','紹介コード','referral code','referral'];
+var ALIAS_UNIQUEID = ['user id','userid','unique id','uniqueid','customer id','唯一id','用户id','ユーザーid'];
+var ALIAS_USER     = ['user email masked','user email','email','user','name','邮箱','用户','メール','ユーザー'];
+var ALIAS_CONV     = ['converted','conversion','usage status','is converted','txn','是否完成交易','转化','交易','取引','成約','コンバージョン'];
+var ALIAS_REG      = ['registered','registered count','registrations','signups','注册数','登録数'];
+var ALIAS_USED     = ['used','used count','usage','usage count','使用数','利用数'];
+
+var TRUTHY = ['1','true','yes','y','是'];
+var FALSY  = ['0','false','no','n','否',''];
+
+/** 成功返回 {ok:true, records, convertedCount}；失败返回 {ok:false, error:'中文原因'} */
 function parseCsv(raw) {
-  var lines = raw.trim().split('\n').filter(function(l){ return l.trim(); });
-  var records = [];
+  var lines = raw.trim().split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  if (lines.length < 2) return { ok:false, error:'至少需要两行：第一行表头 + 至少一行数据' };
+
+  var rawHeaders = splitCsvLine(lines[0]);
+  var headers = rawHeaders.map(normHeader);
+  var colCount = headers.length;
+  var shown = rawHeaders.map(function(h,i){ return '第'+(i+1)+'列「'+(h||'(空)')+'」'; }).join('，');
+  var expect = function(a){ return a.slice(0,3).join(' / '); };
   var isDetail = taskInfo && taskInfo.dataMode === 'DETAIL';
-  var start = 0;
-  // 跳过表头
-  if (lines.length > 0 && /code|推广码|promo/i.test(lines[0])) start = 1;
-  for (var i = start; i < lines.length; i++) {
-    var cols = lines[i].split(',');
-    var code = (cols[0]||'').trim();
-    if (!code) continue;
-    if (isDetail) {
-      // 明细：code, 用户标识, 是否完成交易
-      var user = (cols[1]||'').trim();
-      if (!user) continue;
-      records.push({ code: code, user: user, converted: (cols[2]||'0').trim() });
-    } else {
-      if (cols.length < 3) continue;
-      records.push({ code: code, registered_count: parseInt(cols[1].trim(),10)||0, used_count: parseInt(cols[2].trim(),10)||0 });
+
+  var codeIdx = findHeaderIdx(headers, ALIAS_CODE);
+  if (codeIdx === -1) return { ok:false, error:'未找到「推广码」列。模板要求列名为：' + expect(ALIAS_CODE) + '。你的表头依次是：' + shown + '。请把对应列改成模板列名后重新上传。' };
+
+  var records = [], convertedCount = 0;
+
+  if (isDetail) {
+    var uniqueIdx = findHeaderIdx(headers, ALIAS_UNIQUEID);
+    var userIdx = findHeaderIdx(headers, ALIAS_USER);
+    if (userIdx === uniqueIdx) userIdx = -1;
+    var convIdx = findHeaderIdx(headers, ALIAS_CONV);
+    if (uniqueIdx === -1 && userIdx === -1)
+      return { ok:false, error:'未找到「用户标识」列。模板要求列名为：' + expect(ALIAS_UNIQUEID) + '（优先）/ ' + expect(ALIAS_USER) + '。你的表头依次是：' + shown + '。' };
+    if (convIdx === -1)
+      return { ok:false, error:'未找到「是否完成交易」列——该列缺失会导致全部记录判为未转化、赫使拿不到结算，因此不允许上传。模板要求列名为：' + expect(ALIAS_CONV) + '。你的表头依次是：' + shown + '。' };
+    var keyMode = uniqueIdx >= 0 ? 'ID' : 'EMAIL';
+
+    for (var i = 1; i < lines.length; i++) {
+      var rowNo = i + 1;
+      var cols = splitCsvLine(lines[i]);
+      if (cols.length !== colCount)
+        return { ok:false, error:'第 ' + rowNo + ' 行列数为 ' + cols.length + '，与表头 ' + colCount + ' 列不符（含逗号的字段请用英文双引号包裹）' };
+      var code = cols[codeIdx] || '';
+      var uniqueId = uniqueIdx >= 0 ? (cols[uniqueIdx] || '') : '';
+      var user = userIdx >= 0 ? (cols[userIdx] || '') : '';
+      if (!code && !uniqueId && !user) continue;
+      if (!code) return { ok:false, error:'第 ' + rowNo + ' 行缺少推广码' };
+      if (keyMode === 'ID' && !uniqueId) return { ok:false, error:'第 ' + rowNo + ' 行缺少用户ID（本文件含用户ID列时不允许留空，否则同一用户会被重复计费）' };
+      if (keyMode === 'EMAIL' && !user) return { ok:false, error:'第 ' + rowNo + ' 行缺少用户标识' };
+      var convRaw = (cols[convIdx] || '').toLowerCase();
+      if (TRUTHY.indexOf(convRaw) === -1 && FALSY.indexOf(convRaw) === -1)
+        return { ok:false, error:'第 ' + rowNo + ' 行「是否完成交易」取值无法识别：' + (cols[convIdx]||'') + '（应为 1/0）' };
+      var converted = TRUTHY.indexOf(convRaw) !== -1;
+      if (converted) convertedCount++;
+      records.push({ code: code, user: user, uniqueId: uniqueId || undefined, converted: converted });
+    }
+  } else {
+    var regIdx = findHeaderIdx(headers, ALIAS_REG);
+    var usedIdx = findHeaderIdx(headers, ALIAS_USED);
+    if (regIdx === -1 || usedIdx === -1)
+      return { ok:false, error:'未找到「注册数」「使用数」列。模板要求列名为：' + expect(ALIAS_REG) + ' + ' + expect(ALIAS_USED) + '。你的表头依次是：' + shown + '。' };
+    for (var j = 1; j < lines.length; j++) {
+      var rn = j + 1;
+      var c2 = splitCsvLine(lines[j]);
+      if (c2.length !== colCount)
+        return { ok:false, error:'第 ' + rn + ' 行列数为 ' + c2.length + '，与表头 ' + colCount + ' 列不符' };
+      var cd = c2[codeIdx] || '';
+      if (!cd) continue;
+      var reg = Number(c2[regIdx]), used = Number(c2[usedIdx]);
+      if (!isFinite(reg) || reg < 0 || reg % 1 !== 0 || !isFinite(used) || used < 0 || used % 1 !== 0)
+        return { ok:false, error:'第 ' + rn + ' 行注册数/使用数必须为非负整数' };
+      records.push({ code: cd, registered_count: reg, used_count: used });
+      convertedCount += used;
     }
   }
-  return records;
+
+  if (!records.length) return { ok:false, error:'没有解析到有效数据行' };
+  return { ok:true, records: records, convertedCount: convertedCount };
+}
+
+/** 待确认批次：非 null 表示预览已展示，下一次 doUpload() 才真正提交 */
+var pendingConfirm = null;
+
+function cancelUpload() {
+  pendingConfirm = null;
+  var el = document.getElementById('upload-result');
+  if (el) el.innerHTML = '';
 }
 
 function doUpload() {
@@ -293,8 +388,28 @@ function doUpload() {
   var resultEl = document.getElementById('upload-result');
   if (!raw.trim()) { resultEl.innerHTML = '<div class="alert alert-error">请粘贴数据或选择 CSV 文件</div>'; return; }
 
-  var records = parseCsv(raw);
-  if (records.length === 0) { resultEl.innerHTML = '<div class="alert alert-error">未解析到有效数据，请检查格式</div>'; return; }
+  var parsed = parseCsv(raw);
+  if (!parsed.ok) { resultEl.innerHTML = '<div class="alert alert-error">❌ ' + esc(parsed.error) + '</div>'; return; }
+  var records = parsed.records;
+
+  // 结算不可逆：解析结果先给品牌方"最后一眼"，确认后才真正提交
+  if (!pendingConfirm) {
+    pendingConfirm = records;
+    var zeroWarn = parsed.convertedCount === 0
+      ? '<div style="color:#b91c1c;margin-top:6px">⚠️ 本批次已完成交易的记录为 <b>0</b> 条，请确认「是否完成交易」列取值是否正确（应为 1/0）。</div>'
+      : '';
+    resultEl.innerHTML = '<div class="alert alert-info">'
+      + '<div style="font-weight:700;margin-bottom:8px">请确认本次上传内容</div>'
+      + '<div class="result-row"><span>识别记录</span><span class="badge">' + records.length + ' 条</span></div>'
+      + '<div class="result-row"><span>其中已完成交易</span><span class="badge">' + parsed.convertedCount + ' 条</span></div>'
+      + zeroWarn
+      + '<div style="font-size:12px;color:#6b7280;margin-top:8px">仅新增的转化会触发结算，重复上传不会重复计费。</div>'
+      + '<button class="btn" style="margin-top:10px" onclick="doUpload()">确认上传</button>'
+      + '<button class="btn btn-outline" style="margin-top:10px;margin-left:8px" onclick="cancelUpload()">取消</button>'
+      + '</div>';
+    return;
+  }
+  pendingConfirm = null;
 
   resultEl.innerHTML = '<div class="alert alert-info">⏳ 上传中（' + records.length + ' 条记录）…</div>';
 

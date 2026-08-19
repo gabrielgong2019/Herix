@@ -607,3 +607,34 @@
     margin-bottom: 0;
   }
 }
+
+/* 走错端引导页（商家账号登进赫使端时显示） */
+.wrong-portal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+}
+.wp-card {
+  width: 100%;
+  background: #fff;
+  border-radius: 24px;
+  padding: 56px 40px 40px;
+  text-align: center;
+}
+.wp-icon { display: block; font-size: 64px; margin-bottom: 20px; }
+.wp-title { display: block; font-size: 32px; font-weight: 600; margin-bottom: 16px; }
+.wp-desc {
+  display: block;
+  font-size: 26px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 40px;
+}
+.wrong-portal .btn-outline { margin-top: 20px; }
+.wp-logout {
+  display: block;
+  margin-top: 32px;
+  font-size: 24px;
+  color: var(--text-muted);
+}

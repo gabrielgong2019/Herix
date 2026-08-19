@@ -1294,5 +1294,11 @@
   "apply.eitherNeedContent": "请上传图片或提供内容链接",
   "hd.copyShareText": "复制分享文案",
   "hd.shareTextCopied": "分享文案已复制",
-  "merchant.csv.hdrUniqueId": "唯一ID"
+  "merchant.csv.hdrUniqueId": "唯一ID",
+  "portal.brandOnlyTitle": "这是商家账号",
+  "portal.brandOnlyDesc": "{email} 目前只有商家身份。赫使端的功能（接任务、交作品、提现）需要赫使身份。",
+  "portal.toMerchant": "前往商家后台",
+  "portal.becomeHerald": "我要同时成为赫使",
+  "portal.becomeHeraldOk": "已开通赫使身份",
+  "portal.switchAccount": "退出登录，换个账号"
 }

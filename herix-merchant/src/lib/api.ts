@@ -28,6 +28,12 @@ http.interceptors.request.use((config) => {
 })
 
 // ── Auth ──────────────────────────────────────────────────────────
+export const usersApi = {
+  /** 给当前账号追加角色（走错端引导页用）。后端换发含新角色的 token，调用方须立即替换存储 */
+  addRole: (role: 'HERALD' | 'BRAND') =>
+    http.post<{ token: string; roles: string[] }>('/users/add-role', { role }),
+}
+
 export const authApi = {
   login: (email: string, password: string) =>
     http.post<{ token: string; user: MerchantUser }>('/auth/login', { account: email, password }),
@@ -263,6 +269,8 @@ export interface MerchantUser {
   contact_email?: string
   brandName?: string
   role?: string
+  /** 多角色账号的完整角色集（/auth/me 恒返回）。走错端的判断以它为准，不看单个 role */
+  roles?: string[]
   brand_onboarded?: boolean
   // brand_profile fields joined by auth/me
   industry?: string

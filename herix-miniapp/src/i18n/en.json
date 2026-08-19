@@ -1294,5 +1294,11 @@
   "apply.eitherNeedContent": "Please upload images or provide a content link",
   "hd.copyShareText": "Copy share text",
   "hd.shareTextCopied": "Share text copied",
-  "merchant.csv.hdrUniqueId": "Unique ID"
+  "merchant.csv.hdrUniqueId": "Unique ID",
+  "portal.brandOnlyTitle": "This is a brand account",
+  "portal.brandOnlyDesc": "{email} currently has brand access only. Herald features (apply, submit, withdraw) require a herald role.",
+  "portal.toMerchant": "Go to brand portal",
+  "portal.becomeHerald": "Also become a herald",
+  "portal.becomeHeraldOk": "Herald role added",
+  "portal.switchAccount": "Log out and switch account"
 }

@@ -454,6 +454,29 @@ export default class Profile extends Component<{}, State> {
     }
   };
 
+  /** 走错端引导：去商家后台。小程序不能直接开外部网页，沿用复制链接的既有做法 */
+  goMerchant = () => {
+    const MERCHANT_URL = 'https://herix.huaxuex.com/merchant/';
+    if (process.env.TARO_ENV === 'weapp') {
+      Taro.setClipboardData({ data: MERCHANT_URL });
+      Taro.showToast({ title: t('profile.brandUrlCopied'), icon: 'none', duration: 3000 });
+    } else {
+      window.open(MERCHANT_URL, '_blank');
+    }
+  };
+
+  /** 走错端引导：就地给本账号补赫使身份（有些用户是真想双开，不是走错门） */
+  addHeraldRole = async () => {
+    try {
+      const r = await users.addRole('HERALD');
+      if (r?.token) setToken(r.token); // 后端换发含新角色的 token，不换后续请求仍是旧角色
+      Taro.showToast({ title: t('portal.becomeHeraldOk'), icon: 'success' });
+      this.loadUser();
+    } catch (err: any) {
+      Taro.showToast({ title: err?.message || t('common.opFailed'), icon: 'none' });
+    }
+  };
+
   goOnboard = () => Taro.navigateTo({ url: '/pages/onboard/index' });
   goWallet = () => Taro.navigateTo({ url: '/pages/wallet/index' });
 
@@ -594,6 +617,26 @@ export default class Profile extends Component<{}, State> {
 
 
     const u = user || {};
+    const roleList: string[] = u.roles || (u.role ? [u.role] : []);
+
+    // 走错端：/auth/login 赫使端与商户端共用、不校验角色，纯商家账号也能登进来。
+    // 核心操作后端有 requireRole 兜住（报名/交稿都 403），但界面是半残的、用户不知道原因，
+    // 故在此引导。双角色账号（BRAND+HERALD）不受影响，roles 含 HERALD 即放行。
+    if (user && roleList.length > 0 && !roleList.includes('HERALD')) {
+      return (
+        <View className='profile-page wrong-portal'>
+          <View className='wp-card'>
+            <Text className='wp-icon'>🔀</Text>
+            <Text className='wp-title'>{t('portal.brandOnlyTitle')}</Text>
+            <Text className='wp-desc'>{t('portal.brandOnlyDesc', { email: u.email || u.nickname || '' })}</Text>
+            <View className='btn-primary' onClick={this.goMerchant}>{t('portal.toMerchant')}</View>
+            <View className='btn-outline' onClick={this.addHeraldRole}>{t('portal.becomeHerald')}</View>
+            <Text className='wp-logout' onClick={this.handleLogout}>{t('portal.switchAccount')}</Text>
+          </View>
+        </View>
+      );
+    }
+
     const isHerald = u.role === 'HERALD';
     const initial = (u.nickname || '?')[0].toUpperCase();
     const color = AVATAR_COLORS[(u.nickname || '').charCodeAt(0) % AVATAR_COLORS.length] || AVATAR_COLORS[0];
@@ -601,7 +644,7 @@ export default class Profile extends Component<{}, State> {
     const socials = u.social_platforms || [];
     const tierSnap = u.tier_snapshot || {};
     const bank = u.bank_account || null;
-    const roles: string[] = u.roles || [u.role];
+    const roles: string[] = roleList;
     const { editingName, newNick } = this.state;
 
     return (

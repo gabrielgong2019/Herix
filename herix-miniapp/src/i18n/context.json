@@ -1098,5 +1098,8 @@
   "task.withdrawConfirmNo": "二次确认取消按钮（继续保留报名）",
   "task.withdrawSuccess": "取消成功 Toast",
   "index.loadFailed": "首页任务列表加载失败提示（区别于真正的无任务）",
-  "index.retry": "加载失败后的重试按钮"
+  "index.retry": "加载失败后的重试按钮",
+  "portal.brandOnlyTitle": "走错端引导页标题：商家账号登进了赫使端（登录接口两端共用不校验角色）",
+  "portal.brandOnlyDesc": "走错端引导页说明，{email}为当前账号",
+  "portal.becomeHerald": "走错端引导页按钮：给当前商家账号补赫使身份（有人是真想双开）"
 }

@@ -748,5 +748,11 @@
   "task.contentTypeEither": "Hình ảnh hoặc video",
   "apply.eitherNeedContent": "Vui lòng tải ảnh lên hoặc cung cấp liên kết nội dung",
   "hd.copyShareText": "Sao chép lời mời",
-  "hd.shareTextCopied": "Đã sao chép lời mời"
+  "hd.shareTextCopied": "Đã sao chép lời mời",
+  "portal.brandOnlyTitle": "Đây là tài khoản thương hiệu",
+  "portal.brandOnlyDesc": "{email} hiện chỉ có quyền thương hiệu. Các chức năng đại sứ (nhận việc, nộp bài, rút tiền) cần vai trò đại sứ.",
+  "portal.toMerchant": "Tới cổng thương hiệu",
+  "portal.becomeHerald": "Đồng thời trở thành đại sứ",
+  "portal.becomeHeraldOk": "Đã thêm vai trò đại sứ",
+  "portal.switchAccount": "Đăng xuất, đổi tài khoản"
 }

@@ -1294,5 +1294,11 @@
   "apply.eitherNeedContent": "画像をアップロードするか、コンテンツリンクを入力してください",
   "hd.copyShareText": "シェア文をコピー",
   "hd.shareTextCopied": "シェア文をコピーしました",
-  "merchant.csv.hdrUniqueId": "一意のID"
+  "merchant.csv.hdrUniqueId": "一意のID",
+  "portal.brandOnlyTitle": "こちらは企業アカウントです",
+  "portal.brandOnlyDesc": "{email} は現在企業アカウントのみです。アンバサダー機能（案件応募・作品提出・出金）には アンバサダー登録が必要です。",
+  "portal.toMerchant": "企業管理画面へ",
+  "portal.becomeHerald": "アンバサダーとしても登録する",
+  "portal.becomeHeraldOk": "アンバサダー登録が完了しました",
+  "portal.switchAccount": "ログアウトして別のアカウントへ"
 }

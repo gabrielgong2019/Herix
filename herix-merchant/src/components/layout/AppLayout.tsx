@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
+import { WrongPortal } from './WrongPortal'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function AppLayout() {
@@ -28,6 +29,11 @@ export function AppLayout() {
   }
 
   if (!user) return <Navigate to="/login" replace />
+
+  // 走错端：登录接口不校验角色，纯赫使账号也能登进商家后台，看到的是半残界面。
+  // 以 roles 全集判断（双角色账号两端都要能进），老账号 roles 缺失时回退单个 role。
+  const roles = user.roles || (user.role ? [user.role] : [])
+  if (!roles.includes('BRAND')) return <WrongPortal />
 
   // Gate: force onboarding if not yet completed
   if (user.brand_onboarded === false && location.pathname !== '/onboard') {

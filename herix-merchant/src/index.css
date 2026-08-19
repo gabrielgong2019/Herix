@@ -31,6 +31,15 @@
 
   #root { min-height: 100vh; }
 
+  /* 手机端兜底（2026-08-18）：本后台按桌面设计，窄屏下侧边栏改抽屉后仍有
+     宽表格/固定列宽的页面会横向撑破。整页永不横向滚动，宽内容各自局部滚动。 */
+  @media (max-width: 767px) {
+    html, body { overflow-x: hidden; }
+    table { display: block; overflow-x: auto; max-width: 100%; }
+    /* 桌面多列网格在窄屏一律压成单列，避免每列被挤成竖排文字 */
+    [class*="grid-cols-"] { grid-template-columns: 1fr !important; }
+  }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 3px; }

@@ -21,7 +21,14 @@ const AGENCY_NAV_ITEMS = [
   { key: 'partner', path: '/partner', icon: Handshake },
 ]
 
-export function Sidebar() {
+interface SidebarProps {
+  /** 窄屏抽屉是否展开（≥md 恒定展开，此值被忽略） */
+  open?: boolean
+  /** 点导航后收起抽屉 */
+  onNavigate?: () => void
+}
+
+export function Sidebar({ open = false, onNavigate }: SidebarProps) {
   const { t } = useTranslation()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -34,7 +41,12 @@ export function Sidebar() {
   return (
     <aside
       style={{ width: 'var(--sidebar-w)', background: 'var(--sidebar)' }}
-      className="fixed top-0 left-0 h-screen flex flex-col z-50"
+      className={cn(
+        'fixed top-0 left-0 h-screen flex flex-col z-50 transition-transform duration-200',
+        // 窄屏：默认滑出屏外，展开时滑入；≥md 恒定固定在左侧
+        'md:translate-x-0',
+        open ? 'translate-x-0' : '-translate-x-full',
+      )}
     >
       {/* Logo */}
       <div className="px-5 py-4 border-b border-white/10 flex items-center gap-2.5">
@@ -54,6 +66,7 @@ export function Sidebar() {
             key={key}
             to={path}
             end={path === '/'}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
                 'flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm mx-1 my-0.5 transition-all',

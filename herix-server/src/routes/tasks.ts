@@ -857,7 +857,8 @@ async function handleDetailUpload(
   if (lockedMode && lockedMode !== keyMode) {
     const label = (m: string) => (m === 'ID' ? '用户ID' : '邮箱/姓名');
     return res.status(400).json({
-      error: `本任务首次上传时已锁定去重键为「${label(lockedMode)}」，本次为「${label(keyMode)}」。切换去重键会让同一用户被重复计费，请沿用原口径重新导出后上传。`,
+      error: `本次上传的模板与上次不一致：上次用「${label(lockedMode)}」识别用户，本次用「${label(keyMode)}」。`
+           + `识别方式变了会把同一个用户当成两个人、导致重复计费，因此已拦截。请沿用上次的模板重新导出后上传。`,
       code: 'KEY_MODE_LOCKED',
       lockedMode,
       gotMode: keyMode,

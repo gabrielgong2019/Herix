@@ -624,7 +624,7 @@
     "errRowNoUser": "Row {{row}} is missing the user identifier (email or name)",
     "errConvValue": "Row {{row}}: unrecognized conversion value \"{{value}}\". Use 1 (converted) or 0 (not converted).",
     "errCountValue": "Row {{row}}: registered/used counts must be non-negative integers",
-    "errKeyModeLocked": "This task locked its dedup key to \"{{locked}}\" on the first upload; this file uses \"{{got}}\". Switching keys would double-charge the same user — please re-export using the original format.",
+    "errKeyModeLocked": "This file uses a different template than last time: previously users were identified by \"{{locked}}\", now by \"{{got}}\". Changing how users are identified would treat the same person as two people and double-charge you, so the upload was blocked. Please re-export using the same template as before.",
     "keyModeId": "User ID",
     "keyModeEmail": "Email / name",
     "parseAndPreview": "Validate & preview",

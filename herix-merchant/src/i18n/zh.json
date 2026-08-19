@@ -619,7 +619,7 @@
     "errRowNoUser": "第 {{row}} 行缺少用户标识（邮箱或姓名）",
     "errConvValue": "第 {{row}} 行「是否完成交易」取值无法识别：{{value}}。应为 1（已完成）或 0（未完成）。",
     "errCountValue": "第 {{row}} 行注册数/使用数必须为非负整数",
-    "errKeyModeLocked": "本任务首次上传时已锁定去重键为「{{locked}}」，本次为「{{got}}」。切换去重键会让同一用户被重复计费，请沿用原口径重新导出后上传。",
+    "errKeyModeLocked": "本次上传的模板与上次不一致：上次用「{{locked}}」识别用户，本次用「{{got}}」。识别方式变了会把同一个用户当成两个人、导致重复计费，因此已拦截。请沿用上次的模板重新导出后上传。",
     "keyModeId": "用户ID",
     "keyModeEmail": "邮箱/姓名",
     "parseAndPreview": "校验并预览",

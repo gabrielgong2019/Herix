@@ -33,7 +33,7 @@ npm run build        # 输出到 dist/
 | 文件/目录 | 用途 | 角色 |
 |------|------|------|
 | `herix-miniapp/` | 赫使（KOL/大使）端 | **Taro(React) 双端**：微信小程序 + H5。浏览任务、报名、提交、钱包、消息、入驻引导；中日英三语 |
-| `merchant.html` | 品牌商家端 | 发布任务、审核报名、审核内容、数据上传（纯 HTML 无构建） |
+| `herix-merchant/` | 品牌商家端（React SPA，挂 `/merchant`）| 发布任务、审核报名、审核内容、数据上传。旧 `merchant.html` 已于 2026-08-18 删除（双实现导致 CSV 解析器修漏，见 git 历史 / ~/Herix_backups/），`/merchant.html` 现 301 跳新版 |
 | `admin.html` | 运营后台 | 用户管理、任务管理、结算、KYC 审核、本地化词条矩阵（纯 HTML 无构建） |
 | `herix-server/` | Express + TypeScript API | 统一后端，端口 4005（⚠️ 原 3005 与 MT5 回测 Agent 端口段 3000+ 冲突，2026-07-17 迁移）|
 

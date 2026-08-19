@@ -1994,12 +1994,12 @@ function addRole(role){
       // 更新 token 和 roles
       state.token=d.token;
       state.user.roles=d.roles;
-      // 品牌功能统一在 merchant.html 里，开通后直接跳转过去入驻，
+      // 品牌功能统一在 /merchant/ (React商家端) 里，开通后直接跳转过去入驻，
       // 不在本文件内触发过时的品牌入驻/管理流程
       if(role==='BRAND'){
         sessionStorage.setItem('herix_switch_token', state.token || '');
         sessionStorage.setItem('herix_switch_role', 'BRAND');
-        window.location.href = 'merchant.html';
+        window.location.href = '/merchant/';
         return;
       }
       render();
@@ -2294,11 +2294,11 @@ function loginHTML(){
     registerSubtitle: '成为品牌与社区的桥梁',
     registerSubmitText: '注册',
     nicknameLabel: '昵称',
-    // 身份切换已移除（2026-07-19）：本站注册恒定赫使，商家/广告代理走 merchant.html 入驻向导
+    // 身份切换已移除（2026-07-19）：本站注册恒定赫使，商家/广告代理走 /merchant/ 入驻向导
   };
   h+=Auth.loginForm(opts);
   h+='<div class="link" onclick="toggleLoginTab()">'+(l?'没有账号？去注册':'已有账号？去登录')+'</div>';
-  if(!l) h+='<div class="link" style="margin-top:4px" onclick="window.location.href=\'/merchant.html?intent=brand\'">商家 / 广告代理入驻 →</div>';
+  if(!l) h+='<div class="link" style="margin-top:4px" onclick="window.location.href=\'/merchant/register\'">商家 / 广告代理入驻 →</div>';
   return h;
 }
 
@@ -2529,7 +2529,7 @@ function switchRole(role) {
   if (role === 'BRAND') {
     sessionStorage.setItem('herix_switch_token', state.token || '');
     sessionStorage.setItem('herix_switch_role', 'BRAND');
-    window.location.href = 'merchant.html';
+    window.location.href = '/merchant/';
     return;
   }
   state.activeRole = role;
@@ -2607,7 +2607,7 @@ function switchAccount(){
       var roles=d.user.roles||[d.user.role];
       if(d.user.role==='BRAND'&&!roles.includes('HERALD')){
         sessionStorage.setItem('herix_switch_token',d.token);
-        window.location.href='merchant.html';
+        window.location.href='/merchant/';
         return;
       }
       afterAuth(d);
@@ -2633,7 +2633,7 @@ function tryResumeSwitchedSession(){
       var roles=d.roles||[d.role];
       if(d.role==='BRAND'&&!roles.includes('HERALD')&&targetRole!=='HERALD'){
         sessionStorage.setItem('herix_switch_token',token);
-        window.location.href='merchant.html';
+        window.location.href='/merchant/';
         return;
       }
       state.user={id:d.id,nickname:d.nickname,role:d.role,roles:roles,is_verified:!!d.is_verified,is_onboarded:!!(d.is_onboarded||d.brand_onboarded)};
@@ -2919,7 +2919,7 @@ function onboardBrandHTML(){
     h+='<div style="font-size:12px;color:var(--muted);margin-top:6px">入驻后业务市场和结算币种不可更改，请谨慎选择</div></div>';
     h+='<div style="margin-top:16px"><label style="font-size:12px;color:var(--muted)">公司 / 品牌名称 *</label><input id="ob-company" class="ob-input" placeholder="例：周大福珠宝" value="'+(d.companyName||'')+'"></div>';
     h+='<div style="margin-top:12px"><label style="font-size:12px;color:var(--muted)">所属行业</label>';
-    // id 入库（2026-07-18，与 merchant.html industrySelectHTML 同一套 id）
+    // id 入库（2026-07-18，与商家端 industrySelect 同一套 id）
     var industries=[['beauty','美妆'],['fashion','时尚'],['food','食品饮料'],['finance','金融服务'],['travel','旅游'],['baby','母婴'],['ecommerce','电商'],['other','其他']];
     h+='<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">';
     for(var ii=0;ii<industries.length;ii++){

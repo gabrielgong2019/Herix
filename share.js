@@ -54,7 +54,7 @@ server.listen(PORT, () => {
   console.log(`\n📡 分享服务器已启动`);
   console.log(`   http://localhost:${PORT}`);
   console.log(`   http://localhost:${PORT}/herix.html`);
-  console.log(`   http://localhost:${PORT}/merchant.html`);
+  console.log(`   http://localhost:${PORT}/merchant/`);
   console.log(`   http://localhost:${PORT}/admin.html`);
   console.log(`\n🔗 用 ngrok 分享出去:`);
   console.log(`   ngrok http ${PORT}`);

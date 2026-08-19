@@ -58,6 +58,6 @@ app.use((err, _req, res, _next) => {
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Herix running on http://0.0.0.0:${PORT}`);
   console.log(`  Preview: /herix.html`);
-  console.log(`  Merchant: /merchant.html`);
+  console.log(`  Merchant: /merchant/`);
   console.log(`  Admin: /admin.html`);
 });

@@ -383,7 +383,7 @@ export default class Profile extends Component<{}, State> {
     }
     this.setState({ loading: true });
     try {
-      // 注册恒定赫使：商家/广告代理走 merchant.html 入驻向导（2026-07-19 移除身份切换）
+      // 注册恒定赫使：商家/广告代理走 /merchant/ 入驻向导（2026-07-19 移除身份切换）
       const role = 'HERALD';
       const res = await authApi.register({ email, password, nickname, role, code: vcode.trim() });
       setToken(res.token);
@@ -432,7 +432,7 @@ export default class Profile extends Component<{}, State> {
   };
 
   addBrandRole = async () => {
-    const MERCHANT_URL = 'https://herix.huaxuex.com/merchant.html';
+    const MERCHANT_URL = 'https://herix.huaxuex.com/merchant/';
     const res = await Taro.showModal({ title: t('profile.addBrandTitle'), content: t('profile.addBrandConfirm'), confirmText: t('common.confirm'), cancelText: t('common.cancel') });
     if (!res.confirm) return;
     if (process.env.TARO_ENV === 'weapp') {

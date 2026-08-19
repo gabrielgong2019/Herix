@@ -56,11 +56,18 @@ app.use('/app', express.static(H5_DIR, {
   },
 }));
 app.get('/app/*', (_req, res) => res.sendFile(path.join(H5_DIR, 'index.html')));
-// 新版商家后台（React SPA）挂在 /merchant；旧 merchant.html 保留在 /merchant.html 过渡期并存
+// 商家后台（React SPA）。旧 merchant.html 已于 2026-08-18 下线删除：
+// 它跟本 SPA 是两套并行实现，CSV 解析器各写一份导致修了新版、商家用的旧版仍漏结算
+// （Remitly 108 行明细全判未转化）。老书签/外部链接 301 到新版，查询串原样带过去
+// （bind_task/bind_token 深链 AppLayout 已支持）。文件存 git 历史 + ~/Herix_backups/
 const MERCHANT_DIR = path.join(__dirname, '../../herix-merchant/dist');
+app.get('/merchant.html', (req, res) => {
+  const qs = req.originalUrl.includes('?') ? req.originalUrl.slice(req.originalUrl.indexOf('?')) : '';
+  res.redirect(301, '/merchant/' + qs);
+});
 app.use('/merchant', express.static(MERCHANT_DIR));
 app.get('/merchant/*', (_req, res) => res.sendFile(path.join(MERCHANT_DIR, 'index.html')));
-// 根路径 → 项目根目录（营销主页、merchant.html 等）
+// 根路径 → 项目根目录（营销主页等）
 app.use('/', express.static(path.join(__dirname, '../../')));
 // 用户上传的品牌素材（LOGO/宣传图）
 app.use('/uploads', express.static(UPLOADS_DIR));

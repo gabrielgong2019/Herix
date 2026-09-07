@@ -664,7 +664,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
     return res.status(400).json({ error: '该任务为汇总模式，请按「code,注册数,使用数」模板上传', code: 'MODE_MISMATCH', dataMode });
   }
   if (dataMode === 'DETAIL' && !isDetailShaped) {
-    return res.status(400).json({ error: '该任务为明细模式，请按「code,唯一ID,用户名或邮箱,是否完成交易」模板上传', code: 'MODE_MISMATCH', dataMode });
+    return res.status(400).json({ error: '该任务为明细模式，请按「code,唯一ID,用户名或邮箱,是否完成交易,交易时间」模板上传', code: 'MODE_MISMATCH', dataMode });
   }
   if (dataMode === 'DETAIL') {
     return handleDetailUpload(res, task, records as any[], { payoutPerConv, costPerConv, feePerConv, isTokenAuth: !!isTokenAuth, stripMoney: isBrandParty });
@@ -824,7 +824,7 @@ tasksRouter.post('/:id/csv', optionalAuth, async (req: Request, res: Response) =
 async function handleDetailUpload(
   res: Response,
   task: any,
-  records: Array<{ code?: string; user?: string; uniqueId?: string; converted?: any }>,
+  records: Array<{ code?: string; user?: string; uniqueId?: string; converted?: any; transaction_date?: string }>,
   money: { payoutPerConv: number; costPerConv: number; feePerConv: number; isTokenAuth: boolean; stripMoney?: boolean },
 ) {
   const now = () => new Date().toISOString();
@@ -918,9 +918,19 @@ async function handleDetailUpload(
     const userHash = hashUserKey(dedupKey);
     const userMasked = maskUserKey(rawUser || rawUniqueId);
     const converted = isTruthy(row.converted);
+
+    // 交易时间：品牌方填了 transaction_date 则用之（date_source='brand'），否则用上传时刻（date_source='system'）
+    const rawDate = String(row.transaction_date || '').trim();
+    const brandDate = rawDate && !isNaN(Date.parse(rawDate)) ? new Date(rawDate).toISOString() : null;
+    const dateSource: 'brand' | 'system' = brandDate ? 'brand' : 'system';
+    // converted=0：transaction_date 代表注册时间（registered_at）
+    // converted=1：transaction_date 代表转化时间（converted_at），注册时间用系统时间
+    const registeredAt = (!converted && brandDate) ? brandDate : now();
+    const convertedAt  = converted ? (brandDate ?? now()) : null;
+
     // 幂等键：同码内同用户唯一。同一用户在其他码下的记录不影响本行（分别计费）
     const existing = await findOne<any>(
-      'SELECT id, converted_at, settled_txn_id FROM referral_records WHERE task_id = ? AND code = ? AND user_hash = ?',
+      'SELECT id, converted_at, settled_txn_id, date_source FROM referral_records WHERE task_id = ? AND code = ? AND user_hash = ?',
       [task.id, code, userHash]
     );
     if (!existing) {
@@ -934,15 +944,32 @@ async function handleDetailUpload(
       }
       await insert('referral_records', {
         task_id: task.id, code, herald_id: at.herald_id, user_hash: userHash, user_masked: userMasked,
-        registered_at: now(), converted_at: converted ? now() : null,
+        registered_at: registeredAt, converted_at: convertedAt,
+        date_source: dateSource,
         created_at: now(), updated_at: now(),
       });
       touchedCodes.add(code);
       processed++;
     } else {
-      // 同码重复出现：仅允许 未转化→已转化 单向升级；1 改回 0 不降级、已结算不回收
+      // 同码重复出现：
+      // 1. 未转化→已转化 单向升级；1 改回 0 不降级、已结算不回收
+      // 2. date_source='system'→'brand' 允许用真实日期覆盖（反向不允许）
+      const updates: Record<string, any> = {};
       if (converted && !existing.converted_at) {
-        await update('referral_records', { converted_at: now(), updated_at: now() }, 'id = ?', [existing.id]);
+        updates.converted_at = convertedAt;
+      }
+      // converted=0 + 品牌提供日期：更新 registered_at（不论 date_source，两字段独立管理）
+      if (!converted && brandDate) {
+        updates.registered_at = brandDate;
+        updates.date_source = 'brand';
+      }
+      // converted=1 + 品牌提供日期 + 原日期是系统时间 + 未结算：覆盖 converted_at
+      if (converted && brandDate && existing.date_source === 'system' && existing.converted_at && !existing.settled_txn_id) {
+        updates.converted_at = brandDate;
+        updates.date_source = 'brand';
+      }
+      if (Object.keys(updates).length > 0) {
+        await update('referral_records', { ...updates, updated_at: now() }, 'id = ?', [existing.id]);
         touchedCodes.add(code);
       }
       processed++;

@@ -1115,6 +1115,8 @@ export async function initDatabase() {
        ('bank_account_name', '', '口座名義カナ')
      ON CONFLICT(key) DO NOTHING`,
     `ALTER TABLE tasks ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false`,
+    // date_source：区分日期来源——'brand'=品牌方 CSV 填写的真实交易时间，'system'=平台上传时自动打的时间（2026-09-07）
+    `ALTER TABLE referral_records ADD COLUMN IF NOT EXISTS date_source TEXT NOT NULL DEFAULT 'system'`,
     // 内容形式加 'either'（图片或视频任一即可，2026-08-07）：幂等重建 CHECK
     `ALTER TABLE task_content_specs DROP CONSTRAINT IF EXISTS task_content_specs_content_type_check`,
     `ALTER TABLE task_content_specs ADD CONSTRAINT task_content_specs_content_type_check

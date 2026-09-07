@@ -52,7 +52,8 @@ function splitCsvLine(line: string): string[] {
 const ALIAS_CODE     = ['code', 'promo code', 'promo', '推广码', '紹介コード', 'referral code', 'referral']
 const ALIAS_UNIQUEID = ['user id', 'userid', 'unique id', 'uniqueid', 'customer id', '唯一id', '用户id', 'ユーザーid']
 const ALIAS_USER     = ['user email masked', 'user email', 'email', 'user', 'name', '邮箱', '用户', 'メール', 'ユーザー']
-const ALIAS_CONV     = ['converted', 'conversion', 'usage status', 'is converted', 'txn', '是否完成交易', '转化', '交易', '取引', '成約', 'コンバージョン']
+const ALIAS_CONV     = ['converted', 'conversion', 'usage status', 'is converted', 'txn', 'event type', 'eventtype', '是否完成交易', '转化', '交易', '取引', '成約', 'コンバージョン']
+const ALIAS_DATE     = ['transaction_date', 'event_date', 'event date', 'eventdate', 'date', 'txn date', 'transaction date', '交易时间', '交易日期', '取引日']
 const ALIAS_REG      = ['registered', 'registered count', 'registrations', 'signups', '注册数', '登録数']
 const ALIAS_USED     = ['used', 'used count', 'usage', 'usage count', '使用数', '利用数']
 
@@ -118,6 +119,7 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
     let userIdx = findHeaderIdx(headers, ALIAS_USER)
     if (userIdx === uniqueIdx) userIdx = -1
     const convIdx = findHeaderIdx(headers, ALIAS_CONV)
+    const dateIdx = findHeaderIdx(headers, ALIAS_DATE)
 
     if (uniqueIdx === -1 && userIdx === -1)
       return { ok: false, error: { errorKey: 'csv.errNoUserCol', params: { expected: `${expectedNames(ALIAS_UNIQUEID)}（优先）/ ${expectedNames(ALIAS_USER)}`, headers: shown, hint: suggestColumn(headers, rawHeaders, ALIAS_UNIQUEID.concat(ALIAS_USER)) } } }
@@ -153,7 +155,8 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
       const converted = TRUTHY.includes(convRaw)
       if (converted) convertedCount++
 
-      records.push({ code, user, uniqueId: uniqueId || undefined, converted })
+      const transaction_date = dateIdx >= 0 ? (cols[dateIdx] || '').trim() || undefined : undefined
+      records.push({ code, user, uniqueId: uniqueId || undefined, converted, transaction_date })
     }
 
     if (!records.length) return { ok: false, error: { errorKey: 'csv.errNoValidRows' } }
@@ -186,10 +189,10 @@ function parseCsv(text: string, dataMode: 'AGGREGATE' | 'DETAIL'): ParseResult {
 
 // ── Template download ──────────────────────────────────────────────
 
-function downloadTemplate(dataMode: 'AGGREGATE' | 'DETAIL', hdrUser: string, hdrUniqueId: string, hdrConverted: string, hdrReg: string, hdrUsed: string) {
+function downloadTemplate(dataMode: 'AGGREGATE' | 'DETAIL', hdrUser: string, hdrUniqueId: string, hdrConverted: string, hdrReg: string, hdrUsed: string, hdrDate: string) {
   const csv =
     dataMode === 'DETAIL'
-      ? `code,${hdrUniqueId},${hdrUser},${hdrConverted}\nHERIX-EXAMPLE1,U1001,alice@gmail.com,1\nHERIX-EXAMPLE2,U1002,a**@gmail.com,0`
+      ? `code,${hdrUniqueId},${hdrUser},${hdrConverted},${hdrDate}\nHERIX-EXAMPLE1,U1001,alice@gmail.com,1,2026-08-25\nHERIX-EXAMPLE2,U1002,a**@gmail.com,0,2026-08-20`
       : `code,${hdrReg},${hdrUsed}\nHERIX-EXAMPLE1,0,0\nHERIX-EXAMPLE2,0,0`
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a')
@@ -209,9 +212,10 @@ function ModeBlock({ task }: { task: Task }) {
   const hdrConverted = t('csv.hdrConverted')
   const hdrReg = t('csv.hdrRegistered')
   const hdrUsed = t('csv.hdrUsed')
+  const hdrDate = t('csv.hdrDate')
 
   const sample = isDetail
-    ? `code,${hdrUniqueId},${hdrUser},${hdrConverted}\nHERIX-A3K9Z2,U1001,alice@gmail.com,1\nHERIX-A3K9Z2,U1002,a**@gmail.com,0`
+    ? `code,${hdrUniqueId},${hdrUser},${hdrConverted},${hdrDate}\nHERIX-A3K9Z2,U1001,alice@gmail.com,1,2026-08-25\nHERIX-A3K9Z2,U1002,a**@gmail.com,0,2026-08-20`
     : `code,${hdrReg},${hdrUsed}\nHERIX-A3K9Z2,10,5\nHERIX-DEF456,8,3`
 
   const noteKeys = isDetail
@@ -234,7 +238,7 @@ function ModeBlock({ task }: { task: Task }) {
         </div>
         <button
           type="button"
-          onClick={() => downloadTemplate(isDetail ? 'DETAIL' : 'AGGREGATE', hdrUser, hdrUniqueId, hdrConverted, hdrReg, hdrUsed)}
+          onClick={() => downloadTemplate(isDetail ? 'DETAIL' : 'AGGREGATE', hdrUser, hdrUniqueId, hdrConverted, hdrReg, hdrUsed, hdrDate)}
           className="text-xs px-3 py-1.5 rounded-lg font-medium border transition-colors hover:bg-gray-50"
           style={{ border: '1px solid var(--border)', color: '#374151' }}
         >

@@ -559,7 +559,7 @@ export interface TopupRequest {
 
 export type CsvRecord =
   | { code: string; registered_count: number; used_count: number }
-  | { code: string; user: string; uniqueId?: string; converted: boolean }
+  | { code: string; user: string; uniqueId?: string; converted: boolean; transaction_date?: string }
 
 export interface CsvUploadResult {
   processed: number

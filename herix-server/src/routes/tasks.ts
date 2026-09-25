@@ -70,7 +70,7 @@ tasksRouter.post('/events', optionalAuth, async (req: Request, res: Response) =>
 
 
 /** GET /api/tasks — 获取任务列表（已登录用户可见自己所有状态，未登录只见 OPEN） */
-tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
+tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => { try {
   const { status, mode, creator, search, category, page = '1', limit = '20', lang } = req.query;
   const skip = (Number(page) - 1) * Number(limit);
 
@@ -121,7 +121,10 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
   }
 
   const totalRow = await findOne<{ cnt: number }>(
-    `SELECT COUNT(*) as cnt FROM tasks t WHERE ${where}`, params
+    `SELECT COUNT(*) as cnt FROM tasks t
+     JOIN users u ON u.id = t.creator_id
+     LEFT JOIN brand_profiles bp ON bp.user_id = t.creator_id
+     WHERE ${where}`, params
   );
 
   const total = totalRow?.cnt || 0;
@@ -196,6 +199,7 @@ tasksRouter.get('/', optionalAuth, async (req: Request, res: Response) => {
       totalPages: Math.ceil(total / Number(limit)),
     },
   });
+  } catch (e) { console.error('[GET /tasks]', e); res.status(500).json({ error: '服务器错误' }); }
 });
 
 /** POST /api/tasks/preview — 任务成本预算（商家端发布前展示）。

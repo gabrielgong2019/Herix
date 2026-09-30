@@ -1305,7 +1305,16 @@ tasksRouter.put('/:id', requireAuth, requireRole('BRAND', 'ADMIN'), async (req: 
   const task = await findOne<any>('SELECT id, creator_id, status, mode FROM tasks WHERE id = ?', [req.params.id]);
   if (!task) return res.status(404).json({ error: '任务不存在' });
   if (task.creator_id !== req.user!.userId && req.user!.role !== 'ADMIN') return res.status(403).json({ error: '无权限' });
-  if (task.status !== 'DRAFT') return res.status(400).json({ error: '只有草稿可以编辑' });
+  // OPEN 任务只允许改截止时间
+  if (task.status !== 'DRAFT') {
+    if (!['OPEN', 'IN_PROGRESS', 'PENDING_REVIEW'].includes(task.status)) {
+      return res.status(400).json({ error: '只有草稿或进行中的任务可以编辑' });
+    }
+    const { deadline } = req.body;
+    if (deadline === undefined) return res.status(400).json({ error: '进行中的任务只允许修改截止时间' });
+    await update('tasks', { deadline: deadline || null }, 'id = ?', [req.params.id]);
+    return res.json({ ok: true });
+  }
 
   const { title, description, payoutPerHerald, maxHeralds, deadline, category, contentType, difficulty, coverImage, platformRequirements, visibility, reqMode, reqMinCount } = req.body;
   const data: Record<string, any> = {};

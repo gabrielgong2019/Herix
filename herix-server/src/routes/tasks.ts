@@ -1565,7 +1565,6 @@ tasksRouter.patch('/:id/publish', requireAuth, requireRole('BRAND', 'ADMIN'), as
     if (brandUser) {
       notify({
         userId: brandUser.id,
-        email: brandUser.email,
         targetRole: 'BRAND',
         type: 'TASK_PENDING_REVIEW',
         variables: { task: task.title },

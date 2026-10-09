@@ -188,7 +188,6 @@ applicationRouter.post('/:taskId', requireAuth, requireRole('HERALD'), async (re
     if (creator) {
       await notify({
         userId: creator.id,
-        email: creator.email,
         targetRole: 'BRAND',
         type: 'NEW_APPLICATION',
         variables: { task: app.task_title, heraldName: app.herald_name },

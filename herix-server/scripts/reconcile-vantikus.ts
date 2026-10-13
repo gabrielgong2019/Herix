@@ -44,12 +44,16 @@ async function main() {
 
   // 2. Vantikus API：/promo-code-summary（当前月往前 24 个月）
   const summary = await vantikusGet('/api/partner/promo-code-summary');
-  // summary.tasks[].codes[].code / .months[].payableCount
+  console.log('\n[DEBUG] Vantikus raw response:');
+  console.log(JSON.stringify(summary, null, 2));
+
+  // 结构：tasks[].codes = string[], tasks[].months[].net = 该任务当月净转化数
+  // 因为月数据是 task 级别汇总，按 code 列表平摊（或直接用 task 级别对账）
   const vantikusMap = new Map<string, number>();
   for (const task of summary.tasks ?? []) {
-    for (const codeEntry of task.codes ?? []) {
-      const total = (codeEntry.months ?? []).reduce((s: number, m: any) => s + (m.payableCount ?? 0), 0);
-      vantikusMap.set(codeEntry.code, (vantikusMap.get(codeEntry.code) ?? 0) + total);
+    const taskTotal = (task.months ?? []).reduce((s: number, m: any) => s + (m.net ?? 0), 0);
+    for (const code of task.codes ?? []) {
+      vantikusMap.set(String(code), (vantikusMap.get(String(code)) ?? 0) + taskTotal);
     }
   }
 

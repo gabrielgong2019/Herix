@@ -21,18 +21,31 @@ async function vantikusGet(path: string) {
 }
 
 async function main() {
-  // 1. Vantikus：每个 task 的净转化数 + 该 task 下的所有码
+  // 0. Herix 最新同步日期（已结算记录中最晚的 converted_at）
+  const latestRow = await pool.query(
+    `SELECT MAX(converted_at) AS latest FROM referral_records WHERE settled_txn_id IS NOT NULL`
+  );
+  const latestConverted: string | null = latestRow.rows[0]?.latest ?? null;
+  // 截止到"最新同步月"的月末（e.g. 2026-09-23 → 截止 2026-09）
+  const cutoffMonth = latestConverted ? latestConverted.slice(0, 7) : null;
+  console.log(`Herix 最新已结算日期: ${latestConverted ?? '无'}`);
+  console.log(`对账截止月份: ${cutoffMonth ?? '全部'}\n`);
+
+  // 1. Vantikus：每个 task 的净转化数 + 该 task 下的所有码（只算截止月份内）
   const summary = await vantikusGet('/api/partner/promo-code-summary');
 
   type VTask = { codes: string[]; net: number; months: { periodStart: string; net: number }[] };
-  const vTasks: VTask[] = (summary.tasks ?? []).map((t: any) => ({
-    codes: (t.codes ?? []).map(String),
-    net:   (t.months ?? []).reduce((s: number, m: any) => s + (m.net ?? 0), 0),
-    months: (t.months ?? []).filter((m: any) => m.net > 0).map((m: any) => ({
-      periodStart: m.periodStart,
-      net: m.net,
-    })),
-  }));
+  const vTasks: VTask[] = (summary.tasks ?? []).map((t: any) => {
+    const months = (t.months ?? [])
+      .filter((m: any) => !cutoffMonth || m.periodStart.slice(0, 7) <= cutoffMonth)
+      .filter((m: any) => m.net > 0)
+      .map((m: any) => ({ periodStart: m.periodStart, net: m.net }));
+    return {
+      codes: (t.codes ?? []).map(String),
+      net:   months.reduce((s: number, m) => s + m.net, 0),
+      months,
+    };
+  });
 
   // 码 → vTask 索引
   const codeToVTask = new Map<string, number>();

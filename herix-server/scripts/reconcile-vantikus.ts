@@ -1,8 +1,9 @@
 /**
- * Vantikus ↔ Herix 对账脚本
+ * Vantikus ↔ Herix 对账脚本（任务级别）
  * 在 ECS 上跑：
+ *   cd /home/herix/Herix/herix-server
  *   export $(grep -v '^#' .env | grep '=' | xargs)
- *   npx tsx scripts/reconcile-vantikus.ts
+ *   VANTIKUS_API_KEY=vtk_... npx tsx scripts/reconcile-vantikus.ts
  */
 
 import pool from '../src/db.js';
@@ -20,79 +21,102 @@ async function vantikusGet(path: string) {
 }
 
 async function main() {
-  // 1. Herix 生产库：每个码的转化汇总
+  // 1. Vantikus：每个 task 的净转化数 + 该 task 下的所有码
+  const summary = await vantikusGet('/api/partner/promo-code-summary');
+
+  type VTask = { codes: string[]; net: number; months: { periodStart: string; net: number }[] };
+  const vTasks: VTask[] = (summary.tasks ?? []).map((t: any) => ({
+    codes: (t.codes ?? []).map(String),
+    net:   (t.months ?? []).reduce((s: number, m: any) => s + (m.net ?? 0), 0),
+    months: (t.months ?? []).filter((m: any) => m.net > 0).map((m: any) => ({
+      periodStart: m.periodStart,
+      net: m.net,
+    })),
+  }));
+
+  // 码 → vTask 索引
+  const codeToVTask = new Map<string, number>();
+  vTasks.forEach((t, i) => t.codes.forEach(c => codeToVTask.set(c, i)));
+
+  // 2. Herix 生产库：按 task_id 汇总
   const herixRows = await pool.query(`
     SELECT
-      code,
+      task_id,
       COUNT(*)::int                                        AS total_records,
       COUNT(settled_txn_id)::int                           AS settled,
       COUNT(*) FILTER (WHERE settled_txn_id IS NULL)::int  AS unsettled,
-      MAX(converted_at)                                    AS latest_converted
+      MAX(converted_at)                                    AS latest_converted,
+      array_agg(DISTINCT code)                             AS codes
     FROM referral_records
-    GROUP BY code
-    ORDER BY code
+    GROUP BY task_id
+    ORDER BY task_id
   `);
 
-  const herixMap = new Map<string, { settled: number; unsettled: number; latest: string | null }>();
-  for (const r of herixRows.rows) {
-    herixMap.set(r.code, {
-      settled:   r.settled,
-      unsettled: r.unsettled,
-      latest:    r.latest_converted ?? null,
-    });
-  }
+  // 3. 任务级别汇总：将 Herix task_id 和 Vantikus task 通过 code 对应
+  // Vantikus task index → Herix settled/unsettled
+  const herixByVTask = new Map<number, { settled: number; unsettled: number; latest: string | null; taskId: string }>();
+  const herixUnmatched: typeof herixRows.rows = [];
 
-  // 2. Vantikus API：/promo-code-summary（当前月往前 24 个月）
-  const summary = await vantikusGet('/api/partner/promo-code-summary');
-  console.log('\n[DEBUG] Vantikus raw response:');
-  console.log(JSON.stringify(summary, null, 2));
-
-  // 结构：tasks[].codes = string[], tasks[].months[].net = 该任务当月净转化数
-  // 因为月数据是 task 级别汇总，按 code 列表平摊（或直接用 task 级别对账）
-  const vantikusMap = new Map<string, number>();
-  for (const task of summary.tasks ?? []) {
-    const taskTotal = (task.months ?? []).reduce((s: number, m: any) => s + (m.net ?? 0), 0);
-    for (const code of task.codes ?? []) {
-      vantikusMap.set(String(code), (vantikusMap.get(String(code)) ?? 0) + taskTotal);
+  for (const row of herixRows.rows) {
+    const codes: string[] = row.codes ?? [];
+    // 找第一个能匹配上 Vantikus task 的码
+    const vIdx = codes.map(c => codeToVTask.get(c)).find(i => i !== undefined);
+    if (vIdx !== undefined) {
+      const existing = herixByVTask.get(vIdx);
+      herixByVTask.set(vIdx, {
+        settled:   (existing?.settled   ?? 0) + row.settled,
+        unsettled: (existing?.unsettled ?? 0) + row.unsettled,
+        latest:    existing?.latest && existing.latest > (row.latest_converted ?? '') ? existing.latest : (row.latest_converted ?? null),
+        taskId:    row.task_id,
+      });
+    } else {
+      herixUnmatched.push(row);
     }
   }
 
-  // 3. 合并输出
-  const allCodes = new Set([...herixMap.keys(), ...vantikusMap.keys()]);
-
-  console.log('\n=== Vantikus ↔ Herix 对账报告 ===\n');
+  // 4. 输出报告
+  console.log('\n=== Vantikus ↔ Herix 对账报告（任务级别）===\n');
   console.log(
-    'Code'.padEnd(16),
-    'Vantikus合计'.padEnd(14),
+    '任务码前缀'.padEnd(14),
+    '码数'.padEnd(6),
+    'Vantikus净转化'.padEnd(16),
     'Herix已结算'.padEnd(13),
     'Herix未结算'.padEnd(13),
     '差值'.padEnd(8),
-    'Herix最晚转化日',
+    '月度明细(Vantikus)',
   );
-  console.log('-'.repeat(90));
+  console.log('-'.repeat(100));
 
   let totalDiff = 0;
-  for (const code of [...allCodes].sort()) {
-    const v = vantikusMap.get(code) ?? 0;
-    const h = herixMap.get(code);
+  vTasks.forEach((vt, idx) => {
+    const prefix = vt.codes[0]?.replace(/\d+$/, '') ?? '?';
+    const h = herixByVTask.get(idx);
     const settled   = h?.settled   ?? 0;
     const unsettled = h?.unsettled ?? 0;
-    const diff = v - settled;
+    const diff = vt.net - settled;
     totalDiff += Math.abs(diff);
-
-    const flag = diff !== 0 ? ' ←' : '';
+    const flag = diff !== 0 ? ' ←' : ' ✓';
+    const monthDetail = vt.months.map(m => `${m.periodStart.slice(0,7)}:${m.net}`).join(' ');
     console.log(
-      code.padEnd(16),
-      String(v).padEnd(14),
+      prefix.padEnd(14),
+      String(vt.codes.length).padEnd(6),
+      String(vt.net).padEnd(16),
       String(settled).padEnd(13),
       String(unsettled).padEnd(13),
-      String(diff).padEnd(8),
-      (h?.latest ?? '-') + flag,
+      (String(diff) + flag).padEnd(12),
+      monthDetail,
     );
+  });
+
+  if (herixUnmatched.length > 0) {
+    console.log('\n⚠️  Herix 有转化记录但在 Vantikus 找不到对应任务：');
+    for (const row of herixUnmatched) {
+      console.log(`  task_id=${row.task_id} settled=${row.settled} unsettled=${row.unsettled} codes=${row.codes.slice(0,3).join(',')}`);
+    }
   }
 
-  console.log('-'.repeat(90));
-  console.log(`总差异条数: ${totalDiff}`);
+  console.log('-'.repeat(100));
+  console.log(`总差异: ${totalDiff} 条`);
   await pool.end();
 }
 

@@ -47,11 +47,13 @@ export async function runVantikusSyncOnce(): Promise<void> {
 
   const dryRun = process.env.VANTIKUS_DRY_RUN === 'true';
 
-  // Rolling window: from the cutoff month to current month.
-  // 每次都重新拉 CONVERTED_EVENTS_SINCE 所在月份起的数据，
-  // ON CONFLICT DO NOTHING 保证已入库的不重复计入。
-  const fromMonth = CONVERTED_EVENTS_SINCE.slice(0, 7); // '2026-09'
-  const toMonth = new Date().toISOString().slice(0, 7);  // 当前月份
+  // Rolling window: 当月 + 上月，但不早于 CONVERTED_EVENTS_SINCE 所在月份。
+  // 覆盖两个月足以捡回任何迟到的事件；ON CONFLICT DO NOTHING 保证已入库的幂等跳过。
+  const now = new Date();
+  const toMonth   = now.toISOString().slice(0, 7); // 当前月份 e.g. '2026-10'
+  const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 7);
+  const cutoffMonth = CONVERTED_EVENTS_SINCE.slice(0, 7); // '2026-09'
+  const fromMonth = prevMonth >= cutoffMonth ? prevMonth : cutoffMonth;
 
   const res = await fetch(
     `${VANTIKUS_API}/api/partner/promo-code-events?from=${fromMonth}&to=${toMonth}`,

@@ -998,3 +998,26 @@ adminRouter.patch('/brands/:userId/pricing', async (req: Request, res: Response)
     res.json({ commissionRateOverride: rate, effectiveRate: effective, note });
   }
 });
+
+/** GET /api/admin/referral-conversion-stats — 推广码转化汇总（按任务/码/月） */
+adminRouter.get('/referral-conversion-stats', async (_req: Request, res: Response) => {
+  const rows = await pool.query(`
+    SELECT
+      r.task_id,
+      t.title                                                      AS task_title,
+      r.code,
+      u.display_name                                               AS herald_name,
+      TO_CHAR(DATE_TRUNC('month', r.converted_at::date), 'YYYY-MM') AS month,
+      COUNT(*)::int                                                AS conversions,
+      COUNT(r.settled_txn_id)::int                                 AS settled
+    FROM referral_records r
+    JOIN tasks t           ON t.id  = r.task_id
+    JOIN ambassador_tasks at ON at.unique_code = r.code
+    JOIN users u           ON u.id  = at.herald_id
+    WHERE r.converted_at IS NOT NULL
+    GROUP BY r.task_id, t.title, r.code, u.display_name,
+             DATE_TRUNC('month', r.converted_at::date)
+    ORDER BY month DESC, r.task_id, r.code
+  `);
+  res.json({ rows: rows.rows });
+});

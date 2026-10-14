@@ -9,6 +9,7 @@ import { sweepSubscriptionsOnce } from '../utils/subscriptions';
 import { runTranslationRetryOnce } from '../utils/translateRetry';
 import { runMonthlyCron } from '../utils/monthly-invoice';
 import { runTaskStatsAggregationOnce } from '../utils/taskStatsAggregation';
+import { runVantikusSyncOnce } from '../utils/vantikusSync';
 
 const MIN = 60_000;
 const HOUR = 3600_000;
@@ -27,4 +28,7 @@ export const JOBS: Job[] = [
   { name: 'monthly-invoice',    everyMs: 1 * DAY,  firstDelayMs: 60_000, runOnce: runMonthlyCron },
   // 任务流量统计聚合（刷新 task_stats，供排名查询使用）
   { name: 'task-stats-agg',     everyMs: 1 * HOUR, firstDelayMs: 15_000, runOnce: runTaskStatsAggregationOnce },
+  // Vantikus → Herix 转化数据自动同步（只拉 converted 事件，见 utils/vantikusSync.ts 注释）
+  // VANTIKUS_DRY_RUN=true 时只打日志不写库，影子验证阶段使用
+  { name: 'vantikus-sync',      everyMs: 1 * DAY,  firstDelayMs: 120_000, runOnce: runVantikusSyncOnce },
 ];

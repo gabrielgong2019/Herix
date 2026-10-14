@@ -152,6 +152,7 @@ function shell(inner){
     {id:'ambassadors',icon:'🌟',label:'赫使列表'},
     {id:'categories',icon:'🏷️',label:'任务分类'},
     {id:'specialty-tags',icon:'🔖',label:'专长标签'},
+    {id:'referrals',icon:'🔗',label:'推广码转化'},
     {id:'i18n',icon:'🌐',label:'本地化'},
     {id:'pricing',icon:'💰',label:'定价'},
   ];
@@ -165,7 +166,7 @@ function shell(inner){
   return '<div class="layout">'+sb+'<div class="main">'+topbar+'<div class="content">'+msg+inner+'</div></div></div><div class="overlay" id="ov" onclick="toggleSB()"></div>';
 }
 
-function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',arbitrations:'仲裁',subscriptions:'订阅管理',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',i18n:'本地化',pricing:'定价'}[st.page]||''}
+function pageTitle(){return{dashboard:'数据看板',reviews:'审核中心',topups:'充值确认',withdrawals:'提现打款',arbitrations:'仲裁',subscriptions:'订阅管理',users:'用户管理','brand-edit':'品牌资料编辑',tasks:'任务管理',ambassadors:'赫使列表',categories:'任务分类','specialty-tags':'专长标签',referrals:'推广码转化',i18n:'本地化',pricing:'定价'}[st.page]||''}
 function topActions(){
   return '';
 }
@@ -185,6 +186,7 @@ function pageCont(){
     case 'ambassadors': return ambassadorsPage();
     case 'categories': return categoriesPage();
     case 'specialty-tags': return specialtyTagsPage();
+    case 'referrals': return referralsPage();
     case 'i18n': return i18nPage();
     case 'pricing': return pricingPage();
     default: return dashPage();
@@ -1424,6 +1426,50 @@ function fmtLocal(s) {
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
 }
 
+function referralsPage(){
+  var rows=st.data.referralStats||[];
+  if(!rows.length) return '<div style="padding:32px;color:var(--muted);text-align:center">暂无转化数据</div>';
+
+  // 按 task 分组
+  var taskMap={};
+  rows.forEach(function(r){
+    if(!taskMap[r.task_id]) taskMap[r.task_id]={title:r.task_title,rows:[]};
+    taskMap[r.task_id].rows.push(r);
+  });
+
+  var h='<div style="padding:0 0 24px">';
+  Object.keys(taskMap).forEach(function(taskId){
+    var tm=taskMap[taskId];
+    var totalConv=tm.rows.reduce(function(s,r){return s+Number(r.conversions)},0);
+    var totalSettled=tm.rows.reduce(function(s,r){return s+Number(r.settled)},0);
+    h+='<div class="tcard" style="margin-bottom:24px">';
+    h+='<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">';
+    h+='<div style="font-size:14px;font-weight:600">'+esc(tm.title)+'</div>';
+    h+='<div style="font-size:12px;color:var(--muted)">转化合计 '+totalConv+' · 已结算 '+totalSettled+'</div>';
+    h+='</div>';
+    h+='<table><thead><tr>'
+      +'<th>推广码</th><th>赫使</th><th>月份</th>'
+      +'<th style="text-align:right">转化数</th>'
+      +'<th style="text-align:right">已结算</th>'
+      +'<th style="text-align:right">待结算</th>'
+      +'</tr></thead><tbody>';
+    tm.rows.forEach(function(r){
+      var pending=Number(r.conversions)-Number(r.settled);
+      h+='<tr>'
+        +'<td style="font-family:monospace;font-size:12px">'+esc(r.code)+'</td>'
+        +'<td>'+esc(r.herald_name||'—')+'</td>'
+        +'<td>'+esc(r.month||'—')+'</td>'
+        +'<td style="text-align:right;font-variant-numeric:tabular-nums">'+r.conversions+'</td>'
+        +'<td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--success)">'+r.settled+'</td>'
+        +'<td style="text-align:right;font-variant-numeric:tabular-nums;color:'+(pending>0?'var(--warning)':'var(--muted)')+'">'+pending+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+  h+='</div>';
+  return h;
+}
+
 function load(page){
   if(page==='pricing'){
     apiGet('/admin/pricing',function(d){st.data.pricing=d;render()});
@@ -1462,6 +1508,8 @@ function load(page){
     apiGet('/categories/all',function(d){st.data.categories=Array.isArray(d)?d:[];render()});
   } else if(page==='specialty-tags'){
     apiGet('/specialty-tags/all',function(d){st.data.specialtyTags=Array.isArray(d)?d:[];render()});
+  } else if(page==='referrals'){
+    apiGet('/admin/referral-conversion-stats',function(d){st.data.referralStats=Array.isArray(d.rows)?d.rows:[];render()});
   }
 }
 

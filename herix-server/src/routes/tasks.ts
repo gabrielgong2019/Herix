@@ -609,7 +609,7 @@ tasksRouter.get('/:id/referrals', requireAuth, requireRole('BRAND', 'ADMIN'), as
     }
   }
   const rows = await findMany<any>(
-    `SELECT r.id, r.code, r.user_masked, r.registered_at, r.converted_at,
+    `SELECT r.id, r.code, r.user_masked, r.registered_at, r.converted_at, r.event_type,
             (r.settled_txn_id IS NOT NULL) AS settled,
             u.nickname AS herald_name
      FROM referral_records r JOIN users u ON u.id = r.herald_id
@@ -934,8 +934,8 @@ async function handleDetailUpload(
 
     // 幂等键：同码内同用户唯一。同一用户在其他码下的记录不影响本行（分别计费）
     const existing = await findOne<any>(
-      'SELECT id, converted_at, settled_txn_id, date_source FROM referral_records WHERE task_id = ? AND code = ? AND user_hash = ?',
-      [task.id, code, userHash]
+      'SELECT id, converted_at, settled_txn_id, date_source FROM referral_records WHERE task_id = ? AND code = ? AND user_hash = ? AND event_type = ?',
+      [task.id, code, userHash, 'converted']
     );
     if (!existing) {
       // 透明提示（不拦截）：该用户已出现在本任务其他码下 → 本行照常入库计费
@@ -949,7 +949,7 @@ async function handleDetailUpload(
       await insert('referral_records', {
         task_id: task.id, code, herald_id: at.herald_id, user_hash: userHash, user_masked: userMasked,
         registered_at: registeredAt, converted_at: convertedAt,
-        date_source: dateSource,
+        date_source: dateSource, event_type: 'converted',
         created_at: now(), updated_at: now(),
       });
       touchedCodes.add(code);
@@ -990,11 +990,16 @@ async function handleDetailUpload(
   const blockedCodes: string[] = [];
   for (const code of touchedCodes) {
     const at = atByCode.get(code);
-    const unsettled = await findMany<any>(
-      'SELECT id FROM referral_records WHERE task_id = ? AND code = ? AND converted_at IS NOT NULL AND settled_txn_id IS NULL',
-      [task.id, code]
+    const unsettledConverted = await findMany<any>(
+      'SELECT id FROM referral_records WHERE task_id = ? AND code = ? AND event_type = ? AND settled_txn_id IS NULL',
+      [task.id, code, 'converted']
     );
-    const delta = unsettled.length;
+    const unsettledCancelled = await findMany<any>(
+      'SELECT id FROM referral_records WHERE task_id = ? AND code = ? AND event_type = ? AND settled_txn_id IS NULL',
+      [task.id, code, 'cancelled']
+    );
+    // Net: converted minus pending cancellations; floor at 0（欠款留到下期对冲，不扣为负）
+    const delta = Math.max(0, unsettledConverted.length - unsettledCancelled.length);
     let settledNow = false;
 
     if (delta > 0) {
@@ -1009,11 +1014,12 @@ async function handleDetailUpload(
           metadata: { taskId: task.id, taskTitle: task.title, code, needed: totalNeeded, available: brandBal.available },
         });
       } else {
+        const cancelNote = unsettledCancelled.length > 0 ? `，含 ${unsettledCancelled.length} 次扣减对冲` : '';
         const releaseTxnId = await insert('task_transactions', {
           task_id: task.id, type: 'TASK_RELEASE',
           task_amount: money.costPerConv * delta, amount: money.payoutPerConv * delta, platform_fee: money.feePerConv * delta,
           from_user_id: task.creator_id, to_user_id: at.herald_id, parent_txn_id: task.lock_txn_id || null,
-          status: 'completed', note: `推广码 ${code} 新增 ${delta} 次转化（明细）`,
+          status: 'completed', note: `推广码 ${code} 新增 ${delta} 次转化（明细）${cancelNote}`,
         });
         await Promise.all([
           settleCreditTask({
@@ -1032,20 +1038,30 @@ async function handleDetailUpload(
             note: `平台服务费（发布时费率快照）`,
           }),
         ]);
+        // Mark all unsettled converted + matched cancelled rows with the same txn_id.
+        // cancelledToSettle = cancelled rows consumed by this settlement run (up to converted count).
+        const cancelledToSettle = unsettledCancelled.slice(0, unsettledConverted.length);
+        const idsToSettle = [
+          ...unsettledConverted.map((r: any) => r.id),
+          ...cancelledToSettle.map((r: any) => r.id),
+        ];
         await pool.query('UPDATE referral_records SET settled_txn_id = $1, updated_at = $2 WHERE id = ANY($3)',
-          [releaseTxnId, now(), unsettled.map((r: any) => r.id)]);
+          [releaseTxnId, now(), idsToSettle]);
         totalNewConversions += delta;
         totalPaid += money.payoutPerConv * delta;
         settledNow = true;
       }
     }
 
-    // 投影：计数从明细行派生（赫使端/任务页展示零改动）
+    // 投影：计数从明细行净值派生（converted行 − cancelled行）
     await pool.query(
       `UPDATE ambassador_tasks SET
-         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2),
-         used_count       = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.converted_at IS NOT NULL),
-         paid_conversions = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.settled_txn_id IS NOT NULL)
+         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.event_type = 'converted'),
+         used_count       = (SELECT COUNT(*) FILTER (WHERE r.event_type = 'converted') - COUNT(*) FILTER (WHERE r.event_type = 'cancelled')
+                             FROM referral_records r WHERE r.task_id = $1 AND r.code = $2),
+         paid_conversions = (SELECT COUNT(*) FILTER (WHERE r.event_type = 'converted' AND r.settled_txn_id IS NOT NULL)
+                                          - COUNT(*) FILTER (WHERE r.event_type = 'cancelled' AND r.settled_txn_id IS NOT NULL)
+                             FROM referral_records r WHERE r.task_id = $1 AND r.code = $2)
        WHERE task_id = $1 AND unique_code = $2`,
       [task.id, code]
     );

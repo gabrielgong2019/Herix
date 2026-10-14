@@ -1004,16 +1004,20 @@ adminRouter.get('/referral-conversion-stats', async (_req: Request, res: Respons
   const rows = await pool.query(`
     SELECT
       r.task_id,
-      t.title                                                      AS task_title,
+      t.title                                                        AS task_title,
       r.code,
-      u.display_name                                               AS herald_name,
+      u.display_name                                                 AS herald_name,
       TO_CHAR(DATE_TRUNC('month', r.converted_at::date), 'YYYY-MM') AS month,
-      COUNT(*)::int                                                AS conversions,
-      COUNT(r.settled_txn_id)::int                                 AS settled
+      COUNT(*) FILTER (WHERE r.event_type = 'converted')::int        AS conversions,
+      COUNT(*) FILTER (WHERE r.event_type = 'cancelled')::int        AS cancellations,
+      COUNT(*) FILTER (WHERE r.event_type = 'converted')::int
+        - COUNT(*) FILTER (WHERE r.event_type = 'cancelled')::int    AS net,
+      COUNT(*) FILTER (WHERE r.event_type = 'converted' AND r.settled_txn_id IS NOT NULL)::int
+        - COUNT(*) FILTER (WHERE r.event_type = 'cancelled' AND r.settled_txn_id IS NOT NULL)::int AS settled
     FROM referral_records r
-    JOIN tasks t           ON t.id  = r.task_id
+    JOIN tasks t             ON t.id  = r.task_id
     JOIN ambassador_tasks at ON at.unique_code = r.code
-    JOIN users u           ON u.id  = at.herald_id
+    JOIN users u             ON u.id  = at.herald_id
     WHERE r.converted_at IS NOT NULL
     GROUP BY r.task_id, t.title, r.code, u.display_name,
              DATE_TRUNC('month', r.converted_at::date)

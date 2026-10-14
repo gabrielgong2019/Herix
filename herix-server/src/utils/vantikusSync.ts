@@ -1,7 +1,10 @@
 /**
  * Vantikus → Herix 自动同步（每日一次，由 jobs/registry.ts 调度）
  *
- * 只同步 eventType='converted' 的事件，跳过 tracked/cancelled/duplicate。
+ * 同步 eventType='converted' 和 'cancelled' 事件，跳过 tracked/duplicate。
+ * converted → INSERT event_type='converted' 行（ON CONFLICT DO NOTHING 幂等）
+ * cancelled → INSERT event_type='cancelled' 行（扣减记录，赫使可见哪个用户被取消）
+ * 结算时 net = converted行数 − cancelled行数，floor=0；同一 user_hash 只能各有一行（唯一索引）。
  * Herix 的 referral_records 是结算台账，未转化的跟踪数据不需要落库，
  * Vantikus 本身有完整的 pipeline 视图。
  *
@@ -67,6 +70,7 @@ export async function runVantikusSyncOnce(): Promise<void> {
 
   let newRows = 0;
   let duplicates = 0;
+  let cancelled = 0;
   let noCode = 0;
   // codes that received new insertions → need ambassador_tasks counter refresh
   const touchedCodes = new Set<string>();
@@ -89,34 +93,36 @@ export async function runVantikusSyncOnce(): Promise<void> {
     }
 
     for (const ev of entry.events) {
-      if (ev.eventType !== 'converted') continue;
       if (ev.occurredAt < CONVERTED_EVENTS_SINCE) continue;
+
+      if (ev.eventType !== 'converted' && ev.eventType !== 'cancelled') continue;
 
       const userHash   = hashUserKey(ev.externalId);
       const userMasked = ev.maskedIdentifier ?? maskUserKey(ev.externalId);
+      const evType     = ev.eventType; // 'converted' | 'cancelled'
 
       if (dryRun) {
         console.log(
-          `[vantikus-sync] DRY_RUN would insert: code=${entry.code} task=${at.task_id} date=${ev.occurredAt} hash=${userHash.slice(0, 8)}...`,
+          `[vantikus-sync] DRY_RUN would insert ${evType}: code=${entry.code} date=${ev.occurredAt} hash=${userHash.slice(0, 8)}...`,
         );
-        newRows++;
+        evType === 'converted' ? newRows++ : cancelled++;
         continue;
       }
 
-      const now = new Date().toISOString();
+      const ts = new Date().toISOString();
       const result = await pool.query(
         `INSERT INTO referral_records
            (id, task_id, code, herald_id, user_hash, user_masked,
-            registered_at, converted_at, date_source, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'brand',$9,$9)
-         ON CONFLICT (task_id, code, user_hash) DO NOTHING
+            registered_at, converted_at, date_source, event_type, created_at, updated_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'brand',$9,$10,$10)
+         ON CONFLICT (task_id, code, user_hash, event_type) DO NOTHING
          RETURNING id`,
         [genId(), at.task_id, entry.code, at.herald_id, userHash, userMasked,
-         ev.occurredAt, ev.occurredAt, now],
+         ev.occurredAt, ev.occurredAt, evType, ts],
       );
 
       if (result.rowCount && result.rowCount > 0) {
-        newRows++;
+        evType === 'converted' ? newRows++ : cancelled++;
         touchedCodes.add(entry.code);
       } else {
         duplicates++;
@@ -130,9 +136,11 @@ export async function runVantikusSyncOnce(): Promise<void> {
     for (const code of touchedCodes) {
       await pool.query(
         `UPDATE ambassador_tasks SET
-           registered_count = (SELECT COUNT(*)         FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1),
-           used_count       = (SELECT COUNT(*)         FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1 AND converted_at IS NOT NULL),
-           paid_conversions = (SELECT COUNT(*)         FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1 AND settled_txn_id IS NOT NULL),
+           registered_count = (SELECT COUNT(*) FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1 AND event_type = 'converted'),
+           used_count       = (SELECT COUNT(*) FILTER (WHERE event_type = 'converted') - COUNT(*) FILTER (WHERE event_type = 'cancelled')
+                               FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1),
+           paid_conversions = (SELECT COUNT(*) FILTER (WHERE event_type = 'converted' AND settled_txn_id IS NOT NULL) - COUNT(*) FILTER (WHERE event_type = 'cancelled' AND settled_txn_id IS NOT NULL)
+                               FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1),
            updated_at       = NOW()
          WHERE unique_code = $1`,
         [code],
@@ -141,6 +149,6 @@ export async function runVantikusSyncOnce(): Promise<void> {
   }
 
   console.log(
-    `[vantikus-sync] done — new=${newRows} duplicate=${duplicates} noCode=${noCode} touchedCodes=${touchedCodes.size}${dryRun ? ' (DRY_RUN)' : ''}`,
+    `[vantikus-sync] done — new=${newRows} duplicate=${duplicates} cancelled=${cancelled} noCode=${noCode} touchedCodes=${touchedCodes.size}${dryRun ? ' (DRY_RUN)' : ''}`,
   );
 }

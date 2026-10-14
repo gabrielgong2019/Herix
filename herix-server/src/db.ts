@@ -1162,6 +1162,14 @@ export async function initDatabase() {
     // 数据修复（2026-08-06）：历史赫使未选社群的默认归属中国社群（cn-in-jp）。
     // 幂等：仅补齐 NULL/空值，不覆盖已有选择。
     `UPDATE herald_profiles SET community = 'cn-in-jp' WHERE community IS NULL OR community = ''`,
+
+    // event_type（2026-10-14）：区分 converted / cancelled 事件行，支持扣减记录展示与结算对冲。
+    // ADD COLUMN 时给存量行填 'converted'（正确），之后立即 DROP DEFAULT 强制新行显式声明，防止漏写静默进结算。
+    `ALTER TABLE referral_records ADD COLUMN IF NOT EXISTS event_type TEXT NOT NULL DEFAULT 'converted'`,
+    `ALTER TABLE referral_records ALTER COLUMN event_type DROP DEFAULT`,
+    // 旧唯一索引只覆盖 (task_id, code, user_hash)，同用户不能有 converted+cancelled 两行；扩展后允许。
+    `DROP INDEX IF EXISTS idx_refrec_task_code_user`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_refrec_task_code_user_event ON referral_records(task_id, code, user_hash, event_type)`,
   ];
   for (const m of migrations) {
     await pool.query(m);

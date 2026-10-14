@@ -1440,27 +1440,34 @@ function referralsPage(){
   var h='<div style="padding:0 0 24px">';
   Object.keys(taskMap).forEach(function(taskId){
     var tm=taskMap[taskId];
-    var totalConv=tm.rows.reduce(function(s,r){return s+Number(r.conversions)},0);
+    var totalNet=tm.rows.reduce(function(s,r){return s+Number(r.net)},0);
     var totalSettled=tm.rows.reduce(function(s,r){return s+Number(r.settled)},0);
     h+='<div class="tcard" style="margin-bottom:24px">';
     h+='<div style="display:flex;align-items:baseline;gap:12px;margin-bottom:12px">';
     h+='<div style="font-size:14px;font-weight:600">'+esc(tm.title)+'</div>';
-    h+='<div style="font-size:12px;color:var(--muted)">转化合计 '+totalConv+' · 已结算 '+totalSettled+'</div>';
+    h+='<div style="font-size:12px;color:var(--muted)">净转化 '+totalNet+' · 已结算 '+totalSettled+'</div>';
     h+='</div>';
     h+='<table><thead><tr>'
       +'<th>推广码</th><th>赫使</th><th>月份</th>'
-      +'<th style="text-align:right">转化数</th>'
+      +'<th style="text-align:right">转化</th>'
+      +'<th style="text-align:right">扣减</th>'
+      +'<th style="text-align:right">净值</th>'
       +'<th style="text-align:right">已结算</th>'
       +'<th style="text-align:right">待结算</th>'
       +'</tr></thead><tbody>';
     tm.rows.forEach(function(r){
-      var pending=Number(r.conversions)-Number(r.settled);
+      var net=Number(r.net);
+      var settled=Number(r.settled);
+      var pending=net-settled;
+      var hasCancels=Number(r.cancellations)>0;
       h+='<tr>'
         +'<td style="font-family:monospace;font-size:12px">'+esc(r.code)+'</td>'
         +'<td>'+esc(r.herald_name||'—')+'</td>'
         +'<td>'+esc(r.month||'—')+'</td>'
         +'<td style="text-align:right;font-variant-numeric:tabular-nums">'+r.conversions+'</td>'
-        +'<td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--success)">'+r.settled+'</td>'
+        +'<td style="text-align:right;font-variant-numeric:tabular-nums;color:'+(hasCancels?'var(--danger)':'var(--muted)')+'">'+r.cancellations+'</td>'
+        +'<td style="text-align:right;font-variant-numeric:tabular-nums;font-weight:600">'+net+'</td>'
+        +'<td style="text-align:right;font-variant-numeric:tabular-nums;color:var(--success)">'+settled+'</td>'
         +'<td style="text-align:right;font-variant-numeric:tabular-nums;color:'+(pending>0?'var(--warning)':'var(--muted)')+'">'+pending+'</td>'
         +'</tr>';
     });

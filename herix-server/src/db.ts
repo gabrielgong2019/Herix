@@ -1172,6 +1172,9 @@ export async function initDatabase() {
     // 建表时的 UNIQUE(task_id,code,user_hash) 产生了同名 constraint，DROP INDEX 删不掉 constraint，须显式 DROP。
     // 保留 idx_refrec_task_code_user_event 作为唯一性保证，此 constraint 冗余且阻断 cancelled 行插入。
     `ALTER TABLE referral_records DROP CONSTRAINT IF EXISTS referral_records_task_id_code_user_hash_key`,
+    // ambassador_tasks 建表时未含 updated_at，vantikusSync counter refresh 需要此列。
+    `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS updated_at TEXT`,
+    `UPDATE ambassador_tasks SET updated_at = joined_at WHERE updated_at IS NULL`,
   ];
   for (const m of migrations) {
     await pool.query(m);

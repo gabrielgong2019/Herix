@@ -17,6 +17,7 @@ import { processLogo, processPromo } from '../utils/image';
 import { saveBrandAsset } from '../utils/uploads';
 import { i18nAdminRouter } from './i18n';
 import { notify } from '../utils/notify';
+import { runVantikusSyncOnce } from '../utils/vantikusSync';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
@@ -1024,4 +1025,13 @@ adminRouter.get('/referral-conversion-stats', async (_req: Request, res: Respons
     ORDER BY month DESC, r.task_id, r.code
   `);
   res.json({ rows: rows.rows });
+});
+
+adminRouter.post('/trigger-vantikus-sync', requireAuth, requireRole('ADMIN'), async (_req: Request, res: Response) => {
+  try {
+    await runVantikusSyncOnce();
+    res.json({ ok: true });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
 });

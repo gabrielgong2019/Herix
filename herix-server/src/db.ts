@@ -449,8 +449,7 @@ export async function initDatabase() {
       converted_at TEXT,
       settled_txn_id TEXT,
       created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL,
-      UNIQUE(task_id, code, user_hash)
+      updated_at TEXT NOT NULL
     )`,
     // 旧约束/旧列迁移（同日内的设计修订，幂等）
     `ALTER TABLE referral_records DROP CONSTRAINT IF EXISTS referral_records_task_id_user_hash_key`,
@@ -1170,6 +1169,9 @@ export async function initDatabase() {
     // 旧唯一索引只覆盖 (task_id, code, user_hash)，同用户不能有 converted+cancelled 两行；扩展后允许。
     `DROP INDEX IF EXISTS idx_refrec_task_code_user`,
     `CREATE UNIQUE INDEX IF NOT EXISTS idx_refrec_task_code_user_event ON referral_records(task_id, code, user_hash, event_type)`,
+    // 建表时的 UNIQUE(task_id,code,user_hash) 产生了同名 constraint，DROP INDEX 删不掉 constraint，须显式 DROP。
+    // 保留 idx_refrec_task_code_user_event 作为唯一性保证，此 constraint 冗余且阻断 cancelled 行插入。
+    `ALTER TABLE referral_records DROP CONSTRAINT IF EXISTS referral_records_task_id_code_user_hash_key`,
   ];
   for (const m of migrations) {
     await pool.query(m);

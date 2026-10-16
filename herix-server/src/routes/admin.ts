@@ -1009,6 +1009,7 @@ adminRouter.get('/referral-conversion-stats', async (_req: Request, res: Respons
       r.code,
       u.display_name                                                 AS herald_name,
       TO_CHAR(DATE_TRUNC('month', r.converted_at::date), 'YYYY-MM') AS month,
+      COUNT(*) FILTER (WHERE r.event_type = 'tracked')::int           AS registered,
       COUNT(*) FILTER (WHERE r.event_type = 'converted')::int        AS conversions,
       COUNT(*) FILTER (WHERE r.event_type = 'cancelled')::int        AS cancellations,
       COUNT(*) FILTER (WHERE r.event_type = 'converted')::int

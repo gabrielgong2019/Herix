@@ -95,17 +95,17 @@ export async function runVantikusSyncOnce(): Promise<void> {
     for (const ev of entry.events) {
       if (ev.occurredAt < CONVERTED_EVENTS_SINCE) continue;
 
-      if (ev.eventType !== 'converted' && ev.eventType !== 'cancelled') continue;
+      if (ev.eventType !== 'converted' && ev.eventType !== 'cancelled' && ev.eventType !== 'tracked') continue;
 
       const userHash   = hashUserKey(ev.externalId);
       const userMasked = ev.maskedIdentifier ?? maskUserKey(ev.externalId);
-      const evType     = ev.eventType; // 'converted' | 'cancelled'
+      const evType     = ev.eventType; // 'converted' | 'cancelled' | 'tracked'
 
       if (dryRun) {
         console.log(
           `[vantikus-sync] DRY_RUN would insert ${evType}: code=${entry.code} date=${ev.occurredAt} hash=${userHash.slice(0, 8)}...`,
         );
-        evType === 'converted' ? newRows++ : cancelled++;
+        evType === 'converted' ? newRows++ : evType === 'cancelled' ? cancelled++ : newRows++;
         continue;
       }
 
@@ -122,7 +122,7 @@ export async function runVantikusSyncOnce(): Promise<void> {
       );
 
       if (result.rowCount && result.rowCount > 0) {
-        evType === 'converted' ? newRows++ : cancelled++;
+        evType === 'cancelled' ? cancelled++ : newRows++;
         touchedCodes.add(entry.code);
       } else {
         duplicates++;
@@ -136,7 +136,7 @@ export async function runVantikusSyncOnce(): Promise<void> {
     for (const code of touchedCodes) {
       await pool.query(
         `UPDATE ambassador_tasks SET
-           registered_count = (SELECT COUNT(*) FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1 AND event_type = 'converted'),
+           registered_count = (SELECT COUNT(*) FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1 AND event_type = 'tracked'),
            used_count       = (SELECT COUNT(*) FILTER (WHERE event_type = 'converted') - COUNT(*) FILTER (WHERE event_type = 'cancelled')
                                FROM referral_records WHERE task_id = (SELECT task_id FROM ambassador_tasks WHERE unique_code = $1) AND code = $1),
            paid_conversions = (SELECT COUNT(*) FILTER (WHERE event_type = 'converted' AND settled_txn_id IS NOT NULL) - COUNT(*) FILTER (WHERE event_type = 'cancelled' AND settled_txn_id IS NOT NULL)

@@ -1056,7 +1056,7 @@ async function handleDetailUpload(
     // 投影：计数从明细行净值派生（converted行 − cancelled行）
     await pool.query(
       `UPDATE ambassador_tasks SET
-         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.event_type = 'converted'),
+         registered_count = (SELECT COUNT(*) FROM referral_records r WHERE r.task_id = $1 AND r.code = $2 AND r.event_type = 'tracked'),
          used_count       = (SELECT COUNT(*) FILTER (WHERE r.event_type = 'converted') - COUNT(*) FILTER (WHERE r.event_type = 'cancelled')
                              FROM referral_records r WHERE r.task_id = $1 AND r.code = $2),
          paid_conversions = (SELECT COUNT(*) FILTER (WHERE r.event_type = 'converted' AND r.settled_txn_id IS NOT NULL)

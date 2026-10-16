@@ -455,7 +455,6 @@ export async function initDatabase() {
     `ALTER TABLE referral_records DROP CONSTRAINT IF EXISTS referral_records_task_id_user_hash_key`,
     `ALTER TABLE referral_records DROP COLUMN IF EXISTS reassign_note`,
     `ALTER TABLE referral_records DROP COLUMN IF EXISTS reassigned_at`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS idx_refrec_task_code_user ON referral_records(task_id, code, user_hash)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_task_code ON referral_records(task_id, code)`,
     `CREATE INDEX IF NOT EXISTS idx_refrec_herald ON referral_records(herald_id)`,
     // 邮箱验证码（2026-07-17）：注册验证等用途。6位码/30分钟有效/5次尝试上限/60秒限频+小时配额（逻辑在 auth.ts）

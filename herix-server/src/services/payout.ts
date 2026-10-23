@@ -70,6 +70,28 @@ export class AirwallexPayout implements PayoutProvider {
     if (!acct) throw new Error(`Bank account ${bankAccountId} not found`);
 
     const token = await this.getToken();
+    const country = acct.address_country || 'JP';
+    const isCN = country === 'CN';
+
+    const bankDetails: Record<string, any> = {
+      account_currency: isCN ? 'CNY' : 'JPY',
+      account_name: acct.account_name,
+      account_number: acct.account_number,
+      bank_country_code: country,
+    };
+    if (isCN) {
+      // 中国：CNAPS 联行号（12位）存在 bank_code 字段
+      bankDetails.account_routing_type1 = 'cnaps_code';
+      bankDetails.account_routing_value1 = acct.bank_code;
+    } else {
+      // 日本：银行コード（4位）+ 支店コード（3位）
+      bankDetails.account_routing_type1 = 'bank_code';
+      bankDetails.account_routing_value1 = acct.bank_code;
+      bankDetails.account_routing_type2 = 'branch_code';
+      bankDetails.account_routing_value2 = acct.branch_code;
+      bankDetails.bank_account_category = acct.account_category || 'Savings';
+    }
+
     const body = {
       transfer_methods: ['LOCAL'],
       beneficiary: {
@@ -80,22 +102,12 @@ export class AirwallexPayout implements PayoutProvider {
           last_name: acct.last_name,
         },
         address: {
-          country_code: acct.address_country || 'JP',
+          country_code: country,
           city: acct.address_city,
           street_address: acct.address_street,
           postcode: acct.address_postcode,
         },
-        bank_details: {
-          account_currency: 'JPY',
-          account_name: acct.account_name,
-          account_number: acct.account_number,
-          account_routing_type1: 'bank_code',
-          account_routing_value1: acct.bank_code,
-          account_routing_type2: 'branch_code',
-          account_routing_value2: acct.branch_code,
-          bank_account_category: acct.account_category || 'Savings',
-          bank_country_code: 'JP',
-        },
+        bank_details: bankDetails,
       },
     };
 

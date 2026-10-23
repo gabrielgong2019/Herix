@@ -6,12 +6,22 @@
  *   ECS： ssh root@8.210.73.0 "AIRWALLEX_CLIENT_ID=xxx AIRWALLEX_API_KEY=yyy node /home/herix/Herix/scripts/check-airwallex.mjs"
  */
 
-const CLIENT_ID = process.env.AIRWALLEX_CLIENT_ID;
-const API_KEY   = process.env.AIRWALLEX_API_KEY;
-const BASE      = 'https://api.airwallex.com';
+import * as readline from 'readline';
+
+const BASE = 'https://api.airwallex.com';
+
+function prompt(question) {
+  return new Promise(resolve => {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    rl.question(question, answer => { rl.close(); resolve(answer.trim()); });
+  });
+}
+
+const CLIENT_ID = process.env.AIRWALLEX_CLIENT_ID || await prompt('Client ID : ');
+const API_KEY   = process.env.AIRWALLEX_API_KEY   || await prompt('API Key   : ');
 
 if (!CLIENT_ID || !API_KEY) {
-  console.error('❌ 请设置环境变量 AIRWALLEX_CLIENT_ID 和 AIRWALLEX_API_KEY');
+  console.error('❌ Client ID 和 API Key 不能为空');
   process.exit(1);
 }
 

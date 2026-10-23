@@ -3,7 +3,7 @@ import { findMany, findOne, update, insert } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
 import { payoutProvider } from '../services/payout';
-import { topupBrand, debitWithdrawal, creditPlatformFee, PLATFORM_USER_ID } from '../utils/wallet';
+import { topupBrand, debitWithdrawal, creditPlatformFee, unfreezeWithdrawal, PLATFORM_USER_ID } from '../utils/wallet';
 import { nextInvoiceNo } from '../utils/invoice-number';
 import { generateDepositPdf, detectJurisdiction } from '../utils/invoice-pdf';
 import { loadIssuerSettings } from '../utils/monthly-invoice';
@@ -657,6 +657,16 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
         status: 'failed',
         note: err.message,
       }, 'id = ?', [req.params.id]);
+      // 解冻用户余额，让赫使可以重新申请或手动处理
+      await unfreezeWithdrawal({
+        userId: wr.herald_id,
+        amount: wr.amount,
+        idempotencyKey: `WITHDRAWAL_UNFREEZE:${wr.id}`,
+        referenceType: 'withdrawal_request',
+        referenceId: wr.id,
+        note: `提现打款失败解冻 ¥${wr.amount}（${err.message.slice(0, 100)}）`,
+        createdBy: req.user!.userId,
+      }).catch((e: any) => console.error('[unfreeze] failed:', e));
       return res.status(502).json({ error: '自动打款失败: ' + err.message });
     }
   }

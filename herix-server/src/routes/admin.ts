@@ -3,7 +3,7 @@ import { findMany, findOne, update, insert } from '../utils/db';
 import { requireAuth, requireRole } from '../middleware/auth';
 import { sendMail } from '../utils/mailer';
 import { payoutProvider } from '../services/payout';
-import { topupBrand, debitWithdrawal, creditPlatformFee, unfreezeWithdrawal, PLATFORM_USER_ID } from '../utils/wallet';
+import { topupBrand, debitWithdrawal, creditPlatformFee, PLATFORM_USER_ID } from '../utils/wallet';
 import { nextInvoiceNo } from '../utils/invoice-number';
 import { generateDepositPdf, detectJurisdiction } from '../utils/invoice-pdf';
 import { loadIssuerSettings } from '../utils/monthly-invoice';
@@ -623,17 +623,13 @@ adminRouter.get('/withdrawal-requests', async (_req: Request, res: Response) => 
   res.json(rows);
 });
 
-adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: Response) => {
-  const wr = await findOne<any>('SELECT * FROM withdrawal_requests WHERE id = ?', [req.params.id]);
-  if (!wr) return res.status(404).json({ error: '申请不存在' });
-  if (wr.status !== 'pending') return res.status(400).json({ error: '已处理' });
-
-  await update('withdrawal_requests', { status: 'processing' }, 'id = ?', [req.params.id]);
+// 共用打款逻辑：process（pending→paid）和 retry（failed→paid）都调这里
+async function executePayout(wr: any, adminUserId: string, res: Response) {
+  await update('withdrawal_requests', { status: 'processing' }, 'id = ?', [wr.id]);
 
   // 实际打款金额：跨境用申请时锁价的目标币金额，日本本地用扣费后净额。
-  // 此前传 wr.amount（申请金额）会把手续费也付给用户，接真实支付渠道后每笔多付。
-  const fee       = Number(wr.fee) || 0;
-  const netAmount = Number(wr.net_amount) ?? (wr.amount - fee);
+  const fee            = Number(wr.fee) || 0;
+  const netAmount      = Number(wr.net_amount) ?? (wr.amount - fee);
   const payoutAmount   = wr.target_amount != null ? Number(wr.target_amount) : netAmount;
   const payoutCurrency = wr.target_currency || wr.currency;
 
@@ -651,22 +647,8 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
     if (!result.success) throw new Error(result.error || 'payout failed');
     payoutRef = result.referenceId || 'MANUAL';
   } catch (err: any) {
-    // 自动打款失败时仍可手动处理，记录错误但不阻断流程
     if (payoutProvider.name !== 'manual') {
-      await update('withdrawal_requests', {
-        status: 'failed',
-        note: err.message,
-      }, 'id = ?', [req.params.id]);
-      // 解冻用户余额，让赫使可以重新申请或手动处理
-      await unfreezeWithdrawal({
-        userId: wr.herald_id,
-        amount: wr.amount,
-        idempotencyKey: `WITHDRAWAL_UNFREEZE:${wr.id}`,
-        referenceType: 'withdrawal_request',
-        referenceId: wr.id,
-        note: `提现打款失败解冻 ¥${wr.amount}（${err.message.slice(0, 100)}）`,
-        createdBy: req.user!.userId,
-      }).catch((e: any) => console.error('[unfreeze] failed:', e));
+      await update('withdrawal_requests', { status: 'failed', note: err.message }, 'id = ?', [wr.id]);
       return res.status(502).json({ error: '自动打款失败: ' + err.message });
     }
   }
@@ -676,9 +658,9 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
     payout_reference: payoutRef,
     airwallex_transfer_id: payoutProvider.name === 'airwallex' ? payoutRef : null,
     paid_at: new Date().toISOString(),
-    processed_by: req.user!.userId,
+    processed_by: adminUserId,
     processed_at: new Date().toISOString(),
-  }, 'id = ?', [req.params.id]);
+  }, 'id = ?', [wr.id]);
 
   await debitWithdrawal({
     userId:         wr.herald_id,
@@ -687,7 +669,7 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
     referenceType:  'withdrawal_request',
     referenceId:    wr.id,
     note:           `提现打款 ¥${netAmount} 参考号 ${payoutRef}（手续费 ¥${fee}）`,
-    createdBy:      req.user!.userId,
+    createdBy:      adminUserId,
   });
 
   if (fee > 0) {
@@ -698,7 +680,7 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
       referenceType:  'withdrawal_request',
       referenceId:    wr.id,
       note:           `提现手续费`,
-      createdBy:      req.user!.userId,
+      createdBy:      adminUserId,
     });
   }
 
@@ -710,6 +692,20 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
   );
 
   res.json({ success: true, payoutReference: payoutRef, netAmount, payoutAmount, payoutCurrency, fee, provider: payoutProvider.name });
+}
+
+adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: Response) => {
+  const wr = await findOne<any>('SELECT * FROM withdrawal_requests WHERE id = ?', [req.params.id]);
+  if (!wr) return res.status(404).json({ error: '申请不存在' });
+  if (wr.status !== 'pending') return res.status(400).json({ error: '已处理' });
+  await executePayout(wr, req.user!.userId, res);
+});
+
+adminRouter.post('/withdrawal-requests/:id/retry', async (req: Request, res: Response) => {
+  const wr = await findOne<any>('SELECT * FROM withdrawal_requests WHERE id = ?', [req.params.id]);
+  if (!wr) return res.status(404).json({ error: '申请不存在' });
+  if (wr.status !== 'failed') return res.status(400).json({ error: '只有失败的申请可以重试' });
+  await executePayout(wr, req.user!.userId, res);
 });
 
 // ── 定价管理 ──────────────────────────────────────────────────────────────────

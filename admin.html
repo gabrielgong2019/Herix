@@ -921,14 +921,17 @@ function withdrawalsPage(){
   }
   if(done.length){
     h+='<div style="font-weight:600;font-size:13px;margin-bottom:10px">历史记录</div>';
-    h+='<div class="tcard"><table><thead><tr><th>赫使</th><th>金额</th><th>状态</th><th>参考号</th><th>处理时间</th></tr></thead><tbody>';
+    h+='<div class="tcard"><table><thead><tr><th>赫使</th><th>金额</th><th>状态</th><th>参考号/错误</th><th>处理时间</th><th></th></tr></thead><tbody>';
     h+=done.map(function(r){
       var sc={paid:'var(--success)',failed:'var(--danger)',processing:'var(--warning)'};
       var sl={paid:'已打款',failed:'失败',processing:'处理中'};
+      var retryBtn=r.status==='failed'?'<button class="btn btn-sm" style="background:var(--warning);color:#fff" onclick="retryWithdrawal(\''+r.id+'\')">重试</button>':'';
+      var refOrErr=r.status==='failed'?(r.note||'—'):esc(r.payout_reference||'—');
       return '<tr><td>'+esc(r.nickname)+'</td><td>¥'+Number(r.amount).toLocaleString()+'</td>'
         +'<td><span style="color:'+sc[r.status]+';font-weight:600">'+(sl[r.status]||r.status)+'</span></td>'
-        +'<td style="font-size:11px;color:var(--muted)">'+esc(r.payout_reference||'—')+'</td>'
-        +'<td>'+fmtLocal(r.processed_at)+'</td></tr>';
+        +'<td style="font-size:11px;color:var(--muted);max-width:200px;word-break:break-all">'+refOrErr+'</td>'
+        +'<td>'+fmtLocal(r.processed_at)+'</td>'
+        +'<td>'+retryBtn+'</td></tr>';
     }).join('');
     h+='</tbody></table></div>';
   }
@@ -941,6 +944,15 @@ function processWithdrawal(id){
     if(d.error){showToast(d.error);return;}
     var msg='打款完成';
     if(d.provider==='airwallex') msg='Airwallex 自动打款成功，参考号：'+d.payoutReference;
+    st.msg=msg;st.msgType='success';load('withdrawals');render();
+  });
+}
+function retryWithdrawal(id){
+  if(!confirm('确认重试打款？Airwallex 账户需有足够余额。'))return;
+  post('/admin/withdrawal-requests/'+id+'/retry',{},function(d){
+    if(d.error){showToast(d.error);return;}
+    var msg='重试成功';
+    if(d.provider==='airwallex') msg='重试成功，Airwallex 参考号：'+d.payoutReference;
     st.msg=msg;st.msgType='success';load('withdrawals');render();
   });
 }

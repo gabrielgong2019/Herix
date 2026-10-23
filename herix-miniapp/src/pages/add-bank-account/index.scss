@@ -1,0 +1,120 @@
+@use '../../styles/breakpoints' as bp;
+
+.aba-page {
+  padding: 40px 32px 64px;
+}
+
+@include bp.desktop {
+  .aba-page {
+    max-width: 640PX;
+    margin: 0 auto;
+  }
+}
+
+.aba-title {
+  display: block;
+  font-size: 40px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.aba-sub {
+  display: block;
+  font-size: 26px;
+  color: var(--text-muted);
+  margin-bottom: 48px;
+}
+
+.ig-row {
+  display: flex;
+  gap: 24px;
+}
+.ig-half {
+  flex: 1;
+  min-width: 0;
+}
+
+.ig {
+  margin-bottom: 32px;
+}
+.ig-label {
+  display: block;
+  font-size: 26px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.ig-hint {
+  display: block;
+  font-size: 22px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.req-star {
+  color: #ef4444;
+}
+.ig-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  height: 88px;
+  line-height: normal;
+  padding: 0 28px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 28px;
+  color: var(--text-primary);
+}
+.ig-picker {
+  display: flex;
+  align-items: center;
+  height: 88px;
+  padding: 0 28px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 28px;
+  color: var(--text-primary);
+}
+
+.default-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.checkbox {
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  color: #fff;
+  &.checked {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+}
+.default-label {
+  font-size: 26px;
+  color: var(--text-primary);
+}
+
+.btn-primary {
+  height: 96px;
+  line-height: 96px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 32px;
+  font-weight: 600;
+  border-radius: 48px;
+  text-align: center;
+  &.disabled {
+    background: #e5e5ea;
+    color: #8a8a8e;
+  }
+}

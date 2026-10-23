@@ -9,8 +9,11 @@ const CLOUD_ENV_ID = 'prod-herix-d5gh5h4nv767053ae'; // 与 utils/api.ts 中保�
 
 class App extends Component<PropsWithChildren> {
   componentDidMount() {
-    if (process.env.TARO_ENV === 'weapp' && wx.cloud) {
-      wx.cloud.init({ env: CLOUD_ENV_ID });
+    if (process.env.TARO_ENV === 'weapp') {
+      if (wx.cloud) wx.cloud.init({ env: CLOUD_ENV_ID });
+      // 有新版本时自动重启，避免用户停留在旧版本
+      const um = wx.getUpdateManager();
+      um.onUpdateReady(() => um.applyUpdate());
     }
     initI18n(); // 语言检测 + 词典缓存加载 + 远端词典异步更新
   }

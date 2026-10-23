@@ -328,19 +328,36 @@ walletRouter.get('/withdrawal-info', async (req: Request, res: Response) => {
  */
 walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
-  const { amount, method, accountDetails, methodId } = req.body;
+  const { amount, method, accountDetails, methodId, bankAccountId } = req.body;
 
   const amt = Number(amount);
   if (!Number.isFinite(amt) || amt <= 0) {
     return res.status(400).json({ error: '提现金额无效', code: 'INVALID_AMOUNT' });
   }
-  if (!method || !accountDetails) {
+
+  // bankAccountId 路径：从银行账户表读取信息，无需 method/accountDetails
+  let resolvedMethod = method;
+  let resolvedAccountDetails = accountDetails;
+  if (bankAccountId) {
+    const acct = await findOne<any>(
+      'SELECT * FROM herald_bank_accounts WHERE id = ? AND user_id = ? AND closed_at IS NULL',
+      [bankAccountId, userId]
+    );
+    if (!acct) return res.status(400).json({ error: '银行账户不存在', code: 'INVALID_BANK_ACCOUNT' });
+    resolvedMethod = resolvedMethod || 'BANK';
+    resolvedAccountDetails = resolvedAccountDetails || {
+      account_name: acct.account_name,
+      account_number: acct.account_number,
+      bank_code: acct.bank_code,
+      branch_code: acct.branch_code,
+    };
+  } else if (!method || !accountDetails) {
     return res.status(400).json({ error: '请填写收款方式和账号信息', code: 'MISSING_METHOD_INFO' });
   }
 
   let feeInfo: import('../utils/settings').WithdrawalFeeInfo;
   try {
-    const toCountry = await resolveToCountry(userId, methodId ? String(methodId) : undefined);
+    const toCountry = bankAccountId ? 'JP' : await resolveToCountry(userId, methodId ? String(methodId) : undefined);
     feeInfo = await calcWithdrawalFee(amt, toCountry);
   } catch (err: any) {
     return res.status(400).json({ error: err.message, code: err.code, ...(err.fee != null ? { fee: err.fee } : {}) });
@@ -377,14 +394,15 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
     await client.query(
       `INSERT INTO withdrawal_requests
          (id, herald_id, amount, currency, method, account_details, status, fee, net_amount, payout_date,
-          to_country, fx_mid_rate, fx_markup_bps, target_currency, target_amount)
-       VALUES ($1, $2, $3, 'JPY', $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13)`,
+          to_country, fx_mid_rate, fx_markup_bps, target_currency, target_amount, bank_account_id)
+       VALUES ($1, $2, $3, 'JPY', $4, $5, 'pending', $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
       [
-        id, userId, amt, method, JSON.stringify(accountDetails),
+        id, userId, amt, resolvedMethod, JSON.stringify(resolvedAccountDetails),
         feeInfo.fee, feeInfo.netAmount,
         feeInfo.payoutDate === 'immediate' ? null : feeInfo.payoutDate,
         feeInfo.toCountry, feeInfo.fxMidRate ?? null, feeInfo.fxMarkupBps ?? null,
         feeInfo.targetCurrency ?? null, feeInfo.targetAmount ?? null,
+        bankAccountId || null,
       ]
     );
 

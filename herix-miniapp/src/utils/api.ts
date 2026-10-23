@@ -332,9 +332,11 @@ export const wallet = {
     request<{ requestAmount: number; fee: number; netAmount: number; scheduleMode: string; nextPayoutDate?: string; note?: string }>(
       'GET', '/wallet/withdrawal-info', { amount, ...(methodId ? { methodId } : {}) },
     ),
-  withdrawRequest: (data: { amount: number; method: string; accountDetails: any; methodId?: string }) =>
+  withdrawRequest: (data: { amount: number; method?: string; accountDetails?: any; methodId?: string; bankAccountId?: string }) =>
     request<any>('POST', '/wallet/withdraw-request', data),
-  // withdraw: 对应新设计的提现执行接口，后端还没有（见迁移计划第7节），Phase 3 补上后端后再加这个方法
+  bankAccounts: () => request<any[]>('GET', '/wallet/bank-accounts'),
+  addBankAccount: (data: any) => request<{ id: string }>('POST', '/wallet/bank-accounts', data),
+  deleteBankAccount: (id: string) => request<any>('DELETE', `/wallet/bank-accounts/${id}`),
 };
 
 // ── Referrals ──

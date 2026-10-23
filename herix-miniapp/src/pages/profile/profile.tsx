@@ -119,6 +119,10 @@ export default class Profile extends Component<{}, State> {
     communityPending: null,
   };
 
+  onShareAppMessage(): Taro.ShareAppMessageReturn {
+    return { title: 'Herix 赫使 — 赚取推广报酬', path: '/pages/index/index' };
+  }
+
   componentDidShow() {
     if (getToken()) this.loadUser();
     // 小程序端：无 token 时先试静默登录（openid 已有账号则零操作进入）
@@ -1018,6 +1022,9 @@ export default class Profile extends Component<{}, State> {
           )}
           <Text className='action-item danger' onClick={this.handleLogout}>{t('profile.logout')}</Text>
         </View>
+        <Text className='app-version'>
+          v{(process.env.TARO_ENV === 'weapp' ? Taro.getAccountInfoSync().miniProgram.version : null) || 'dev'}
+        </Text>
       </View>
     );
   }

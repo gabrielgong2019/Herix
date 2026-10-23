@@ -82,6 +82,13 @@ export default class Index extends Component<{}, State> {
     if (this.unsubscribeSession) this.unsubscribeSession();
   }
 
+  onShareAppMessage(): Taro.ShareAppMessageReturn {
+    return {
+      title: 'Herix 赫使 — 赚取推广报酬',
+      path: '/pages/index/index',
+    };
+  }
+
   componentDidMount() {
     this.loadCommunity();
     this.loadData();

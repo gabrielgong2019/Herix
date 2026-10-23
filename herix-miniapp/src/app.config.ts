@@ -1,4 +1,4 @@
-// 赫使端页面全集。landing 是 H5 专属营销落地页，只注册进 H5，不打进小程序包
+// 赫使端页面全集
 const pages = [
   'pages/index/index', // explore：发现（tab1，启动页）
   'pages/herald-dashboard/index', // tasks：我的任务（tab2）
@@ -9,14 +9,12 @@ const pages = [
   'pages/wallet/index', // 钱包（次级）
   'pages/withdraw/index', // 提现（次级）
   'pages/add-method/index', // 添加收款方式（次级）
+  'pages/add-bank-account/index', // 添加银行账户（次级，Airwallex JPY）
   'pages/onboard/index', // 赫使入职引导（注册后进入）
   'pages/brand/brand', // 品牌主页（公开，任务卡品牌名点击进入）
   'pages/legal/legal', // 服务协议与隐私政策（公开，次级；weapp=中文/h5=日英）
+  'pages/landing/index', // 分享落地页：weapp 小程序分享链接的入口页
 ];
-
-if (process.env.TARO_ENV === 'h5') {
-  pages.push('pages/landing/index'); // 落地页仅 H5
-}
 
 export default {
   pages,

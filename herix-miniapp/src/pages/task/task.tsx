@@ -151,9 +151,10 @@ export default class TaskDetail extends Component<{ id: string }, State> {
 
   onShareAppMessage(): Taro.ShareAppMessageReturn {
     const { task } = this.state;
+    const taskId = task?.id || (Taro.getCurrentInstance().router?.params?.id as string);
     return {
       title: task?.title ?? 'Herix 任务',
-      path: task ? `/pages/landing/index?task=${task.id}` : '/pages/index/index',
+      path: taskId ? `/pages/landing/index?task=${taskId}` : '/pages/index/index',
       imageUrl: task?.cover_image || task?.brand_promo_image_url || '',
     };
   }

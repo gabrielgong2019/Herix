@@ -72,6 +72,10 @@ export default class Messages extends Component<{}, State> {
     notifs: [],
   };
 
+  onShareAppMessage(): Taro.ShareAppMessageReturn {
+    return { title: 'Herix 赫使 — 赚取推广报酬', path: '/pages/index/index' };
+  }
+
   componentDidShow() {
     if (!getToken()) {
       this.setState({ loggedIn: false, loading: false });

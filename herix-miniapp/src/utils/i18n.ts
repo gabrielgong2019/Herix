@@ -77,6 +77,7 @@ async function fetchRemoteDict(locale: Locale) {
     if (d && d.entries) {
       remoteDict = d.entries;
       Taro.setStorageSync(DICT_KEY(locale), { version: d.version, entries: d.entries });
+      emitSessionChange(); // 远端词典到位后通知所有订阅页重渲染
     }
   } catch {
     /* 拉取失败无碍: 缓存/打包词典兜底 */

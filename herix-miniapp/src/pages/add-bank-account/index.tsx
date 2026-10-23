@@ -3,6 +3,7 @@ import { View, Text, Input, Picker } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { wallet as walletApi } from '../../utils/api';
 import { t } from '../../utils/i18n';
+import { onSessionChange } from '../../utils/session';
 import './index.scss';
 import BackBar from '../../components/BackBar';
 
@@ -39,6 +40,16 @@ interface State {
 }
 
 export default class AddBankAccount extends Component<{}, State> {
+  private unsubscribe?: () => void;
+
+  componentDidMount() {
+    this.unsubscribe = onSessionChange(() => this.forceUpdate());
+  }
+
+  componentWillUnmount() {
+    this.unsubscribe?.();
+  }
+
   state: State = {
     step: 1,
     country: 'JP',

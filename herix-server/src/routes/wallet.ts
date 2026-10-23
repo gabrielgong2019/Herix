@@ -335,29 +335,38 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
     return res.status(400).json({ error: '提现金额无效', code: 'INVALID_AMOUNT' });
   }
 
-  // bankAccountId 路径：从银行账户表读取信息，无需 method/accountDetails
+  // 路径1：银行账户（Airwallex）
+  // 路径2：CASH（现金受取，无需银行账户）
+  // 路径3：旧收款方式（兼容）
   let resolvedMethod = method;
   let resolvedAccountDetails = accountDetails;
+  let resolvedBankAcct: any = null;
+
   if (bankAccountId) {
-    const acct = await findOne<any>(
+    resolvedBankAcct = await findOne<any>(
       'SELECT * FROM herald_bank_accounts WHERE id = ? AND user_id = ? AND closed_at IS NULL',
       [bankAccountId, userId]
     );
-    if (!acct) return res.status(400).json({ error: '银行账户不存在', code: 'INVALID_BANK_ACCOUNT' });
+    if (!resolvedBankAcct) return res.status(400).json({ error: '银行账户不存在', code: 'INVALID_BANK_ACCOUNT' });
     resolvedMethod = resolvedMethod || 'BANK';
     resolvedAccountDetails = resolvedAccountDetails || {
-      account_name: acct.account_name,
-      account_number: acct.account_number,
-      bank_code: acct.bank_code,
-      branch_code: acct.branch_code,
+      account_name: resolvedBankAcct.account_name,
+      account_number: resolvedBankAcct.account_number,
+      bank_code: resolvedBankAcct.bank_code,
     };
+  } else if (method === 'CASH') {
+    resolvedMethod = 'CASH';
+    resolvedAccountDetails = { method: 'CASH' };
   } else if (!method || !accountDetails) {
     return res.status(400).json({ error: '请填写收款方式和账号信息', code: 'MISSING_METHOD_INFO' });
   }
 
   let feeInfo: import('../utils/settings').WithdrawalFeeInfo;
   try {
-    const toCountry = bankAccountId ? 'JP' : await resolveToCountry(userId, methodId ? String(methodId) : undefined);
+    const toCountry = bankAccountId
+      ? (resolvedBankAcct?.address_country || 'JP')
+      : method === 'CASH' ? 'JP'
+      : await resolveToCountry(userId, methodId ? String(methodId) : undefined);
     feeInfo = await calcWithdrawalFee(amt, toCountry);
   } catch (err: any) {
     return res.status(400).json({ error: err.message, code: err.code, ...(err.fee != null ? { fee: err.fee } : {}) });
@@ -444,7 +453,8 @@ walletRouter.get('/bank-accounts', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const accounts = await findMany(
     `SELECT id, nickname, first_name, last_name, account_name, account_number,
-            bank_code, branch_code, account_category, is_verified, is_default, created_at
+            bank_code, branch_code, account_category, account_currency, address_country,
+            is_verified, is_default, created_at
      FROM herald_bank_accounts
      WHERE user_id = ? AND closed_at IS NULL
      ORDER BY is_default DESC, created_at DESC`,
@@ -453,21 +463,38 @@ walletRouter.get('/bank-accounts', async (req: Request, res: Response) => {
   res.json(accounts);
 });
 
-/** POST /api/wallet/bank-accounts — 添加银行账户（自动向 Airwallex 注册受益人） */
+/** POST /api/wallet/bank-accounts — 添加银行账户（同步向 Airwallex 注册受益人校验） */
 walletRouter.post('/bank-accounts', async (req: Request, res: Response) => {
   const userId = req.user!.userId;
   const {
     nickname, first_name, last_name,
     address_city, address_street, address_postcode,
     account_name, account_number, bank_code, branch_code,
-    account_category, is_default,
+    account_category, account_currency, is_default,
+    address_country: rawCountry,
   } = req.body;
 
-  if (!first_name || !last_name) return res.status(400).json({ error: '请填写姓名（英文或片假名）' });
-  if (!account_name) return res.status(400).json({ error: '请填写口座名义（英文或片假名）' });
-  if (!/^\d{7}$/.test(String(account_number))) return res.status(400).json({ error: '口座番号は7桁の数字です' });
-  if (!/^\d{4}$/.test(String(bank_code))) return res.status(400).json({ error: '銀行コードは4桁の数字です' });
-  if (!/^\d{3}$/.test(String(branch_code))) return res.status(400).json({ error: '支店コードは3桁の数字です' });
+  const country: string = rawCountry || 'JP';
+  const isJP = country === 'JP';
+  const isCN = country === 'CN';
+  const isOther = !isJP && !isCN;
+
+  if (!first_name || !last_name) return res.status(400).json({ error: '请填写姓名' });
+  if (!account_name) return res.status(400).json({ error: '请填写账户名' });
+
+  if (isJP) {
+    if (!/^\d{7}$/.test(String(account_number))) return res.status(400).json({ error: '口座番号は7桁の数字です' });
+    if (!/^\d{4}$/.test(String(bank_code))) return res.status(400).json({ error: '銀行コードは4桁の数字です' });
+    if (!/^\d{3}$/.test(String(branch_code))) return res.status(400).json({ error: '支店コードは3桁の数字です' });
+  } else if (isCN) {
+    if (!/^\d{12}$/.test(String(bank_code))) return res.status(400).json({ error: '联行号须为12位数字' });
+    if (!/^\d{16,19}$/.test(String(account_number))) return res.status(400).json({ error: '银行卡号须为16-19位数字' });
+  } else {
+    if (!/^[A-Z0-9]{8,11}$/i.test(String(bank_code))) return res.status(400).json({ error: 'SWIFT/BIC须为8-11位字母数字' });
+    if (!account_number || String(account_number).length < 4) return res.status(400).json({ error: '请填写账户号码' });
+    if (!account_currency) return res.status(400).json({ error: '请选择收款货币' });
+  }
+
   if (!address_city || !address_street || !address_postcode) return res.status(400).json({ error: '请填写地址' });
 
   if (is_default) {
@@ -479,23 +506,27 @@ walletRouter.post('/bank-accounts', async (req: Request, res: Response) => {
     nickname: nickname || '',
     first_name,
     last_name,
-    address_country: 'JP',
+    address_country: country,
     address_city,
     address_street,
     address_postcode,
     account_name,
     account_number: String(account_number),
     bank_code: String(bank_code),
-    branch_code: String(branch_code),
-    account_category: account_category || 'Savings',
+    branch_code: isJP ? String(branch_code || '') : '',
+    account_category: isJP ? (account_category || 'Savings') : 'Savings',
+    account_currency: isOther ? account_currency : (isCN ? 'CNY' : 'JPY'),
     is_default: is_default ? 1 : 0,
   });
 
-  // 向 Airwallex 注册受益人（异步，失败不阻断；重试在打款时自动补救）
+  // 向 Airwallex 同步注册受益人（添加即校验，账户信息有误直接报错）
   if (payoutProvider.name === 'airwallex') {
-    (payoutProvider as AirwallexPayout).registerBeneficiary(id).catch(err => {
-      console.error('[bank-accounts] Airwallex registration error:', err.message);
-    });
+    try {
+      await (payoutProvider as AirwallexPayout).registerBeneficiary(id);
+    } catch (err: any) {
+      await update('herald_bank_accounts', { closed_at: new Date().toISOString() }, 'id = ?', [id]);
+      return res.status(400).json({ error: `账户信息验证失败：${err.message}`, code: 'BANK_VALIDATION_FAILED' });
+    }
   }
 
   res.status(201).json({ id, message: '银行账户已添加' });

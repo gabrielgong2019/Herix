@@ -634,22 +634,27 @@ async function executePayout(wr: any, adminUserId: string, res: Response) {
   const payoutCurrency = wr.target_currency || wr.currency;
 
   let payoutRef = 'MANUAL';
-  try {
-    const result = await payoutProvider.send({
-      withdrawalId: wr.id,
-      heraldId: wr.herald_id,
-      amount: payoutAmount,
-      currency: payoutCurrency,
-      method: wr.method,
-      accountDetails: JSON.parse(wr.account_details || '{}'),
-      bankAccountId: wr.bank_account_id || undefined,
-    });
-    if (!result.success) throw new Error(result.error || 'payout failed');
-    payoutRef = result.referenceId || 'MANUAL';
-  } catch (err: any) {
-    if (payoutProvider.name !== 'manual') {
-      await update('withdrawal_requests', { status: 'failed', note: err.message }, 'id = ?', [wr.id]);
-      return res.status(502).json({ error: '自动打款失败: ' + err.message });
+  if (wr.method === 'CASH') {
+    // 现金受取：Admin 手动支付，不经过打款服务商
+    payoutRef = 'CASH-MANUAL';
+  } else {
+    try {
+      const result = await payoutProvider.send({
+        withdrawalId: wr.id,
+        heraldId: wr.herald_id,
+        amount: payoutAmount,
+        currency: payoutCurrency,
+        method: wr.method,
+        accountDetails: JSON.parse(wr.account_details || '{}'),
+        bankAccountId: wr.bank_account_id || undefined,
+      });
+      if (!result.success) throw new Error(result.error || 'payout failed');
+      payoutRef = result.referenceId || 'MANUAL';
+    } catch (err: any) {
+      if (payoutProvider.name !== 'manual') {
+        await update('withdrawal_requests', { status: 'failed', note: err.message }, 'id = ?', [wr.id]);
+        return res.status(502).json({ error: '自动打款失败: ' + err.message });
+      }
     }
   }
 

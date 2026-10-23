@@ -8,8 +8,7 @@ const pages = [
   'pages/apply/apply', // 报名/提交作品（次级，submit 复用此页）
   'pages/wallet/index', // 钱包（次级）
   'pages/withdraw/index', // 提现（次级）
-  'pages/add-method/index', // 添加收款方式（次级）
-  'pages/add-bank-account/index', // 添加银行账户（次级，Airwallex JPY）
+  'pages/add-bank-account/index', // 添加银行账户（次级，Airwallex JP/CN/海外）
   'pages/onboard/index', // 赫使入职引导（注册后进入）
   'pages/brand/brand', // 品牌主页（公开，任务卡品牌名点击进入）
   'pages/legal/legal', // 服务协议与隐私政策（公开，次级；weapp=中文/h5=日英）

@@ -72,28 +72,33 @@ export class AirwallexPayout implements PayoutProvider {
     const token = await this.getToken();
     const country = acct.address_country || 'JP';
     const isCN = country === 'CN';
+    const isJP = country === 'JP';
+    const currency = acct.account_currency || (isCN ? 'CNY' : isJP ? 'JPY' : 'USD');
 
     const bankDetails: Record<string, any> = {
-      account_currency: isCN ? 'CNY' : 'JPY',
+      account_currency: currency,
       account_name: acct.account_name,
       account_number: acct.account_number,
       bank_country_code: country,
     };
+    const transferMethod = (isJP || isCN) ? 'LOCAL' : 'SWIFT';
     if (isCN) {
-      // 中国：CNAPS 联行号（12位）存在 bank_code 字段
       bankDetails.account_routing_type1 = 'cnaps_code';
       bankDetails.account_routing_value1 = acct.bank_code;
-    } else {
-      // 日本：银行コード（4位）+ 支店コード（3位）
+    } else if (isJP) {
       bankDetails.account_routing_type1 = 'bank_code';
       bankDetails.account_routing_value1 = acct.bank_code;
       bankDetails.account_routing_type2 = 'branch_code';
       bankDetails.account_routing_value2 = acct.branch_code;
       bankDetails.bank_account_category = acct.account_category || 'Savings';
+    } else {
+      // 海外：SWIFT/BIC 存在 bank_code 字段
+      bankDetails.account_routing_type1 = 'swift_code';
+      bankDetails.account_routing_value1 = acct.bank_code;
     }
 
     const body = {
-      transfer_methods: ['LOCAL'],
+      transfer_methods: [transferMethod],
       beneficiary: {
         nickname: acct.nickname || `Herald-${acct.user_id.slice(-6)}`,
         entity_type: acct.entity_type || 'PERSONAL',
@@ -118,7 +123,8 @@ export class AirwallexPayout implements PayoutProvider {
     });
     const data = await res.json() as any;
     if (!res.ok || !data.id) {
-      throw new Error(`Airwallex beneficiary registration failed: ${JSON.stringify(data)}`);
+      const msg = data.message || data.error_message || JSON.stringify(data);
+      throw new Error(msg);
     }
 
     await db.query(
@@ -136,10 +142,13 @@ export class AirwallexPayout implements PayoutProvider {
     }
 
     const { rows } = await db.query(
-      `SELECT airwallex_beneficiary_id FROM herald_bank_accounts WHERE id = $1`,
+      `SELECT airwallex_beneficiary_id, address_country FROM herald_bank_accounts WHERE id = $1`,
       [req.bankAccountId]
     );
-    let beneficiaryId: string = rows[0]?.airwallex_beneficiary_id;
+    const acctRow = rows[0];
+    let beneficiaryId: string = acctRow?.airwallex_beneficiary_id;
+    const acctCountry = acctRow?.address_country || 'JP';
+    const paymentMethod = (acctCountry === 'JP' || acctCountry === 'CN') ? 'LOCAL' : 'SWIFT';
     if (!beneficiaryId) {
       beneficiaryId = await this.registerBeneficiary(req.bankAccountId);
     }
@@ -159,7 +168,7 @@ export class AirwallexPayout implements PayoutProvider {
         beneficiary_id: beneficiaryId,
         amount: req.amount,
         currency: req.currency,
-        payment_method: 'LOCAL',
+        payment_method: paymentMethod,
       }),
     });
     const data = await res.json() as any;

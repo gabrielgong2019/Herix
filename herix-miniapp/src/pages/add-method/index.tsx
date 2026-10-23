@@ -11,19 +11,18 @@ const REGIONS = [
   { id: 'china', flag: '🇨🇳', nameKey: 'addMethod.region.china', subKey: 'addMethod.region.chinaSub' },
   { id: 'overseas', flag: '🌐', nameKey: 'addMethod.region.overseas', subKey: 'addMethod.region.overseasSub' },
 ];
-const METHOD_MAP: Record<string, { id: string; icon: string; nameKey: string; subKey: string }[]> = {
+const METHOD_MAP: Record<string, { id: string; icon: string; nameKey: string; subKey: string; comingSoon?: boolean }[]> = {
   japan: [
     { id: 'BANK', icon: '🏦', nameKey: 'addMethod.m.jpBank', subKey: 'addMethod.m.jpBankSub' },
     { id: 'CASH', icon: '💴', nameKey: 'addMethod.m.cash', subKey: 'addMethod.m.cashSub' },
   ],
   china: [
-    { id: 'ALIPAY', icon: '🔵', nameKey: 'addMethod.m.alipay', subKey: 'addMethod.m.alipaySub' },
-    { id: 'WECHAT', icon: '🟢', nameKey: 'addMethod.m.wechat', subKey: 'addMethod.m.wechatSub' },
+    { id: 'ALIPAY', icon: '🔵', nameKey: 'addMethod.m.alipay', subKey: 'addMethod.m.alipaySub', comingSoon: true },
+    { id: 'WECHAT', icon: '🟢', nameKey: 'addMethod.m.wechat', subKey: 'addMethod.m.wechatSub', comingSoon: true },
     { id: 'BANK', icon: '🏦', nameKey: 'addMethod.m.cnBank', subKey: 'addMethod.m.cnBankSub' },
   ],
   overseas: [
     { id: 'BANK', icon: '🏦', nameKey: 'addMethod.m.intlBank', subKey: 'addMethod.m.intlBankSub' },
-    { id: 'PAYPAL', icon: '🅿️', nameKey: 'addMethod.m.paypal', subKey: 'addMethod.m.paypalSub' },
   ],
 };
 // 表单标题复用 wallet.methodType.* 词条
@@ -69,7 +68,7 @@ function getFields(type: string, region: string): Field[] {
       { kind: 'input', labelKey: 'addMethod.f.cnBankName', key: 'm-bank', phKey: 'addMethod.ph.cnBank', req: true },
       { kind: 'input', labelKey: 'addMethod.f.cnAcctNo', key: 'm-acct', phKey: 'addMethod.ph.cnAcctNo', req: true },
       { kind: 'input', labelKey: 'addMethod.f.cnAcctName', key: 'm-name', phKey: 'addMethod.ph.cnAcctName', req: true },
-      { kind: 'input', labelKey: 'addMethod.f.swift', key: 'm-swift', phKey: 'addMethod.ph.swift', req: true },
+      { kind: 'input', labelKey: 'addMethod.f.swift', key: 'm-swift', phKey: 'addMethod.ph.swift', req: false },
     ];
   }
   if (type === 'ALIPAY') return [{ kind: 'input', labelKey: 'addMethod.f.alipay', key: 'm-alipay-acct', phKey: 'addMethod.ph.alipay', req: true }];
@@ -205,13 +204,16 @@ export default class AddMethod extends Component<{}, State> {
               {t('addMethod.step2Sub', { region: t(REGIONS.find(r => r.id === region)?.nameKey || 'addMethod.region.overseas') })}
             </Text>
             {(METHOD_MAP[region] || METHOD_MAP.overseas).map(m => (
-              <View key={m.id} className='choice-card' onClick={() => this.pickType(m.id)}>
+              <View key={m.id} className={`choice-card ${m.comingSoon ? 'choice-card-disabled' : ''}`} onClick={m.comingSoon ? undefined : () => this.pickType(m.id)}>
                 <Text className='choice-icon'>{m.icon}</Text>
                 <View className='choice-info'>
                   <Text className='choice-name'>{t(m.nameKey)}</Text>
                   <Text className='choice-sub'>{t(m.subKey)}</Text>
                 </View>
-                <Text className='choice-arrow'>›</Text>
+                {m.comingSoon
+                  ? <Text className='coming-soon-tag'>敬请期待</Text>
+                  : <Text className='choice-arrow'>›</Text>
+                }
               </View>
             ))}
           </View>
@@ -273,7 +275,7 @@ export default class AddMethod extends Component<{}, State> {
               </Text>
               <Input
                 className='ig-input'
-                placeholder={t(type === 'BANK' && region === 'japan' ? 'addMethod.ph.labelJp' : 'addMethod.ph.labelDefault')}
+                placeholder={t(type === 'BANK' && region === 'japan' ? 'addMethod.ph.labelJp' : type === 'BANK' && region === 'china' ? 'addMethod.ph.labelCnBank' : 'addMethod.ph.labelDefault')}
                 value={form['method-label'] || ''}
                 onInput={e => this.setField('method-label', e.detail.value)}
               />

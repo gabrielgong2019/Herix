@@ -37,6 +37,7 @@ interface State {
   feeErr: { code?: string; fee?: number } | null;
   selBankAccountId: string;
   selMethodId: string;
+  selCash: boolean;
   amount: string;
   submitting: boolean;
 }
@@ -55,6 +56,7 @@ export default class Withdraw extends Component<{}, State> {
     feeErr: null,
     selBankAccountId: '',
     selMethodId: '',
+    selCash: false,
     amount: '',
     submitting: false,
   };
@@ -91,7 +93,6 @@ export default class Withdraw extends Component<{}, State> {
     }
   };
 
-  goAddMethod = () => Taro.navigateTo({ url: '/pages/add-method/index' });
   goAddBankAccount = () => Taro.navigateTo({ url: '/pages/add-bank-account/index' });
 
   feeTimer: ReturnType<typeof setTimeout> | null = null;
@@ -120,12 +121,11 @@ export default class Withdraw extends Component<{}, State> {
   };
 
   submit = async () => {
-    const { bankAccounts, selBankAccountId, methods, selMethodId, amount } = this.state;
+    const { bankAccounts, selBankAccountId, methods, selMethodId, selCash, amount } = this.state;
     const selBA = bankAccounts.find(a => a.id === selBankAccountId);
     const selMethod = methods.find(m => m.id === selMethodId);
 
-    // 优先用银行账户（Airwallex 通道），无银行账户时回落到旧收款方式
-    if (!selBA && !selMethod) {
+    if (!selBA && !selMethod && !selCash) {
       Taro.showToast({ title: t('withdraw.errSelect'), icon: 'none' });
       return;
     }
@@ -134,12 +134,14 @@ export default class Withdraw extends Component<{}, State> {
     try {
       if (selBA) {
         await walletApi.withdrawRequest({ amount: amt, bankAccountId: selBA.id });
+      } else if (selCash) {
+        await walletApi.withdrawRequest({ amount: amt, method: 'CASH' });
       } else {
-        const detail = selMethod.account_details || {};
+        const detail = selMethod!.account_details || {};
         await walletApi.withdrawRequest({
           amount: amt,
-          method: selMethod.type,
-          methodId: selMethod.id,
+          method: selMethod!.type,
+          methodId: selMethod!.id,
           accountDetails: detail,
         });
       }
@@ -176,7 +178,7 @@ export default class Withdraw extends Component<{}, State> {
   );
 
   render() {
-    const { loading, loggedIn, balance: bal, bankAccounts, methods, selBankAccountId, selMethodId, amount, submitting, feeErr } = this.state;
+    const { loading, loggedIn, balance: bal, bankAccounts, methods, selBankAccountId, selMethodId, selCash, amount, submitting, feeErr } = this.state;
 
     if (!loggedIn) {
       return (
@@ -198,44 +200,21 @@ export default class Withdraw extends Component<{}, State> {
     }
 
     const avail = bal.available || 0;
-    const hasAny = bankAccounts.length > 0 || methods.length > 0;
-
-    // 无任何收款方式空态
-    if (!hasAny) {
-      return (
-        <View className='withdraw-page'>
-          <BackBar />
-          <Text className='avail-line'>
-            {t('withdraw.availPrefix')} <Text className='avail-strong'>¥{fmt(avail)}</Text>
-          </Text>
-          {this.renderRules()}
-          <View className='no-method'>
-            <Text className='nm-icon'>💳</Text>
-            <Text className='nm-title'>{t('withdraw.noMethod')}</Text>
-            <Text className='nm-sub'>{t('withdraw.noMethodSub')}</Text>
-            <View className='btn-primary' onClick={this.goAddBankAccount}>
-              {t('withdraw.addMethod')}
-            </View>
-          </View>
-        </View>
-      );
-    }
-
     const selBA = bankAccounts.find(a => a.id === selBankAccountId);
-    const sel = selBA ? null : (methods.find(m => m.id === selMethodId) || methods[0]);
+    const sel = (selBA || selCash) ? null : (methods.find(m => m.id === selMethodId) || methods[0]);
     const amt = parseFloat(amount) || 0;
     const fi = this.state.feeInfo;
     const fee = fi ? fi.fee : null;
     const net = fi ? fi.netAmount : null;
-    // 银行账户走 Airwallex，无需服务端费用预览；旧方式仍需预览
-    const validBA = selBA && amt > 0 && amt <= avail;
-    const validMethod = !selBA && amt > 0 && amt <= avail && net !== null && net > 0;
-    const valid = validBA || validMethod;
-    const eta = t(sel ? METHOD_ETA_KEYS[sel.type] || 'withdraw.etaBank' : 'withdraw.etaBank');
+    const validBA = !!selBA && amt > 0 && amt <= avail;
+    const validCash = selCash && amt > 0 && amt <= avail;
+    const validMethod = !selBA && !selCash && amt > 0 && amt <= avail && net !== null && net > 0;
+    const valid = validBA || validCash || validMethod;
+    const eta = t(selCash ? 'withdraw.etaCash' : sel ? METHOD_ETA_KEYS[sel.type] || 'withdraw.etaBank' : 'withdraw.etaBank');
 
     let btnText = t('withdraw.btnEnter');
     if (amt > avail) btnText = t('withdraw.btnExceed');
-    else if (valid) btnText = t('withdraw.btnConfirm', { n: fmt(selBA ? amt : (net ?? 0)) });
+    else if (valid) btnText = t('withdraw.btnConfirm', { n: fmt(selBA ? amt : selCash ? amt : (net ?? 0)) });
 
     return (
       <View className='withdraw-page'>
@@ -247,19 +226,20 @@ export default class Withdraw extends Component<{}, State> {
         {/* 提现规则（审核要求：明确展示规则；无起提门槛） */}
         {this.renderRules()}
 
-        {/* 银行账户区（Airwallex JPY，优先显示） */}
+        {/* 收款账户区（Airwallex，优先显示） */}
         <Text className='field-label'>{t('withdraw.bankSection')}</Text>
         <ScrollView scrollX className='method-scroll'>
           <View className='method-track'>
             {bankAccounts.map(ba => {
               const active = ba.id === selBankAccountId;
-              const label = ba.nickname || `${ba.bank_code}-${ba.branch_code}`;
-              const sub = `****${ba.account_number.slice(-4)}`;
+              const countryFlag = ba.address_country === 'CN' ? '🇨🇳' : ba.address_country !== 'JP' ? '🌐' : '🇯🇵';
+              const label = ba.nickname || `${countryFlag} ****${ba.account_number.slice(-4)}`;
+              const sub = ba.account_currency || 'JPY';
               return (
                 <View
                   key={ba.id}
                   className={`method-card ${active ? 'active' : ''}`}
-                  onClick={() => this.setState({ selBankAccountId: ba.id, selMethodId: '' })}
+                  onClick={() => this.setState({ selBankAccountId: ba.id, selMethodId: '', selCash: false })}
                 >
                   <Text className='mc-icon'>🏦</Text>
                   <Text className='mc-label'>{label}</Text>
@@ -272,41 +252,18 @@ export default class Withdraw extends Component<{}, State> {
               <Text className='mc-add-plus'>+</Text>
               <Text className='mc-add-text'>{t('withdraw.addBankAccount')}</Text>
             </View>
+            {/* 现金受取（兜底选项） */}
+            <View
+              className={`method-card ${selCash ? 'active' : ''}`}
+              onClick={() => this.setState({ selCash: true, selBankAccountId: '', selMethodId: '' })}
+            >
+              <Text className='mc-icon'>💴</Text>
+              <Text className='mc-label'>{t('withdraw.cash')}</Text>
+              <Text className='mc-sub'>{t('withdraw.cashDesc')}</Text>
+              {selCash && <Text className='mc-check'>{t('withdraw.selected')}</Text>}
+            </View>
           </View>
         </ScrollView>
-
-        {/* 其他收款方式（旧通道，次要） */}
-        {methods.length > 0 && (
-          <View>
-            <Text className='field-label'>{t('wallet.methods')}</Text>
-            <ScrollView scrollX className='method-scroll'>
-              <View className='method-track'>
-                {methods.map(m => {
-                  const d = m.account_details || {};
-                  let sub = d.wechat_id || d.account || d.account_number || d.email || '';
-                  if (sub.length > 14) sub = sub.slice(0, 14) + '…';
-                  const active = !selBankAccountId && m.id === (sel && sel.id);
-                  return (
-                    <View
-                      key={m.id}
-                      className={`method-card ${active ? 'active' : ''}`}
-                      onClick={() => this.setState({ selMethodId: m.id, selBankAccountId: '' }, this.scheduleFeeRefresh)}
-                    >
-                      <Text className='mc-icon'>{METHOD_ICONS[m.type] || '💳'}</Text>
-                      <Text className='mc-label'>{m.label}</Text>
-                      {!!sub && <Text className='mc-sub'>{sub}</Text>}
-                      {active && <Text className='mc-check'>{t('withdraw.selected')}</Text>}
-                    </View>
-                  );
-                })}
-                <View className='method-card add' onClick={this.goAddMethod}>
-                  <Text className='mc-add-plus'>+</Text>
-                  <Text className='mc-add-text'>{t('withdraw.addCard')}</Text>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-        )}
 
         {/* 金额输入 */}
         <Text className='field-label'>{t('withdraw.amount')}</Text>

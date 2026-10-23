@@ -1207,6 +1207,7 @@ export async function initDatabase() {
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS bank_account_id TEXT REFERENCES herald_bank_accounts(id)`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS airwallex_transfer_id TEXT`,
     `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS paid_at TEXT`,
+    `ALTER TABLE herald_bank_accounts ADD COLUMN IF NOT EXISTS account_currency TEXT NOT NULL DEFAULT 'JPY'`,
   ];
   for (const m of migrations) {
     await pool.query(m);

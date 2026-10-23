@@ -162,7 +162,7 @@ export default class Wallet extends Component<{}, State> {
   };
 
   goWithdraw = () => Taro.navigateTo({ url: '/pages/withdraw/index' });
-  goAddMethod = () => Taro.navigateTo({ url: '/pages/add-method/index' });
+  goAddBankAccount = () => Taro.navigateTo({ url: '/pages/add-bank-account/index' });
 
   render() {
     const { loading, loggedIn, balance: bal, methods, txns, flow, period, txnFilter } = this.state;
@@ -238,7 +238,7 @@ export default class Wallet extends Component<{}, State> {
         {/* 收款方式 */}
         <View className='section-head'>
           <Text className='section-title'>{t('wallet.methods')}</Text>
-          <Text className='section-action' onClick={this.goAddMethod}>
+          <Text className='section-action' onClick={this.goAddBankAccount}>
             {t('wallet.methodsAdd')}
           </Text>
         </View>

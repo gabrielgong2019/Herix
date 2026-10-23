@@ -74,6 +74,17 @@
   font-size: 36px;
   color: var(--text-muted);
 }
+.choice-card-disabled {
+  opacity: 0.55;
+}
+.coming-soon-tag {
+  font-size: 22px;
+  color: var(--primary);
+  background: rgba(220, 38, 38, 0.08);
+  border-radius: 20px;
+  padding: 6px 16px;
+  white-space: nowrap;
+}
 
 // ── 表单 ──
 .form-head {

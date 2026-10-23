@@ -1174,6 +1174,39 @@ export async function initDatabase() {
     // ambassador_tasks 建表时未含 updated_at，vantikusSync counter refresh 需要此列。
     `ALTER TABLE ambassador_tasks ADD COLUMN IF NOT EXISTS updated_at TEXT`,
     `UPDATE ambassador_tasks SET updated_at = joined_at WHERE updated_at IS NULL`,
+
+    // ── 赫使银行账户 + Airwallex 打款（2026-10-23）────────────────────────────
+    // herald_bank_accounts: 赫使自助维护的收款账户，支持 Airwallex 本地转账（日本国内）。
+    // airwallex_beneficiary_id 在账户添加时向 Airwallex 注册后写入；is_verified=1 表示注册成功。
+    // 软删除：closed_at 非空 = 已删除，不物理删（保留打款历史关联）。
+    `CREATE TABLE IF NOT EXISTS herald_bank_accounts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      nickname TEXT NOT NULL DEFAULT '',
+      entity_type TEXT NOT NULL DEFAULT 'PERSONAL',
+      first_name TEXT NOT NULL DEFAULT '',
+      last_name TEXT NOT NULL DEFAULT '',
+      address_country TEXT NOT NULL DEFAULT 'JP',
+      address_city TEXT NOT NULL DEFAULT '',
+      address_street TEXT NOT NULL DEFAULT '',
+      address_postcode TEXT NOT NULL DEFAULT '',
+      account_name TEXT NOT NULL DEFAULT '',
+      account_number TEXT NOT NULL DEFAULT '',
+      bank_code TEXT NOT NULL DEFAULT '',
+      branch_code TEXT NOT NULL DEFAULT '',
+      account_category TEXT NOT NULL DEFAULT 'Savings',
+      airwallex_beneficiary_id TEXT,
+      is_verified INTEGER NOT NULL DEFAULT 0,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      closed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS')),
+      updated_at TEXT NOT NULL DEFAULT (TO_CHAR(CURRENT_TIMESTAMP, 'YYYY-MM-DD HH24:MI:SS'))
+    )`,
+    `CREATE INDEX IF NOT EXISTS idx_herald_bank_accounts_user ON herald_bank_accounts(user_id)`,
+    // withdrawal_requests：加 bank_account_id（关联赫使账户）和 airwallex_transfer_id（打款后写入）
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS bank_account_id TEXT REFERENCES herald_bank_accounts(id)`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS airwallex_transfer_id TEXT`,
+    `ALTER TABLE withdrawal_requests ADD COLUMN IF NOT EXISTS paid_at TEXT`,
   ];
   for (const m of migrations) {
     await pool.query(m);

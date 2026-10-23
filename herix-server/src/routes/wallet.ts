@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth';
 import { getBalance, freezeWithdrawal, ENTRY_DIRECTION, WalletType } from '../utils/wallet';
 import { calcWithdrawalFee, getSetting, getBrandCreditInfo, getPublishLimitInfo } from '../utils/settings';
 import { serializeWithdrawalMethod } from '../utils/serialize';
+import { payoutProvider, AirwallexPayout } from '../services/payout';
 
 export const walletRouter = Router();
 
@@ -416,4 +417,88 @@ walletRouter.post('/withdraw-request', async (req: Request, res: Response) => {
     currency: 'JPY',
     message,
   });
+});
+
+// ── 银行账户管理（日本本地转账 / Airwallex）─────────────────────────────────
+
+/** GET /api/wallet/bank-accounts — 赫使银行账户列表 */
+walletRouter.get('/bank-accounts', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const accounts = await findMany(
+    `SELECT id, nickname, first_name, last_name, account_name, account_number,
+            bank_code, branch_code, account_category, is_verified, is_default, created_at
+     FROM herald_bank_accounts
+     WHERE user_id = ? AND closed_at IS NULL
+     ORDER BY is_default DESC, created_at DESC`,
+    [userId]
+  );
+  res.json(accounts);
+});
+
+/** POST /api/wallet/bank-accounts — 添加银行账户（自动向 Airwallex 注册受益人） */
+walletRouter.post('/bank-accounts', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const {
+    nickname, first_name, last_name,
+    address_city, address_street, address_postcode,
+    account_name, account_number, bank_code, branch_code,
+    account_category, is_default,
+  } = req.body;
+
+  if (!first_name || !last_name) return res.status(400).json({ error: '请填写姓名（英文或片假名）' });
+  if (!account_name) return res.status(400).json({ error: '请填写口座名义（英文或片假名）' });
+  if (!/^\d{7}$/.test(String(account_number))) return res.status(400).json({ error: '口座番号は7桁の数字です' });
+  if (!/^\d{4}$/.test(String(bank_code))) return res.status(400).json({ error: '銀行コードは4桁の数字です' });
+  if (!/^\d{3}$/.test(String(branch_code))) return res.status(400).json({ error: '支店コードは3桁の数字です' });
+  if (!address_city || !address_street || !address_postcode) return res.status(400).json({ error: '请填写地址' });
+
+  if (is_default) {
+    await db.query('UPDATE herald_bank_accounts SET is_default = 0 WHERE user_id = $1', [userId]);
+  }
+
+  const id = await insert('herald_bank_accounts', {
+    user_id: userId,
+    nickname: nickname || '',
+    first_name,
+    last_name,
+    address_country: 'JP',
+    address_city,
+    address_street,
+    address_postcode,
+    account_name,
+    account_number: String(account_number),
+    bank_code: String(bank_code),
+    branch_code: String(branch_code),
+    account_category: account_category || 'Savings',
+    is_default: is_default ? 1 : 0,
+  });
+
+  // 向 Airwallex 注册受益人（异步，失败不阻断；重试在打款时自动补救）
+  if (payoutProvider.name === 'airwallex') {
+    (payoutProvider as AirwallexPayout).registerBeneficiary(id).catch(err => {
+      console.error('[bank-accounts] Airwallex registration error:', err.message);
+    });
+  }
+
+  res.status(201).json({ id, message: '银行账户已添加' });
+});
+
+/** DELETE /api/wallet/bank-accounts/:id — 软删除银行账户 */
+walletRouter.delete('/bank-accounts/:id', async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const accountId = req.params.id;
+
+  const acct = await findOne(
+    'SELECT id FROM herald_bank_accounts WHERE id = ? AND user_id = ? AND closed_at IS NULL',
+    [accountId, userId]
+  );
+  if (!acct) return res.status(404).json({ error: '账户不存在' });
+
+  await update(
+    'herald_bank_accounts',
+    { closed_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+    'id = ?',
+    [accountId]
+  );
+  res.json({ message: '账户已删除' });
 });

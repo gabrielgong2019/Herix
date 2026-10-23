@@ -1,15 +1,18 @@
+import db from '../db';
+
 export interface PayoutRequest {
   withdrawalId: string;
   heraldId: string;
   amount: number;
-  currency: string;       // 'JPY' | 'CNY' | 'USD' | ...
-  method: string;         // 'bank' | 'alipay' | 'wechat' | 'wise'
+  currency: string;
+  method: string;
   accountDetails: Record<string, any>;
+  bankAccountId?: string;
 }
 
 export interface PayoutResult {
   success: boolean;
-  referenceId?: string;  // provider's transaction ID
+  referenceId?: string;
   error?: string;
 }
 
@@ -18,8 +21,7 @@ export interface PayoutProvider {
   send(req: PayoutRequest): Promise<PayoutResult>;
 }
 
-// ── Manual（现阶段）──────────────────────────────────────
-// 管理员在后台确认打款，此处只记录意图，不做真实转账
+// ── Manual（手工确认打款）──────────────────────────────────
 class ManualPayout implements PayoutProvider {
   readonly name = 'manual';
 
@@ -28,32 +30,129 @@ class ManualPayout implements PayoutProvider {
   }
 }
 
-// ── Airwallex（预留）────────────────────────────────────
-// 接入时：npm install airwallex-payment-elements 或调用 REST API
-// 文档：https://www.airwallex.com/docs/payouts
-class AirwallexPayout implements PayoutProvider {
+// ── Airwallex（日本本地打款）──────────────────────────────
+const AW_BASE = 'https://api.airwallex.com';
+
+export class AirwallexPayout implements PayoutProvider {
   readonly name = 'airwallex';
 
+  private tokenCache: { token: string; expiresAt: number } | null = null;
+
+  async getToken(): Promise<string> {
+    if (this.tokenCache && Date.now() < this.tokenCache.expiresAt) {
+      return this.tokenCache.token;
+    }
+    const clientId = process.env.AIRWALLEX_CLIENT_ID;
+    const apiKey = process.env.AIRWALLEX_API_KEY;
+    if (!clientId || !apiKey) throw new Error('AIRWALLEX_CLIENT_ID and AIRWALLEX_API_KEY must be set');
+
+    const res = await fetch(`${AW_BASE}/api/v1/authentication/login`, {
+      method: 'POST',
+      headers: { 'x-client-id': clientId, 'x-api-key': apiKey, 'Content-Type': 'application/json' },
+    });
+    if (!res.ok) throw new Error(`Airwallex auth failed: ${res.status} ${await res.text()}`);
+    const data = await res.json() as any;
+    this.tokenCache = {
+      token: data.token,
+      expiresAt: data.expires_at
+        ? new Date(data.expires_at).getTime() - 60_000
+        : Date.now() + 25 * 60 * 1000,
+    };
+    return data.token;
+  }
+
+  /** 向 Airwallex 注册受益人，成功后更新 herald_bank_accounts.airwallex_beneficiary_id */
+  async registerBeneficiary(bankAccountId: string): Promise<string> {
+    const { rows } = await db.query(
+      `SELECT * FROM herald_bank_accounts WHERE id = $1`, [bankAccountId]
+    );
+    const acct = rows[0];
+    if (!acct) throw new Error(`Bank account ${bankAccountId} not found`);
+
+    const token = await this.getToken();
+    const body = {
+      transfer_methods: ['LOCAL'],
+      beneficiary: {
+        nickname: acct.nickname || `Herald-${acct.user_id.slice(-6)}`,
+        entity_type: acct.entity_type || 'PERSONAL',
+        personal_details: {
+          first_name: acct.first_name,
+          last_name: acct.last_name,
+        },
+        address: {
+          country_code: acct.address_country || 'JP',
+          city: acct.address_city,
+          street_address: acct.address_street,
+          postcode: acct.address_postcode,
+        },
+        bank_details: {
+          account_currency: 'JPY',
+          account_name: acct.account_name,
+          account_number: acct.account_number,
+          account_routing_type1: 'bank_code',
+          account_routing_value1: acct.bank_code,
+          account_routing_type2: 'branch_code',
+          account_routing_value2: acct.branch_code,
+          bank_account_category: acct.account_category || 'Savings',
+          bank_country_code: 'JP',
+        },
+      },
+    };
+
+    const res = await fetch(`${AW_BASE}/api/v1/beneficiaries/create`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json() as any;
+    if (!res.ok || !data.id) {
+      throw new Error(`Airwallex beneficiary registration failed: ${JSON.stringify(data)}`);
+    }
+
+    await db.query(
+      `UPDATE herald_bank_accounts
+         SET airwallex_beneficiary_id = $1, is_verified = 1, updated_at = NOW()::text
+       WHERE id = $2`,
+      [data.id, bankAccountId]
+    );
+    return data.id;
+  }
+
   async send(req: PayoutRequest): Promise<PayoutResult> {
-    // TODO: 配置 AIRWALLEX_CLIENT_ID + AIRWALLEX_API_KEY 后实现
-    // const token = await this.getToken();
-    // const res = await fetch('https://api.airwallex.com/api/v1/transfers/create', {
-    //   method: 'POST',
-    //   headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     request_id: req.withdrawalId,
-    //     amount: req.amount,
-    //     currency: req.currency,
-    //     beneficiary: { ... req.accountDetails },
-    //   }),
-    // });
-    // const data = await res.json();
-    // return { success: data.status === 'SUCCESS', referenceId: data.transfer_id };
-    throw new Error('Airwallex payout not configured — set PAYOUT_PROVIDER=airwallex and provide credentials');
+    if (!req.bankAccountId) {
+      throw new Error('bankAccountId is required for Airwallex payout');
+    }
+
+    const { rows } = await db.query(
+      `SELECT airwallex_beneficiary_id FROM herald_bank_accounts WHERE id = $1`,
+      [req.bankAccountId]
+    );
+    let beneficiaryId: string = rows[0]?.airwallex_beneficiary_id;
+    if (!beneficiaryId) {
+      beneficiaryId = await this.registerBeneficiary(req.bankAccountId);
+    }
+
+    const token = await this.getToken();
+    const res = await fetch(`${AW_BASE}/api/v1/transfers/create`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        request_id: `HERIX_${req.withdrawalId}`,
+        beneficiary_id: beneficiaryId,
+        amount: req.amount,
+        currency: req.currency,
+        payment_method: 'LOCAL',
+      }),
+    });
+    const data = await res.json() as any;
+    if (!res.ok) {
+      throw new Error(`Airwallex transfer failed: ${JSON.stringify(data)}`);
+    }
+    return { success: true, referenceId: data.id || data.transfer_id };
   }
 }
 
-// ── 工厂：通过环境变量切换 ────────────────────────────────
+// ── 工厂 ────────────────────────────────────────────────────
 function createProvider(): PayoutProvider {
   const name = process.env.PAYOUT_PROVIDER || 'manual';
   if (name === 'airwallex') return new AirwallexPayout();

@@ -610,10 +610,14 @@ adminRouter.post('/topup-requests/:id/reject', async (req: Request, res: Respons
 adminRouter.get('/withdrawal-requests', async (_req: Request, res: Response) => {
   const rows = await findMany<any>(`
     SELECT wr.*, u.nickname, u.email,
-           hp.residence, hp.bank_account
+           hp.residence, hp.bank_account,
+           hba.nickname AS bank_account_nickname,
+           hba.account_name, hba.bank_code, hba.branch_code, hba.account_number,
+           hba.account_category, hba.airwallex_beneficiary_id, hba.is_verified AS bank_verified
     FROM withdrawal_requests wr
     JOIN users u ON u.id = wr.herald_id
     LEFT JOIN herald_profiles hp ON hp.user_id = wr.herald_id
+    LEFT JOIN herald_bank_accounts hba ON hba.id = wr.bank_account_id
     ORDER BY wr.created_at DESC
   `);
   res.json(rows);
@@ -642,6 +646,7 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
       currency: payoutCurrency,
       method: wr.method,
       accountDetails: JSON.parse(wr.account_details || '{}'),
+      bankAccountId: wr.bank_account_id || undefined,
     });
     if (!result.success) throw new Error(result.error || 'payout failed');
     payoutRef = result.referenceId || 'MANUAL';
@@ -659,6 +664,8 @@ adminRouter.post('/withdrawal-requests/:id/process', async (req: Request, res: R
   await update('withdrawal_requests', {
     status: 'paid',
     payout_reference: payoutRef,
+    airwallex_transfer_id: payoutProvider.name === 'airwallex' ? payoutRef : null,
+    paid_at: new Date().toISOString(),
     processed_by: req.user!.userId,
     processed_at: new Date().toISOString(),
   }, 'id = ?', [req.params.id]);

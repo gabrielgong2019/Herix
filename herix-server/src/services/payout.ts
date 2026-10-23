@@ -132,6 +132,12 @@ export class AirwallexPayout implements PayoutProvider {
       beneficiaryId = await this.registerBeneficiary(req.bankAccountId);
     }
 
+    // DRY_RUN: 验证 token 和 beneficiary 注册，但跳过实际转账
+    if (process.env.AIRWALLEX_DRY_RUN === 'true') {
+      console.log(`[Airwallex DRY_RUN] would transfer ${req.amount} ${req.currency} to beneficiary ${beneficiaryId}`);
+      return { success: true, referenceId: `DRY_RUN_${req.withdrawalId}` };
+    }
+
     const token = await this.getToken();
     const res = await fetch(`${AW_BASE}/api/v1/transfers/create`, {
       method: 'POST',

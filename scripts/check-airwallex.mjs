@@ -78,7 +78,7 @@ async function main() {
   console.log();
 
   // 检查 Beneficiaries 能力
-  const benes = await get(token, '/api/v1/beneficiaries?page_num=0&page_size=1');
+  const benes = await get(token, '/api/v1/beneficiaries?page_num=0&page_size=10');
   console.log('👤 Beneficiaries（收款人管理）');
   if (benes.ok) {
     console.log('   ✅ 已开通，可注册收款人');
